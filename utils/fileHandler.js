@@ -3,6 +3,14 @@ export default class FileHandler {
         this.main = main;
         this.data = null;
         this.handleFile = this.handleFile.bind(this);
+        this.json={
+            "O": { "color": "red", "radius": 1, "realRadius": 0.24 },
+            "C": { "color": "gray", "radius": 1.25, "realRadius": 0.28 },
+            "H": { "color": "lightgray", "radius": 0.5, "realRadius": 0.1 },
+            "Si": { "color": "darkgray", "radius": 1.75, "realRadius": 0.34 },
+            "N": { "color": "blue", "radius": 0.65, "realRadius": 0.26 },
+            "S": { "color": "yellow", "radius": 1.5, "realRadius": 0.45 }
+        }
     }
 
     handleFile(event) {
@@ -16,7 +24,6 @@ export default class FileHandler {
                 const parsedData = this.parseXYZ(text);
                 this.data = parsedData;
                 this.main.data = parsedData; // Now correctly updates `main.data`
-                console.log("Parsed Data:", this.main.data);
 
                 // Initialize molecule rendering *after* data is available
                 this.main.init();
@@ -29,6 +36,7 @@ export default class FileHandler {
 
     parseXYZ(text) {
         try {
+            let jsonMol={};
             const lines = text.trim().split(/\r?\n/);
             const numAtoms = parseInt(lines[0], 10);
             if (isNaN(numAtoms)) throw new Error("Invalid XYZ file format: First line must be a number.");
@@ -47,6 +55,7 @@ export default class FileHandler {
                     z: parseFloat(z),
                 });
             }
+            console.log(atomData)
 
             return { numAtoms, atomData };
         } catch (error) {
@@ -54,4 +63,23 @@ export default class FileHandler {
             return null;
         }
     }
+    parseJSON() {
+        return fetch('./utils/atomSettings.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to load JSON: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(settings => {
+                this.atomSettings = settings;
+                console.log("Loaded Atom Settings:", this.atomSettings);
+                return settings; // Return settings so it can be used elsewhere
+            })
+            .catch(error => {
+                console.error("Error loading atom settings:", error);
+                return null;
+            });
+    }
+    
 }

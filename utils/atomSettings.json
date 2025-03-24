@@ -1,8 +1,8 @@
 {
-    "O": { "color": "red", "radius": 2, "realRadius": 0.24 },
-    "C": { "color": "gray", "radius": 2.5, "realRadius": 0.28 },
-    "H": { "color": "lightgray", "radius": 1, "realRadius": 0.1 },
-    "Si": { "color": "darkgray", "radius": 3.5, "realRadius": 0.34 },
-    "N": { "color": "blue", "radius": 1.3, "realRadius": 0.26 },
-    "S": { "color": "yellow", "radius": 3, "realRadius": 0.45 }
+    "O": { "color": "red", "radius": 1, "realRadius": 0.24 },
+    "C": { "color": "gray", "radius": 1.25, "realRadius": 0.28 },
+    "H": { "color": "lightgray", "radius": 0.5, "realRadius": 0.1 },
+    "Si": { "color": "darkgray", "radius": 1.75, "realRadius": 0.34 },
+    "N": { "color": "blue", "radius": 0.65, "realRadius": 0.26 },
+    "S": { "color": "yellow", "radius": 1.5, "realRadius": 0.45 }
 }

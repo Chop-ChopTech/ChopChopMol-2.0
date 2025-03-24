@@ -9,12 +9,17 @@ export default class Atom {
         this.z = coordinates.z;
         this.type = type;
         this.id = id;
+        this.radius=this.molecule.atomSettings[this.type].radius
+        this.color=new THREE.Color(this.molecule.atomSettings[this.type].color)
+
 
 
     }
     drawAtom() {
-        const geometry = new THREE.SphereGeometry(0.5,16,16);
-        const material = new THREE.MeshNormalMaterial({ color: 0x00ff00 });
+        
+        console.log();
+        const geometry = new THREE.SphereGeometry(this.radius,16,16);
+        const material = new THREE.MeshStandardMaterial({ color: this.color });
 
         const cube = new THREE.Mesh(geometry, material);
         cube.position.set(this.x, this.y, this.z);
