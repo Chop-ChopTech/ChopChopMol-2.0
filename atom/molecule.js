@@ -63,8 +63,25 @@ export default class Molecule {
 
         // Add the instanced mesh to the scene
         this.main.scene.add(this.instancedMesh);
+        this.centerMolecule();
     }
-
+    centerMolecule() {
+        const boundingBox = new THREE.Box3().setFromObject(this.instancedMesh);
+    
+        // Get the center of the bounding box
+        const center = new THREE.Vector3();
+        boundingBox.getCenter(center);
+    
+        // Move the molecule to the center
+        this.instancedMesh.position.sub(center);
+    
+        // Update the controls target to rotate around the center
+        this.main.controls.target.copy(center);
+    
+        // Update controls
+        this.main.controls.update();
+    }
+    
     drawMolecule() {
         // Optionally update instanced mesh properties each frame
     }
