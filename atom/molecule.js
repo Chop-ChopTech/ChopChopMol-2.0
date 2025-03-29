@@ -60,32 +60,72 @@ export default class Molecule {
         this.main.scene.add(this.instancedMesh);
         this.centerMolecule();
         // this.createBonds(this.atoms, 30);
-        console.log(this.createBonds(this.atoms, 8));
+        console.log(this.createBonds(this.atoms, 6.5));
         console.log(this.atoms);
         this.visualizeBonds(this.bonds);
 
     }
     createBonds(atoms, threshold) {
+        const gridSize = threshold * 2; // Grid cell size should be at least twice the threshold
+        const grid = new Map();
+    
+        // Place atoms into grid cells
+        for (let i = 0; i < atoms.length; i++) {
+            const atom = atoms[i];
+            const cellKey = this.getCellKey(atom.position, gridSize);
+            if (!grid.has(cellKey)) {
+                grid.set(cellKey, []);
+            }
+            grid.get(cellKey).push(atom);
+        }
+    
+        // Check nearby cells for possible bonds
+        const directions = [
+            [0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0],
+            [0, 0, 1], [0, 0, -1], [1, 1, 0], [-1, -1, 0], [1, -1, 0],
+            [-1, 1, 0], [1, 0, 1], [-1, 0, -1], [0, 1, 1], [0, -1, -1],
+            [0, 1, -1], [0, -1, 1], [1, 1, 1], [-1, -1, -1]
+        ];
     
         for (let i = 0; i < atoms.length; i++) {
-            for (let j = i + 1; j < atoms.length; j++) {
-                const atom1 = atoms[i];
-                const atom2 = atoms[j];
-                const atom1Position = atom1.position;
-                const atom2Position = atom2.position;
-                const distance = atom1Position.distanceTo(atom2Position);
-                console.log(distance);
+            const atom1 = atoms[i];
+            const cellKey = this.getCellKey(atom1.position, gridSize);
     
-                if (distance <= threshold) {
-                    // Create a bond between the two atoms
-                    const bond = new Bond(this, atom1, atom2, distance);
-                    this.bonds.push(bond);
+            // Check all neighboring cells
+            for (const dir of directions) {
+                const neighborKey = this.getNeighborKey(cellKey, dir);
+                if (!grid.has(neighborKey)) continue;
+    
+                const neighbors = grid.get(neighborKey);
+                for (const atom2 of neighbors) {
+                    if (atom1 === atom2) continue;
+                    const distance = atom1.position.distanceTo(atom2.position);
+    
+                    if (distance <= threshold) {
+                        const bond = new Bond(this, atom1, atom2, distance);
+                        this.bonds.push(bond);
+                    }
                 }
             }
         }
     
         return this.bonds;
     }
+    
+    // Generate a grid cell key from a position
+    getCellKey(position, gridSize) {
+        const x = Math.floor(position.x / gridSize);
+        const y = Math.floor(position.y / gridSize);
+        const z = Math.floor(position.z / gridSize);
+        return `${x},${y},${z}`;
+    }
+    
+    // Get neighboring cell key based on direction
+    getNeighborKey(cellKey, direction) {
+        const [x, y, z] = cellKey.split(',').map(Number);
+        return `${x + direction[0]},${y + direction[1]},${z + direction[2]}`;
+    }
+    
     
     centerMolecule() {
         const boundingBox = new THREE.Box3().setFromObject(this.instancedMesh);
@@ -97,21 +137,28 @@ export default class Molecule {
         // Move the molecule to the center
         this.instancedMesh.position.sub(center);
     
-        // Update the controls target to rotate around the center
-    
+        // Store the offset for centering bonds later
+        this.offset = center.clone(); // Save offset to use for bonds
     }
+    
     visualizeBonds(bonds) {
         bonds.forEach(bond => {
             const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(6); // Two points, each with x, y, z coordinates
-            positions.set([...bond.atom1.position.toArray(), ...bond.atom2.position.toArray()]);
-    
+            
+            // Apply the offset to the bond positions
+            const atom1Pos = bond.atom1.position.clone().sub(this.offset);
+            const atom2Pos = bond.atom2.position.clone().sub(this.offset);
+            
+            positions.set([...atom1Pos.toArray(), ...atom2Pos.toArray()]);
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
             const line = new THREE.Line(geometry, material);
             this.main.scene.add(line);
         });
     }
+    
     
     drawMolecule() {
         // Optionally update instanced mesh properties each frame
