@@ -76,10 +76,7 @@ export default class Molecule {
         this.instancedMesh.position.sub(center);
     
         // Update the controls target to rotate around the center
-        this.main.controls.target.copy(center);
     
-        // Update controls
-        this.main.controls.update();
     }
     
     drawMolecule() {
