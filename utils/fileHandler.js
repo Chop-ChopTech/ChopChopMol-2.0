@@ -55,7 +55,6 @@ export default class FileHandler {
                     z: parseFloat(z),
                 });
             }
-            console.log(atomData)
 
             return { numAtoms, atomData };
         } catch (error) {

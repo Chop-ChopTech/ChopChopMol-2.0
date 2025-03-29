@@ -60,8 +60,7 @@ export default class Molecule {
         this.main.scene.add(this.instancedMesh);
         this.centerMolecule();
         // this.createBonds(this.atoms, 30);
-        console.log(this.createBonds(this.atoms, 6.5));
-        console.log(this.atoms);
+        this.createBonds(this.atoms, 6.5)
         this.visualizeBonds(this.bonds);
 
     }
