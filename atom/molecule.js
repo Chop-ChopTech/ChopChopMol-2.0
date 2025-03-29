@@ -19,7 +19,8 @@ export default class Molecule {
         // 0: {element: 'O', x: 104.008, y: 103.223, z: 106.729}
         // 
 
-        const atomGeometry = new THREE.SphereGeometry(1, 8, 8);
+        const resolution = 16;
+        const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
         const material = new THREE.MeshStandardMaterial({ vertexColors: true });
 
         this.instancedMesh = new THREE.InstancedMesh(atomGeometry, material, data.numAtoms);
