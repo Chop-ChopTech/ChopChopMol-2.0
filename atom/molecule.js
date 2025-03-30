@@ -104,12 +104,13 @@ export default class Molecule {
                 const neighbors = grid.get(neighborKey);
                 for (const atom2 of neighbors) {
                     if (atom1 === atom2) continue;
-                    const distance = atom1.position.distanceTo(atom2.position);
-    
-                    if (distance <= threshold) {
-                        const bond = new Bond(this, atom1, atom2, distance);
+                    const distSq = atom1.position.distanceToSquared(atom2.position);
+                    const thresholdSq = threshold * threshold;
+                    if (distSq <= thresholdSq) {
+                        const bond = new Bond(this, atom1, atom2, Math.sqrt(distSq)); // Only get distance here if needed
                         this.bonds.push(bond);
                     }
+                    
                 }
             }
         }

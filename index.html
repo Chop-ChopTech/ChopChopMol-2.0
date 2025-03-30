@@ -7,7 +7,25 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <input type="file" id="fileInput" accept=".xyz">
+    <input id="fileInput" type="file" accept=".xyz" style="display: none;">
+    <button id="customButton">Select .xyz File</button>
+
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const customButton = document.getElementById('customButton');
+
+        customButton.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (event) => {
+            if (event.target.files.length > 0) {
+                customButton.textContent = `Selected: ${event.target.files[0].name}`;
+            }
+        });
+    </script>
+
     <script type="importmap">
         {
             "imports": {
