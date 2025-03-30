@@ -19,6 +19,7 @@ export default class Molecule {
         // 0: {element: 'O', x: 104.008, y: 103.223, z: 106.729}
         // 
 
+        const bondThreshold = 6.66;
         const resolution = 16;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
         const material = new THREE.MeshStandardMaterial({ vertexColors: true });
@@ -60,8 +61,8 @@ export default class Molecule {
         // Add the instanced mesh to the scene
         this.main.scene.add(this.instancedMesh);
         this.centerMolecule();
-        // this.createBonds(this.atoms, 30);
-        this.createBonds(this.atoms, 6.5)
+        
+        this.createBonds(this.atoms, bondThreshold)
         this.visualizeBonds(this.bonds);
 
     }
