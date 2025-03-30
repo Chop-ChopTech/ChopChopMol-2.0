@@ -19,7 +19,19 @@ export default class Molecule {
         // 0: {element: 'O', x: 104.008, y: 103.223, z: 106.729}
         // 
 
+
         const bondThreshold = 6.66;
+
+        this.createAtoms(data);
+        // Add the instanced mesh to the scene
+        this.main.scene.add(this.instancedMesh);
+        this.centerMolecule();
+        
+        this.createBonds(this.atoms, bondThreshold)
+        this.visualizeBonds(this.bonds);
+
+    }
+    createAtoms(data){
         const resolution = 16;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
         const material = new THREE.MeshStandardMaterial({ vertexColors: true });
@@ -56,17 +68,9 @@ export default class Molecule {
         // Update after all atoms are added
         this.instancedMesh.instanceMatrix.needsUpdate = true;
         colorAttribute.needsUpdate = true;
-
-
-        // Add the instanced mesh to the scene
-        this.main.scene.add(this.instancedMesh);
-        this.centerMolecule();
-        
-        this.createBonds(this.atoms, bondThreshold)
-        this.visualizeBonds(this.bonds);
-
     }
     createBonds(atoms, threshold) {
+
         const gridSize = threshold * 2; // Grid cell size should be at least twice the threshold
         const grid = new Map();
     
