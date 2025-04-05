@@ -20,7 +20,7 @@ export default class Molecule {
         // 
 
 
-        const bondThreshold = 6.66;
+        const bondThreshold = 5;
 
         this.createAtoms(data);
         // Add the instanced mesh to the scene
@@ -104,10 +104,11 @@ export default class Molecule {
                 const neighbors = grid.get(neighborKey);
                 for (const atom2 of neighbors) {
                     if (atom1 === atom2) continue;
-                    const distSq = atom1.position.distanceToSquared(atom2.position);
-                    const thresholdSq = threshold * threshold;
-                    if (distSq <= thresholdSq) {
-                        const bond = new Bond(this, atom1, atom2, Math.sqrt(distSq)); // Only get distance here if needed
+                    console.log(atom1.radius, atom2.radius);
+                    const distSq = atom1.position.distanceTo(atom2.position);
+                    const thresholdSq = threshold;
+                    if (distSq <= (atom1.radius+atom2.radius)+thresholdSq) {
+                        const bond = new Bond(this, atom1, atom2,distSq); // Only get distance here if needed
                         this.bonds.push(bond);
                     }
                     
