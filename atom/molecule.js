@@ -149,22 +149,31 @@ export default class Molecule {
     }
     
     visualizeBonds(bonds) {
+        const radius = 0.1; // Bond thickness
+        const radialSegments = 8; // Smoother cylinder
+        const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    
         bonds.forEach(bond => {
-            const material = new THREE.LineBasicMaterial({ color: 0xffffff });
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(6); // Two points, each with x, y, z coordinates
-            
-            // Apply the offset to the bond positions
-            const atom1Pos = bond.atom1.position.clone().sub(this.offset);
-            const atom2Pos = bond.atom2.position.clone().sub(this.offset);
-            
-            positions.set([...atom1Pos.toArray(), ...atom2Pos.toArray()]);
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            
-            const line = new THREE.Line(geometry, material);
-            this.main.scene.add(line);
+            const start = bond.atom1.position.clone().sub(this.offset);
+            const end = bond.atom2.position.clone().sub(this.offset);
+            const direction = new THREE.Vector3().subVectors(end, start);
+            const length = direction.length();
+    
+            const bondGeometry = new THREE.CylinderGeometry(radius, radius, length, radialSegments);
+            const bondMesh = new THREE.Mesh(bondGeometry, material);
+    
+            // Move bond to midpoint
+            const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+            bondMesh.position.copy(midpoint);
+    
+            // Align the cylinder with the bond direction
+            bondMesh.lookAt(end);
+            bondMesh.rotateX(Math.PI / 2); // Rotate so it's aligned properly
+    
+            this.main.scene.add(bondMesh);
         });
     }
+    
     
     
     drawMolecule() {
