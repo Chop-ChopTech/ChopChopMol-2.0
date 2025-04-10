@@ -157,8 +157,8 @@ export default class Molecule {
             const end = bond.atom2.position.clone().sub(this.offset);
     
             const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-            const color1 = new THREE.Color(this.atomSettings[bond.atom1.type].color);
-            const color2 = new THREE.Color(this.atomSettings[bond.atom2.type].color);
+            const color1 = bond.atom1.color;
+            const color2 = bond.atom2.color;
     
             const material1 = new THREE.MeshStandardMaterial({ color: color1 });
             const material2 = new THREE.MeshStandardMaterial({ color: color2 });
