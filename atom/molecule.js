@@ -32,9 +32,9 @@ export default class Molecule {
 
     }
     createAtoms(data){
-        const resolution = 16;
+        const resolution = 32;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
-        const material = new THREE.MeshStandardMaterial({ vertexColors: true });
+        const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4 });
 
         this.instancedMesh = new THREE.InstancedMesh(atomGeometry, material, data.numAtoms);
 
@@ -150,7 +150,7 @@ export default class Molecule {
     
     visualizeBonds(bonds) {
         bonds.forEach(bond => {
-            const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+            const material = new THREE.LineBasicMaterial({ color: 0xffffff });
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(6); // Two points, each with x, y, z coordinates
             
