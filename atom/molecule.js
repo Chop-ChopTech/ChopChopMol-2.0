@@ -149,30 +149,44 @@ export default class Molecule {
     }
     
     visualizeBonds(bonds) {
-        const radius = 0.1; // Bond thickness
-        const radialSegments = 8; // Smoother cylinder
-        const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        const radius = 0.15;
+        const radialSegments = 8;
     
         bonds.forEach(bond => {
             const start = bond.atom1.position.clone().sub(this.offset);
             const end = bond.atom2.position.clone().sub(this.offset);
-            const direction = new THREE.Vector3().subVectors(end, start);
-            const length = direction.length();
     
-            const bondGeometry = new THREE.CylinderGeometry(radius, radius, length, radialSegments);
-            const bondMesh = new THREE.Mesh(bondGeometry, material);
-    
-            // Move bond to midpoint
             const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-            bondMesh.position.copy(midpoint);
+            const color1 = new THREE.Color(this.atomSettings[bond.atom1.type].color);
+            const color2 = new THREE.Color(this.atomSettings[bond.atom2.type].color);
     
-            // Align the cylinder with the bond direction
-            bondMesh.lookAt(end);
-            bondMesh.rotateX(Math.PI / 2); // Rotate so it's aligned properly
+            const material1 = new THREE.MeshStandardMaterial({ color: color1 });
+            const material2 = new THREE.MeshStandardMaterial({ color: color2 });
     
-            this.main.scene.add(bondMesh);
+            const length1 = start.distanceTo(midpoint);
+            const length2 = end.distanceTo(midpoint);
+    
+            const bondGeom1 = new THREE.CylinderGeometry(radius, radius, length1, radialSegments);
+            const bondGeom2 = new THREE.CylinderGeometry(radius, radius, length2, radialSegments);
+    
+            const bondMesh1 = new THREE.Mesh(bondGeom1, material1);
+            const bondMesh2 = new THREE.Mesh(bondGeom2, material2);
+    
+            // Position and rotate mesh 1
+            bondMesh1.position.copy(new THREE.Vector3().addVectors(start, midpoint).multiplyScalar(0.5));
+            bondMesh1.lookAt(midpoint);
+            bondMesh1.rotateX(Math.PI / 2);
+    
+            // Position and rotate mesh 2
+            bondMesh2.position.copy(new THREE.Vector3().addVectors(midpoint, end).multiplyScalar(0.5));
+            bondMesh2.lookAt(end);
+            bondMesh2.rotateX(Math.PI / 2);
+    
+            this.main.scene.add(bondMesh1);
+            this.main.scene.add(bondMesh2);
         });
     }
+    
     
     
     
