@@ -7,12 +7,13 @@ export default class Molecule {
         this.main = main;
         this.atoms = [];
         this.bonds = [];
-        this.atomSettings = atomSettings;
         this.instancedMesh = null;  // Store the instanced mesh here
-        console.log(this.atomSettings);
+        this.atomSettings = atomSettings;
+        
     }
 
-    init(data) {
+    init(data, mode) {
+        this.reset()
         console.log(data);
         // Data format:
         // Example:
@@ -20,7 +21,7 @@ export default class Molecule {
         // 
 
 
-        const bondThreshold = 5.4;
+        const bondThreshold = 5;
 
         this.createAtoms(data);
         // Add the instanced mesh to the scene
@@ -28,8 +29,11 @@ export default class Molecule {
         this.centerMolecule();
         
         this.createBonds(this.atoms, bondThreshold)
-        this.visualizeBondsStyle(this.bonds);
-
+        if(mode=="fast"){
+            this.visualizeBondsFast(this.bonds);
+        }else{
+            this.visualizeBondsStyle(this.bonds);
+        }
     }
     createAtoms(data){
         const resolution = 16;
@@ -149,21 +153,25 @@ export default class Molecule {
     }
     
     visualizeBondsFast(bonds) {
+        const positions = new Float32Array(bonds.length * 2 * 3); // 2 points per bond, 3 coords per point
+    
+        const material = new THREE.LineBasicMaterial({ color: 0x00ff00 }); // Reuse one material
+        let index = 0;
+    
         bonds.forEach(bond => {
-            const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(6); // Two points, each with x, y, z coordinates
-            
-            // Apply the offset to the bond positions
             const atom1Pos = bond.atom1.position.clone().sub(this.offset);
             const atom2Pos = bond.atom2.position.clone().sub(this.offset);
-            
-            positions.set([...atom1Pos.toArray(), ...atom2Pos.toArray()]);
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            
-            const line = new THREE.Line(geometry, material);
-            this.main.scene.add(line);
+    
+            positions.set(atom1Pos.toArray(), index);
+            positions.set(atom2Pos.toArray(), index + 3);
+            index += 6;
         });
+    
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    
+        const lines = new THREE.LineSegments(geometry, material);
+        this.main.scene.add(lines);
     }
     
     visualizeBondsStyle(bonds) {
@@ -213,7 +221,12 @@ export default class Molecule {
         });
     }
     
-    
+    reset(){
+        this.atoms = [];
+        this.bonds = [];
+        this.instancedMesh = null;  // Store the instanced mesh here
+
+    }
     
 
     

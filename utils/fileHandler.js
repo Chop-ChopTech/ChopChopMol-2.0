@@ -3,14 +3,7 @@ export default class FileHandler {
         this.main = main;
         this.data = null;
         this.handleFile = this.handleFile.bind(this);
-        this.json={
-            "O": { "color": "red", "radius": 1, "realRadius": 0.24 },
-            "C": { "color": "gray", "radius": 1.25, "realRadius": 0.28 },
-            "H": { "color": "lightgray", "radius": 0.5, "realRadius": 0.1 },
-            "Si": { "color": "darkgray", "radius": 1.75, "realRadius": 0.34 },
-            "N": { "color": "blue", "radius": 0.65, "realRadius": 0.26 },
-            "S": { "color": "yellow", "radius": 1.5, "realRadius": 0.45 }
-        }
+       
     }
 
     handleFile(event) {
@@ -24,9 +17,9 @@ export default class FileHandler {
                 const parsedData = this.parseXYZ(text);
                 this.data = parsedData;
                 this.main.data = parsedData; // Now correctly updates `main.data`
-
+                clearScene(this.main.scene);
                 // Initialize molecule rendering *after* data is available
-                this.main.init();
+                this.main.init("fast");
             } catch (error) {
                 console.error("Error parsing XYZ file:", error);
             }

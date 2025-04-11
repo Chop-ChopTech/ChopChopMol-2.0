@@ -38,9 +38,10 @@ export default class Main {
         });
         
     }
-    init(){
-        this.molecule.init(this.data);
+    init(mode){
+        this.molecule.init(this.data,mode);
     }
+
 }
 
 const main = new Main();
