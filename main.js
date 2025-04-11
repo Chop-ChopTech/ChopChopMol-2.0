@@ -13,7 +13,7 @@ renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
+controls.enableDamping = false;
 controls.dampingFactor = 0.05;
 
 const light = new THREE.DirectionalLight(0xffffff, 3);
