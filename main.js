@@ -44,6 +44,7 @@ export default class Main {
     }
     init(mode){
         this.molecule.init(this.data,mode);
+        console.log(this.data)
     }
     reset(){
         clearScene(this.scene);
@@ -62,6 +63,13 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
+window.addEventListener('keydown', (event) => {
+    if (event.key === ' ') {
+        const json=prompt('Enter test JSON');
+        main.reset();
+        main.molecule.init(JSON.parse(json),mode);
+    }
+})
 
 switchModeButton.addEventListener('click', () => {
     mode=1-mode

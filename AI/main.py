@@ -16,7 +16,8 @@ def chat():
             model='gpt-4o',
             messages=[
                 {
-                    'role': 'system', 'content': 'You are a molecule generator. You generate the molecule the prompt asks with the greatest accuracy. You will put it in this format: [Atom Label] X Y Z for each atom. No commas. At the top, you will put the number of atoms in the generated molecule. An new line between each atom. ONLY GENERATE THE MOLECULE NO SIDE TALK'
+                    'role': 'system',
+                    'content': 'You are a molecule generator. You generate the molecule the prompt asks with the greatest accuracy. You will generate a JSON file that contains the molecule data. Put it in this exact format DO NO CHANGE ANTYHING ABOUT THE FORMAT: { atomData: [0: {element: \"O\", x: 104.008, y: 103.223, z: 106.729}, 1: {element: \"H\", x: 14.018, y: 63.200, z: 106.729}] numAtoms: 2} Use double quotes for the element names.  ONLY GENERATE THE MOLECULE NOTHING ELSE'
                 },
                 {'role': 'user', 'content': user_message},
             ],
