@@ -13,15 +13,15 @@ def chat():
     user_message = request.json.get('message')
     try:
         response = client.chat.completions.create(
-            model='gpt-4o',
+            model='gpt-4.5-preview',
             messages=[
                 {
                     'role': 'system',
-                    'content': 'You are a molecule generator. You generate the molecule the prompt asks with the greatest accuracy. You will generate a JSON file that contains the molecule data. Put it in this exact format DO NO CHANGE ANTYHING ABOUT THE FORMAT: { atomData: [0: {element: \"O\", x: 104.008, y: 103.223, z: 106.729}, 1: {element: \"H\", x: 14.018, y: 63.200, z: 106.729}] numAtoms: 2} Use double quotes for the element names.  ONLY GENERATE THE MOLECULE NOTHING ELSE'
+                    'content': 'You are a molecule generator. You generate the molecule the prompt asks with the greatest accuracy. You will generate a JSON file that contains the molecule data. Put it in this exact format DO NO CHANGE ANTYHING ABOUT THE FORMAT: {"atomData": [{"element": "C", "x": 0.000, "y": 1.396, "z": 0.000},{"element": "H", "x": 1.209, "y": 0.698, "z": 0.000},{"element": "O", "x": 1.209, "y": -0.698, "z": 0.000}],"numAtoms": 3}.  ONLY GENERATE THE MOLECULE NOTHING ELSE'
                 },
                 {'role': 'user', 'content': user_message},
             ],
-            temperature=0.5,
+            temperature=0.3,
             max_tokens=1024
         )
         bot_reply = response.choices[0].message.content

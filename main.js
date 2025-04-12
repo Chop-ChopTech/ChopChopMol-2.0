@@ -74,7 +74,7 @@ window.addEventListener('keydown', (event) => {
 switchModeButton.addEventListener('click', () => {
     mode=1-mode
     main.reset();
-    main.molecule.init(main.data,mode);
+    main.molecule.init(main.data,1);
     console.log(mode)
 });
 
