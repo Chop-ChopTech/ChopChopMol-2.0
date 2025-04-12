@@ -5,15 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChopChopMol 2.0</title>
     <link rel="stylesheet" href="style.css">
-    <!-- <link rel="icon" type="image/png" sizes="32x32" href="atommmlogo.png"t  href="atommmlogo.png"> -->
+    <!-- <link rel="icon" type="image/png" sizes="32x32" href="atommmlogo.png"> -->
 </head>
 <body>
+    <!-- Existing file picker -->
     <input id="fileInput" type="file" accept=".xyz" style="display: none;">
     <button id="customButton">Select .xyz File</button>
-    <button id="switchMode" >Switch Mode</button>
+    <button id="switchMode">Switch Mode</button>
+
+    <!-- New chat interface -->
+    <div id="chatContainer" style="margin-top: 20px;">
+        <input id="chatInput" type="text" placeholder="Ask Atomix" style="width: 200px; padding: 5px;">
+        <button onclick="sendChatMessage()">Send</button>
+        <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div>
+    </div>
+
+    <!-- Existing scripts -->
     <script src="utils/utils.js"></script>
-
-
     <script>
         const fileInput = document.getElementById('fileInput');
         const customButton = document.getElementById('customButton');
@@ -29,12 +37,42 @@
         });
     </script>
 
+    <!-- New chat script -->
+    <script>
+        async function sendChatMessage() {
+            const chatInput = document.getElementById('chatInput').value;
+            const chatOutput = document.getElementById('chatOutput');
+            if (!chatInput) return;
+
+            // Show user message
+            chatOutput.innerHTML += `<p><strong>You:</strong> ${chatInput}</p>`;
+
+            try {
+                const response = await fetch('http://localhost:5000/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: chatInput })
+                });
+                const data = await response.json();
+                if (data.error) {
+                    chatOutput.innerHTML += `<p><strong>Error:</strong> ${data.error}</p>`;
+                } else {
+                    chatOutput.innerHTML += `<p><strong>Atomix:</strong> ${data.reply}</p>`;
+                }
+                document.getElementById('chatInput').value = ''; // Clear input
+                chatOutput.scrollTop = chatOutput.scrollHeight; // Auto-scroll
+            } catch (error) {
+                chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
+            }
+        }
+    </script>
+
+    <!-- Existing Three.js importmap and output -->
     <script type="importmap">
         {
             "imports": {
                 "three": "https://cdn.jsdelivr.net/npm/three@v0.171.0/build/three.module.js",
                 "jsm/": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/"
-
             }
         }
     </script>

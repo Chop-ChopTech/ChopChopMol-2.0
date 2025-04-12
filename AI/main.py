@@ -16,11 +16,11 @@ def chat():
             model='gpt-4o',
             messages=[
                 {
-                    'role': 'system', 'content': 'You are a molecule generator. You generate the molecule the prompt asks with the greatest accuracy. You will put it in this format: [Atom Label] X Y Z. No commas.'
+                    'role': 'system', 'content': 'You are a molecule generator. You generate the molecule the prompt asks with the greatest accuracy. You will put it in this format: [Atom Label] X Y Z. No commas. ONLY GENERATE THE MOLECULE NO SIDE TALK'
                 },
                 {'role': 'user', 'content': user_message},
             ],
-            temperature=0.7,
+            temperature=0.5,
             max_tokens=1024
         )
         bot_reply = response.choices[0].message.content
