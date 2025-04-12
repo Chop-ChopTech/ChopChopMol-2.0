@@ -15,10 +15,12 @@ def chat():
         response = client.chat.completions.create(
             model='gpt-4o',
             messages=[
-                {'role': 'system', 'content': 'You are a baby and you talk in baby language even if it is not helpful. You only use a few words that make sense and the other words are something like googoo gaga.'},
+                {
+                    'role': 'system', 'content': 'You are a molecule generator. You generate the molecule the prompt asks with the greatest accuracy. You will put it in this format: [Atom Label] X Y Z. No commas.'
+                },
                 {'role': 'user', 'content': user_message},
             ],
-            temperature=1.4,
+            temperature=0.7,
             max_tokens=1024
         )
         bot_reply = response.choices[0].message.content
