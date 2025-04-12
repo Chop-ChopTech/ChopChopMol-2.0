@@ -29,7 +29,7 @@ export default class Molecule {
         this.centerMolecule();
         
         this.createBonds(this.atoms, bondThreshold)
-        if(mode=="fast"){
+        if(mode==0){
             this.visualizeBondsFast(this.bonds);
         }else{
             this.visualizeBondsStyle(this.bonds);

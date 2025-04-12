@@ -23,6 +23,10 @@ scene.add(light);
 scene.add(ambientLight);
 
 camera.position.z = 15;
+let mode=0
+
+const switchModeButton = document.getElementById('switchMode');
+
 
 export default class Main {
     constructor() {
@@ -41,7 +45,9 @@ export default class Main {
     init(mode){
         this.molecule.init(this.data,mode);
     }
-
+    reset(){
+        clearScene(this.scene);
+    }
 }
 
 const main = new Main();
@@ -55,6 +61,13 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+switchModeButton.addEventListener('click', () => {
+    mode=1-mode
+    main.reset();
+    main.molecule.init(main.data,mode);
+    console.log(mode)
 });
 
 // Animation loop
