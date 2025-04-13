@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChopChopMol 2.0</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300..700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
     <!-- <link rel="icon" type="image/png" sizes="32x32" href="atommmlogo.png"> -->
 </head>
 <body>
@@ -16,7 +19,7 @@
     <!-- New chat interface -->
     <div id="chatContainer" style="margin-top: 20px; padding: 10px;">
         <input id="chatInput" type="text" placeholder="Visualize any molecule..." style="width: 200px; padding: 9px; border-radius: 5px; border: 2px solid #ccc; margin: 10px;">
-        <button onclick="sendChatMessage()" class="button">Send</button>
+        <button onclick="sendChatMessage()" class="button" id="generateButton">Generate!</button>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div>
     </div>
 
@@ -38,15 +41,28 @@
         });
     </script>
     <script>
-        let reply=null
+        let _reply = null;
+    
+        Object.defineProperty(window, 'reply', {
+            get: function () {
+                return _reply;
+            },
+            set: function (value) {
+                _reply = value;
+                console.log('[Atomix] reply updated:', value);
+    
+                // 🔥 Trigger a custom event
+                window.dispatchEvent(new CustomEvent('replyUpdated', { detail: value }));
+            }
+        });
+    
         async function sendChatMessage() {
             const chatInput = document.getElementById('chatInput').value;
             const chatOutput = document.getElementById('chatOutput');
             if (!chatInput) return;
-        
-            // Show user message
+    
             chatOutput.innerHTML += `<p><strong>You:</strong> ${chatInput}</p>`;
-        
+    
             try {
                 const response = await fetch('http://localhost:5000/chat', {
                     method: 'POST',
@@ -59,14 +75,15 @@
                 } else {
                     chatOutput.innerHTML += `<p><strong>Atomix:</strong> ${data.reply}</p>`;
                 }
-                reply=data.reply
-                document.getElementById('chatInput').value = ''; // Clear input
-                chatOutput.scrollTop = chatOutput.scrollHeight; // Auto-scroll
+                window.reply = data.reply; // ← this triggers the custom event!
+                document.getElementById('chatInput').value = '';
+                chatOutput.scrollTop = chatOutput.scrollHeight;
             } catch (error) {
                 chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
             }
         }
     </script>
+    
 
     <!-- New chat script -->
 
