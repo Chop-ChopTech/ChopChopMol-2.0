@@ -1,5 +1,5 @@
 *{
-    transition: all 0.2s ease;
+    transition: all 0.5s ease;
     font-family: comfortaa;
 }
 body{
@@ -29,7 +29,7 @@ body{
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 300px;
+    width: auto;
     margin: 0 auto;
     margin-top: 20px;
     margin-bottom: 20px;
@@ -44,6 +44,8 @@ body{
 }
 
 .button{
+    position: relative;
+    margin: 15px;
     background-color: rgb(0, 115, 8);
     padding: 8px 11px;
     border: none;
@@ -57,7 +59,7 @@ body{
 
 #generateButton {
     color: #fff;
-    background: linear-gradient(90deg,rgba(0, 136, 255, 1) 0%, rgba(0, 64, 255, 1) 0%, rgba(255, 0, 98, 1) 100%);    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background: linear-gradient(90deg,rgba(0, 136, 255, 1) 0%, rgba(0, 64, 255, 1) 0%, rgba(255, 0, 98, 1) 100%);
     padding: 8px 11px;
     border: none;
     cursor: pointer;
@@ -72,6 +74,59 @@ body{
     box-shadow: 0 0 10px rgb(255, 255, 0), 0 0 20px rgb(255, 204, 0), 0 0 30px rgb(255, 230, 0);
 }
 
+
+.snake-container {
+    position: relative;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.snake-container::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(
+        45deg,
+        #ff0000,
+        #ff9900,
+        #33cc33,
+        #3399ff,
+        #cc33cc,
+        #ff0000
+    );
+    background-size: 400%;
+    z-index: -1;
+    animation: snake 6s linear infinite;
+}
+
+@keyframes snake {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 400% 50%;
+    }
+}
+
+.snake-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    border-radius: 8px;
+    z-index: -1;
+}
+
+
+  
 
 @keyframes moveGradient {
     0% {
