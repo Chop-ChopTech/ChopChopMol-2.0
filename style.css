@@ -74,22 +74,21 @@ body{
     box-shadow: 0 0 10px rgb(255, 255, 0), 0 0 20px rgb(255, 204, 0), 0 0 30px rgb(255, 230, 0);
 }
 
-
 .snake-container {
     position: relative;
     padding: 20px;
     background: #ffffff;
     border-radius: 10px;
-    overflow: hidden;
+    margin: 20px; /* Added for better visibility */
 }
 
 .snake-container::before {
     content: '';
     position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
     background: linear-gradient(
         45deg,
         #ff0000,
@@ -100,17 +99,9 @@ body{
         #ff0000
     );
     background-size: 400%;
-    z-index: -1;
-    animation: snake 6s linear infinite;
-}
-
-@keyframes snake {
-    0% {
-        background-position: 0% 50%;
-    }
-    100% {
-        background-position: 400% 50%;
-    }
+    z-index: -2;
+    border-radius: 14px; /* Slightly larger to account for border width */
+    animation: snake 8s linear infinite;
 }
 
 .snake-container::after {
@@ -121,11 +112,18 @@ body{
     right: 0;
     bottom: 0;
     background: #ffffff;
-    border-radius: 8px;
+    border-radius: 10px;
     z-index: -1;
 }
 
-
+@keyframes snake {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 400% 50%;
+    }
+}
   
 
 @keyframes moveGradient {
