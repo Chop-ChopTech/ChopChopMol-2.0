@@ -32,7 +32,6 @@ export default class Main {
     constructor() {
         this.scene = scene;
         this.atomData = [];
-
         this.data = []; // Stores parsed molecule data
         this.atomSettings = [];
         this.loader = new FileHandler(this); // Pass `this` to FileHandler

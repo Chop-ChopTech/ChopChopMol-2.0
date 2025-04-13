@@ -22,6 +22,7 @@
 
     <!-- Existing scripts -->
     <script src="utils/utils.js"></script>
+
     <script>
         const fileInput = document.getElementById('fileInput');
         const customButton = document.getElementById('customButton');
@@ -36,17 +37,16 @@
             }
         });
     </script>
-
-    <!-- New chat script -->
     <script>
+        let reply=null
         async function sendChatMessage() {
             const chatInput = document.getElementById('chatInput').value;
             const chatOutput = document.getElementById('chatOutput');
             if (!chatInput) return;
-
+        
             // Show user message
             chatOutput.innerHTML += `<p><strong>You:</strong> ${chatInput}</p>`;
-
+        
             try {
                 const response = await fetch('http://localhost:5000/chat', {
                     method: 'POST',
@@ -59,6 +59,7 @@
                 } else {
                     chatOutput.innerHTML += `<p><strong>Atomix:</strong> ${data.reply}</p>`;
                 }
+                reply=data.reply
                 document.getElementById('chatInput').value = ''; // Clear input
                 chatOutput.scrollTop = chatOutput.scrollHeight; // Auto-scroll
             } catch (error) {
@@ -66,6 +67,8 @@
             }
         }
     </script>
+
+    <!-- New chat script -->
 
     <!-- Existing Three.js importmap and output -->
     <script type="importmap">
