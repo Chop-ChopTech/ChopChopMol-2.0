@@ -12,9 +12,13 @@
 </head>
 <body>
     <!-- Existing file picker -->
-    <input id="fileInput" type="file" accept=".xyz" style="display: none;">
-    <button id="customButton">Select .xyz File</button>
-    <button id="switchMode" class="button">Switch Mode</button>
+    <div id="buttons">
+        <input id="fileInput" type="file" accept=".xyz" style="display: none;">
+        <button id="customButton">Select .xyz File</button>
+        <button id="switchMode" class="button">Switch Mode</button>
+        <button id="aiGenerate" class="button, snake-container">AI Generate BETA</button>
+    </div>
+
 
     <!-- New chat interface -->
     <div id="chatContainer" style="margin-top: 20px; padding: 10px;" class="snake-container">
@@ -39,6 +43,7 @@
             }
         });
     </script>
+
     <script>
         let _reply = null;
     
@@ -85,6 +90,14 @@
                 chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
             }
         }
+
+        const aiGeneratePanel = document.getElementById('chatContainer');
+        const aiGenerateButton = document.getElementById('aiGenerate');
+
+        aiGenerateButton.addEventListener('click', () => {
+            aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'block' : 'none';
+        });
+
     </script>
     
 
