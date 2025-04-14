@@ -60,7 +60,7 @@
             const chatOutput = document.getElementById('chatOutput');
             if (!chatInput) return;
     
-            chatOutput.innerHTML += `<p><strong>You:</strong> ${chatInput}</p>`;
+            chatOutput.innerHTML += `<p id="loading" class="typewriter"><strong>Generating Molecule...</p>`;
     
             try {
                 const response = await fetch('http://localhost:5000/chat', {
@@ -71,8 +71,12 @@
                 const data = await response.json();
                 if (data.error) {
                     chatOutput.innerHTML += `<p><strong>Error:</strong> ${data.error}</p>`;
+
                 } else {
-                    chatOutput.innerHTML += `<p><strong>Atomix:</strong> ${data.reply}</p>`;
+                    const loadingElement = document.getElementById('loading');
+                    if (loadingElement) {
+                        loadingElement.remove();
+                    }
                 }
                 window.reply = data.reply; // ← this triggers the custom event!
                 document.getElementById('chatInput').value = '';

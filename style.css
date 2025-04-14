@@ -5,7 +5,7 @@
 body{
     overflow: hidden;
     margin: 0;
-    padding: 0;
+    padding: 15px;
     background-color: black;
 }
 #customButton {
@@ -114,6 +114,24 @@ body{
     background: #ffffff;
     border-radius: 10px;
     z-index: -1;
+}
+
+.typewriter {
+    display: inline-block;
+    overflow: hidden;
+    border-right: 0.15em solid rgba(255, 166, 0, 0); /* Cursor */
+    white-space: nowrap;
+    animation: typing 0.75s steps(20, end), blink-caret 0.75s step-end infinite;
+  }
+  
+@keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+}
+  
+@keyframes blink-caret {
+    from, to { border-color: transparent; }
+    50% { border-color: rgba(255, 166, 0, 0); }
 }
 
 @keyframes snake {
