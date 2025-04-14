@@ -122,8 +122,25 @@ body{
     border-right: 0.15em solid rgba(255, 166, 0, 0); /* Cursor */
     white-space: nowrap;
     animation: typing 0.75s steps(20, end), blink-caret 0.75s step-end infinite;
-  }
+}
   
+.glow {
+    font-size: 2em;
+    color: #fff;
+    text-shadow: 0 0 10px #fff, 0 0 20px #ff0080, 0 0 30px #ff0080;
+    animation: glow 2s ease-in-out infinite alternate;
+}
+  
+@keyframes glow {
+    from {
+      text-shadow: 0 0 10px #fff, 0 0 20px #ff0080, 0 0 30px #ff0080;
+      color: #fff;
+    }
+    to {
+      text-shadow: 0 0 20px #fff, 0 0 30px #00ffea, 0 0 40px #00ffea;
+      color: #00ffea;
+    }
+}
 @keyframes typing {
     from { width: 0; }
     to { width: 100%; }
