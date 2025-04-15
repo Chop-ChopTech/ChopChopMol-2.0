@@ -22,7 +22,7 @@
 
     <!-- New chat interface -->
     <div id="chatContainer" style="margin-top: 20px; padding: 10px;" class="snake-container">
-        <input id="chatInput" type="text" placeholder="Visualize any molecule..." style="">
+        <input id="chatInput" type="text" placeholder="Visualize any molecule...">
         <button onclick="sendChatMessage()" class="button" id="generateButton">Generate!</button>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div>
     </div>
@@ -68,7 +68,7 @@
             chatOutput.innerHTML += `<p id="loading" class="typewriter"><strong>Generating Molecule...</p>`;
     
             try {
-                const response = await fetch('http://localhost:5000/chat', {
+                const response = await fetch('https://chopchopmol-2-0-2.onrender.com/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: chatInput })
