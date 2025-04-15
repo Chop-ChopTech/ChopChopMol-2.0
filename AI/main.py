@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, jsonify
 from openai import OpenAI
 from flask_cors import CORS
@@ -6,7 +7,7 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for front-end access
 
 # Initialize OpenAI client
-client = OpenAI(api_key="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")  # Use environment variable in production
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 @app.route('/chat', methods=['POST'])
 def chat():
