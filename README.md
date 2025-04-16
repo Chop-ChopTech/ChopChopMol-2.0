@@ -1,0 +1,1 @@
+ChopChopMol 2.0 is a huge improvement over version 1.0. The new version is estimated to be about 17 times faster than the first version. We have implemented A.I. capabilities into 2.0. This gives you the ability to generate molecules with the A.I. Our new model can handle over 55,000 atoms while version 1.0 could only handle 3,800. This is ChopChopMol version 2.0.

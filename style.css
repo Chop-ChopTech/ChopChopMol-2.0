@@ -1,21 +1,276 @@
 *{
-    transition: all 0.2s ease;
+    transition: all 0.5s ease;
+    font-family: comfortaa;
 }
 body{
     overflow: hidden;
     margin: 0;
-    padding: 0;
+    padding: 15px;
     background-color: black;
 }
 #customButton {
     background-color: rgb(0, 157, 255);
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     padding: 8px 11px;
     border: none;
     cursor: pointer;
+    height: auto;
     border-radius: 5px;
 }
 
 #customButton:hover {
     background-color: #0ec2f9;
 }
+
+#chatInput {
+    padding: 12px; /* More padding for comfort */
+    border-radius: 10px; /* Smoother, modern corners */
+    border: 2px solid #d1d5db; /* Softer gray for a clean look */
+    margin: 12px; /* Consistent spacing */
+    font-size: 15px; /* Readable text */
+    background-color: #ffffff; /* Crisp white background */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.05); /* Very subtle shadow */
+    transition: all 0.3s ease-in-out; /* Smooth transitions */
+    caret-color: #6366f1; /* Indigo cursor for flair */
+}
+
+#chatInput::placeholder {
+    color: #9ca3af; /* Muted gray for placeholder */
+    opacity: 1; /* Full opacity for clarity */
+}
+
+#chatInput:focus {
+    outline: none; /* No default outline */
+    border-color: transparent; /* Remove solid border */
+    background: linear-gradient(white, white) padding-box, 
+                linear-gradient(to right, #6366f1, #a855f7) border-box; /* Gradient border */
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); /* Soft indigo glow */
+}
+
+#chatInput:hover {
+    border-color: #a5b4fc; /* Light indigo on hover */
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1); /* Slightly stronger shadow */
+}
+
+#chatInput:disabled {
+    background-color: #f3f4f6; /* Grayed-out background */
+    border-color: #e5e7eb; /* Faded border */
+    cursor: not-allowed; /* Clear feedback */
+    opacity: 0.7; /* Reduced opacity */
+}
+
+/* Optional error state */
+#chatInput.error {
+    border-color: #ef4444; /* Red for errors */
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.3); /* Red glow */
+}
+
+#chatContainer {
+    position: absolute;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    margin: 0 auto;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 10px;    
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    color: #333;
+    text-align: center;
+    transition: all 0.2s ease;
+    z-index: 99999999;
+    display: none;
+}
+
+#aiGenerate {
+    color: #fff;
+    background: linear-gradient(90deg, rgb(77, 166, 255), rgb(255, 42, 42), rgb(215, 181, 32));
+    padding: 8px 11px;
+
+    border: none;
+    cursor: pointer;
+    height: auto;
+    border-radius: 10px;
+}
+
+#aiGenerate:hover {
+    color: #ffea00;
+    box-shadow: 0 0 10px rgb(255, 255, 0), 0 0 15px rgb(255, 204, 0), 0 0 30px rgba(255, 230, 0, 0.414);
+    background-color: #0ec2f9;
+}
+
+#buttons{
+    display:  flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 15px;
+}
+
+#aiContainer{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.button{
+
+    /* margin: 15px; */
+    background-color: rgb(0, 115, 8);
+    padding: 8px 11px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+
+}
+
+.button:hover {
+    background-color: #00d600;
+}
+
+#generateButton {
+    color: #fff;
+    background: linear-gradient(90deg,rgba(0, 136, 255, 1) 0%, rgb(0, 94, 255) 0%, rgba(255, 0, 98, 1) 100%);
+    padding: 8px 11px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    background-size: 300% 100%; /* makes it bigger so there's room to animate */
+
+}
+
+#generateButton:hover {
+    color: #ffea00;
+    background-color: #0ec2f9;
+    box-shadow: 0 0 10px rgb(255, 255, 0), 0 0 15px rgb(255, 204, 0), 0 0 30px rgba(255, 230, 0, 0.414);
+}
+
+.snake-container {
+    position: relative;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 10px;
+}
+
+.snake-container::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    background: linear-gradient(
+        45deg,
+        #ff0000,
+        #ff9900,
+        #33cc33,
+        #3399ff,
+        #cc33cc,
+        #ff0000
+    );
+    background-size: 400%;
+    z-index: -2;
+    border-radius: 14px; /* Slightly larger to account for border width */
+    animation: snake 8s linear infinite;
+}
+
+.snake-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    border-radius: 10px;
+    z-index: -1;
+}
+
+.typewriter {
+    display: inline-block;
+    overflow: hidden;
+    border-right: 0.15em solid rgba(255, 166, 0, 0); /* Cursor */
+    white-space: nowrap;
+    animation: typing 0.75s steps(20, end), blink-caret 0.75s step-end infinite;
+}
+  
+.glow {
+    font-size: 2em;
+    color: #fff;
+    text-shadow: 0 0 10px #fff, 0 0 20px #ff0080, 0 0 30px #ff0080;
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s;
+}
+
+.fade-out {
+    animation: fadeOut 0.5s;
+}
+  
+@keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+}
+  
+@keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+}
+
+@keyframes glow {
+    from {
+      text-shadow: 0 0 10px #fff, 0 0 20px #ff0080, 0 0 30px #ff0080;
+      color: #fff;
+    }
+    to {
+      text-shadow: 0 0 20px #fff, 0 0 30px #00ffea, 0 0 40px #00ffea;
+      color: #00ffea;
+    }
+}
+@keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+}
+  
+@keyframes blink-caret {
+    from, to { border-color: transparent; }
+    50% { border-color: rgba(255, 166, 0, 0); }
+}
+
+@keyframes snake {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 400% 50%;
+    }
+}
+  
+
+@keyframes moveGradient {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+  
