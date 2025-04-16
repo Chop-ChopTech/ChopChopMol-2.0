@@ -32,6 +32,7 @@ export default class Main {
     constructor() {
         this.scene = scene;
         this.atomData = [];
+
         this.data = []; // Stores parsed molecule data
         this.atomSettings = [];
         this.loader = new FileHandler(this); // Pass `this` to FileHandler
@@ -41,16 +42,11 @@ export default class Main {
         });
         
     }
-    init(data,mode){
-        this.molecule.init(data,mode);
-        console.log(this.data)
+    init(mode){
+        this.molecule.init(this.data,mode);
     }
     reset(){
         clearScene(this.scene);
-    }
-    newMolecule(data,mode){
-        this.reset();
-        this.molecule.init(data,mode);
     }
 }
 
@@ -66,16 +62,11 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
-// window.addEventListener('keydown', (event) => {
-//     if (event.key === ' ') {
-//         const json=prompt('Enter test JSON');
-//         main.newMolecule(JSON.parse(json),0);
-//     }
-// })
 
 switchModeButton.addEventListener('click', () => {
     mode=1-mode
-    main.newMolecule(main.data,mode);
+    main.reset();
+    main.molecule.init(main.data,mode);
     console.log(mode)
 });
 
@@ -85,14 +76,5 @@ function animate() {
     controls.update();
     renderer.render(scene, camera);
 }
-
-window.addEventListener('replyUpdated', (event) => {
-    const newReply = event.detail;
-    const data=JSON.parse(newReply);
-    main.newMolecule(data,0);
-    main.data=data;
-    console.log('Reply updated:', newReply);
-});
-
 
 animate();

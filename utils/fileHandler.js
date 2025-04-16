@@ -19,7 +19,7 @@ export default class FileHandler {
                 this.main.data = parsedData; // Now correctly updates `main.data`
                 clearScene(this.main.scene);
                 // Initialize molecule rendering *after* data is available
-                this.main.newMolecule(parsedData,0);
+                this.main.init("fast");
             } catch (error) {
                 console.error("Error parsing XYZ file:", error);
             }
