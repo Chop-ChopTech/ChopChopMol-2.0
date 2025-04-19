@@ -23,34 +23,41 @@ scene.add(light);
 scene.add(ambientLight);
 
 camera.position.z = 15;
-let mode=0
+let mode = 0;
+let labelMode = false; // Track label mode
 
 const switchModeButton = document.getElementById('switchMode');
-
+const toggleLabelsButton = document.getElementById('toggleLabels');
 
 export default class Main {
     constructor() {
         this.scene = scene;
         this.atomData = [];
-        this.data = []; // Stores parsed molecule data
+        this.data = [];
         this.atomSettings = [];
-        this.loader = new FileHandler(this); // Pass `this` to FileHandler
+        this.loader = new FileHandler(this);
         this.loader.parseJSON().then(settings => {
-            this.atomSettings = settings || {}; // Ensure it's assigned even if null
+            this.atomSettings = settings || {};
             this.molecule = new Molecule(this, this.atomSettings);
         });
-        
     }
-    init(data,mode){
-        this.molecule.init(data,mode);
-        console.log(this.data)
+    init(data, mode) {
+        this.molecule.init(data, mode);
+        console.log(this.data);
     }
-    reset(){
+    reset() {
         clearScene(this.scene);
     }
-    newMolecule(data,mode){
+    newMolecule(data, mode) {
         this.reset();
-        this.molecule.init(data,mode);
+        this.molecule.init(data, mode);
+        if (labelMode) {
+            this.molecule.toggleLabels(true); // Show labels if in label mode
+        }
+    }
+    toggleLabels() {
+        labelMode = !labelMode;
+        this.molecule.toggleLabels(labelMode);
     }
 }
 
@@ -66,17 +73,23 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
-// window.addEventListener('keydown', (event) => {
-//     if (event.key === ' ') {
-//         const json=prompt('Enter test JSON');
-//         main.newMolecule(JSON.parse(json),0);
-//     }
-// })
 
 switchModeButton.addEventListener('click', () => {
-    mode=1-mode
-    main.newMolecule(main.data,mode);
-    console.log(mode)
+    mode = 1 - mode;
+    main.newMolecule(main.data, mode);
+    console.log(mode);
+});
+
+toggleLabelsButton.addEventListener('click', () => {
+    main.toggleLabels();
+});
+
+window.addEventListener('replyUpdated', (event) => {
+    const newReply = event.detail;
+    const data = JSON.parse(newReply);
+    main.newMolecule(data, 0);
+    main.data = data;
+    console.log('Reply updated:', newReply);
 });
 
 // Animation loop
@@ -85,14 +98,5 @@ function animate() {
     controls.update();
     renderer.render(scene, camera);
 }
-
-window.addEventListener('replyUpdated', (event) => {
-    const newReply = event.detail;
-    const data=JSON.parse(newReply);
-    main.newMolecule(data,0);
-    main.data=data;
-    console.log('Reply updated:', newReply);
-});
-
 
 animate();
