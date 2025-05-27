@@ -21,7 +21,7 @@ const ambientLight = new THREE.AmbientLight(0xffffff, 2);
 
 scene.add(light);
 scene.add(ambientLight);
-
+// testing 123
 camera.position.z = 15;
 let mode = 0;
 let labelMode = false; // Track label mode
