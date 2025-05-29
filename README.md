@@ -6,7 +6,7 @@ Download Here:
 - Mac Download: https://drive.google.com/file/d/18PmPOiFpma-Lor85TI4T-VXY3yI-4D1q/view?usp=sharing
 
 - Windows Download: https://drive.google.com/file/d/1GKVwO9iTfI92neuybPPHa-imM6Kbi_WZ/view?usp=sharing
-Note:
-For a Mac, you may have to go to settings to confirm the download.
+
+Note: For a Mac, you may have to go to settings to confirm the download.
 
 <img src="demo.png"></img>
