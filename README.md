@@ -7,4 +7,4 @@ Download Here:
 
 - Windows Download: https://drive.google.com/file/d/1GKVwO9iTfI92neuybPPHa-imM6Kbi_WZ/view?usp=sharing
 
-<img src="https://drive.google.com/file/d/1RnrXPhzPPinK9ZzQ1TkqbPTFrc5_S_FI/view?usp=sharing"></img>
+<img src="demo.png"></img>
