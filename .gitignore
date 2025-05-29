@@ -1,3 +1,4 @@
 node_modules/
-*.zip
 ChopChopMol-darwin-x64/
+ChopChopMol-darwin-x64 2/
+*.app
