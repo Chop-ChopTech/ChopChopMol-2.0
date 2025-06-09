@@ -21,7 +21,7 @@ export default class Molecule {
         this.createAtoms(data);
         this.main.scene.add(this.instancedMesh);
         this.centerMolecule();
-        
+
         this.createBonds(this.atoms, bondThreshold);
         if (mode == 0) {
             this.visualizeBondsFast(this.bonds);
@@ -68,45 +68,20 @@ export default class Molecule {
     }
 
     createBonds(atoms, threshold) {
-        const gridSize = threshold * 2;
-        const grid = new Map();
         this.bonds = [];
 
-        for (const atom of atoms) {
-            const cellKey = this.getCellKey(atom.position, gridSize);
-            if (!grid.has(cellKey)) {
-                grid.set(cellKey, []);
-            }
-            grid.get(cellKey).push(atom);
-        }
+        // Check all unique pairs of atoms
+        for (let i = 0; i < atoms.length; i++) {
+            for (let j = i + 1; j < atoms.length; j++) {
+                const atom1 = atoms[i];
+                const atom2 = atoms[j];
 
-        const directions = [
-            [0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0],
-            [0, 0, 1], [0, 0, -1], [1, 1, 0], [-1, -1, 0], [1, -1, 0],
-            [-1, 1, 0], [1, 0, 1], [-1, 0, -1], [0, 1, 1], [0, -1, -1],
-            [0, 1, -1], [0, -1, 1], [1, 1, 1], [-1, -1, -1]
-        ];
+                const dist = atom1.position.distanceTo(atom2.position);
+                const maxBondDistance = atom1.radius + atom2.radius + threshold;
 
-        for (const atom1 of atoms) {
-            const cellKey = this.getCellKey(atom1.position, gridSize);
-
-            for (const dir of directions) {
-                const neighborKey = this.getNeighborKey(cellKey, dir);
-                const neighbors = grid.get(neighborKey);
-                if (!neighbors) continue;
-
-                for (const atom2 of neighbors) {
-                    if (atom1 === atom2) continue;
-
-                    if (atom1.id > atom2.id) continue;
-
-                    const dist = atom1.position.distanceTo(atom2.position);
-                    const maxBondDistance = atom1.radius + atom2.radius + threshold;
-
-                    if (dist <= maxBondDistance) {
-                        const bond = new Bond(this, atom1, atom2, dist);
-                        this.bonds.push(bond);
-                    }
+                if (dist <= maxBondDistance) {
+                    const bond = new Bond(this, atom1, atom2, dist);
+                    this.bonds.push(bond);
                 }
             }
         }

@@ -59,6 +59,11 @@ export default class Main {
         labelMode = !labelMode;
         this.molecule.toggleLabels(labelMode);
     }
+    createNewMoleculeFromJSON(json) {
+        const data = JSON.parse(json);
+        this.newMolecule(data, 0);
+        this.data = data;
+    }
 }
 
 const main = new Main();
@@ -86,11 +91,10 @@ toggleLabelsButton.addEventListener('click', () => {
 
 window.addEventListener('replyUpdated', (event) => {
     const newReply = event.detail;
-    const data = JSON.parse(newReply);
-    main.newMolecule(data, 0);
-    main.data = data;
-    console.log('Reply updated:', newReply);
+    main.createNewMoleculeFromJSON(newReply);
+
 });
+
 
 // Animation loop
 function animate() {

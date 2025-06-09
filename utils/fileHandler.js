@@ -3,7 +3,7 @@ export default class FileHandler {
         this.main = main;
         this.data = null;
         this.handleFile = this.handleFile.bind(this);
-       
+
     }
 
     handleFile(event) {
@@ -14,12 +14,23 @@ export default class FileHandler {
         reader.onload = (e) => {
             try {
                 const text = e.target.result;
-                const parsedData = this.parseXYZ(text);
-                this.data = parsedData;
-                this.main.data = parsedData; // Now correctly updates `main.data`
-                clearScene(this.main.scene);
-                // Initialize molecule rendering *after* data is available
-                this.main.newMolecule(parsedData,0);
+                const fileType = findFileType(file);
+                let parsedData = null;
+                if (fileType === 'xyz') {
+                    parsedData = this.parseXYZ(text);
+                    this.data = parsedData;
+                    this.main.data = parsedData; // Now correctly updates `main.data`
+                    clearScene(this.main.scene);
+                    this.main.newMolecule(parsedData, 0);
+                } else {
+                    if (fileType === 'mol') {
+                        parsedData = this.parseMolToJson(text);
+                    } else if (fileType === 'pdb') {
+                        parsedData = this.parsePdbToJson(text);
+                    }
+                    this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)));
+                }
+
             } catch (error) {
                 console.error("Error parsing XYZ file:", error);
             }
@@ -27,9 +38,56 @@ export default class FileHandler {
         reader.readAsText(file);
     }
 
+    parseMolToJson(molText) {
+        const lines = molText.split("\n");
+        const countsLine = lines[3]; // line 4
+        const numAtoms = parseInt(countsLine.slice(0, 3));
+
+        const atomData = [];
+
+        for (let i = 4; i < 4 + numAtoms; i++) {
+            const line = lines[i];
+            const x = parseFloat(line.slice(0, 10).trim());
+            const y = parseFloat(line.slice(10, 20).trim());
+            const z = parseFloat(line.slice(20, 30).trim());
+            const element = line.slice(31, 34).trim();
+
+            atomData.push({ element, x, y, z });
+        }
+
+        return {
+            atomData,
+            numAtoms
+        };
+    }
+    parsePdbToJson(pdbText) {
+        const lines = pdbText.split('\n');
+        const atomData = [];
+
+        for (const line of lines) {
+            if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+                const x = parseFloat(line.slice(30, 38).trim());
+                const y = parseFloat(line.slice(38, 46).trim());
+                const z = parseFloat(line.slice(46, 54).trim());
+
+                let element = line.slice(76, 78).trim();
+                if (!element) {
+                    // Fallback: try getting element from atom name
+                    element = line.slice(12, 14).trim().replace(/[0-9]/g, '');
+                }
+
+                atomData.push({ element, x, y, z });
+            }
+        }
+
+        return {
+            atomData,
+            numAtoms: atomData.length
+        };
+    }
     parseXYZ(text) {
         try {
-            let jsonMol={};
+            let jsonMol = {};
             const lines = text.trim().split(/\r?\n/);
             const numAtoms = parseInt(lines[0], 10);
             if (isNaN(numAtoms)) throw new Error("Invalid XYZ file format: First line must be a number.");
@@ -73,5 +131,5 @@ export default class FileHandler {
                 return null;
             });
     }
-    
+
 }
