@@ -14,7 +14,7 @@ def chat():
     user_message = request.json.get('message')
     try:
         response = client.chat.completions.create(
-            model='gpt-4.1',
+            model='o4-mini',
             messages=[
                 {
                     'role': 'system',
@@ -22,8 +22,7 @@ def chat():
                 },
                 {'role': 'user', 'content': user_message},
             ],
-            temperature=0.2,
-            max_tokens=1024
+            max_completion_tokens=1024
         )
         bot_reply = response.choices[0].message.content
         return jsonify({"reply": bot_reply})

@@ -5,3 +5,10 @@ ChopChopMol-win32-x64
 ChopChopMol.zip
 ChopChopMol-Win.zip
 *.app
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+*.log
