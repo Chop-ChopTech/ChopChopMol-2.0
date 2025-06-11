@@ -23,7 +23,7 @@ def chat():
                 {'role': 'user', 'content': user_message},
             ],
             temperature=0.2,
-            max__tokens=20000
+            max_tokens=20000
         )
         bot_reply = response.choices[0].message.content
         return jsonify({"reply": bot_reply})
