@@ -72,7 +72,12 @@ const main = new Main();
 document.getElementById("fileInput").addEventListener("change", (e) => {
     main.loader.handleFile(e);
 }, false);
-
+window.addEventListener('keydown', function (e) {
+    if (e.key == "l") {
+        const newData = window.prompt("Enter the JSON data:");
+        main.createNewMoleculeFromJSON(newData);
+    }
+})
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
