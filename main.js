@@ -74,8 +74,17 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
 }, false);
 window.addEventListener('keydown', function (e) {
     if (e.key == "l") {
-        const newData = window.prompt("Enter the JSON data:");
-        main.createNewMoleculeFromJSON(newData);
+        window.addEventListener('keydown', function (e2) {
+            if (e2.key === 'Enter') {
+                const newData = window.prompt("Enter the JSON data:");
+                main.createNewMoleculeFromJSON(newData);
+            }
+        })
+    }
+})
+window.addEventListener('keydown', function (e) {
+    if (e.key == "j") {
+        console.log(JSON.stringify(main.data));
     }
 })
 window.addEventListener('resize', () => {
