@@ -51,7 +51,7 @@ export default class Molecule {
             const atom = new Atom(this.main, element, coordinates, id);
             this.atoms.push(atom);
 
-            const radius = this.atomSettings[element]?.radius || 1;
+            const radius = this.atomSettings[element]?.realRadius * 1.5 || 1;
 
             const matrix = new THREE.Matrix4();
             matrix.setPosition(atom.position);
@@ -77,7 +77,7 @@ export default class Molecule {
                 const atom2 = atoms[j];
 
                 const dist = atom1.position.distanceTo(atom2.position);
-                const maxBondDistance = atom1.radius + atom2.radius + threshold;
+                const maxBondDistance = atom1.realRadius + atom2.realRadius + threshold;
 
                 if (dist <= maxBondDistance) {
                     const bond = new Bond(this, atom1, atom2, dist);
