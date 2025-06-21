@@ -10,6 +10,7 @@ export default class Molecule {
         this.instancedMesh = null;
         this.atomSettings = atomSettings;
         this.labels = [];
+        this.stretch = 4;
     }
 
     init(data, mode) {
@@ -41,9 +42,10 @@ export default class Molecule {
         this.instancedMesh.geometry.setAttribute('color', colorAttribute);
 
         for (let i = 0; i < data.numAtoms; i++) {
-            const x = data.atomData[i].x * 4;
-            const y = data.atomData[i].y * 4;
-            const z = data.atomData[i].z * 4;
+
+            const x = data.atomData[i].x * this.stretch;
+            const y = data.atomData[i].y * this.stretch;
+            const z = data.atomData[i].z * this.stretch;
             const element = data.atomData[i].element;
             const coordinates = new THREE.Vector3(x, y, z);
             const id = getRandomArbitrary(0, 1000);

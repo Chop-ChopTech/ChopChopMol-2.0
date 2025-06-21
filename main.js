@@ -72,16 +72,28 @@ const main = new Main();
 document.getElementById("fileInput").addEventListener("change", (e) => {
     main.loader.handleFile(e);
 }, false);
+let isLPressed = false;
+
 window.addEventListener('keydown', function (e) {
-    if (e.key == "l") {
-        window.addEventListener('keydown', function (e2) {
-            if (e2.key === 'Enter') {
-                const newData = window.prompt("Enter the JSON data:");
-                main.createNewMoleculeFromJSON(newData);
-            }
-        })
+    if (e.key === 'l') {
+        isLPressed = true;
     }
-})
+});
+
+window.addEventListener('keyup', function (e) {
+    if (e.key === 'l') {
+        isLPressed = false;
+    }
+});
+
+window.addEventListener('keydown', function (e) {
+    if (isLPressed && e.key === 'Enter') {
+        const newData = window.prompt("Enter the JSON data:");
+        if (newData) {
+            main.createNewMoleculeFromJSON(newData);
+        }
+    }
+});
 window.addEventListener('keydown', function (e) {
     if (e.key == "j") {
         console.log(JSON.stringify(main.data));

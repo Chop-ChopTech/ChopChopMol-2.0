@@ -36,8 +36,8 @@ def chat():
         response = client.responses.create(
             model="gpt-4.1-2025-04-14",
             prompt={
-                "id": "pmpt_6855b624611c8193b777e4b66d554e520a9dd9578464de07",
-                "version": "3",
+                "id": "pmpt_6856204e693081948b83fee98ed1219605e7b5fd05abde69",
+                "version": "9"
             },
             input=user_message,
         )
