@@ -43,13 +43,13 @@ if __name__ == "__main__":
     app.run(debug=True, port=5000)
 
 
-response = client.responses.create(
-    model="gpt-4.1-2025-04-14",
-    prompt={
-        "id": "pmpt_6855b624611c8193b777e4b66d554e520a9dd9578464de07",
-        "version": "3",
-    },
-    input="generate dopamine molecule",
-)
+# response = client.responses.create(
+#     model="gpt-4.1-2025-04-14",
+#     prompt={
+#         "id": "pmpt_6855b624611c8193b777e4b66d554e520a9dd9578464de07",
+#         "version": "3",
+#     },
+#     input="generate dopamine molecule",
+# )
 
-print(response.output[0].content[0].text)
+# print(response.output[0].content[0].text)
