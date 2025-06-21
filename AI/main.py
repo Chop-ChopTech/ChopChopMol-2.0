@@ -40,6 +40,19 @@ def chat():
                 "version": "9"
             },
             input=user_message,
+            tools=[
+                {
+                    "type": "web_search_preview",
+                    "user_location": {
+                        "type": "approximate",
+                        "country": "US",
+                        "region": "California",
+                        "city": "Palo Alto"
+                    },
+                    "search_context_size": "high"
+                }
+            ],
+            temperature=0.2
         )
         bot_reply = response.output[0].content[0].text
         return jsonify({"reply": bot_reply})
