@@ -11,9 +11,7 @@ CORS(app)  # Enable CORS for front-end access
 #     api_key=os.getenv("XAI_API_KEY"),
 #     base_url="https://api.x.ai/v1",
 # )
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-)
+client = OpenAI()
 
 
 @app.route("/chat", methods=["POST"])
