@@ -12,7 +12,7 @@ CORS(app)  # Enable CORS for front-end access
 #     base_url="https://api.x.ai/v1",
 # )
 client = OpenAI(
-    # api_key=os.getenv("OPENAI_API_KEY"),
+    api_key=os.getenv("OPENAI_API_KEY"),
 )
 
 
