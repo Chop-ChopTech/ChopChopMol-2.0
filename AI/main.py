@@ -7,13 +7,13 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for front-end access
 
 # Initialize OpenAI client
-client = OpenAI(
-    api_key=os.getenv("XAI_API_KEY"),
-    base_url="https://api.x.ai/v1",
-)
 # client = OpenAI(
-#     api_key=os.getenv("OPENAI_API_KEY"),
+#     api_key=os.getenv("XAI_API_KEY"),
+#     base_url="https://api.x.ai/v1",
 # )
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+)
 
 
 @app.route("/chat", methods=["POST"])
@@ -21,8 +21,8 @@ def chat():
     user_message = request.json.get("message")
     try:
         response = client.chat.completions.create(
-            model="grok-3-latest",
-            # model="gpt-4.1",
+            # model="grok-3-latest",
+            model="gpt-4.1",
             messages=[
                 {
                     "role": "system",
@@ -41,3 +41,15 @@ def chat():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
+
+response = client.responses.create(
+    model="gpt-4.1-2025-04-14",
+    prompt={
+        "id": "pmpt_6855b624611c8193b777e4b66d554e520a9dd9578464de07",
+        "version": "3",
+    },
+    input="generate dopamine molecule",
+)
+
+print(response.output[0].content[0].text)
