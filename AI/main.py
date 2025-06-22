@@ -63,7 +63,8 @@ def smiles_to_json(smiles):
         molecule_data["atomData"].append(atom_info)
 
     # Convert to JSON
-    json_output = json.dumps(molecule_data, indent=4)
+    # json_output = json.dumps(molecule_data, indent=4)
+    json_output=molecule_data
     return json_output
 
 @app.route("/chat", methods=["POST"])
@@ -84,7 +85,7 @@ def chat():
         )
         bot_reply = response.output_text
         json_data = smiles_to_json(bot_reply)
-        return jsonify({"reply": json_data}), 200
+        return json_data
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
