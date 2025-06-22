@@ -118,7 +118,7 @@ toggleLabelsButton.addEventListener('click', () => {
 window.addEventListener('replyUpdated', (event) => {
     const newReply = event.detail;
     console.log(newReply);
-    main.createNewMoleculeFromJSON(newReply);
+    main.createNewMoleculeFromJSON(JSON.stringify(newReply));
 
 });
 

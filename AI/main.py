@@ -74,10 +74,10 @@ def chat():
     user_message = request.json.get("message")
     try:
         response = client.responses.create(
-            prompt={
-                "id": "pmpt_685781bce13c8193bb21171bd5f508150789e7be82ffe7a0",
-                "version": "2"
-            },
+        prompt={
+            "id": "pmpt_685821a6952481938e593a1766899eca0c45646be5c8bfc9",
+            "version": "6"
+        },
             input=user_message,
             reasoning={},
             max_output_tokens=32768,
@@ -88,7 +88,7 @@ def chat():
         return jsonify({"reply": json_data})
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)}, {"bot output": str(bot_reply)}), 500
 
 
 
