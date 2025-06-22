@@ -18,16 +18,18 @@
     <!-- Buttons with new toggle labels button -->
     <div id="buttons">
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
-        <button id="customButton">Open File</button>
-        <button id="switchMode" class="button">Toggle Style</button>
-        <button id="aiGenerate" class="button">AI Generate BETA</button>
-        <button id="toggleLabels" class="button">Atom Labels</button>
+        <button class="fancy-button" id="customButton">Open File</button>
+        <button class="fancy-button" id="switchMode" class="button">Toggle Style</button>
+        <button class="fancy-button" id="aiGenerate" class="button">AI Generate BETA</button>
+        <button class="fancy-button" id="toggleLabels" class="button">Atom Labels</button>
     </div>
 
     <!-- Chat interface -->
     <div id="chatContainer" style="margin-top: 20px; padding: 10px;" class="snake-container">
-        <input id="chatInput" type="text" placeholder="Visualize any molecule..." autocomplete="off">
-        <button onclick="sendChatMessage()" class="button" id="generateButton">Generate!</button>
+        <input id="chatInput" class="fancy-textbox" type="text" placeholder="Visualize any molecule..."
+            autocomplete="off">
+        <button onclick="sendChatMessage()" class="button, fancy-button" id="generateButton"
+            class="fancy-button">Generate!</button>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div>
     </div>
 
