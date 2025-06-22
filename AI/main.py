@@ -85,7 +85,7 @@ def chat():
         )
         bot_reply = response.output_text
         json_data = smiles_to_json(bot_reply)
-        return json_data
+        return jsonify({"reply": json_data})
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
