@@ -76,7 +76,7 @@ def chat():
         response = client.responses.create(
         prompt={
             "id": "pmpt_685821a6952481938e593a1766899eca0c45646be5c8bfc9",
-            "version": "6"
+            "version": "8"
         },
             input=user_message,
             reasoning={},
