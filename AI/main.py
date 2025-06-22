@@ -2,6 +2,9 @@ import os
 from flask import Flask, request, jsonify
 from openai import OpenAI
 from flask_cors import CORS
+from rdkit import Chem
+from rdkit.Chem import AllChem, MolToSmiles
+import json
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for front-end access
@@ -14,63 +17,88 @@ CORS(app)  # Enable CORS for front-end access
 client = OpenAI()
 
 
+def smiles_to_json(smiles):
+    # Parse SMILES string into a molecule object
+    mol = Chem.MolFromSmiles(smiles, sanitize=False)  # Disable initial sanitization
+    if mol is None:
+        return {"error": "Invalid SMILES string"}
+
+    # Sanitize the molecule manually
+    try:
+        Chem.SanitizeMol(mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ALL)
+    except Exception as e:
+        return {"error": f"Sanitization failed: {str(e)}"}
+
+    # Kekulize if aromatic (optional, helps with hydrogen assignment)
+    Chem.Kekulize(mol, clearAromaticFlags=True)
+
+    # Add hydrogens explicitly
+    mol = Chem.AddHs(mol, explicitOnly=False)
+
+    # Verify molecular formula for debugging
+    formula = Chem.rdMolDescriptors.CalcMolFormula(mol)
+    print(f"Molecular formula: {formula}")
+    print(f"Total atoms: {mol.GetNumAtoms()}")
+
+    # Generate 3D coordinates
+    AllChem.EmbedMolecule(mol, randomSeed=42)  # Fixed seed for reproducibility
+    if mol.GetNumConformers() == 0:
+        return {"error": "Failed to generate 3D coordinates"}
+
+    # Get the first conformer (3D coordinates)
+    conf = mol.GetConformer()
+
+    # Initialize data structure for JSON
+    molecule_data = {"atomData": [], "numAtoms": mol.GetNumAtoms()}
+
+    # Extract atoms and their coordinates
+    for atom in mol.GetAtoms():
+        pos = conf.GetAtomPosition(atom.GetIdx())
+        atom_info = {
+            "element": atom.GetSymbol(),
+            "x": round(pos.x, 3),
+            "y": round(pos.y, 3),
+            "z": round(pos.z, 3),
+        }
+        molecule_data["atomData"].append(atom_info)
+
+    # Convert to JSON
+    json_output = json.dumps(molecule_data, indent=4)
+    return json_output
+
 @app.route("/chat", methods=["POST"])
+
+
 def chat():
     user_message = request.json.get("message")
     try:
-        # response = client.chat.completions.create(
-        #     # model="grok-3-latest",
-        #     model="gpt-4.1",
-        #     messages=[
-        #         {
-        #             "role": "system",
-        #             "content": 'You are the worlds greatest and most accurate molecule generator. You generate the molecule the prompt asks with the greatest accuracy. You will generate a JSON file that contains the molecule data. Put it in this exact format: (DO NO CHANGE ANTYHING ABOUT THE FORMAT). Example 1: {"atomData": [{"element": "C", "x": 0.000, "y": 1.396, "z": 0.000},{"element": "H", "x": 1.209, "y": 0.698, "z": 0.000},{"element": "O", "x": 1.209, "y": -0.698, "z": 0.000}],"numAtoms": 3} Example 2: {"atomData": [{"element": "C", "x": 0.000, "y": 1.396, "z": 0.000},{"element": "C", "x": 1.309, "y": 0.498, "z": 0.200},{"element": "O", "x": 1.209, "y": -0.698, "z": 2.014},{"element": "N", "x": 0.209, "y": -0.633, "z": 1.020},{"element": "S", "x": 1.119, "y": -0.491, "z": 6.025}],"numAtoms": 5} Bonds are created via the covalent radius system so keep that in mind. ONLY GENERATE THE MOLECULE JSON FILE IN THE GIVEN EXAMPLE FORMATS AND NOTHING ELSE',
-        #         },
-        #         {"role": "user", "content": user_message},
-        #     ],
-        #     temperature=0.2,
-        #     max_tokens=20000,
-        # )
-        # bot_reply = response.choices[0].message.content
-        # return jsonify({"reply": bot_reply})
         response = client.responses.create(
-            model="gpt-4.1-2025-04-14",
             prompt={
-                "id": "pmpt_6856204e693081948b83fee98ed1219605e7b5fd05abde69",
-                "version": "9"
+                "id": "pmpt_685781bce13c8193bb21171bd5f508150789e7be82ffe7a0",
+                "version": "2"
             },
             input=user_message,
-            tools=[
-                {
-                    "type": "web_search_preview",
-                    "user_location": {
-                        "type": "approximate",
-                        "country": "US",
-                        "region": "California",
-                        "city": "Palo Alto"
-                    },
-                    "search_context_size": "high"
-                }
-            ],
-            temperature=0.2
+            reasoning={},
+            max_output_tokens=32768,
+            store=False
         )
-        bot_reply = response.output[0].content[0].text
-        return jsonify({"reply": bot_reply})
+        bot_reply = response.output_text
+        json_data = smiles_to_json(bot_reply)
+        return json_data
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+
+
+# Example usage
 
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
 
 
-# response = client.responses.create(
-#     model="gpt-4.1-2025-04-14",
-#     prompt={
-#         "id": "pmpt_6855b624611c8193b777e4b66d554e520a9dd9578464de07",
-#         "version": "3",
-#     },
-#     input="generate dopamine molecule",
-# )
 
-# print(response.output[0].content[0].text)
+
+
