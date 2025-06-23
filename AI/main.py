@@ -7,13 +7,7 @@ from rdkit.Chem import AllChem, MolToSmiles
 import json
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for front-end access
-
-# Initialize OpenAI client
-# client = OpenAI(
-#     api_key=os.getenv("XAI_API_KEY"),
-#     base_url="https://api.x.ai/v1",
-# )
+CORS(app)
 client = OpenAI()
 
 
@@ -63,34 +57,58 @@ def smiles_to_json(smiles):
         molecule_data["atomData"].append(atom_info)
 
     # Convert to JSON
-    # json_output = json.dumps(molecule_data, indent=4)
-    json_output=molecule_data
+    json_output = molecule_data
     return json_output
 
+
+@app.route("/analysis", methods=["POST"])
+def analysis():
+    user_message = request.json.get("message")
+    try:
+
+        response = client.responses.create(
+            model="gpt-4.1",
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "what's in this image?"},
+                        {
+                            "type": "input_image",
+                            "image_url": str(user_message),
+                            # "image_url": "D:\ChopChopMol 2.0\demo.png",
+                        },
+                    ],
+                }
+            ],
+        )
+        bot_reply = response.output_text
+        return bot_reply
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/chat", methods=["POST"])
-
-
 def chat():
     user_message = request.json.get("message")
     try:
         response = client.responses.create(
-        prompt={
-            "id": "pmpt_685846a14e408190b05deaa4c8dfe2c5095b9f1f3307fa01",
-            "version": "1"
-        },
+            prompt={
+                "id": "pmpt_685846a14e408190b05deaa4c8dfe2c5095b9f1f3307fa01",
+                "version": "1",
+            },
             input=user_message,
             reasoning={},
             max_output_tokens=32768,
-            store=False
+            store=False,
         )
         bot_reply = response.output_text
         json_data = smiles_to_json(bot_reply)
         return jsonify({"reply": json_data})
-        
+
     except Exception as e:
-        return jsonify({"error": str(e)}, {"bot output": str(bot_reply)}), 500
-
-
+        return jsonify({"error": str(e)}), 500
 
 
 # Example usage
@@ -98,8 +116,3 @@ def chat():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-
-
-
-
-
