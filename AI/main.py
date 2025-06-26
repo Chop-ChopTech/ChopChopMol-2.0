@@ -4,6 +4,7 @@ from openai import OpenAI
 from flask_cors import CORS
 from rdkit import Chem
 from rdkit.Chem import AllChem, MolToSmiles
+from decimer import predict_SMILES
 import json
 
 app = Flask(__name__)
@@ -63,27 +64,15 @@ def smiles_to_json(smiles):
 
 @app.route("/analysis", methods=["POST"])
 def analysis():
-    user_message = request.json.get("message")
+    user_img = request.json.get("message")
     try:
 
-        response = client.responses.create(
-            model="gpt-4.1",
-            input=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "input_text", "text": "what's in this image?"},
-                        {
-                            "type": "input_image",
-                            "image_url": str(user_message),
-                            # "image_url": "D:\ChopChopMol 2.0\demo.png",
-                        },
-                    ],
-                }
-            ],
-        )
-        bot_reply = response.output_text
-        return bot_reply
+
+        image_path = str(user_img)
+        SMILES = predict_SMILES(image_path)
+        print(f"Decoded SMILES: {SMILES}")
+        smiles_json=smiles_to_json(str(SMILES))
+        return str(smiles_json)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
