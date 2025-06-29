@@ -107,56 +107,56 @@ export default class Molecule {
         colorAttribute.needsUpdate = true;
     }
 
-    // createBonds(atoms, threshold) {
-    //     this.bonds = [];
-
-    //     // Check all unique pairs of atoms
-    //     for (let i = 0; i < atoms.length; i++) {
-    //         for (let j = i + 1; j < atoms.length; j++) {
-    //             const atom1 = atoms[i];
-    //             const atom2 = atoms[j];
-
-    //             const dist = atom1.position.distanceTo(atom2.position);
-    //             const maxBondDistance = atom1.realRadius + atom2.realRadius + threshold;
-
-    //             if (dist <= maxBondDistance) {
-    //                 const bond = new Bond(this, atom1, atom2, dist);
-    //                 this.bonds.push(bond);
-    //             }
-    //         }
-    //     }
-
-    //     return this.bonds;
-    // }
     createBonds(atoms, threshold) {
         this.bonds = [];
 
+        // Check all unique pairs of atoms
         for (let i = 0; i < atoms.length; i++) {
-            const atom1 = atoms[i];
-            const pos1 = atom1.position;
-            const radius1 = atom1.realRadius;
-
             for (let j = i + 1; j < atoms.length; j++) {
+                const atom1 = atoms[i];
                 const atom2 = atoms[j];
-                const pos2 = atom2.position;
 
-                // Quick AABB check before expensive distance calculation
-                const dx = Math.abs(pos1.x - pos2.x);
-                const dy = Math.abs(pos1.y - pos2.y);
-                const dz = Math.abs(pos1.z - pos2.z);
-                const maxDist = radius1 + atom2.realRadius + threshold;
+                const dist = atom1.position.distanceTo(atom2.position);
+                const maxBondDistance = atom1.realRadius + atom2.realRadius + threshold;
 
-                if (dx > maxDist || dy > maxDist || dz > maxDist) continue;
-
-                const dist = pos1.distanceTo(pos2);
-                if (dist <= maxDist) {
-                    this.bonds.push(new Bond(this, atom1, atom2, dist));
+                if (dist <= maxBondDistance) {
+                    const bond = new Bond(this, atom1, atom2, dist);
+                    this.bonds.push(bond);
                 }
             }
         }
 
         return this.bonds;
     }
+    // createBonds(atoms, threshold) {
+    //     this.bonds = [];
+
+    //     for (let i = 0; i < atoms.length; i++) {
+    //         const atom1 = atoms[i];
+    //         const pos1 = atom1.position;
+    //         const radius1 = atom1.realRadius;
+
+    //         for (let j = i + 1; j < atoms.length; j++) {
+    //             const atom2 = atoms[j];
+    //             const pos2 = atom2.position;
+
+    //             // Quick AABB check before expensive distance calculation
+    //             const dx = Math.abs(pos1.x - pos2.x);
+    //             const dy = Math.abs(pos1.y - pos2.y);
+    //             const dz = Math.abs(pos1.z - pos2.z);
+    //             const maxDist = radius1 + atom2.realRadius + threshold;
+
+    //             if (dx > maxDist || dy > maxDist || dz > maxDist) continue;
+
+    //             const dist = pos1.distanceTo(pos2);
+    //             if (dist <= maxDist) {
+    //                 this.bonds.push(new Bond(this, atom1, atom2, dist));
+    //             }
+    //         }
+    //     }
+
+    //     return this.bonds;
+    // }
 
 
     getCellKey(position, gridSize) {
