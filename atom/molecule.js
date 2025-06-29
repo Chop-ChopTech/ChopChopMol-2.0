@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'jsm/utils/BufferGeometryUtils.js'
 import Atom from './atom.js';
 import Bond from './bond.js';
 
@@ -31,10 +32,47 @@ export default class Molecule {
         }
     }
 
+    // createAtoms(data) {
+    //     const resolution = 16;
+    //     const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
+    //     const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+
+    //     this.instancedMesh = new THREE.InstancedMesh(atomGeometry, material, data.numAtoms);
+
+    //     const colorAttribute = new THREE.InstancedBufferAttribute(new Float32Array(data.numAtoms * 3), 3);
+    //     this.instancedMesh.geometry.setAttribute('color', colorAttribute);
+
+    //     for (let i = 0; i < data.numAtoms; i++) {
+
+    //         const x = data.atomData[i].x * this.stretch;
+    //         const y = data.atomData[i].y * this.stretch;
+    //         const z = data.atomData[i].z * this.stretch;
+    //         const element = data.atomData[i].element;
+    //         const coordinates = new THREE.Vector3(x, y, z);
+    //         const id = getRandomArbitrary(0, 1000);
+
+    //         const atom = new Atom(this.main, element, coordinates, id);
+    //         this.atoms.push(atom);
+
+    //         const radius = this.atomSettings[element]?.realRadius * 1.5 || 1;
+
+    //         const matrix = new THREE.Matrix4();
+    //         matrix.setPosition(atom.position);
+    //         matrix.scale(new THREE.Vector3(radius, radius, radius));
+
+    //         this.instancedMesh.setMatrixAt(i, matrix);
+
+    //         const color = new THREE.Color(this.atomSettings[element].color);
+    //         colorAttribute.setXYZ(i, color.r, color.g, color.b);
+    //     }
+
+    //     this.instancedMesh.instanceMatrix.needsUpdate = true;
+    //     colorAttribute.needsUpdate = true;
+    // }
     createAtoms(data) {
         const resolution = 16;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
-        const material = new THREE.MeshStandardMaterial({ vertexColors: true });
+        const material = new THREE.MeshLambertMaterial({ vertexColors: true });
 
         this.instancedMesh = new THREE.InstancedMesh(atomGeometry, material, data.numAtoms);
 
