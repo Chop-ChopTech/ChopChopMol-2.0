@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'jsm/controls/OrbitControls.js';
+import { TrackballControls } from 'jsm/controls/TrackballControls.js';
 import Molecule from './atom/molecule.js';
 import FileHandler from './utils/fileHandler.js';
 // WE WILL NOW TRY TO MAKE THIS AMAZING WEBSITE AN APP. IT MAY GO AMAZINGLY OR IT MAY GO HORRIBLY.
@@ -7,14 +8,25 @@ import FileHandler from './utils/fileHandler.js';
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: false });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = false;
-controls.dampingFactor = 0.05;
+// const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new TrackballControls(camera, renderer.domElement);
+// controls.minPolarAngle = 0;
+// controls.maxPolarAngle = Math.PI;
+// controls.minAzimuthAngle = -Infinity;
+// controls.maxAzimuthAngle = Infinity;
+// controls.enablePan = false;
+// controls.enableDamping = false;
+// controls.dampingFactor = 0.05;
+controls.rotateSpeed = 5.0;
+controls.zoomSpeed = 2.0;
+controls.panSpeed = 1.0;
+controls.dynamicDampingFactor = 1.0; // No drag smoothing
+
 
 const light = new THREE.DirectionalLight(0xffffff, 3);
 const ambientLight = new THREE.AmbientLight(0xffffff, 2);
@@ -28,6 +40,7 @@ let labelMode = false; // Track label mode
 
 const switchModeButton = document.getElementById('switchMode');
 const toggleLabelsButton = document.getElementById('toggleLabels');
+const saveImageButton = document.getElementById('captureScreen');
 
 export default class Main {
     constructor() {
@@ -120,6 +133,10 @@ window.addEventListener('replyUpdated', (event) => {
     console.log(newReply);
     main.createNewMoleculeFromJSON(JSON.stringify(newReply));
 
+});
+
+saveImageButton.addEventListener('click', () => {
+    saveImage();
 });
 
 function saveImage() {
