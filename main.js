@@ -56,10 +56,12 @@ export default class Main {
     }
     init(data, mode) {
         this.molecule.init(data, mode);
+        render()
         console.log(this.data);
     }
     reset() {
         clearScene(this.scene);
+        render();
     }
     newMolecule(data, mode) {
         this.reset();
@@ -67,10 +69,12 @@ export default class Main {
         if (labelMode) {
             this.molecule.toggleLabels(true); // Show labels if in label mode
         }
+        render();
     }
     toggleLabels() {
         labelMode = !labelMode;
         this.molecule.toggleLabels(labelMode);
+        render();
     }
     createNewMoleculeFromJSON(json) {
         const data = JSON.parse(json);

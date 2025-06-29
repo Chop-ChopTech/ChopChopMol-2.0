@@ -72,7 +72,9 @@ export default class Molecule {
     createAtoms(data) {
         const resolution = 16;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
-        const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+        const material = new THREE.MeshBasicMaterial({ vertexColors: true });
+        // const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+
 
         this.instancedMesh = new THREE.InstancedMesh(atomGeometry, material, data.numAtoms);
 
