@@ -42,12 +42,23 @@
         <!-- <br>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
     </div>
-    <div id="smilesContainer" style="margin-top: 20px; padding: 10px;">
+    <div id="smilesContainer" class="fancy-input-container" style="margin-top: 20px; padding: 10px;">
         <!-- <h3>Generate a molecule with AI!</h2> -->
         <div id="smilesInputContainer">
             <input id="smilesInput" class="fancy-textbox" type="text"
                 placeholder="Type your SMILES string and press enter or click Load!" autocomplete="off">
-            <button onclick="sendChatMessage()" class="button, fancy-button" id="generateButton"
+            <button onclick="sendChatMessage()" class="button, fancy-button" id="loadSmilesButton"
+                class="fancy-button">Load</button>
+        </div>
+        <!-- <br>
+        <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
+    </div>
+    <div id="jsonContainer" class="fancy-input-container" style="margin-top: 20px; padding: 10px;">
+        <!-- <h3>Generate a molecule with AI!</h2> -->
+        <div id="jsonInputContainer">
+            <input id="jsonInput" class="fancy-textbox" type="text"
+                placeholder="Type your JSON string and press enter or click Load!" autocomplete="off">
+            <button onclick="sendChatMessage()" class="button, fancy-button" id="loadJsonButton"
                 class="fancy-button">Load</button>
         </div>
         <!-- <br>
@@ -129,22 +140,26 @@
 
         const aiGeneratePanel = document.getElementById('chatContainer');
         const aiGenerateButton = document.getElementById('aiGenerate');
-        const smilesContainer = document.getElementById('import-smiles');
+        const smilesButton = document.getElementById('import-smiles');
         const smilesPanel = document.getElementById('smilesContainer');
-
+        const jsonButton = document.getElementById('import-json');
+        const jsonPanel = document.getElementById('jsonContainer');
+        jsonButton.addEventListener('click', () => {
+            jsonPanel.classList.toggle('on');
+            smilesPanel.classList.remove('on');
+            aiGeneratePanel.classList.remove('on');
+        })
         aiGenerateButton.addEventListener('click', () => {
-            // aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'flex' : 'none'; 
             aiGeneratePanel.classList.toggle('on');
-            if (aiGeneratePanel.classList.contains('on')) {
-                smilesPanel.classList.remove('on');
-            }
+            smilesPanel.classList.remove('on');
+            jsonPanel.classList.remove('on');
         });
-        smilesContainer.addEventListener('click', () => {
+
+        smilesButton.addEventListener('click', () => {
             // aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'flex' : 'none'; 
             smilesPanel.classList.toggle('on');
-            if (smilesPanel.classList.contains('on')) {
-                aiGeneratePanel.classList.remove('on');
-            }
+            aiGeneratePanel.classList.remove('on');
+            jsonPanel.classList.remove('on');
         });
 
         let enterPressed = false;

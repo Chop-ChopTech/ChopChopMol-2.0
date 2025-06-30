@@ -45,47 +45,7 @@ body {
     gap: 10px;
 }
 
-#chatInput {
-    padding: 12px;
-    border-radius: 10px;
-    border: 2px solid #d1d5db;
-    /* margin: 12px; */
-    font-size: 15px;
-    background-color: #ffffff;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease-in-out;
-    caret-color: #6366f1;
-    border: 2px solid #6200ea;
-    width: 880px;
-    /* Vibrant border color */
-    border-radius: 10px;
-    /* Rounded corners */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 10px rgba(98, 0, 234, 0.5);
-    /* Subtle shadow + glow */
-    outline: none;
-    /* Remove default outline */
-}
 
-#smilesInput {
-    padding: 12px;
-    border-radius: 10px;
-    border: 2px solid #d1d5db;
-    /* margin: 12px; */
-    font-size: 15px;
-    background-color: #ffffff;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease-in-out;
-    caret-color: #6366f1;
-    border: 2px solid #6200ea;
-    width: 880px;
-    /* Vibrant border color */
-    border-radius: 10px;
-    /* Rounded corners */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 10px rgba(98, 0, 234, 0.5);
-    /* Subtle shadow + glow */
-    outline: none;
-    /* Remove default outline */
-}
 
 #chatInput::placeholder {
     color: #9ca3af;
@@ -127,22 +87,13 @@ body {
 }
 
 #smilesContainer {
-    /* padding: 200px; */
-    position: absolute;
-    top: -200px;
-    /* Adjust spacing from bottom of viewport or buttons */
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 999999;
+
     background: linear-gradient(90deg, rgb(211, 255, 220) 0%, rgba(255, 232, 224, 1) 50%, rgb(252, 219, 255) 100%);
-    height: auto;
-    width: 1000px;
-    display: flex;
-    /* flex-direction: row; */
-    justify-content: center;
-    align-items: center;
-    border-radius: 20px;
-    gap: 32px;
+
+}
+
+#jsonContainer {
+    background: linear-gradient(90deg, rgb(230, 211, 255) 0%, rgb(255, 224, 224) 50%, rgb(219, 247, 255) 100%);
 }
 
 .fancy-input-container {
@@ -384,6 +335,27 @@ body {
 
 #import-json {
     background-color: #17af2d;
+}
+
+.fancy-textbox {
+    padding: 12px;
+    border-radius: 10px;
+    border: 2px solid #d1d5db;
+    /* margin: 12px; */
+    font-size: 15px;
+    background-color: #ffffff;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease-in-out;
+    caret-color: #6366f1;
+    border: 2px solid #6200ea;
+    width: 880px;
+    /* Vibrant border color */
+    border-radius: 10px;
+    /* Rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 10px rgba(98, 0, 234, 0.5);
+    /* Subtle shadow + glow */
+    outline: none;
+    /* Remove default outline */
 }
 
 @keyframes fadeIn {
