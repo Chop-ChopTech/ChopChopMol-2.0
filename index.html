@@ -30,13 +30,25 @@
     </div>
 
     <!-- Chat interface -->
-    <div id="chatContainer" style="margin-top: 20px; padding: 10px;" class="on">
+    <div id="chatContainer" style="margin-top: 20px; padding: 10px;">
         <!-- <h3>Generate a molecule with AI!</h2> -->
         <div id="chatInputContainer">
-            <input id="chatInput" class="fancy-textbox" type="text" placeholder="Visualize any molecule..."
+            <input id="chatInput" class="fancy-textbox" type="text"
+                placeholder="Type a real or made up molecule name and press enter or click Generate!"
                 autocomplete="off">
             <button onclick="sendChatMessage()" class="button, fancy-button" id="generateButton"
                 class="fancy-button">Generate!</button>
+        </div>
+        <!-- <br>
+        <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
+    </div>
+    <div id="smilesContainer" style="margin-top: 20px; padding: 10px;">
+        <!-- <h3>Generate a molecule with AI!</h2> -->
+        <div id="smilesInputContainer">
+            <input id="smilesInput" class="fancy-textbox" type="text"
+                placeholder="Type your SMILES string and press enter or click Load!" autocomplete="off">
+            <button onclick="sendChatMessage()" class="button, fancy-button" id="generateButton"
+                class="fancy-button">Load</button>
         </div>
         <!-- <br>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
@@ -98,14 +110,41 @@
                 //chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
             }
         }
+        async function convertToJson(smiles) {
+            const chatInput = smiles;
+            if (!chatInput) return;
+
+
+            try {
+                const response = await fetch('https://chopchopmol-2-0-3.onrender.com/tosmiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: chatInput })
+                });
+                const data = await response.json();
+                chatOutput.scrollTop = chatOutput.scrollHeight;
+            } catch (error) {
+            }
+        }
 
         const aiGeneratePanel = document.getElementById('chatContainer');
         const aiGenerateButton = document.getElementById('aiGenerate');
-
+        const smilesContainer = document.getElementById('import-smiles');
+        const smilesPanel = document.getElementById('smilesContainer');
 
         aiGenerateButton.addEventListener('click', () => {
             // aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'flex' : 'none'; 
             aiGeneratePanel.classList.toggle('on');
+            if (aiGeneratePanel.classList.contains('on')) {
+                smilesPanel.classList.remove('on');
+            }
+        });
+        smilesContainer.addEventListener('click', () => {
+            // aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'flex' : 'none'; 
+            smilesPanel.classList.toggle('on');
+            if (smilesPanel.classList.contains('on')) {
+                aiGeneratePanel.classList.remove('on');
+            }
         });
 
         let enterPressed = false;

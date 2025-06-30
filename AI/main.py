@@ -76,6 +76,14 @@ def analysis():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+def tosmiles():
+    smiles_string = request.json.get("message")
+    try:
+        smiles_json=smiles_to_json(str(smiles_string))
+        return str(smiles_json)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/chat", methods=["POST"])

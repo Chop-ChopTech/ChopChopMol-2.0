@@ -9,6 +9,7 @@ body {
     margin: 0;
     padding: 15px;
     background-color: black;
+    display: flex;
 }
 
 #customButton {
@@ -31,9 +32,41 @@ body {
     align-items: center;
     margin: 0;
     padding: 0;
+    gap: 10px;
+}
+
+#smilesInputContainer {
+    display: flex;
+    flex-direction: row !important;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    gap: 10px;
 }
 
 #chatInput {
+    padding: 12px;
+    border-radius: 10px;
+    border: 2px solid #d1d5db;
+    /* margin: 12px; */
+    font-size: 15px;
+    background-color: #ffffff;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease-in-out;
+    caret-color: #6366f1;
+    border: 2px solid #6200ea;
+    width: 880px;
+    /* Vibrant border color */
+    border-radius: 10px;
+    /* Rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 10px rgba(98, 0, 234, 0.5);
+    /* Subtle shadow + glow */
+    outline: none;
+    /* Remove default outline */
+}
+
+#smilesInput {
     padding: 12px;
     border-radius: 10px;
     border: 2px solid #d1d5db;
@@ -90,6 +123,7 @@ body {
 }
 
 #chatContainer {
+    /* padding: 200px; */
     position: absolute;
     top: -200px;
     /* Adjust spacing from bottom of viewport or buttons */
@@ -100,14 +134,37 @@ body {
     height: auto;
     width: 1000px;
     display: flex;
-    flex-direction: column;
+    /* flex-direction: row; */
     justify-content: center;
     align-items: center;
     border-radius: 20px;
-    gap: 12px;
+    gap: 32px;
+}
+
+#smilesContainer {
+    /* padding: 200px; */
+    position: absolute;
+    top: -200px;
+    /* Adjust spacing from bottom of viewport or buttons */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999999;
+    background: linear-gradient(90deg, rgb(211, 255, 220) 0%, rgba(255, 232, 224, 1) 50%, rgb(252, 219, 255) 100%);
+    height: auto;
+    width: 1000px;
+    display: flex;
+    /* flex-direction: row; */
+    justify-content: center;
+    align-items: center;
+    border-radius: 20px;
+    gap: 32px;
 }
 
 #chatContainer.on {
+    top: 40px !important;
+}
+
+#smilesContainer.on {
     top: 40px !important;
 }
 
