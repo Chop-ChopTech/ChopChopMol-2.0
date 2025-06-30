@@ -30,12 +30,16 @@
     </div>
 
     <!-- Chat interface -->
-    <div id="chatContainer" style="margin-top: 20px; padding: 10px;" class="snake-container">
-        <input id="chatInput" class="fancy-textbox" type="text" placeholder="Visualize any molecule..."
-            autocomplete="off">
-        <button onclick="sendChatMessage()" class="button, fancy-button" id="generateButton"
-            class="fancy-button">Generate!</button>
-        <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div>
+    <div id="chatContainer" style="margin-top: 20px; padding: 10px;" class="on">
+        <!-- <h3>Generate a molecule with AI!</h2> -->
+        <div id="chatInputContainer">
+            <input id="chatInput" class="fancy-textbox" type="text" placeholder="Visualize any molecule..."
+                autocomplete="off">
+            <button onclick="sendChatMessage()" class="button, fancy-button" id="generateButton"
+                class="fancy-button">Generate!</button>
+        </div>
+        <!-- <br>
+        <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
     </div>
 
     <!-- Scripts -->
@@ -56,6 +60,8 @@
     </script>
     <script>
         let _reply = null;
+        const chatBox = document.getElementById('chatInput');
+
         Object.defineProperty(window, 'reply', {
             get: function () { return _reply; },
             set: function (value) {
@@ -66,11 +72,11 @@
         });
 
         async function sendChatMessage() {
-            const chatInput = document.getElementById('chatInput').value;
-            const chatOutput = document.getElementById('chatOutput');
+            const chatInput = chatBox.value;
+            //const chatOutput = document.getElementById('chatOutput');
             if (!chatInput) return;
 
-            chatOutput.innerHTML += `<p id="loading" class="typewriter"><strong>Generating Molecule...</p>`;
+            //chatOutput.innerHTML += `<p id="loading" class="typewriter"><strong>Generating Molecule...</p>`;
 
             try {
                 const response = await fetch('https://chopchopmol-2-0-3.onrender.com/chat', {
@@ -80,7 +86,7 @@
                 });
                 const data = await response.json();
                 if (data.error) {
-                    chatOutput.innerHTML += `<p><strong>Error:</strong> ${data.error}</p>`;
+                    //chatOutput.innerHTML += `<p><strong>Error:</strong> ${data.error}</p>`;
                 } else {
                     const loadingElement = document.getElementById('loading');
                     if (loadingElement) loadingElement.remove();
@@ -89,16 +95,35 @@
                 document.getElementById('chatInput').value = '';
                 chatOutput.scrollTop = chatOutput.scrollHeight;
             } catch (error) {
-                chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
+                //chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
             }
         }
 
         const aiGeneratePanel = document.getElementById('chatContainer');
         const aiGenerateButton = document.getElementById('aiGenerate');
 
+
         aiGenerateButton.addEventListener('click', () => {
-            aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'flex' : 'none';
+            // aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'flex' : 'none'; 
+            aiGeneratePanel.classList.toggle('on');
         });
+
+        let enterPressed = false;
+
+        chatBox.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !enterPressed) {
+                enterPressed = true;
+                sendChatMessage();
+                aiGeneratePanel.classList.toggle('on');
+            }
+        });
+
+        chatBox.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                enterPressed = false;
+            }
+        });
+
     </script>
     <script type="importmap">
         {

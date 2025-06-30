@@ -1,6 +1,7 @@
 * {
     transition: all 0.5s ease;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    user-select: none;
 }
 
 body {
@@ -23,17 +24,27 @@ body {
     background-color: #0ec2f9;
 }
 
+#chatInputContainer {
+    display: flex;
+    flex-direction: row !important;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+
 #chatInput {
     padding: 12px;
     border-radius: 10px;
     border: 2px solid #d1d5db;
-    margin: 12px;
+    /* margin: 12px; */
     font-size: 15px;
     background-color: #ffffff;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease-in-out;
     caret-color: #6366f1;
     border: 2px solid #6200ea;
+    width: 880px;
     /* Vibrant border color */
     border-radius: 10px;
     /* Rounded corners */
@@ -80,25 +91,28 @@ body {
 
 #chatContainer {
     position: absolute;
-    background-color: #f0f0f0;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    top: -200px;
+    /* Adjust spacing from bottom of viewport or buttons */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999999;
+    background: linear-gradient(90deg, rgba(211, 237, 255, 1) 0%, rgba(255, 232, 224, 1) 50%, rgba(255, 251, 219, 1) 100%);
+    height: auto;
+    width: 1000px;
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
-    width: 100vw;
-    margin: 50px;
+    align-items: center;
+    border-radius: 20px;
+    gap: 12px;
+}
 
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    background-color: #fff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    color: #333;
-    text-align: center;
-    transition: all 0.2s ease;
-    z-index: 99999999;
-    display: none;
+#chatContainer.on {
+    top: 40px !important;
+}
+
+#chatOutput {
+    margin: 0;
 }
 
 #aiGenerate {
@@ -118,13 +132,15 @@ body {
 }
 
 #buttons {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: row;
     justify-content: center;
     gap: 15px;
     /* background-color: #e4e4e4; */
     /* padding: 30px; */
-    position: absolute;
     width: 100vw;
 }
 
@@ -154,6 +170,7 @@ body {
     cursor: pointer;
     border-radius: 5px;
     background-size: 300% 100%;
+    height: 43px;
 }
 
 #generateButton:hover {
