@@ -61,7 +61,7 @@ def smiles_to_json(smiles):
     return json_output
 
 
-@app.route("/analysis", methods=["POST"])
+@app.route("/tosmiles", methods=["POST"])
 def tosmiles():
     smiles_string = request.json.get("message")
     try:
