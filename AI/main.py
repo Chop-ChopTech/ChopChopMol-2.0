@@ -4,7 +4,6 @@ from openai import OpenAI
 from flask_cors import CORS
 from rdkit import Chem
 from rdkit.Chem import AllChem, MolToSmiles
-from decimer import predict_SMILES
 import json
 
 app = Flask(__name__)
