@@ -63,19 +63,6 @@ def smiles_to_json(smiles):
 
 
 @app.route("/analysis", methods=["POST"])
-def analysis():
-    user_img = request.json.get("message")
-    try:
-
-
-        image_path = str(user_img)
-        SMILES = predict_SMILES(image_path)
-        print(f"Decoded SMILES: {SMILES}")
-        smiles_json=smiles_to_json(str(SMILES))
-        return str(smiles_json)
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 def tosmiles():
     smiles_string = request.json.get("message")
     try:
