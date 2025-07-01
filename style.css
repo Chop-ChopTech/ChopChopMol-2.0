@@ -246,6 +246,16 @@ body {
     z-index: -1;
 }
 
+#loadSmilesButton {
+    height: 43px;
+    background: linear-gradient(90deg, rgba(0, 136, 255, 1) 0%, rgb(0, 94, 255) 0%, rgba(255, 0, 98, 1) 100%);
+}
+
+#loadJsonButton {
+    height: 43px;
+    background: linear-gradient(90deg, rgba(0, 136, 255, 1) 0%, rgb(0, 94, 255) 0%, rgba(255, 0, 98, 1) 100%);
+}
+
 .typewriter {
     display: inline-block;
     overflow: hidden;

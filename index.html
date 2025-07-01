@@ -47,8 +47,7 @@
         <div id="smilesInputContainer">
             <input id="smilesInput" class="fancy-textbox" type="text"
                 placeholder="Type your SMILES string and press enter or click Load!" autocomplete="off">
-            <button onclick="sendChatMessage()" class="button, fancy-button" id="loadSmilesButton"
-                class="fancy-button">Load</button>
+            <button onclick="convertToJson()" class="button, fancy-button" id="loadSmilesButton">Load</button>
         </div>
         <!-- <br>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
@@ -121,11 +120,9 @@
                 //chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
             }
         }
-        async function convertToJson(smiles) {
-            const chatInput = smiles;
+        async function convertToJson() {
+            const chatInput = document.getElementById('smilesInput').value;
             if (!chatInput) return;
-
-
             try {
                 const response = await fetch('https://chopchopmol-2-0-3.onrender.com/tosmiles', {
                     method: 'POST',
