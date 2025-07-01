@@ -63,9 +63,10 @@ def smiles_to_json(smiles):
 
 @app.route("/tosmiles", methods=["POST"])
 def tosmiles():
-    smiles_string = request.json.get("message")
+    user_message = request.json.get("message")
     try:
-        smiles_json=smiles_to_json(str(smiles_string))
+        smiles_string=str(user_message)
+        smiles_json=smiles_to_json(smiles_string)
         return str(smiles_json)
 
     except Exception as e:
