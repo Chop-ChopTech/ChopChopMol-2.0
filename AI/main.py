@@ -67,7 +67,7 @@ def tosmiles():
     try:
         smiles_string=str(user_message)
         smiles_json=smiles_to_json(smiles_string)
-        return str(smiles_json)
+        return jsonify({"reply": smiles_json})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
