@@ -12,6 +12,15 @@ body {
     display: flex;
 }
 
+#canvas {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
 #customButton {
     background-color: rgb(0, 157, 255);
     padding: 8px 11px;
@@ -369,7 +378,7 @@ body {
 }
 
 #loading {
-    position: relative;
+    position: absolute;
     color: #fff;
     /* background-color: #00d600; */
     width: 100vw;
@@ -378,10 +387,9 @@ body {
     text-align: center;
     padding: 10px 0;
     border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     white-space: nowrap;
     font-size: 2em;
-    white-space: nowrap;
+    height: 30px;
     /* Ensures text stays on one line */
     background: linear-gradient(90deg, #ff0000, #ff9900, #33cc33, #3399ff, #ff0000);
     background-size: 200% 200%;
@@ -392,10 +400,12 @@ body {
     display: inline-block;
     top: -100px;
     transition: all 0.5s ease;
+    z-index: 9999;
+    pointer-events: none;
 }
 
 #loading.on {
-    top: 0px;
+    top: 15px;
 }
 
 @keyframes gradient {
