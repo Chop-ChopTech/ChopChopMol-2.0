@@ -368,6 +368,47 @@ body {
     /* Remove default outline */
 }
 
+#loading {
+    position: relative;
+    color: #fff;
+    /* background-color: #00d600; */
+    width: 100vw;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    padding: 10px 0;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    font-size: 2em;
+    white-space: nowrap;
+    /* Ensures text stays on one line */
+    background: linear-gradient(90deg, #ff0000, #ff9900, #33cc33, #3399ff, #ff0000);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: gradient 7s linear infinite;
+    display: inline-block;
+    top: -100px;
+    transition: all 0.5s ease;
+}
+
+#loading.on {
+    top: 0px;
+}
+
+@keyframes gradient {
+    0% {
+        background-position: 0% 0%;
+    }
+
+    100% {
+        background-position: 600% 0%;
+        /* Moves gradient fully to the right */
+    }
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
