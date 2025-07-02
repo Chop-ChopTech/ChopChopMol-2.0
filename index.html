@@ -175,12 +175,7 @@
                     body: JSON.stringify({ message: chatInput })
                 });
                 const data = await response.json();
-                if (data.error) {
-                    //chatOutput.innerHTML += `<p><strong>Error:</strong> ${data.error}</p>`;
-                } else {
-                    const loadingElement = document.getElementById('loading');
-                    if (loadingElement) loadingElement.remove();
-                }
+
                 window.reply = data.reply;
                 document.getElementById('chatInput').value = '';
                 chatOutput.scrollTop = chatOutput.scrollHeight;
