@@ -83,6 +83,8 @@
     <script>
         let _reply = null;
         const chatBox = document.getElementById('chatInput');
+        const smilesBox = document.getElementById('smilesInput');
+        const jsonBox = document.getElementById('jsonInput');
 
         Object.defineProperty(window, 'reply', {
             get: function () { return _reply; },
@@ -140,6 +142,9 @@
                 //chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
             }
         }
+        function loadJson() {
+            window.reply = document.getElementById('jsonInput').value;
+        }
 
         const aiGeneratePanel = document.getElementById('chatContainer');
         const aiGenerateButton = document.getElementById('aiGenerate');
@@ -171,11 +176,37 @@
             if (event.key === 'Enter' && !enterPressed) {
                 enterPressed = true;
                 sendChatMessage();
-                aiGeneratePanel.classList.toggle('on');
+                aiGeneratePanel.classList.remove('on');
             }
         });
 
         chatBox.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                enterPressed = false;
+            }
+        });
+        smilesBox.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !enterPressed) {
+                enterPressed = true;
+                convertToJson();
+                smilesPanel.classList.remove('on');
+            }
+        });
+
+        smilesBox.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                enterPressed = false;
+            }
+        });
+        jsonBox.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !enterPressed) {
+                enterPressed = true;
+                loadJson();
+                jsonPanel.classList.remove('on');
+            }
+        });
+
+        jsonBox.addEventListener('keyup', (event) => {
             if (event.key === 'Enter') {
                 enterPressed = false;
             }
