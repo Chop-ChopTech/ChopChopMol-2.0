@@ -41,6 +41,8 @@ let labelMode = false; // Track label mode
 const switchModeButton = document.getElementById('switchMode');
 const toggleLabelsButton = document.getElementById('toggleLabels');
 const saveImageButton = document.getElementById('captureScreen');
+const clearSceneButton = document.getElementById('clear-canvas');
+const analyzeMoleculeButton = document.getElementById('analyze-molecule');
 
 export default class Main {
     constructor() {
@@ -113,7 +115,7 @@ window.addEventListener('keydown', function (e) {
 });
 window.addEventListener('keydown', function (e) {
     if (e.key == "j") {
-        console.log(JSON.stringify(main.data));
+        copyTextToClipboard(JSON.stringify(getScreenUrl()));
     }
 })
 window.addEventListener('resize', () => {
@@ -143,6 +145,15 @@ saveImageButton.addEventListener('click', () => {
     saveImage();
 });
 
+clearSceneButton.addEventListener('click', () => {
+    main.reset();
+});
+analyzeMoleculeButton.addEventListener('click', () => {
+    const imgData = getScreenUrl();
+    window.imgToAnalyze = imgData;
+    console.log(window.imgToAnalyze);
+})
+
 function saveImage() {
     renderer.render(scene, camera);
     let imgData = renderer.domElement.toDataURL("image/png", 1.0);
@@ -152,7 +163,42 @@ function saveImage() {
     link.setAttribute('download', 'molecule.png');
     link.click();
 }
+function getScreenUrl() {
+    renderer.render(scene, camera);
+    let imgData = renderer.domElement.toDataURL("image/png", 1.0);
+    return imgData;
+}
 // Animation loop
+function copyTextToClipboard(text) {
+    if (!navigator.clipboard) {
+        // fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";  // prevent scrolling to bottom
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            console.log(successful ? 'Fallback: Copy successful!' : 'Fallback: Copy failed.');
+        } catch (err) {
+            console.error('Fallback: Copy error', err);
+        }
+
+        document.body.removeChild(textArea);
+        return;
+    }
+
+    navigator.clipboard.writeText(text)
+        .then(() => {
+            console.log('Copy successful!');
+        })
+        .catch(err => {
+            console.error('Copy error:', err);
+        });
+}
+
 function animate() {
     requestAnimationFrame(animate);
     controls.update();

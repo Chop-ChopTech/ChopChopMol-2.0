@@ -27,6 +27,8 @@
         <button class="fancy-button" id="compare" class="button">compare</button>
         <button class="fancy-button" id="import-smiles" class="button">Load SMILES string</button>
         <button class="fancy-button" id="import-json" class="button">Load JSON string</button>
+        <button class="fancy-button" id="analyze-molecule" class="button">Analyze molecule</button>
+        <button class="fancy-button" id="clear-canvas" class="button">Clear</button>
 
     </div>
     <h1 id="loading">Loading Molecule</h1>
@@ -85,6 +87,8 @@
     </script>
     <script>
         let _reply = null;
+        let _reply2 = "hhhh";
+
         const chatBox = document.getElementById('chatInput');
         const smilesBox = document.getElementById('smilesInput');
         const jsonBox = document.getElementById('jsonInput');
@@ -97,6 +101,14 @@
                 window.dispatchEvent(new CustomEvent('replyUpdated', { detail: value }));
             }
         });
+        Object.defineProperty(window, 'imgToAnalyze', {
+            get: function () { return _reply2; },
+            set: function (value) {
+                _reply2 = value;
+                window.dispatchEvent(new CustomEvent('analyzeImage', { detail: value }));
+            }
+        });
+
 
         const aiGeneratePanel = document.getElementById('chatContainer');
         const aiGenerateButton = document.getElementById('aiGenerate');
@@ -208,6 +220,32 @@
             } catch (error) {
                 //chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
             }
+        }
+        async function analyzeMolecule() {
+            const chatInput = window.imgToAnalyze;
+
+            //const chatOutput = document.getElementById('chatOutput');
+            if (!chatInput) return;
+            loadingText.classList.add('on');
+            //chatOutput.innerHTML += `<p id="loading" class="typewriter"><strong>Generating Molecule...</p>`;
+
+            try {
+                const response = await fetch('https://chopchopmol-2-0-3.onrender.com/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: chatInput })
+                });
+                const data = await response.json();
+
+                window.imgToAnalyze = data.reply;
+                document.getElementById('chatInput').value = '';
+                loadingText.classList.remove('on');
+            } catch (error) {
+                //chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
+                loadingText.classList.remove('on');
+
+            }
+
         }
         function loadJson() {
             jsonPanel.classList.remove('on');

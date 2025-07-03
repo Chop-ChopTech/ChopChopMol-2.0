@@ -408,6 +408,14 @@ body {
     top: 15px;
 }
 
+#clear-canvas {
+    background-color: #efbc44;
+}
+
+#analyze-molecule {
+    background-color: #7ad23c;
+}
+
 @keyframes gradient {
     0% {
         background-position: 0% 0%;
