@@ -231,7 +231,7 @@
             //chatOutput.innerHTML += `<p id="loading" class="typewriter"><strong>Generating Molecule...</p>`;
 
             try {
-                const response = await fetch('https://chopchopmol-2-0-3.onrender.com/analyze', {
+                const response = await fetch('https://chopchopmol-2-0-3.onrender.com/analysis', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: chatInput })
