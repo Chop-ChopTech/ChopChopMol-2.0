@@ -94,8 +94,7 @@ def analysis():
         )
 
         bot_reply = response.output_text
-        json_data = smiles_to_json(bot_reply)  # Remaining 50% handled in smiles_to_json
-        return jsonify({"reply": json_data})
+        return jsonify({"reply": bot_reply})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
