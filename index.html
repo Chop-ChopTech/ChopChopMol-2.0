@@ -97,7 +97,7 @@
             get: function () { return _reply; },
             set: function (value) {
                 _reply = value;
-                console.log('[Atomix] reply updated:', value);
+                console.log('New molecule updated:', value);
                 window.dispatchEvent(new CustomEvent('replyUpdated', { detail: value }));
             }
         });
@@ -105,6 +105,7 @@
             get: function () { return _reply2; },
             set: function (value) {
                 _reply2 = value;
+                console.log('Analyzed image:', value);
                 window.dispatchEvent(new CustomEvent('analyzeImage', { detail: value }));
             }
         });
@@ -221,8 +222,8 @@
                 //chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
             }
         }
-        async function analyzeMolecule() {
-            const chatInput = window.imgToAnalyze;
+        async function analyzeMolecule(data) {
+            const chatInput = data;
 
             //const chatOutput = document.getElementById('chatOutput');
             if (!chatInput) return;
@@ -238,7 +239,6 @@
                 const data = await response.json();
 
                 window.imgToAnalyze = data.reply;
-                document.getElementById('chatInput').value = '';
                 loadingText.classList.remove('on');
             } catch (error) {
                 //chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
@@ -251,7 +251,12 @@
             jsonPanel.classList.remove('on');
             window.reply = document.getElementById('jsonInput').value;
         }
+        window.addEventListener('analyzeImage', (event) => {
+            const newReply = event.detail;
+            console.log(newReply);
+            analyzeMolecule(event.detail);
 
+        });
 
 
     </script>
