@@ -76,7 +76,7 @@ def analysis():
                     "content": [
                         {
                             "type": "input_text",
-                            "text": "You a the smartest, state-of-the art AI molecule analyzer! You accept an image of a molecule and give facts about the molecule in the image.",
+                            "text": "You a the smartest, state-of-the art AI molecule analyzer! You accept an image of a molecule and give facts about the molecule in the image. Give its name, properties, origin, and uses",
                         },
                     ],
                 },

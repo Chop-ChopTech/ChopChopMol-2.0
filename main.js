@@ -155,6 +155,7 @@ analyzeMoleculeButton.addEventListener('click', () => {
 })
 
 function saveImage() {
+
     renderer.render(scene, camera);
     let imgData = renderer.domElement.toDataURL("image/png", 1.0);
     const link = document.createElement('a');
@@ -164,8 +165,10 @@ function saveImage() {
     link.click();
 }
 function getScreenUrl() {
+    const analysisPanel = document.getElementById('analysisResponseContainer');
     renderer.render(scene, camera);
     let imgData = renderer.domElement.toDataURL("image/png", 1.0);
+
     return imgData;
 }
 // Animation loop

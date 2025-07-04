@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300..700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400..700;1,400..700&family=Comfortaa:wght@300..700&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
         rel="stylesheet">
 </head>
 
@@ -32,7 +32,9 @@
 
     </div>
     <h1 id="loading">Loading Molecule</h1>
-
+    <div id="analysisResponseContainer">
+        <h1>Molecule Information</h1>
+    </div>
 
     <!-- Chat interface -->
     <div id="chatContainer" class="fancy-input-container" style="margin-top: 20px; padding: 10px;">
@@ -114,7 +116,7 @@
         const aiGeneratePanel = document.getElementById('chatContainer');
         const aiGenerateButton = document.getElementById('aiGenerate');
         const smilesButton = document.getElementById('import-smiles');
-        const smilesPanel = document.getElementById('smilesContainer');
+        const smilesPanel = document.getElementById('analysisResponseContainer');
         const jsonButton = document.getElementById('import-json');
         const jsonPanel = document.getElementById('jsonContainer');
         jsonButton.addEventListener('click', () => {
