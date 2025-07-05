@@ -15,6 +15,7 @@
 </head>
 
 <body>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Buttons with new toggle labels button -->
     <div id="buttons">
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
@@ -33,8 +34,12 @@
     </div>
     <h1 id="loading">Loading Molecule</h1>
     <div id="analysisResponseContainer">
-        <h1>Molecule Information</h1>
+        <h1 id="analysisHeader">Molecule Information</h1>
+        <button onclick="closeAnalysisWindow()" id="closeAnalysis" class="fancy-button">Close</button>
+        <canvas id="explorationCanvas" class="on"></canvas>
     </div>
+    <script src="effects.js"></script>
+
 
     <!-- Chat interface -->
     <div id="chatContainer" class="fancy-input-container" style="margin-top: 20px; padding: 10px;">
@@ -226,12 +231,12 @@
         }
         async function analyzeMolecule(data) {
             const chatInput = data;
-
+            const aiAnalyzePanel = document.getElementById('analysisResponseContainer');
+            const loading = document.getElementById('explorationCanvas');
             //const chatOutput = document.getElementById('chatOutput');
             if (!chatInput) return;
-            loadingText.classList.add('on');
             //chatOutput.innerHTML += `<p id="loading" class="typewriter"><strong>Generating Molecule...</p>`;
-
+            loading.classList.add('on');
             try {
                 const response = await fetch('https://chopchopmol-2-0-3.onrender.com/analysis', {
                     method: 'POST',
@@ -241,13 +246,18 @@
                 const data = await response.json();
 
                 window.imgToAnalyze = data.reply;
-                loadingText.classList.remove('on');
+
+                const reply = marked.parse(data.reply);
+
+                const text = document.createElement('p');
+
+                text.innerHTML = reply;
+                aiAnalyzePanel.appendChild(text);
+                loading.classList.remove('on');
             } catch (error) {
                 //chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
                 loadingText.classList.remove('on');
-
             }
-
         }
         function loadJson() {
             jsonPanel.classList.remove('on');
@@ -259,6 +269,9 @@
             analyzeMolecule(event.detail);
 
         });
+        function closeAnalysisWindow() {
+            document.getElementById('analysisResponseContainer').classList.remove('on');
+        }
 
 
     </script>

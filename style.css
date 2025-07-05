@@ -417,7 +417,7 @@ body {
 }
 
 #analysisResponseContainer {
-    background-color: #e7ffc248;
+    background-color: #c2e7ff5e;
     width: calc(100vw - 80px);
     height: 610px;
     overflow-y: scroll;
@@ -438,6 +438,8 @@ body {
     gap: 20px;
     font-size: 1.2em;
     opacity: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
 
 }
 
@@ -448,6 +450,42 @@ body {
 
 } */
 #analysisResponseContainer.on {
+    opacity: 1;
+    pointer-events: all !important
+}
+
+#analysisHeader {
+
+    background-color: #0088dd;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+#closeAnalysis {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    right: 0px;
+    top: 35px;
+    background-color: red;
+
+}
+
+#explorationCanvas {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: block;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 999999999999999999999999999999;
+    background-color: #0b2b3e;
+    transition: all 0.5s ease;
+}
+
+#explorationCanvas.on {
     opacity: 1;
 }
 
