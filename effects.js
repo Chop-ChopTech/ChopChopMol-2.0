@@ -10,9 +10,10 @@ canvas.height = canvasContainer.clientHeight;
 class Particle {
     constructor() {
         this.radius = Math.random() * 3 + 2; // Particle size (2-5px)
-        this.orbitRadius = Math.random() * 100 + 50; // Orbit radius (50-150px)
+        this.baseOrbitRadius = Math.random() * 150 + 50; // Orbit radius (50-150px)
+        this.orbitRadius = this.baseOrbitRadius;
         this.angle = Math.random() * Math.PI * 2; // Random starting angle
-        this.speed = Math.random() * 0.02 + 0.01; // Orbit speed
+        this.speed = Math.random() * 0.04 + 0.01; // Orbit speed
         this.centerX = canvas.width / 2;
         this.centerY = canvas.height / 2;
     }
@@ -21,6 +22,7 @@ class Particle {
         this.angle += this.speed; // Update angle for orbit
         this.x = this.centerX + Math.cos(this.angle) * this.orbitRadius;
         this.y = this.centerY + Math.sin(this.angle) * this.orbitRadius;
+        this.orbitRadius = this.baseOrbitRadius * (1 + (1 + Math.sin(Date.now() / 500)) / 2);
     }
 
     draw() {
@@ -38,7 +40,7 @@ class Particle {
 }
 
 // Create particles (adjust number here)
-const particleCount = 70; // Increase/decrease for more/fewer particles
+const particleCount = 230; // Increase/decrease for more/fewer particles
 const particles = Array.from({ length: particleCount }, () => new Particle());
 
 // Animation loop
