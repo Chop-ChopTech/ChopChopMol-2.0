@@ -69,28 +69,31 @@ def analysis():
     try:
         # Step 1: OpenAI API call (0% to 50%)
         response = client.responses.create(
-            model="gpt-4.1",
+            prompt={
+                "id": "pmpt_686a9eaf85d081938cd0bdee847a1d7a05ce9c3dac2a8066",
+                "version": "1",
+            },
             input=[
-                {
-                    "role": "system",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": "You are the smartest, state-of-the art AI molecule analyzer! You accept an image of a molecule and give facts about the molecule in the image. Give its name, properties, origin, and uses",
-                        },
-                    ],
-                },
                 {
                     "role": "user",
                     "content": [
-                        {"type": "input_text", "text": "Analyze this molecule:"},
                         {
                             "type": "input_image",
                             "image_url": str(img),
-                        },
+                        }
                     ],
                 },
             ],
+            reasoning={},
+            tools=[
+                {
+                    "type": "web_search_preview",
+                    "user_location": {"type": "approximate"},
+                    "search_context_size": "high",
+                }
+            ],
+            max_output_tokens=32768,
+            store=False,
         )
 
         bot_reply = response.output_text
