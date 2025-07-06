@@ -165,9 +165,13 @@ function saveImage() {
     link.click();
 }
 function getScreenUrl() {
+
     const analysisPanel = document.getElementById('analysisResponseContainer');
+    analysisPanel.querySelectorAll('p').forEach(p => p.remove());
+
     renderer.render(scene, camera);
     let imgData = renderer.domElement.toDataURL("image/png", 1.0);
+    analysisPanel.classList.add('on');
 
     return imgData;
 }
