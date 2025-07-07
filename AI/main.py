@@ -91,7 +91,7 @@ def analysis():
                 "content": [
                     {
                         "type": "input_text",
-                        "text": "These are the coordinates to help you predict what the molecule is. It is structured in a JSON format where atomData is the coordinates of the atom and numAtoms is the number of atoms in the molecule. Here is the JSON for the moleucle: "
+                        "text": "These are the coordinates to help you predict what the molecule is. It is structured in a JSON format where atomData is the coordinates of the atom and numAtoms is the number of atoms in the molecule. These are to help you with predicting what the molecule is in addition to the images as well, which should also help you predict what the moleucle is. Here is the JSON for the coordinates: "
                         + str(coordinates_from_message),
                     }
                 ],
