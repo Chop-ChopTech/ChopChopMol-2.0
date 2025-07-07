@@ -65,15 +65,15 @@ def tosmiles():
 
 @app.route("/analysis", methods=["POST"])
 def analysis():
-    img = request.json.get("message")
+    images_from_message = request.json.get("message")
+    images = json.loads(images_from_message)
+    if not isinstance(images, list):
+        images = [images]
     try:
         # Step 1: OpenAI API call (0% to 50%)
-        response = client.responses.create(
-            prompt={
-                "id": "pmpt_686a9eaf85d081938cd0bdee847a1d7a05ce9c3dac2a8066",
-                "version": "1",
-            },
-            input=[
+        input_images = []
+        for img in images:
+            input_images.append(
                 {
                     "role": "user",
                     "content": [
@@ -82,8 +82,14 @@ def analysis():
                             "image_url": str(img),
                         }
                     ],
-                },
-            ],
+                }
+            )
+        response = client.responses.create(
+            prompt={
+                "id": "pmpt_686a9eaf85d081938cd0bdee847a1d7a05ce9c3dac2a8066",
+                "version": "1",
+            },
+            input=input_images,
             reasoning={},
             tools=[
                 {

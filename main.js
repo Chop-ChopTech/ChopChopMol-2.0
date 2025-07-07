@@ -115,7 +115,7 @@ window.addEventListener('keydown', function (e) {
 });
 window.addEventListener('keydown', function (e) {
     if (e.key == "j") {
-        copyTextToClipboard(JSON.stringify(getScreenUrl()));
+        // copyTextToClipboard(JSON.stringify(getScreenUrl()));
     }
 })
 window.addEventListener('resize', () => {
@@ -149,8 +149,16 @@ clearSceneButton.addEventListener('click', () => {
     main.reset();
 });
 analyzeMoleculeButton.addEventListener('click', () => {
-    const imgData = getScreenUrl();
-    window.imgToAnalyze = imgData;
+    const images = []
+    const numImages = 6;
+    for (let i = 0; i < numImages; i++) {
+        const imgData = getScreenUrl();
+        images.push()
+        rotateCamera(Math.PI / (numImages / 2), camera, controls);
+
+    }
+
+    window.imgToAnalyze = images;
     console.log(window.imgToAnalyze);
 })
 
@@ -204,6 +212,18 @@ function copyTextToClipboard(text) {
         .catch(err => {
             console.error('Copy error:', err);
         });
+}
+function rotateCamera(angleToRotate, camera, controls = null) {
+    const pos = camera.position;
+    const angle = angleToRotate;
+    const newX = pos.x * Math.cos(angle) + pos.z * Math.sin(angle);
+    const newZ = -pos.x * Math.sin(angle) + pos.z * Math.cos(angle);
+    camera.position.set(newX, pos.y, newZ);
+    camera.lookAt(0, 0, 0);
+    if (controls) {
+        controls.target.set(0, 0, 0);
+        controls.update();
+    }
 }
 
 function animate() {
