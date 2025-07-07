@@ -66,14 +66,15 @@ def tosmiles():
 @app.route("/analysis", methods=["POST"])
 def analysis():
     images_from_message = request.json.get("message")
+    coordinates_from_message = request.json.get("coordinates")
     images = json.loads(images_from_message)
     if not isinstance(images, list):
         images = [images]
     try:
         # Step 1: OpenAI API call (0% to 50%)
-        input_images = []
+        inputs = []
         for img in images:
-            input_images.append(
+            inputs.append(
                 {
                     "role": "user",
                     "content": [
@@ -84,12 +85,24 @@ def analysis():
                     ],
                 }
             )
+        inputs.append(
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": "These are the coordinates to help you predict what the molecule is. It is structured in a JSON format where atomData is the coordinates of the atom and numAtoms is the number of atoms in the molecule. Here is the JSON for the moleucle: "
+                        + str(coordinates_from_message),
+                    }
+                ],
+            }
+        )
         response = client.responses.create(
             prompt={
                 "id": "pmpt_686a9eaf85d081938cd0bdee847a1d7a05ce9c3dac2a8066",
                 "version": "3",
             },
-            input=input_images,
+            input=inputs,
             reasoning={},
             tools=[
                 {

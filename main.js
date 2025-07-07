@@ -155,10 +155,9 @@ analyzeMoleculeButton.addEventListener('click', () => {
         const imgData = getScreenUrl();
         images.push(imgData)
         rotateCamera(Math.PI / (numImages / 2), camera, controls);
-
     }
 
-    window.imgToAnalyze = JSON.stringify(images);
+    window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
     console.log(window.imgToAnalyze);
 })
 

@@ -228,18 +228,19 @@
             }
         }
         async function analyzeMolecule(data) {
-            const chatInput = data;
+            const chatInputImg = data.images;
+            const chatInputCoordinates = data.coordinates;
             const aiAnalyzePanel = document.getElementById('analysisResponseContainer');
             const loading = document.getElementById('explorationCanvas');
             //const chatOutput = document.getElementById('chatOutput');
-            if (!chatInput) return;
+            if (!chatInputImg) return;
             //chatOutput.innerHTML += `<p id="loading" class="typewriter"><strong>Generating Molecule...</p>`;
             loading.classList.add('on');
             try {
                 const response = await fetch('https://chopchopmol-2-0-3.onrender.com/analysis', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: chatInput })
+                    body: JSON.stringify({ message: chatInputImg, coordinates: chatInputCoordinates })
                 });
                 const data = await response.json();
 
