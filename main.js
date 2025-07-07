@@ -150,15 +150,15 @@ clearSceneButton.addEventListener('click', () => {
 });
 analyzeMoleculeButton.addEventListener('click', () => {
     const images = []
-    const numImages = 6;
+    const numImages = 3;
     for (let i = 0; i < numImages; i++) {
         const imgData = getScreenUrl();
-        images.push()
+        images.push(imgData)
         rotateCamera(Math.PI / (numImages / 2), camera, controls);
 
     }
 
-    window.imgToAnalyze = images;
+    window.imgToAnalyze = JSON.stringify(images);
     console.log(window.imgToAnalyze);
 })
 

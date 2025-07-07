@@ -87,7 +87,7 @@ def analysis():
         response = client.responses.create(
             prompt={
                 "id": "pmpt_686a9eaf85d081938cd0bdee847a1d7a05ce9c3dac2a8066",
-                "version": "1",
+                "version": "3",
             },
             input=input_images,
             reasoning={},
