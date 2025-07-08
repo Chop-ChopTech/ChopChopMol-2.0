@@ -481,7 +481,6 @@ body {
     pointer-events: none;
     opacity: 0;
     z-index: 9;
-    background-color: #0b2b3e7b;
     transition: all 0.5s ease;
 }
 

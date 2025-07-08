@@ -48,7 +48,7 @@ function animate() {
     // Clear canvas with slight fade for trail effect
     ctx.fillStyle = 'rgba(10, 10, 26, 0.1)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Update and draw particles
     particles.forEach(particle => {
