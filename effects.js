@@ -40,7 +40,7 @@ class Particle {
 }
 
 // Create particles
-const particleCount = 230;
+const particleCount = 130;
 const particles = Array.from({ length: particleCount }, () => new Particle());
 
 // Animation loop
