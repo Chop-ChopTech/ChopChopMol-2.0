@@ -2,7 +2,7 @@ const canvas = document.getElementById('explorationCanvas');
 const canvasContainer = document.getElementById('analysisResponseContainer');
 const ctx = canvas.getContext('2d');
 
-// Set canvas size to match window
+// Set canvas size to match container
 canvas.width = canvasContainer.clientWidth;
 canvas.height = canvasContainer.clientHeight;
 
@@ -39,16 +39,17 @@ class Particle {
     }
 }
 
-// Create particles (adjust number here)
-const particleCount = 230; // Increase/decrease for more/fewer particles
+// Create particles
+const particleCount = 230;
 const particles = Array.from({ length: particleCount }, () => new Particle());
 
 // Animation loop
 function animate() {
-    // Clear canvas with slight fade for trail effect
-    ctx.fillStyle = 'rgba(10, 10, 26, 0.1)';
+    // Fade previous frames while preserving transparency
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)'; // Increased alpha for cleaner fade
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'source-over'; // Reset for drawing particles
 
     // Update and draw particles
     particles.forEach(particle => {
@@ -61,8 +62,8 @@ function animate() {
 
 // Handle window resize
 window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = canvasContainer.clientWidth;
+    canvas.height = canvasContainer.clientHeight;
     particles.forEach(p => {
         p.centerX = canvas.width / 2;
         p.centerY = canvas.height / 2;
@@ -71,10 +72,3 @@ window.addEventListener('resize', () => {
 
 // Start animation
 animate();
-
-// Customization notes:
-// - Change particleCount (line above) to adjust number of particles (e.g., 50 for more density).
-// - Modify this.radius in Particle constructor for larger/smaller particles (e.g., Math.random() * 5 + 3).
-// - Adjust this.orbitRadius for larger/smaller orbits (e.g., Math.random() * 200 + 100).
-// - Change this.speed for faster/slower orbits (e.g., Math.random() * 0.05 + 0.02).
-// - Modify gradient colors in draw() using hsla values for different hues.

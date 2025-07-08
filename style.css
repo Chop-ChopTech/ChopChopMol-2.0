@@ -482,6 +482,7 @@ body {
     opacity: 0;
     z-index: 9;
     transition: all 0.5s ease;
+    background-color: #0088dd43;
 }
 
 #explorationCanvas.on {
