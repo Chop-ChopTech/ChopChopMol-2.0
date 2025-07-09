@@ -204,10 +204,6 @@ body {
     border-radius: 5px;
 }
 
-#toggleLabels:hover {
-    color: #ffea00;
-    background-color: #0ec2f9;
-}
 
 #switchMode {
     color: #ffffff;
@@ -289,19 +285,30 @@ body {
 }
 
 .fancy-button {
-    display: inline-block;
-    padding: 5px 10px;
-    font-size: 12px;
-    font-weight: 500;
-    text-transform: uppercase;
+    padding: 8px 16px;
+    /* Slightly more padding for better click area */
+    font-size: 13px;
+    /* Slightly larger for readability */
+    font-weight: 600;
+    /* Bolder text for emphasis */
     color: #fff;
     border: none;
-    border-radius: 5px;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    /* Softer, modern radius */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    /* Subtler shadow */
+    text-transform: uppercase;
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
+}
+
+.fancy-button:hover {
+    transform: translateY(-2px) scale(1.02);
+    /* Subtle lift and slight scale */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 0 8px rgba(255, 255, 255, 0.3);
+    /* Glow effect */
 }
 
 .fancy-button::before {
@@ -311,41 +318,52 @@ body {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.514), transparent);
-    transition: 0.5s;
-}
-
-.fancy-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.4s ease;
 }
 
 .fancy-button:hover::before {
     left: 100%;
+    /* Smooth shine effect on hover */
 }
 
 .fancy-button:active {
-    transform: translateY(1px);
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+    transform: translateY(0) scale(0.98);
+    /* Subtle press-down effect */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    /* Reduced shadow on click */
+}
+
+.fancy-button {
+    position: relative;
+    overflow: hidden;
 }
 
 .fancy-button::after {
+    content: '';
     position: absolute;
-    top: 50%;
-    right: 10px;
-    transform: translateY(-50%);
-    font-size: 20px;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    /* Subtle white ripple */
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
     opacity: 0;
-    transition: opacity 0.3s ease;
 }
 
-.fancy-button:hover::after {
-    opacity: 1;
+.fancy-button:active::after {
+    width: 100px;
+    /* Size of ripple */
+    height: 100px;
+    opacity: 0.5;
+    transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
 }
 
-.fancy-button:focus {
-    outline: none;
-
+.fancy-button::after {
+    left: var(--ripple-x, 50%);
+    top: var(--ripple-y, 50%);
 }
 
 #import-smiles {
@@ -481,9 +499,11 @@ body {
     pointer-events: none;
     opacity: 0;
     z-index: 9;
-    transition: all 0.5s ease;
+    transition: all 0.9s ease;
     background-color: #0088dd43;
 }
+
+
 
 #explorationCanvas.on {
     opacity: 1;

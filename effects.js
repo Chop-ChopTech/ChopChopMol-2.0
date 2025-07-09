@@ -5,6 +5,7 @@ const ctx = canvas.getContext('2d');
 // Set canvas size to match container
 canvas.width = canvasContainer.clientWidth;
 canvas.height = canvasContainer.clientHeight;
+let canvasOn = false;
 
 // Particle class for orbiting effect
 class Particle {
@@ -19,6 +20,7 @@ class Particle {
         // Random offset for smooth noise-like variation
         this.noiseOffset1 = Math.random() * 100;
         this.noiseOffset2 = Math.random() * 100;
+        this.vOut = 0
     }
 
     update() {
@@ -29,7 +31,12 @@ class Particle {
         // Simulate smooth noise with two sine waves of different frequencies
         const randomVariation = (Math.sin(time * 0.1 + this.noiseOffset1) * 0.5 + 0.5) * 0.2
             + (Math.sin(time * 0.05 + this.noiseOffset2) * 0.5 + 0.5) * 0.1;
-        this.orbitRadius = this.baseOrbitRadius * (1 + pulsate * 0.5 + randomVariation * 0.3);
+        if (canvasOn) {
+            this.orbitRadius = this.baseOrbitRadius * (1 + pulsate * 0.5 + randomVariation * 0.3);
+        } else {
+            this.vOut += 0.05
+            this.orbitRadius += this.vOut
+        }
         this.x = this.centerX + Math.cos(this.angle) * this.orbitRadius;
         this.y = this.centerY + Math.sin(this.angle) * this.orbitRadius;
     }
@@ -37,7 +44,14 @@ class Particle {
     draw() {
         // Pulsating gradient based on time and position
         const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
-        const hue = (Date.now() / 10 + this.angle * 180 / Math.PI) % 360;
+        let hue
+        if (canvasOn) {
+            hue = (Date.now() / 10 + this.angle * 180 / Math.PI) % 360;
+
+        } else {
+            hue = 60;
+
+        }
         gradient.addColorStop(0, `hsla(${hue}, 80%, 70%, 0.8)`);
         gradient.addColorStop(1, `hsla(${hue}, 80%, 70%, 0)`);
 
@@ -46,11 +60,19 @@ class Particle {
         ctx.fillStyle = gradient;
         ctx.fill();
     }
+    remove() {
+        this.vOut = 0
+
+        const index = particles.indexOf(this);
+        if (index > -1) {
+            particles.splice(index, 1);
+        }
+    }
 }
 
 // Create particles
 const particleCount = 130;
-const particles = Array.from({ length: particleCount }, () => new Particle());
+let particles = Array.from({ length: particleCount }, () => new Particle());
 
 // Animation loop
 function animate() {
@@ -65,7 +87,15 @@ function animate() {
         particle.update();
         particle.draw();
     });
+    if (!canvasOn) {
+        particles.forEach(particle => {
+            particle.orbitRadius += 9
+            if (particle.orbitRadius > 1000) {
+                particle.remove();
+            }
+        })
 
+    }
     requestAnimationFrame(animate);
 }
 
@@ -78,6 +108,30 @@ window.addEventListener('resize', () => {
         p.centerY = canvas.height / 2;
     });
 });
+
+const target = document.getElementById('explorationCanvas');
+
+const observer = new MutationObserver((mutationsList) => {
+    for (const mutation of mutationsList) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+            if (target.classList.contains('on')) {
+                console.log('canvas on')
+                canvasOn = true;
+                particles = Array.from({ length: particleCount }, () => new Particle());
+            } else {
+                console.log('canvas off')
+                canvasOn = false;
+            }
+        }
+    }
+});
+
+// Start observing class changes
+observer.observe(target, {
+    attributes: true,
+    attributeFilter: ['class']
+});
+
 
 // Start animation
 animate();

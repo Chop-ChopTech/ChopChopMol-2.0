@@ -83,12 +83,6 @@
         customButton.addEventListener('click', () => {
             fileInput.click();
         });
-
-        fileInput.addEventListener('change', (event) => {
-            if (event.target.files.length > 0) {
-                customButton.textContent = `Selected: ${event.target.files[0].name}`;
-            }
-        });
     </script>
     <script>
         let _reply = null;
@@ -271,7 +265,15 @@
         function closeAnalysisWindow() {
             document.getElementById('analysisResponseContainer').classList.remove('on');
         }
-
+        document.querySelectorAll('.fancy-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const rect = button.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                button.style.setProperty('--ripple-x', `${x}px`);
+                button.style.setProperty('--ripple-y', `${y}px`);
+            });
+        });
 
     </script>
     <script type="importmap">
