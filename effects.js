@@ -16,13 +16,22 @@ class Particle {
         this.speed = Math.random() * 0.04 + 0.01; // Orbit speed
         this.centerX = canvas.width / 2;
         this.centerY = canvas.height / 2;
+        // Random offset for smooth noise-like variation
+        this.noiseOffset1 = Math.random() * 100;
+        this.noiseOffset2 = Math.random() * 100;
     }
 
     update() {
         this.angle += this.speed; // Update angle for orbit
+        // Combine base pulsating effect with smooth random variation
+        const time = Date.now() / 500;
+        const pulsate = (1 + Math.sin(time)) / 2; // Original pulsating effect
+        // Simulate smooth noise with two sine waves of different frequencies
+        const randomVariation = (Math.sin(time * 0.1 + this.noiseOffset1) * 0.5 + 0.5) * 0.2
+            + (Math.sin(time * 0.05 + this.noiseOffset2) * 0.5 + 0.5) * 0.1;
+        this.orbitRadius = this.baseOrbitRadius * (1 + pulsate * 0.5 + randomVariation * 0.3);
         this.x = this.centerX + Math.cos(this.angle) * this.orbitRadius;
         this.y = this.centerY + Math.sin(this.angle) * this.orbitRadius;
-        this.orbitRadius = this.baseOrbitRadius * (1 + (1 + Math.sin(Date.now() / 500)) / 2);
     }
 
     draw() {
