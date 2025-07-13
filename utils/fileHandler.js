@@ -6,8 +6,9 @@ export default class FileHandler {
 
     }
 
-    handleFile(event) {
+    handleFile(event, overlayOn) {
         const file = event.target.files[0];
+        const overlay = overlayOn
         if (!file) return;
 
         const reader = new FileReader();
@@ -21,14 +22,14 @@ export default class FileHandler {
                     this.data = parsedData;
                     this.main.data = parsedData; // Now correctly updates `main.data`
                     clearScene(this.main.scene);
-                    this.main.newMolecule(parsedData, 0);
+                    this.main.newMolecule(parsedData, 0, overlay);
                 } else {
                     if (fileType === 'mol') {
                         parsedData = this.parseMolToJson(text);
                     } else if (fileType === 'pdb') {
                         parsedData = this.parsePdbToJson(text);
                     }
-                    this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)));
+                    this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)), overlay);
                 }
 
             } catch (error) {

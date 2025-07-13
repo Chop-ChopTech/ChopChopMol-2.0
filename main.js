@@ -53,7 +53,9 @@ export default class Main {
         this.loader = new FileHandler(this);
         this.loader.parseJSON().then(settings => {
             this.atomSettings = settings || {};
-            this.molecule = new Molecule(this, this.atomSettings);
+            this.molecule = new Molecule(this, this.atomSettings, false);
+            this.overlayMolecule = new Molecule(this, this.atomSettings, true);
+
         });
     }
     init(data, mode) {
@@ -65,9 +67,14 @@ export default class Main {
         clearScene(this.scene);
         render();
     }
-    newMolecule(data, mode) {
-        this.reset();
-        this.molecule.init(data, mode);
+    newMolecule(data, mode, overlay) {
+
+        if (overlay) {
+            this.overlayMolecule.init(data, mode);
+        } else {
+            this.reset();
+            this.molecule.init(data, mode);
+        }
         if (labelMode) {
             this.molecule.toggleLabels(true); // Show labels if in label mode
         }
@@ -78,9 +85,9 @@ export default class Main {
         this.molecule.toggleLabels(labelMode);
         render();
     }
-    createNewMoleculeFromJSON(json) {
+    createNewMoleculeFromJSON(json, overlay) {
         const data = JSON.parse(json);
-        this.newMolecule(data, 0);
+        this.newMolecule(data, 0, overlay);
         this.data = data;
     }
 }
@@ -89,7 +96,10 @@ const main = new Main();
 
 // File input event listener
 document.getElementById("fileInput").addEventListener("change", (e) => {
-    main.loader.handleFile(e);
+    main.loader.handleFile(e, false);
+}, false);
+document.getElementById("compare").addEventListener("change", (e) => {
+    main.loader.handleFile(e, true);
 }, false);
 let isLPressed = false;
 

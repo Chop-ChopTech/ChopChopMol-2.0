@@ -4,7 +4,7 @@ import Atom from './atom.js';
 import Bond from './bond.js';
 
 export default class Molecule {
-    constructor(main, atomSettings) {
+    constructor(main, atomSettings, overlay) {
         this.main = main;
         this.atoms = [];
         this.bonds = [];
@@ -12,6 +12,7 @@ export default class Molecule {
         this.atomSettings = atomSettings;
         this.labels = [];
         this.stretch = 4;
+        this.overlay = overlay
     }
 
     init(data, mode) {
@@ -72,7 +73,7 @@ export default class Molecule {
     createAtoms(data) {
         const resolution = 16;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
-        const material = new THREE.MeshBasicMaterial({ vertexColors: true });
+        const material = new THREE.MeshBasicMaterial({ vertexColors: true, opacity: this.overlay ? 0.5 : 1, transparent: this.overlay });
         // const material = new THREE.MeshLambertMaterial({ vertexColors: true });
 
 
@@ -184,7 +185,7 @@ export default class Molecule {
     visualizeBondsFast(bonds) {
         const positions = new Float32Array(bonds.length * 2 * 3);
 
-        const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+        const material = new THREE.LineBasicMaterial({ color: 0x00ff00, opacity: this.overlay ? 0.5 : 1, transparent: this.overlay });
         let index = 0;
 
         bonds.forEach(bond => {

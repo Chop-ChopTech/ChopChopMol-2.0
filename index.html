@@ -18,13 +18,14 @@
     <!-- Buttons with new toggle labels button -->
     <div id="buttons">
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
-        <button class="fancy-button" id="aiGenerate" class="button">AI Generate BETA</button>
+        <input id="compare" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
 
+        <button class="fancy-button" id="aiGenerate" class="button">AI Generate BETA</button>
         <button class="fancy-button" id="customButton">Open File</button>
         <button class="fancy-button" id="switchMode" class="button">Toggle Style</button>
         <button class="fancy-button" id="toggleLabels" class="button">Atom Labels</button>
         <button class="fancy-button" id="captureScreen" class="button">Save Image</button>
-        <button class="fancy-button" id="compare" class="button">compare</button>
+        <button class="fancy-button" id="compareButton" class="button">Compare</button>
         <button class="fancy-button" id="import-smiles" class="button">Load SMILES string</button>
         <button class="fancy-button" id="import-json" class="button">Load JSON string</button>
         <button class="fancy-button" id="analyze-molecule" class="button">Analyze molecule</button>
@@ -82,6 +83,12 @@
 
         customButton.addEventListener('click', () => {
             fileInput.click();
+        });
+        const compareFileInput = document.getElementById('compare');
+        const compareButton = document.getElementById('compareButton');
+
+        compareButton.addEventListener('click', () => {
+            compareFileInput.click();
         });
     </script>
     <script>

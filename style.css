@@ -503,7 +503,9 @@ body {
     background-color: #0088dd43;
 }
 
-
+#compareButton {
+    background-color: #5800dd;
+}
 
 #explorationCanvas.on {
     opacity: 1;
