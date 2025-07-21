@@ -1,32 +1,147 @@
 {
-    "O": {
-        "color": "red",
-        "radius": 1,
-        "realRadius": 0.66
+    "H": {
+        "color": "lightgray",
+        "radius": 1.32,
+        "realRadius": 0.53
+    },
+    "He": {
+        "color": "cyan",
+        "radius": 0.78,
+        "realRadius": 0.31
+    },
+    "Li": {
+        "color": "purple",
+        "radius": 4.17,
+        "realRadius": 1.67
+    },
+    "Be": {
+        "color": "darkgreen",
+        "radius": 2.8,
+        "realRadius": 1.12
+    },
+    "B": {
+        "color": "salmon",
+        "radius": 2.17,
+        "realRadius": 0.87
     },
     "C": {
         "color": "gray",
-        "radius": 1.25,
-        "realRadius": 0.76
-    },
-    "H": {
-        "color": "lightgray",
-        "radius": 0.5,
-        "realRadius": 0.31
-    },
-    "Si": {
-        "color": "darkgray",
-        "radius": 1.75,
-        "realRadius": 1.11
+        "radius": 1.68,
+        "realRadius": 0.67
     },
     "N": {
         "color": "blue",
-        "radius": 0.65,
-        "realRadius": 0.71
+        "radius": 1.4,
+        "realRadius": 0.56
+    },
+    "O": {
+        "color": "red",
+        "radius": 1.2,
+        "realRadius": 0.48
+    },
+    "F": {
+        "color": "green",
+        "radius": 1.05,
+        "realRadius": 0.42
+    },
+    "Ne": {
+        "color": "cyan",
+        "radius": 0.95,
+        "realRadius": 0.38
+    },
+    "Na": {
+        "color": "orange",
+        "radius": 4.75,
+        "realRadius": 1.9
+    },
+    "Mg": {
+        "color": "green",
+        "radius": 3.62,
+        "realRadius": 1.45
+    },
+    "Al": {
+        "color": "gray",
+        "radius": 2.95,
+        "realRadius": 1.18
+    },
+    "Si": {
+        "color": "darkgray",
+        "radius": 2.77,
+        "realRadius": 1.11
+    },
+    "P": {
+        "color": "orange",
+        "radius": 2.45,
+        "realRadius": 0.98
     },
     "S": {
         "color": "yellow",
-        "radius": 1.5,
-        "realRadius": 1.05
+        "radius": 2.17,
+        "realRadius": 0.87
+    },
+    "Cl": {
+        "color": "green",
+        "radius": 1.98,
+        "realRadius": 0.79
+    },
+    "Ar": {
+        "color": "cyan",
+        "radius": 1.77,
+        "realRadius": 0.71
+    },
+    "K": {
+        "color": "violet",
+        "radius": 6.08,
+        "realRadius": 2.43
+    },
+    "Ca": {
+        "color": "lightgreen",
+        "radius": 4.85,
+        "realRadius": 1.94
+    },
+    "Fe": {
+        "color": "orange",
+        "radius": 3.9,
+        "realRadius": 1.56
+    },
+    "Cu": {
+        "color": "brown",
+        "radius": 3.62,
+        "realRadius": 1.45
+    },
+    "Zn": {
+        "color": "lightblue",
+        "radius": 3.55,
+        "realRadius": 1.42
+    },
+    "Ag": {
+        "color": "silver",
+        "radius": 4.12,
+        "realRadius": 1.65
+    },
+    "I": {
+        "color": "purple",
+        "radius": 2.88,
+        "realRadius": 1.15
+    },
+    "Au": {
+        "color": "gold",
+        "radius": 4.35,
+        "realRadius": 1.74
+    },
+    "Hg": {
+        "color": "silver",
+        "radius": 4.28,
+        "realRadius": 1.71
+    },
+    "Pb": {
+        "color": "gray",
+        "radius": 3.85,
+        "realRadius": 1.54
+    },
+    "U": {
+        "color": "gray",
+        "radius": 0,
+        "realRadius": 0
     }
 }

@@ -15,7 +15,7 @@ export default class Molecule {
         this.overlay = overlay
     }
 
-    init(data, mode) {
+    init(data, mode, rotation, translation) {
         this.reset();
         console.log(data);
 
