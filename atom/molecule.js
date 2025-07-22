@@ -21,7 +21,7 @@ export default class Molecule {
 
         const bondThreshold = 5;
 
-        this.createAtoms(data, rotation, translation);
+        this.createAtoms(data, rotation, translation, mode);
         this.centerMolecule();
 
 
@@ -72,14 +72,26 @@ export default class Molecule {
     //     this.instancedMesh.instanceMatrix.needsUpdate = true;
     //     colorAttribute.needsUpdate = true;
     // }
-    createAtoms(data, rotation, translation) {
+    createAtoms(data, rotation, translation, mode) {
         const resolution = 16;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
-        const material = new THREE.MeshBasicMaterial({
-            vertexColors: true,
-            opacity: this.overlay ? 0.5 : 1,
-            transparent: this.overlay
-        });
+        let material;
+        if (mode == 0) {
+            material = new THREE.MeshBasicMaterial({
+                vertexColors: true,
+                opacity: this.overlay ? 0.5 : 1,
+                transparent: this.overlay
+            });
+        } else {
+            material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                opacity: this.overlay ? 0.5 : 1,
+                transparent: this.overlay,
+                roughness: 0.2,
+                // metalness: 0.5,
+                reflectivity: 0.5,
+            });
+        }
 
         this.instancedMesh = new THREE.InstancedMesh(atomGeometry, material, data.numAtoms);
         const colorAttribute = new THREE.InstancedBufferAttribute(new Float32Array(data.numAtoms * 3), 3);
@@ -294,10 +306,7 @@ export default class Molecule {
             bondMesh2.lookAt(end);
             bondMesh2.rotateX(Math.PI / 2);
 
-            bondMesh1.rotation.set(rotation.x, rotation.y, rotation.z)
-            bondMesh1.position.set(translation.x, translation.y, translation.z)
-            bondMesh2.rotation.set(rotation.x, rotation.y, rotation.z)
-            bondMesh2.position.set(translation.x, translation.y, translation.z)
+
             this.main.scene.add(bondMesh1);
             this.main.scene.add(bondMesh2);
         });

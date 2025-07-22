@@ -57,6 +57,10 @@ export default class Main {
             this.overlayMolecule = new Molecule(this, this.atomSettings, true);
 
         });
+        this.roughness = 1;
+        this.metalness = 0;
+        this.opacity = 1;
+
     }
     init(data, mode, rotation, translation) {
         this.molecule.init(data, mode);
@@ -103,6 +107,25 @@ document.getElementById("compare").addEventListener("change", (e) => {
 }, false);
 let isLPressed = false;
 
+const styleSelector = document.getElementById('styleSelector');
+const roughnessSelector = document.getElementById('style1');
+const metalnessSelector = document.getElementById('style2');
+const opacitySelector = document.getElementById('style3');
+const bondsSelector = document.getElementById('style4');
+const toggleStyleChanges = document.getElementById('toggleStyleChanges');
+
+
+toggleStyleChanges.addEventListener('change', () => {
+    if (mode == 0) {
+        mode = 1;
+    } else {
+        mode = 0;
+    }
+    main.newMolecule(main.data, mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+    console.log(mode);
+    render();
+});
+
 window.addEventListener('keydown', function (e) {
     if (e.key === 'l') {
         isLPressed = true;
@@ -136,11 +159,19 @@ window.addEventListener('resize', () => {
 });
 
 switchModeButton.addEventListener('click', () => {
-    mode = 1 - mode;
-    main.newMolecule(main.data, mode);
-    console.log(mode);
+    // mode = 1 - mode;
+    // main.newMolecule(main.data, mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+    // console.log(mode);
+    styleSelector.classList.toggle('on');
 });
-
+roughnessSelector.addEventListener('input', () => {
+    main.molecule.material.roughness = roughnessSelector.value;
+    render();
+});
+metalnessSelector.addEventListener('input', () => {
+    main.molecule.material.metalness = metalnessSelector.value;
+    render();
+});
 toggleLabelsButton.addEventListener('click', () => {
     main.toggleLabels();
 });

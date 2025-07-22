@@ -32,6 +32,35 @@
         <button class="fancy-button" id="clear-canvas" class="button">Clear</button>
 
     </div>
+    <div id="styleSelector">
+
+        <div class="switch-container">
+            <span class="switch-label">Toggle Style Changes</span>
+
+            <label class="switch">
+                <input type="checkbox" id="toggleStyleChanges">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <br>
+
+        <label for="style1">Roughness</label>
+        <input type="range" id="style1">
+
+        <label for="style2">Metalness</label>
+        <input type="range" id="style2">
+
+        <label for="style3">Opacity</label>
+        <input type="range" id="style3">
+
+        <label for="style4">Bonds</label>
+        <input type="range" id="style4">
+
+        <label for="style5">Atom Size</label>
+        <input type="range" id="style5">
+
+    </div>
     <h1 id="loading">Loading Molecule</h1>
     <div id="analysisResponseContainer">
         <button onclick="closeAnalysisWindow()" id="closeAnalysis" class="fancy-button">Close</button>
