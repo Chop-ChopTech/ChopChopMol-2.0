@@ -9,6 +9,8 @@ export default class FileHandler {
     handleFile(event, overlayOn) {
         const file = event.target.files[0];
         const overlay = overlayOn
+        let rotation = { x: 0, y: 0, z: 0 }
+        let translation = { x: 0, y: 0, z: 0 }
         if (!file) return;
 
         const reader = new FileReader();
@@ -17,20 +19,23 @@ export default class FileHandler {
                 const text = e.target.result;
                 const fileType = findFileType(file);
                 let parsedData = null;
-                if (fileType === 'xyz') {
-                    parsedData = this.parseXYZ(text);
-                    this.data = parsedData;
-                    this.main.data = parsedData; // Now correctly updates `main.data`
-                    clearScene(this.main.scene);
-                    this.main.newMolecule(parsedData, 0, overlay);
-                } else {
-                    if (fileType === 'mol') {
-                        parsedData = this.parseMolToJson(text);
-                    } else if (fileType === 'pdb') {
-                        parsedData = this.parsePdbToJson(text);
-                    }
-                    this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)), overlay);
+
+                if (fileType === 'mol') {
+                    parsedData = this.parseMolToJson(text);
+                } else if (fileType === 'pdb') {
+                    parsedData = this.parsePdbToJson(text);
+                } else if (fileType === 'xyz') {
+                    parsedData = this.parseXyzToJson(text);
                 }
+                if (overlay) {
+                    const transformation = alignMolecules(parsedData, this.main.data);
+                    rotation = transformation.rotation;
+                    translation = transformation.translation;
+                    console.log(rotation, translation);
+
+                }
+                this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)), overlay, rotation, translation);
+
 
             } catch (error) {
                 console.error("Error parsing XYZ file:", error);
@@ -38,6 +43,30 @@ export default class FileHandler {
         };
         reader.readAsText(file);
     }
+
+    parseXyzToJson(xyzText) {
+        const lines = xyzText.split("\n").map(line => line.trim()).filter(Boolean);
+
+        const numAtoms = parseInt(lines[0]);
+        const atomData = [];
+
+        for (let i = 2; i < 2 + numAtoms; i++) {
+            const line = lines[i];
+            const [element, xStr, yStr, zStr] = line.split(/\s+/);
+
+            const x = parseFloat(xStr);
+            const y = parseFloat(yStr);
+            const z = parseFloat(zStr);
+
+            atomData.push({ element, x, y, z });
+        }
+
+        return {
+            atomData,
+            numAtoms
+        };
+    }
+
 
     parseMolToJson(molText) {
         const lines = molText.split("\n");

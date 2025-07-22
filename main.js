@@ -58,7 +58,7 @@ export default class Main {
 
         });
     }
-    init(data, mode) {
+    init(data, mode, rotation, translation) {
         this.molecule.init(data, mode);
         render()
         console.log(this.data);
@@ -67,13 +67,13 @@ export default class Main {
         clearScene(this.scene);
         render();
     }
-    newMolecule(data, mode, overlay) {
+    newMolecule(data, mode, overlay, rotation, translation) {
 
         if (overlay) {
-            this.overlayMolecule.init(data, mode);
+            this.overlayMolecule.init(data, mode, rotation, translation);
         } else {
             this.reset();
-            this.molecule.init(data, mode);
+            this.molecule.init(data, mode, rotation, translation);
         }
         if (labelMode) {
             this.molecule.toggleLabels(true); // Show labels if in label mode
@@ -85,9 +85,9 @@ export default class Main {
         this.molecule.toggleLabels(labelMode);
         render();
     }
-    createNewMoleculeFromJSON(json, overlay) {
+    createNewMoleculeFromJSON(json, overlay, rotation, translation) {
         const data = JSON.parse(json);
-        this.newMolecule(data, 0, overlay);
+        this.newMolecule(data, 0, overlay, rotation, translation);
         this.data = data;
     }
 }
@@ -125,7 +125,7 @@ window.addEventListener('keydown', function (e) {
 });
 window.addEventListener('keydown', function (e) {
     if (e.key == "j") {
-        // copyTextToClipboard(JSON.stringify(getScreenUrl()));
+        copyTextToClipboard(JSON.stringify(main.data));
     }
 })
 window.addEventListener('resize', () => {

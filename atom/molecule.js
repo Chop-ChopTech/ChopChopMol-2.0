@@ -21,9 +21,11 @@ export default class Molecule {
 
         const bondThreshold = 5;
 
-        this.createAtoms(data);
-        this.main.scene.add(this.instancedMesh);
+        this.createAtoms(data, rotation, translation);
         this.centerMolecule();
+
+
+        this.main.scene.add(this.instancedMesh);
 
         this.createBonds(this.atoms, bondThreshold);
         if (mode == 0) {
@@ -70,20 +72,20 @@ export default class Molecule {
     //     this.instancedMesh.instanceMatrix.needsUpdate = true;
     //     colorAttribute.needsUpdate = true;
     // }
-    createAtoms(data) {
+    createAtoms(data, rotation, translation) {
         const resolution = 16;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
-        const material = new THREE.MeshBasicMaterial({ vertexColors: true, opacity: this.overlay ? 0.5 : 1, transparent: this.overlay });
-        // const material = new THREE.MeshLambertMaterial({ vertexColors: true });
-
+        const material = new THREE.MeshBasicMaterial({
+            vertexColors: true,
+            opacity: this.overlay ? 0.5 : 1,
+            transparent: this.overlay
+        });
 
         this.instancedMesh = new THREE.InstancedMesh(atomGeometry, material, data.numAtoms);
-
         const colorAttribute = new THREE.InstancedBufferAttribute(new Float32Array(data.numAtoms * 3), 3);
         this.instancedMesh.geometry.setAttribute('color', colorAttribute);
 
         for (let i = 0; i < data.numAtoms; i++) {
-
             const x = data.atomData[i].x * this.stretch;
             const y = data.atomData[i].y * this.stretch;
             const z = data.atomData[i].z * this.stretch;
@@ -97,8 +99,8 @@ export default class Molecule {
             const radius = this.atomSettings[element]?.realRadius * 1.5 || 1;
 
             const matrix = new THREE.Matrix4();
-            matrix.setPosition(atom.position);
-            matrix.scale(new THREE.Vector3(radius, radius, radius));
+            matrix.makeScale(radius, radius, radius);
+            matrix.setPosition(coordinates);
 
             this.instancedMesh.setMatrixAt(i, matrix);
 
@@ -108,7 +110,20 @@ export default class Molecule {
 
         this.instancedMesh.instanceMatrix.needsUpdate = true;
         colorAttribute.needsUpdate = true;
+
+        // 💡 Add the mesh to a group and transform the group
+        this.moleculeGroup = new THREE.Group();
+        this.moleculeGroup.add(this.instancedMesh);
+        // this.moleculeGroup.rotation.set(rotation.x, rotation.y, rotation.z);
+        // this.moleculeGroup.position.set(translation.x * this.stretch, translation.y * this.stretch, translation.z * this.stretch);
+        // Apply rotation and translation to the group
+
+
+        // Finally add the group to your scene or container
+        this.main.scene.add(this.moleculeGroup);
     }
+
+
 
     createBonds(atoms, threshold) {
         this.bonds = [];
@@ -178,7 +193,7 @@ export default class Molecule {
         const boundingBox = new THREE.Box3().setFromObject(this.instancedMesh);
         const center = new THREE.Vector3();
         boundingBox.getCenter(center);
-        this.instancedMesh.position.sub(center);
+        // this.instancedMesh.position.sub(center);
         this.offset = center.clone();
     }
 

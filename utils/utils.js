@@ -59,14 +59,16 @@ function alignMolecules(movingMolecule, fixedMolecule) {
         return { x: sumX / n, y: sumY / n, z: sumZ / n };
     }
 
-    // Convert rotation matrix to Euler angles (X, Y, Z order)
+    // Convert rotation matrix to Euler angles (XYZ order)
     function matrixToEulerAngles(rotationMatrix) {
         const R = rotationMatrix;
 
-        // Extract Euler angles in XYZ order (Tait-Bryan angles)
+        // Clamp values to avoid numerical issues
+        const clamp = (val, min = -1, max = 1) => Math.max(min, Math.min(max, val));
+
         let x, y, z;
 
-        // Check for gimbal lock
+        // Extract Euler angles in XYZ order
         const sy = Math.sqrt(R[0][0] * R[0][0] + R[1][0] * R[1][0]);
         const singular = sy < 1e-6;
 
@@ -85,127 +87,76 @@ function alignMolecules(movingMolecule, fixedMolecule) {
 
     // Apply rotation matrix to a point
     function rotatePoint(point, rotationMatrix) {
-        const x = rotationMatrix[0][0] * point.x + rotationMatrix[0][1] * point.y + rotationMatrix[0][2] * point.z;
-        const y = rotationMatrix[1][0] * point.x + rotationMatrix[1][1] * point.y + rotationMatrix[1][2] * point.z;
-        const z = rotationMatrix[2][0] * point.x + rotationMatrix[2][1] * point.y + rotationMatrix[2][2] * point.z;
-        return { x, y, z };
+        const R = rotationMatrix;
+        return {
+            x: R[0][0] * point.x + R[0][1] * point.y + R[0][2] * point.z,
+            y: R[1][0] * point.x + R[1][1] * point.y + R[1][2] * point.z,
+            z: R[2][0] * point.x + R[2][1] * point.y + R[2][2] * point.z
+        };
     }
 
-    // Apply transformation to atoms for scoring purposes
-    function transformAtoms(atoms, rotationMatrix, translation) {
-        return atoms.map(atom => {
+    // Calculate RMSD (Root Mean Square Deviation) between two sets of points
+    function calculateRMSD(movingAtoms, fixedAtoms, rotationMatrix, translation) {
+        const transformedMoving = movingAtoms.map(atom => {
             const rotated = rotatePoint(atom, rotationMatrix);
             return {
-                ...atom,
                 x: rotated.x + translation.x,
                 y: rotated.y + translation.y,
                 z: rotated.z + translation.z
             };
         });
-    }
 
-    // Calculate overlap score for a given transformation
-    function calculateOverlapScore(movingAtoms, fixedAtoms, rotationMatrix, translation) {
-        const transformedMoving = transformAtoms(movingAtoms, rotationMatrix, translation);
-        let totalScore = 0;
-        let matchCount = 0;
+        let totalSquaredDistance = 0;
+        let pairCount = 0;
 
+        // For each transformed moving atom, find closest fixed atom
         for (const movingAtom of transformedMoving) {
-            let bestDistance = Infinity;
+            let minDistance = Infinity;
             let bestMatch = null;
 
             for (const fixedAtom of fixedAtoms) {
                 const dist = distance(movingAtom, fixedAtom);
-                if (dist < bestDistance) {
-                    bestDistance = dist;
+                if (dist < minDistance) {
+                    minDistance = dist;
                     bestMatch = fixedAtom;
                 }
             }
 
             if (bestMatch) {
-                const elementBonus = movingAtom.element === bestMatch.element ? 2.0 : 1.0;
-                const distanceScore = Math.exp(-bestDistance) * elementBonus;
-                totalScore += distanceScore;
-                matchCount++;
+                // Give bonus for matching elements (reduce effective distance)
+                const elementBonus = movingAtom.element === bestMatch.element ? 0.5 : 1.0;
+                const effectiveDistance = minDistance * elementBonus;
+                totalSquaredDistance += effectiveDistance * effectiveDistance;
+                pairCount++;
             }
         }
 
-        return matchCount > 0 ? totalScore / matchCount : 0;
+        return pairCount > 0 ? Math.sqrt(totalSquaredDistance / pairCount) : Infinity;
     }
 
-    // Calculate optimal rotation using Kabsch algorithm
-    function calculateOptimalRotation(movingPoints, fixedPoints) {
-        if (movingPoints.length === 0) {
-            return [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-        }
+    // Create rotation matrix from axis-angle representation
+    function axisAngleToMatrix(axis, angle) {
+        const [x, y, z] = axis;
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const t = 1 - c;
 
-        const movingCentroid = calculateCentroid(movingPoints);
-        const fixedCentroid = calculateCentroid(fixedPoints);
-
-        const centeredMoving = movingPoints.map(p => ({
-            x: p.x - movingCentroid.x,
-            y: p.y - movingCentroid.y,
-            z: p.z - movingCentroid.z
-        }));
-
-        const centeredFixed = fixedPoints.map(p => ({
-            x: p.x - fixedCentroid.x,
-            y: p.y - fixedCentroid.y,
-            z: p.z - fixedCentroid.z
-        }));
-
-        // Calculate cross-covariance matrix H
-        const H = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-        for (let i = 0; i < centeredMoving.length; i++) {
-            const m = centeredMoving[i];
-            const f = centeredFixed[i];
-
-            H[0][0] += m.x * f.x; H[0][1] += m.x * f.y; H[0][2] += m.x * f.z;
-            H[1][0] += m.y * f.x; H[1][1] += m.y * f.y; H[1][2] += m.y * f.z;
-            H[2][0] += m.z * f.x; H[2][1] += m.z * f.y; H[2][2] += m.z * f.z;
-        }
-
-        const trace = H[0][0] + H[1][1] + H[2][2];
-
-        if (Math.abs(trace) < 1e-6) {
-            return [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-        }
-
-        const norm = Math.sqrt(
-            H[0][0] * H[0][0] + H[0][1] * H[0][1] + H[0][2] * H[0][2] +
-            H[1][0] * H[1][0] + H[1][1] * H[1][1] + H[1][2] * H[1][2] +
-            H[2][0] * H[2][0] + H[2][1] * H[2][1] + H[2][2] * H[2][2]
-        );
-
-        if (norm < 1e-6) {
-            return [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-        }
-
-        const R = H.map(row => row.map(val => val / norm * 3));
-
-        // Orthogonalize using Gram-Schmidt
-        const u0 = R[0];
-        const u0_norm = Math.sqrt(u0[0] * u0[0] + u0[1] * u0[1] + u0[2] * u0[2]);
-        const e0 = u0_norm > 1e-6 ? u0.map(x => x / u0_norm) : [1, 0, 0];
-
-        const u1 = R[1];
-        const dot01 = e0[0] * u1[0] + e0[1] * u1[1] + e0[2] * u1[2];
-        const v1 = [u1[0] - dot01 * e0[0], u1[1] - dot01 * e0[1], u1[2] - dot01 * e0[2]];
-        const v1_norm = Math.sqrt(v1[0] * v1[0] + v1[1] * v1[1] + v1[2] * v1[2]);
-        const e1 = v1_norm > 1e-6 ? v1.map(x => x / v1_norm) : [0, 1, 0];
-
-        const e2 = [
-            e0[1] * e1[2] - e0[2] * e1[1],
-            e0[2] * e1[0] - e0[0] * e1[2],
-            e0[0] * e1[1] - e0[1] * e1[0]
+        return [
+            [t * x * x + c, t * x * y - z * s, t * x * z + y * s],
+            [t * x * y + z * s, t * y * y + c, t * y * z - x * s],
+            [t * x * z - y * s, t * y * z + x * s, t * z * z + c]
         ];
-
-        return [e0, e1, e2];
     }
 
-    // Find the best alignment strategy
+    // Normalize a vector
+    function normalize(vector) {
+        const mag = Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]);
+        return mag > 1e-10 ? vector.map(v => v / mag) : [1, 0, 0];
+    }
+
+    // Find best alignment using multiple strategies
     function findBestAlignment(movingAtoms, fixedAtoms) {
-        let bestScore = -Infinity;
+        let bestRMSD = Infinity;
         let bestTransformation = {
             rotation: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
             translation: { x: 0, y: 0, z: 0 }
@@ -213,103 +164,154 @@ function alignMolecules(movingMolecule, fixedMolecule) {
 
         const movingCentroid = calculateCentroid(movingAtoms);
         const fixedCentroid = calculateCentroid(fixedAtoms);
-        const centroidTranslation = {
+
+        // Strategy 1: Simple centroid alignment (no rotation)
+        const simpleTranslation = {
             x: fixedCentroid.x - movingCentroid.x,
             y: fixedCentroid.y - movingCentroid.y,
             z: fixedCentroid.z - movingCentroid.z
         };
 
-        // Strategy 1: Simple centroid alignment
-        const centroidScore = calculateOverlapScore(
-            movingAtoms, fixedAtoms,
-            [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-            centroidTranslation
-        );
+        const identityMatrix = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+        const simpleRMSD = calculateRMSD(movingAtoms, fixedAtoms, identityMatrix, simpleTranslation);
 
-        if (centroidScore > bestScore) {
-            bestScore = centroidScore;
+        console.log('Simple alignment RMSD:', simpleRMSD);
+        console.log('Simple translation:', simpleTranslation);
+
+        if (simpleRMSD < bestRMSD) {
+            bestRMSD = simpleRMSD;
             bestTransformation = {
-                rotation: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-                translation: centroidTranslation
+                rotation: identityMatrix,
+                translation: simpleTranslation
             };
         }
 
-        // Strategy 2: Kabsch alignment with matching elements
-        const sameElementPairs = [];
-        for (const movingAtom of movingAtoms) {
-            const matchingFixed = fixedAtoms.filter(atom => atom.element === movingAtom.element);
-            if (matchingFixed.length > 0) {
-                let closest = matchingFixed[0];
-                let minDist = distance(movingAtom, closest);
-                for (const candidate of matchingFixed) {
-                    const d = distance(movingAtom, candidate);
-                    if (d < minDist) {
-                        minDist = d;
-                        closest = candidate;
+        // Strategy 2: Try rotations around major axes
+        const axes = [
+            [1, 0, 0], // X-axis
+            [0, 1, 0], // Y-axis
+            [0, 0, 1], // Z-axis
+            normalize([1, 1, 0]), // XY diagonal
+            normalize([1, 0, 1]), // XZ diagonal
+            normalize([0, 1, 1]), // YZ diagonal
+            normalize([1, 1, 1])  // XYZ diagonal
+        ];
+
+        const angles = [0, Math.PI / 6, Math.PI / 4, Math.PI / 3, Math.PI / 2, 2 * Math.PI / 3, 3 * Math.PI / 4, Math.PI, 4 * Math.PI / 3, 3 * Math.PI / 2, 5 * Math.PI / 3];
+
+        for (const axis of axes) {
+            for (const angle of angles) {
+                if (angle === 0) continue; // Skip identity (already tested)
+
+                const rotationMatrix = axisAngleToMatrix(axis, angle);
+
+                // Calculate translation after rotation
+                const rotatedCentroid = rotatePoint(movingCentroid, rotationMatrix);
+                const translation = {
+                    x: fixedCentroid.x - rotatedCentroid.x,
+                    y: fixedCentroid.y - rotatedCentroid.y,
+                    z: fixedCentroid.z - rotatedCentroid.z
+                };
+
+                const rmsd = calculateRMSD(movingAtoms, fixedAtoms, rotationMatrix, translation);
+
+                if (rmsd < bestRMSD) {
+                    bestRMSD = rmsd;
+                    bestTransformation = {
+                        rotation: rotationMatrix,
+                        translation: translation
+                    };
+                    console.log('Better alignment found! RMSD:', rmsd, 'Axis:', axis, 'Angle:', angle * 180 / Math.PI, 'degrees');
+                }
+            }
+        }
+
+        // Strategy 3: Try to align principal vectors (if molecules have enough atoms)
+        if (movingAtoms.length >= 3 && fixedAtoms.length >= 3) {
+            // Find atoms farthest from centroid in each molecule
+            let maxDistMoving = 0, farthestMoving = null;
+            let maxDistFixed = 0, farthestFixed = null;
+
+            for (const atom of movingAtoms) {
+                const dist = distance(atom, movingCentroid);
+                if (dist > maxDistMoving) {
+                    maxDistMoving = dist;
+                    farthestMoving = atom;
+                }
+            }
+
+            for (const atom of fixedAtoms) {
+                const dist = distance(atom, fixedCentroid);
+                if (dist > maxDistFixed) {
+                    maxDistFixed = dist;
+                    farthestFixed = atom;
+                }
+            }
+
+            if (farthestMoving && farthestFixed) {
+                // Create vectors from centroids to farthest atoms
+                const movingVec = normalize([
+                    farthestMoving.x - movingCentroid.x,
+                    farthestMoving.y - movingCentroid.y,
+                    farthestMoving.z - movingCentroid.z
+                ]);
+
+                const fixedVec = normalize([
+                    farthestFixed.x - fixedCentroid.x,
+                    farthestFixed.y - fixedCentroid.y,
+                    farthestFixed.z - fixedCentroid.z
+                ]);
+
+                // Calculate rotation to align these vectors
+                const cross = [
+                    movingVec[1] * fixedVec[2] - movingVec[2] * fixedVec[1],
+                    movingVec[2] * fixedVec[0] - movingVec[0] * fixedVec[2],
+                    movingVec[0] * fixedVec[1] - movingVec[1] * fixedVec[0]
+                ];
+
+                const crossMag = Math.sqrt(cross[0] * cross[0] + cross[1] * cross[1] + cross[2] * cross[2]);
+                const dot = movingVec[0] * fixedVec[0] + movingVec[1] * fixedVec[1] + movingVec[2] * fixedVec[2];
+
+                if (crossMag > 1e-6) { // Vectors are not parallel
+                    const angle = Math.atan2(crossMag, dot);
+                    const axis = normalize(cross);
+
+                    const rotationMatrix = axisAngleToMatrix(axis, angle);
+                    const rotatedCentroid = rotatePoint(movingCentroid, rotationMatrix);
+                    const translation = {
+                        x: fixedCentroid.x - rotatedCentroid.x,
+                        y: fixedCentroid.y - rotatedCentroid.y,
+                        z: fixedCentroid.z - rotatedCentroid.z
+                    };
+
+                    const rmsd = calculateRMSD(movingAtoms, fixedAtoms, rotationMatrix, translation);
+
+                    if (rmsd < bestRMSD) {
+                        bestRMSD = rmsd;
+                        bestTransformation = {
+                            rotation: rotationMatrix,
+                            translation: translation
+                        };
+                        console.log('Vector alignment found! RMSD:', rmsd);
                     }
                 }
-                sameElementPairs.push([movingAtom, closest]);
             }
         }
 
-        if (sameElementPairs.length >= 2) {
-            const movingPoints = sameElementPairs.map(pair => pair[0]);
-            const fixedPoints = sameElementPairs.map(pair => pair[1]);
-
-            const rotation = calculateOptimalRotation(movingPoints, fixedPoints);
-            const rotatedCentroid = rotatePoint(movingCentroid, rotation);
-            const translation = {
-                x: fixedCentroid.x - rotatedCentroid.x,
-                y: fixedCentroid.y - rotatedCentroid.y,
-                z: fixedCentroid.z - rotatedCentroid.z
-            };
-
-            const kabschScore = calculateOverlapScore(movingAtoms, fixedAtoms, rotation, translation);
-
-            if (kabschScore > bestScore) {
-                bestScore = kabschScore;
-                bestTransformation = { rotation, translation };
-            }
-        }
-
-        // Strategy 3: Try systematic rotations
-        for (let attempt = 0; attempt < 12; attempt++) {
-            const angle = (attempt * Math.PI) / 6; // 30-degree increments
-            const axis = attempt < 4 ? 2 : (attempt < 8 ? 1 : 0); // z, y, x axes
-
-            const cos = Math.cos(angle);
-            const sin = Math.sin(angle);
-            let rotation;
-
-            if (axis === 2) { // Z-axis
-                rotation = [[cos, -sin, 0], [sin, cos, 0], [0, 0, 1]];
-            } else if (axis === 1) { // Y-axis
-                rotation = [[cos, 0, sin], [0, 1, 0], [-sin, 0, cos]];
-            } else { // X-axis
-                rotation = [[1, 0, 0], [0, cos, -sin], [0, sin, cos]];
-            }
-
-            const rotatedCentroid = rotatePoint(movingCentroid, rotation);
-            const translation = {
-                x: fixedCentroid.x - rotatedCentroid.x,
-                y: fixedCentroid.y - rotatedCentroid.y,
-                z: fixedCentroid.z - rotatedCentroid.z
-            };
-
-            const score = calculateOverlapScore(movingAtoms, fixedAtoms, rotation, translation);
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestTransformation = { rotation, translation };
-            }
-        }
-
+        console.log('Final best RMSD:', bestRMSD);
         return bestTransformation;
     }
 
     // Main alignment logic
     const movingAtoms = movingMolecule.atomData;
     const fixedAtoms = fixedMolecule.atomData;
+
+    if (!movingAtoms || !fixedAtoms || movingAtoms.length === 0 || fixedAtoms.length === 0) {
+        return {
+            rotation: { x: 0, y: 0, z: 0 },
+            translation: { x: 0, y: 0, z: 0 }
+        };
+    }
 
     // Find the best transformation
     const { rotation, translation } = findBestAlignment(movingAtoms, fixedAtoms);
@@ -318,7 +320,7 @@ function alignMolecules(movingMolecule, fixedMolecule) {
     const rotationAngles = matrixToEulerAngles(rotation);
 
     // Return transformation parameters for Three.js
-    return {
+    const transformations = {
         rotation: {
             x: rotationAngles.x, // Rotation around X-axis in radians
             y: rotationAngles.y, // Rotation around Y-axis in radians
@@ -330,4 +332,38 @@ function alignMolecules(movingMolecule, fixedMolecule) {
             z: translation.z  // Translation along Z-axis
         }
     };
+    console.log("Final transformations: ", transformations.rotation, transformations.translation);
+    return transformations;
 }
+
+// Example usage with debug output:
+/*
+const molecule1 = {
+    numAtoms: 3,
+    atomData: [
+        { element: "O", x: 0.0, y: 0.0, z: 0.0 },
+        { element: "H", x: 1.0, y: 0.0, z: 0.0 },
+        { element: "H", x: 0.0, y: 1.0, z: 0.0 }
+    ]
+};
+
+const molecule2 = {
+    numAtoms: 4,
+    atomData: [
+        { element: "O", x: 5.0, y: 5.0, z: 0.0 },
+        { element: "H", x: 6.0, y: 5.0, z: 0.0 },
+        { element: "H", x: 5.0, y: 6.0, z: 0.0 },
+        { element: "C", x: 4.0, y: 4.0, z: 0.0 }
+    ]
+};
+
+const alignment = alignMolecules(molecule1, molecule2);
+console.log('Final result:');
+console.log('Rotation (radians):', alignment.rotation);
+console.log('Rotation (degrees):', {
+    x: alignment.rotation.x * 180 / Math.PI,
+    y: alignment.rotation.y * 180 / Math.PI,
+    z: alignment.rotation.z * 180 / Math.PI
+});
+console.log('Translation:', alignment.translation);
+*/
