@@ -29,9 +29,9 @@ export default class Molecule {
 
         this.createBonds(this.atoms, bondThreshold);
         if (mode == 0) {
-            this.visualizeBondsFast(this.bonds);
+            this.visualizeBondsFast(this.bonds, rotation, translation);
         } else {
-            this.visualizeBondsStyle(this.bonds);
+            this.visualizeBondsStyle(this.bonds, rotation, translation);
         }
     }
 
@@ -111,19 +111,51 @@ export default class Molecule {
         this.instancedMesh.instanceMatrix.needsUpdate = true;
         colorAttribute.needsUpdate = true;
 
-        // 💡 Add the mesh to a group and transform the group
-        this.moleculeGroup = new THREE.Group();
-        this.moleculeGroup.add(this.instancedMesh);
-        // this.moleculeGroup.rotation.set(rotation.x, rotation.y, rotation.z);
-        // this.moleculeGroup.position.set(translation.x * this.stretch, translation.y * this.stretch, translation.z * this.stretch);
-        // Apply rotation and translation to the group
+        // Apply rotation and translation to the entire molecule
+        if (rotation) {
+            // If rotation is a Vector3 with Euler angles
+            if (rotation.isVector3) {
+                this.instancedMesh.rotation.set(rotation.x, rotation.y, rotation.z);
+            }
+            // If rotation is a Quaternion
+            else if (rotation.isQuaternion) {
+                this.instancedMesh.quaternion.copy(rotation);
+            }
+            // If rotation is a Matrix4
+            else if (rotation.isMatrix4) {
+                this.instancedMesh.applyMatrix4(rotation);
+            }
+            // If rotation is an object with x, y, z properties (Euler angles)
+            else if (rotation.x !== undefined || rotation.y !== undefined || rotation.z !== undefined) {
+                this.instancedMesh.rotation.set(
+                    rotation.x || 0,
+                    rotation.y || 0,
+                    rotation.z || 0
+                );
+            }
+        }
 
+        if (translation) {
+            // If translation is a Vector3
+            if (translation.isVector3) {
+                this.instancedMesh.position.copy(translation);
+            }
+            // If translation is an object with x, y, z properties
+            else if (translation.x !== undefined || translation.y !== undefined || translation.z !== undefined) {
+                this.instancedMesh.position.set(
+                    translation.x || 0,
+                    translation.y || 0,
+                    translation.z || 0
+                );
+            }
+            // If translation is an array [x, y, z]
+            else if (Array.isArray(translation) && translation.length >= 3) {
+                this.instancedMesh.position.set(translation[0], translation[1], translation[2]);
+            }
+        }
 
-        // Finally add the group to your scene or container
-        this.main.scene.add(this.moleculeGroup);
+        this.main.scene.add(this.instancedMesh);
     }
-
-
 
     createBonds(atoms, threshold) {
         this.bonds = [];
@@ -194,10 +226,10 @@ export default class Molecule {
         const center = new THREE.Vector3();
         boundingBox.getCenter(center);
         // this.instancedMesh.position.sub(center);
-        this.offset = center.clone();
+        this.offset = new THREE.Vector3();
     }
 
-    visualizeBondsFast(bonds) {
+    visualizeBondsFast(bonds, rotation, translation) {
         const positions = new Float32Array(bonds.length * 2 * 3);
 
         const material = new THREE.LineBasicMaterial({ color: 0x00ff00, opacity: this.overlay ? 0.5 : 1, transparent: this.overlay });
@@ -216,10 +248,13 @@ export default class Molecule {
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
         const lines = new THREE.LineSegments(geometry, material);
+        lines.rotation.set(rotation.x, rotation.y, rotation.z)
+        lines.position.set(translation.x, translation.y, translation.z)
+
         this.main.scene.add(lines);
     }
 
-    visualizeBondsStyle(bonds) {
+    visualizeBondsStyle(bonds, rotation, translation) {
         const radius = 0.15;
         const radialSegments = 8;
 
@@ -259,6 +294,10 @@ export default class Molecule {
             bondMesh2.lookAt(end);
             bondMesh2.rotateX(Math.PI / 2);
 
+            bondMesh1.rotation.set(rotation.x, rotation.y, rotation.z)
+            bondMesh1.position.set(translation.x, translation.y, translation.z)
+            bondMesh2.rotation.set(rotation.x, rotation.y, rotation.z)
+            bondMesh2.position.set(translation.x, translation.y, translation.z)
             this.main.scene.add(bondMesh1);
             this.main.scene.add(bondMesh2);
         });
