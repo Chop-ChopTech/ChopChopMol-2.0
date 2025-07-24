@@ -13,6 +13,7 @@ export default class Molecule {
         this.labels = [];
         this.stretch = 4;
         this.overlay = overlay
+        this.bondGroup = new THREE.Group();
     }
 
     init(data, mode, rotation, translation) {
@@ -264,8 +265,9 @@ export default class Molecule {
         const lines = new THREE.LineSegments(geometry, material);
         lines.rotation.set(rotation.x, rotation.y, rotation.z)
         lines.position.set(translation.x, translation.y, translation.z)
+        this.bondGroup.add(lines);
 
-        this.main.scene.add(lines);
+        this.main.scene.add(this.bondGroup);
     }
 
     visualizeBondsStyle(bonds, rotation, translation) {
@@ -309,16 +311,31 @@ export default class Molecule {
             bondMesh2.rotateX(Math.PI / 2);
 
 
-            this.main.scene.add(bondMesh1);
-            this.main.scene.add(bondMesh2);
+            this.bondGroup.add(bondMesh1);
+            this.bondGroup.add(bondMesh2);
         });
+
+        this.main.scene.add(this.bondGroup);
     }
 
     reset() {
         this.atoms = [];
         this.bonds = [];
+        this.bondGroup = new THREE.Group();
         this.instancedMesh = null;
         this.clearLabels();
+    }
+
+    updateBonds(mode) {
+        this.bonds = [];
+        this.main.scene.remove(this.bondGroup);
+        this.bondGroup = new THREE.Group();
+        this.createBonds(this.atoms, 5);
+        if (mode == 0) {
+            this.visualizeBondsFast(this.bonds, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+        } else {
+            this.visualizeBondsStyle(this.bonds, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+        }
     }
 
     createLabelTexture(text, color) {

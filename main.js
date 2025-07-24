@@ -26,6 +26,7 @@ controls.rotateSpeed = 5.0;
 controls.zoomSpeed = 2.0;
 controls.panSpeed = 1.0;
 controls.dynamicDampingFactor = 1.0; // No drag smoothing
+let shiftDown = false;
 
 
 const light = new THREE.DirectionalLight(0xffffff, 3);
@@ -48,6 +49,11 @@ const toggleLabelsButton = document.getElementById('toggleLabels');
 const saveImageButton = document.getElementById('captureScreen');
 const clearSceneButton = document.getElementById('clear-canvas');
 const analyzeMoleculeButton = document.getElementById('analyze-molecule');
+
+let dragging = false;
+let draggedAtomIndex = null;
+let dragPlane = new THREE.Plane();
+let dragOffset = new THREE.Vector3();
 
 
 export default class Main {
@@ -210,6 +216,10 @@ window.addEventListener('keyup', function (e) {
     if (e.key === 'l') {
         isLPressed = false;
     }
+    if (e.key == "Shift") {
+        shiftDown = false;
+        controls.enabled = true;
+    }
 });
 
 window.addEventListener('keydown', function (e) {
@@ -218,6 +228,10 @@ window.addEventListener('keydown', function (e) {
         if (newData) {
             main.createNewMoleculeFromJSON(newData);
         }
+    }
+    if (e.key == "Shift") {
+        shiftDown = true;
+        controls.enabled = false;
     }
 });
 window.addEventListener('keydown', function (e) {
@@ -280,22 +294,80 @@ analyzeMoleculeButton.addEventListener('click', () => {
 renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
 
 function onPointerDown(event) {
-    // Convert mouse position to normalized device coordinates (-1 to +1)
+    // Convert mouse to normalized device coordinates
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
 
-    // Assume your instancedMesh is called molecule.instancedMesh
+    // Intersect with the instanced mesh of atoms
     const intersects = raycaster.intersectObject(main.molecule.instancedMesh);
 
     if (intersects.length > 0) {
         const instanceId = intersects[0].instanceId;
         if (instanceId !== undefined) {
-            selectAtom(instanceId);
+            dragging = true;
+            draggedAtomIndex = instanceId;
+
+            // Set up a plane perpendicular to the camera through the atom
+            const atom = main.molecule.atoms[instanceId];
+            dragPlane.setFromNormalAndCoplanarPoint(
+                camera.getWorldDirection(new THREE.Vector3()),
+                atom.position
+            );
+
+            // Calculate offset between mouse and atom position
+            const intersectPoint = intersects[0].point;
+            dragOffset.copy(intersectPoint).sub(atom.position);
+
+            // Listen for move and up
+            window.addEventListener('pointermove', onPointerMove, false);
+            window.addEventListener('pointerup', onPointerUp, false);
         }
     }
+}
+
+function onPointerMove(event) {
+    if (!dragging) return;
+
+    // Convert mouse to normalized device coordinates
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    // Find intersection with drag plane
+    const intersection = new THREE.Vector3();
+    raycaster.ray.intersectPlane(dragPlane, intersection);
+
+    // Update atom position
+    const atom = main.molecule.atoms[draggedAtomIndex];
+    atom.position.copy(intersection.sub(dragOffset));
+    atom.x = atom.position.x;
+    atom.y = atom.position.y;
+    atom.z = atom.position.z;
+
+    // Update instanced mesh matrix for this atom
+    const matrix = new THREE.Matrix4();
+    let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
+    matrix.makeScale(radius, radius, radius);
+    matrix.setPosition(atom.position);
+    main.molecule.instancedMesh.setMatrixAt(draggedAtomIndex, matrix);
+    main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+
+    // Update bonds
+    main.molecule.updateBonds();
+
+    render();
+}
+
+function onPointerUp(event) {
+    dragging = false;
+    draggedAtomIndex = null;
+    window.removeEventListener('pointermove', onPointerMove, false);
+    window.removeEventListener('pointerup', onPointerUp, false);
 }
 
 function selectAtom(index) {
