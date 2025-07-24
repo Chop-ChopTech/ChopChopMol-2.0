@@ -518,7 +518,7 @@ body {
     z-index: 9999;
     background-color: #eaeaea;
     width: 300px;
-    height: 300px;
+    height: 500px;
     padding: 30px;
     border-radius: 10px;
     display: flex;
@@ -527,7 +527,7 @@ body {
 }
 
 #styleSelector.on {
-    bottom: -400px;
+    bottom: -600px;
 }
 
 .switch-container {
@@ -596,6 +596,52 @@ input:checked+.slider:before {
         /* Moves gradient fully to the right */
     }
 }
+
+input[type="range"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: #ddd;
+    border-radius: 5px;
+    outline: none;
+    transition: background 0.3s;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    background: #0098ea;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+    background: #006dea;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+input[type="range"]::-moz-range-track {
+    background: #ddd;
+    border-radius: 5px;
+    height: 8px;
+}
+
+input[type="range"]:focus {
+    background: #ffd079;
+}
+
 
 @keyframes fadeIn {
     from {

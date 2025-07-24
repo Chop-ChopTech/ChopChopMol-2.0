@@ -8,13 +8,13 @@ import FileHandler from './utils/fileHandler.js';
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+let renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
 // const controls = new OrbitControls(camera, renderer.domElement);
-const controls = new TrackballControls(camera, renderer.domElement);
+let controls = new TrackballControls(camera, renderer.domElement);
 // controls.minPolarAngle = 0;
 // controls.maxPolarAngle = Math.PI;
 // controls.minAzimuthAngle = -Infinity;
@@ -36,6 +36,7 @@ scene.add(ambientLight);
 // testing 123
 camera.position.z = 15;
 let mode = 0;
+let antialiasToggled = false
 let labelMode = false; // Track label mode
 
 const switchModeButton = document.getElementById('switchMode');
@@ -43,6 +44,7 @@ const toggleLabelsButton = document.getElementById('toggleLabels');
 const saveImageButton = document.getElementById('captureScreen');
 const clearSceneButton = document.getElementById('clear-canvas');
 const analyzeMoleculeButton = document.getElementById('analyze-molecule');
+
 
 export default class Main {
     constructor() {
@@ -60,6 +62,8 @@ export default class Main {
         this.roughness = 1;
         this.metalness = 0;
         this.opacity = 1;
+        this.atomSize = 1;
+        this.resolution = 16
 
     }
     init(data, mode, rotation, translation) {
@@ -112,17 +116,83 @@ const roughnessSelector = document.getElementById('style1');
 const metalnessSelector = document.getElementById('style2');
 const opacitySelector = document.getElementById('style3');
 const bondsSelector = document.getElementById('style4');
+const atomSizeSelector = document.getElementById('style5');
+const resSelector = document.getElementById('style6')
+const toggleAntialiasing = document.getElementById('style7')
+const backgroundColorSelector = document.getElementById('style8');
+
 const toggleStyleChanges = document.getElementById('toggleStyleChanges');
 
+roughnessSelector.addEventListener('input', () => {
+    main.roughness = roughnessSelector.value;
+    if (mode != 0) {
+        updateStyles();
+    }
+});
+metalnessSelector.addEventListener('input', () => {
+    main.metalness = metalnessSelector.value;
+    if (mode != 0) {
+        updateStyles();
+    }
+});
+opacitySelector.addEventListener('input', () => {
+    main.opacity = opacitySelector.value;
+    if (mode != 0) {
+        updateStyles();
+    }
+});
+atomSizeSelector.addEventListener('input', () => {
+    main.atomSize = atomSizeSelector.value;
+    if (mode != 0) {
+        updateStyles();
+    }
+});
+
+resSelector.addEventListener('input', () => {
+    main.resolution = resSelector.value;
+    if (mode != 0) {
+        updateStyles();
+    }
+});
+
+backgroundColorSelector.addEventListener('input', () => {
+    const color = backgroundColorSelector.value;
+    scene.background = new THREE.Color(color);
+    document.body.style.backgroundColor = color;
+    render();
+});
+
+function setNewMode() {
+    return { roughness: main.roughness, metalness: main.metalness, opacity: main.opacity, atomSize: main.atomSize, resolution: main.resolution, antialias: antialiasToggled };
+}
+function updateStyles() {
+    mode = setNewMode();
+    main.newMolecule(main.data, mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+}
 
 toggleStyleChanges.addEventListener('change', () => {
     if (mode == 0) {
-        mode = 1;
+        mode = setNewMode();
     } else {
         mode = 0;
     }
     main.newMolecule(main.data, mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
     console.log(mode);
+    render();
+});
+
+toggleAntialiasing.addEventListener('change', () => {
+    antialiasToggled = !antialiasToggled;
+    renderer = createRenderer(antialiasToggled);
+    document.body.appendChild(renderer.domElement);
+    controls = new TrackballControls(camera, renderer.domElement);
+    controls.addEventListener('change', () => {
+        render();
+    });
+    controls.rotateSpeed = 5.0;
+    controls.zoomSpeed = 2.0;
+    controls.panSpeed = 1.0;
+    controls.dynamicDampingFactor = 1.0; // No drag smoothing
     render();
 });
 
@@ -155,6 +225,7 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+
     render()
 });
 
@@ -265,6 +336,21 @@ function rotateCamera(angleToRotate, camera, controls = null) {
         controls.target.set(0, 0, 0);
         controls.update();
     }
+}
+
+function createRenderer(antialiasOn) {
+    if (renderer) {
+        // Remove old canvas
+        renderer.domElement.remove();
+        renderer.dispose();
+    }
+
+    renderer = new THREE.WebGLRenderer({ antialias: antialiasOn, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    document.body.appendChild(renderer.domElement);
+    return renderer
 }
 
 function animate() {

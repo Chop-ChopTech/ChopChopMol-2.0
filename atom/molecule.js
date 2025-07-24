@@ -73,7 +73,7 @@ export default class Molecule {
     //     colorAttribute.needsUpdate = true;
     // }
     createAtoms(data, rotation, translation, mode) {
-        const resolution = 16;
+        const resolution = mode.resolution ? mode.resolution : 16;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
         let material;
         if (mode == 0) {
@@ -86,10 +86,11 @@ export default class Molecule {
             material = new THREE.MeshStandardMaterial({
                 vertexColors: true,
                 opacity: this.overlay ? 0.5 : 1,
-                transparent: this.overlay,
-                roughness: 0.2,
-                // metalness: 0.5,
-                reflectivity: 0.5,
+                transparent: mode.opacity < 1,
+                roughness: mode.roughness,
+                metalness: mode.metalness,
+                opacity: mode.opacity,
+                side: THREE.DoubleSide,
             });
         }
 
@@ -108,7 +109,8 @@ export default class Molecule {
             const atom = new Atom(this.main, element, coordinates, id);
             this.atoms.push(atom);
 
-            const radius = this.atomSettings[element]?.realRadius * 1.5 || 1;
+            let radius = this.atomSettings[element]?.realRadius * 1.5 || 1;
+            radius *= mode.atomSize ? mode.atomSize : 1;
 
             const matrix = new THREE.Matrix4();
             matrix.makeScale(radius, radius, radius);
