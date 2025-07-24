@@ -23,7 +23,7 @@ export default class Molecule {
         const bondThreshold = 5;
 
         this.createAtoms(data, rotation, translation, mode);
-        this.centerMolecule();
+        this.centerMolecule(this.overlay);
 
 
         this.main.scene.add(this.instancedMesh);
@@ -193,6 +193,29 @@ export default class Molecule {
 
         return this.bonds;
     }
+
+    getAtomCoordinates() {
+        const coordinates = [];
+        const matrix = new THREE.Matrix4();
+        const position = new THREE.Vector3();
+
+        // Loop through each instance (atom)
+        for (let i = 0; i < this.instancedMesh.count; i++) {
+            // Get the instance's local transformation matrix
+            this.instancedMesh.getMatrixAt(i, matrix);
+
+            // Extract the position from the matrix (local to the instancedMesh)
+            position.setFromMatrixPosition(matrix);
+
+            // Apply the instancedMesh's world transformation
+            position.applyMatrix4(this.instancedMesh.matrixWorld);
+
+            // Store the world position
+            coordinates.push(position.clone());
+        }
+
+        return coordinates;
+    }
     // createBonds(atoms, threshold) {
     //     this.bonds = [];
 
@@ -236,12 +259,39 @@ export default class Molecule {
         return `${x + direction[0]},${y + direction[1]},${z + direction[2]}`;
     }
 
-    centerMolecule() {
+    centerMolecule(overlay) {
         const boundingBox = new THREE.Box3().setFromObject(this.instancedMesh);
         const center = new THREE.Vector3();
         boundingBox.getCenter(center);
-        // this.instancedMesh.position.sub(center);
-        this.offset = new THREE.Vector3();
+        if (!overlay) {
+            this.instancedMesh.position.sub(center);
+            this.offset = center.clone();
+            const coordinates = this.getAtomCoordinates()
+
+            const elements = []
+            this.atoms.forEach(atom => {
+                elements.push(atom.type)
+            })
+            const data = {
+                atomData: [],
+                numAtoms: this.atoms.length,
+            }
+            coordinates.forEach((pos, index) => {
+                data.atomData.push({
+                    element: elements[index],
+                    x: pos.x / 4,
+                    y: pos.y / 4,
+                    z: pos.z / 4,
+                });
+            });
+            console.log(data)
+            this.main.data = data
+        } else {
+
+            this.offset = new THREE.Vector3();
+
+        }
+
     }
 
     visualizeBondsFast(bonds, rotation, translation) {

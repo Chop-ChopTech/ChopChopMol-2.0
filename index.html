@@ -20,7 +20,7 @@
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
         <input id="compare" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
 
-        <button class="fancy-button" id="aiGenerate" class="button">AI Generate BETA</button>
+        <button class="fancy-button" id="aiGenerate" class="button">AI Generate</button>
         <button class="fancy-button" id="customButton">Open File</button>
         <button class="fancy-button" id="switchMode" class="button">Toggle Style</button>
         <button class="fancy-button" id="toggleLabels" class="button">Atom Labels</button>
@@ -73,6 +73,9 @@
 
         </div>
 
+    </div>
+    <div id="dragFile">
+        <h3>Drag and drop a file here .xyz, .mol, or .pdb to be loaded</h3>
     </div>
 
     <div id="editMoleculePanel" class="on">
@@ -173,6 +176,7 @@
         const smilesPanel = document.getElementById('smilesContainer');
         const jsonButton = document.getElementById('import-json');
         const jsonPanel = document.getElementById('jsonContainer');
+        const dropzone = document.getElementById('dragFile');
         jsonButton.addEventListener('click', () => {
             jsonPanel.classList.toggle('on');
             smilesPanel.classList.remove('on');
@@ -229,6 +233,20 @@
             if (event.key === 'Enter') {
                 enterPressed = false;
             }
+        });
+
+        dropZone.addEventListener('dragover', (event) => {
+            event.preventDefault(); // Prevent default to allow drop
+            dropZone.classList.add('dragOver');
+        });
+
+        dropZone.addEventListener('dragenter', (event) => {
+            event.preventDefault();
+            dropZone.classList.add('dragOver');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragOver');
         });
 
         async function sendChatMessage() {

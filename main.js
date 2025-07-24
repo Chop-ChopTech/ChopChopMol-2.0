@@ -79,6 +79,7 @@ export default class Main {
         this.atomSize = 1;
         this.resolution = 16
 
+
     }
     init(data, mode, rotation, translation) {
         this.molecule.init(data, mode);
@@ -322,12 +323,8 @@ function onPointerDown(event) {
             if (instanceId !== undefined) {
                 selectAtom(instanceId);
                 // Create buttons for editing the molecule
-                editMoleculeContent.innerHTML = `
-                    <h2>Element: ${main.molecule.atoms[instanceId].type}</h2><br>
-                    <span>Hold shift and drag to move the atom</span>
-                    <button id="changeMoleculeBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Change Atom</button>
-                    <button id="removeMoleculeBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
-                `;
+                const element = main.molecule.atoms[instanceId].type;
+                updateEditingContent(element, main.molecule.atomSettings[element].color);
 
 
                 document.getElementById('changeMoleculeBtn').addEventListener('click', () => { /* ... */ });
@@ -355,6 +352,7 @@ function onPointerDown(event) {
                 }
             }
         } else {
+            updateEditingContent();
             unselectAtom();
         }
     }
@@ -395,6 +393,19 @@ function onPointerMove(event) {
     render();
 }
 
+function updateEditingContent(element = null, color = null) {
+    if (element !== null) {
+        editMoleculeContent.innerHTML = `
+        <h2 style="color:${color};">Element: ${element}</h2><br>
+        <span>Hold shift and drag to move the atom</span>
+        <button id="changeMoleculeBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Change Atom</button>
+        <button id="removeMoleculeBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
+    `;
+    } else {
+        editMoleculeContent.innerHTML = '<h2 id="select-an-atom">Select an atom</h2>';
+    }
+}
+
 function onPointerUp(event) {
     dragging = false;
     draggedAtomIndex = null;
@@ -419,6 +430,7 @@ function selectAtom(index) {
     const atom = main.molecule.atoms[index];
 
 }
+
 
 function unselectAtom(index = null) {
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');

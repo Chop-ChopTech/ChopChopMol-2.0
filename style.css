@@ -538,7 +538,7 @@ body {
     background-color: #ffffff;
     width: 300px;
     height: 500px;
-    padding: 30px;
+    padding: 5px;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
@@ -550,7 +550,7 @@ body {
 }
 
 #editMoleculeContent {
-    background-color: #ececec;
+    background-color: #a0a0a0;
     width: 100%;
     height: 100%;
     text-align: center;
@@ -683,6 +683,33 @@ input[type="range"]:focus {
 #editMolecule {
     background: #0084ff;
     background: linear-gradient(90deg, rgba(0, 132, 255, 1) 0%, rgba(159, 69, 255, 1) 51%, rgba(255, 171, 74, 1) 100%);
+}
+
+#dragFile {
+    background: #0084ff;
+    background: linear-gradient(90deg, rgba(0, 132, 255, 1) 0%, rgba(159, 69, 255, 1) 51%, rgba(255, 171, 74, 1) 100%);
+    opacity: 0;
+    z-index: -1;
+    pointer-events: none;
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+
+}
+
+#dragFile.dragover {
+    opacity: 0.4;
+    z-index: 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999;
+    cursor: pointer;
 }
 
 @keyframes fadeIn {

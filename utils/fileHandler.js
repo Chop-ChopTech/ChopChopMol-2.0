@@ -34,6 +34,14 @@ export default class FileHandler {
                     console.log(rotation, translation);
 
                 }
+                // if (parsedData.numAtoms <= 500) {
+                //     this.main.setNewMode(true);
+                //     document.getElementById("toggleStyleChanges").checked = true;
+                // } else {
+                //     this.main.setNewMode();
+                //     document.getElementById("toggleStyleChanges").checked = false;
+
+                // }
                 this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)), overlay, rotation, translation);
 
 
