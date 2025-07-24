@@ -324,9 +324,9 @@ function onPointerDown(event) {
                 // Create buttons for editing the molecule
                 editMoleculeContent.innerHTML = `
                     <h2>Element: ${main.molecule.atoms[instanceId].type}</h2><br>
-                    <span>Hold shift and drag to move the molecule</span>
-                    <button id="changeMoleculeBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Change Molecule</button>
-                    <button id="removeMoleculeBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Molecule</button>
+                    <span>Hold shift and drag to move the atom</span>
+                    <button id="changeMoleculeBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Change Atom</button>
+                    <button id="removeMoleculeBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
                 `;
 
 
