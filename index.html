@@ -29,6 +29,7 @@
         <button class="fancy-button" id="import-smiles" class="button">Load SMILES string</button>
         <button class="fancy-button" id="import-json" class="button">Load JSON string</button>
         <button class="fancy-button" id="analyze-molecule" class="button">Analyze molecule</button>
+        <button class="fancy-button" id="editMolecule" class="button">Edit Molecule</button>
         <button class="fancy-button" id="clear-canvas" class="button">Clear</button>
 
     </div>
@@ -73,6 +74,13 @@
         </div>
 
     </div>
+
+    <div id="editMoleculePanel" class="on">
+        <div id="editMoleculeContent">
+            <h2 id="select-an-atom">Select an atom<h2>
+        </div>
+    </div>
+
     <h1 id="loading">Loading Molecule</h1>
     <div id="analysisResponseContainer">
         <button onclick="closeAnalysisWindow()" id="closeAnalysis" class="fancy-button">Close</button>
@@ -140,6 +148,7 @@
         const smilesBox = document.getElementById('smilesInput');
         const jsonBox = document.getElementById('jsonInput');
         const loadingText = document.getElementById('loading');
+
         Object.defineProperty(window, 'reply', {
             get: function () { return _reply; },
             set: function (value) {
@@ -181,6 +190,7 @@
             aiGeneratePanel.classList.remove('on');
             jsonPanel.classList.remove('on');
         });
+
 
         let enterPressed = false;
 

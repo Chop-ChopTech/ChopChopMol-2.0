@@ -27,6 +27,7 @@ controls.zoomSpeed = 2.0;
 controls.panSpeed = 1.0;
 controls.dynamicDampingFactor = 1.0; // No drag smoothing
 let shiftDown = false;
+let editingMolecule = false;
 
 
 const light = new THREE.DirectionalLight(0xffffff, 3);
@@ -49,6 +50,9 @@ const toggleLabelsButton = document.getElementById('toggleLabels');
 const saveImageButton = document.getElementById('captureScreen');
 const clearSceneButton = document.getElementById('clear-canvas');
 const analyzeMoleculeButton = document.getElementById('analyze-molecule');
+const editMoleculePanel = document.getElementById('editMoleculePanel');
+const editMoleculeButton = document.getElementById('editMolecule');
+const editMoleculeContent = document.getElementById('editMoleculeContent');
 
 let dragging = false;
 let draggedAtomIndex = null;
@@ -231,7 +235,9 @@ window.addEventListener('keydown', function (e) {
     }
     if (e.key == "Shift") {
         shiftDown = true;
-        controls.enabled = false;
+        if (editingMolecule) {
+            controls.enabled = false;
+        }
     }
 });
 window.addEventListener('keydown', function (e) {
@@ -291,39 +297,65 @@ analyzeMoleculeButton.addEventListener('click', () => {
     window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
     console.log(window.imgToAnalyze);
 })
+
+editMoleculeButton.addEventListener('click', () => {
+    editMoleculePanel.classList.toggle('on');
+    editingMolecule = !editingMolecule;
+    console.log(editingMolecule);
+})
 renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
 
 function onPointerDown(event) {
-    // Convert mouse to normalized device coordinates
-    const rect = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    if (editingMolecule) {
+        // Convert mouse to normalized device coordinates
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    raycaster.setFromCamera(mouse, camera);
+        raycaster.setFromCamera(mouse, camera);
 
-    // Intersect with the instanced mesh of atoms
-    const intersects = raycaster.intersectObject(main.molecule.instancedMesh);
+        // Intersect with the instanced mesh of atoms
+        const intersects = raycaster.intersectObject(main.molecule.instancedMesh);
 
-    if (intersects.length > 0) {
-        const instanceId = intersects[0].instanceId;
-        if (instanceId !== undefined) {
-            dragging = true;
-            draggedAtomIndex = instanceId;
+        if (intersects.length > 0) {
+            const instanceId = intersects[0].instanceId;
+            if (instanceId !== undefined) {
+                selectAtom(instanceId);
+                // Create buttons for editing the molecule
+                editMoleculeContent.innerHTML = `
+                    <h2>Element: ${main.molecule.atoms[instanceId].type}</h2><br>
+                    <span>Hold shift and drag to move the molecule</span>
+                    <button id="changeMoleculeBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Change Molecule</button>
+                    <button id="removeMoleculeBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Molecule</button>
+                `;
 
-            // Set up a plane perpendicular to the camera through the atom
-            const atom = main.molecule.atoms[instanceId];
-            dragPlane.setFromNormalAndCoplanarPoint(
-                camera.getWorldDirection(new THREE.Vector3()),
-                atom.position
-            );
 
-            // Calculate offset between mouse and atom position
-            const intersectPoint = intersects[0].point;
-            dragOffset.copy(intersectPoint).sub(atom.position);
+                document.getElementById('changeMoleculeBtn').addEventListener('click', () => { /* ... */ });
+                document.getElementById('removeMoleculeBtn').addEventListener('click', () => { /* ... */ });
 
-            // Listen for move and up
-            window.addEventListener('pointermove', onPointerMove, false);
-            window.addEventListener('pointerup', onPointerUp, false);
+                if (shiftDown) {
+                    unselectAtom(instanceId);
+                    dragging = true;
+                    draggedAtomIndex = instanceId;
+
+                    // Set up a plane perpendicular to the camera through the atom
+                    const atom = main.molecule.atoms[instanceId];
+                    dragPlane.setFromNormalAndCoplanarPoint(
+                        camera.getWorldDirection(new THREE.Vector3()),
+                        atom.position
+                    );
+
+                    // Calculate offset between mouse and atom position
+                    const intersectPoint = intersects[0].point;
+                    dragOffset.copy(intersectPoint).sub(atom.position);
+
+                    // Listen for move and up
+                    window.addEventListener('pointermove', onPointerMove, false);
+                    window.addEventListener('pointerup', onPointerUp, false);
+                }
+            }
+        } else {
+            unselectAtom();
         }
     }
 }
@@ -358,7 +390,7 @@ function onPointerMove(event) {
     main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
 
     // Update bonds
-    main.molecule.updateBonds();
+    main.molecule.updateBonds(mode);
 
     render();
 }
@@ -386,6 +418,24 @@ function selectAtom(index) {
     // Optionally: show info
     const atom = main.molecule.atoms[index];
 
+}
+
+function unselectAtom(index = null) {
+    const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+    if (index === null) {
+        // Reset all atoms to their default color
+        for (let i = 0; i < colorAttr.count; i++) {
+            const atom = main.molecule.atoms[i];
+            const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+            colorAttr.setXYZ(i, color.r, color.g, color.b);
+        }
+    } else {
+        // Reset only the specified atom to its default color
+        const atom = main.molecule.atoms[index];
+        const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+        colorAttr.setXYZ(index, color.r, color.g, color.b);
+    }
+    colorAttr.needsUpdate = true;
 }
 
 function saveImage() {
