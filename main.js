@@ -30,6 +30,10 @@ controls.dynamicDampingFactor = 1.0; // No drag smoothing
 
 const light = new THREE.DirectionalLight(0xffffff, 3);
 const ambientLight = new THREE.AmbientLight(0xffffff, 2);
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+
 
 scene.add(light);
 scene.add(ambientLight);
@@ -273,6 +277,44 @@ analyzeMoleculeButton.addEventListener('click', () => {
     window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
     console.log(window.imgToAnalyze);
 })
+renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
+
+function onPointerDown(event) {
+    // Convert mouse position to normalized device coordinates (-1 to +1)
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    // Assume your instancedMesh is called molecule.instancedMesh
+    const intersects = raycaster.intersectObject(main.molecule.instancedMesh);
+
+    if (intersects.length > 0) {
+        const instanceId = intersects[0].instanceId;
+        if (instanceId !== undefined) {
+            selectAtom(instanceId);
+        }
+    }
+}
+
+function selectAtom(index) {
+    // Get the color attribute
+    const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+    // Optionally: reset all colors first
+    for (let i = 0; i < colorAttr.count; i++) {
+        const atom = main.molecule.atoms[i];
+        const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+        colorAttr.setXYZ(i, color.r, color.g, color.b);
+    }
+    // Highlight selected atom (e.g., yellow)
+    colorAttr.setXYZ(index, 1, 1, 0);
+    colorAttr.needsUpdate = true;
+
+    // Optionally: show info
+    const atom = main.molecule.atoms[index];
+
+}
 
 function saveImage() {
 
