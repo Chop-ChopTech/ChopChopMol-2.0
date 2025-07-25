@@ -4,6 +4,7 @@ import { TrackballControls } from 'jsm/controls/TrackballControls.js';
 import Molecule from './atom/molecule.js';
 import FileHandler from './utils/fileHandler.js';
 // WE WILL NOW TRY TO MAKE THIS AMAZING WEBSITE AN APP. IT MAY GO AMAZINGLY OR IT MAY GO HORRIBLY.
+
 // Setup scene
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);

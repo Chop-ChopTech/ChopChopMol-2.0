@@ -14,6 +14,33 @@
 </head>
 
 <body>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyAAlbmJmNxVGJ3wv1KiyoFWJ86Ik31jY-w",
+            authDomain: "chopchopmol-2.firebaseapp.com",
+            projectId: "chopchopmol-2",
+            storageBucket: "chopchopmol-2.firebasestorage.app",
+            messagingSenderId: "911400525967",
+            appId: "1:911400525967:web:1e3e6bfefdcb8edc8ad0fa",
+            measurementId: "G-9T7NPR755W"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);  // Initialize Auth
+        const provider = new GoogleAuthProvider();  // For Google sign-in
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Buttons with new toggle labels button -->
     <div id="buttons">
@@ -31,9 +58,60 @@
         <button class="fancy-button" id="analyze-molecule">Analyze molecule</button>
         <button class="fancy-button" id="editMolecule">Edit Molecule</button>
         <button class="fancy-button" id="clear-canvas">Clear</button>
+        <button class="fancy-button" id="signInButton">Sign In with Google</button>
+        <button class="fancy-button" id="signOutButton" style="display: none;">Sign Out</button>
 
     </div>
+
+    <!-- Add this below #buttons to show user info -->
+    <div id="userStatus" style="margin-top: 10px; font-family: Rubik, sans-serif;"></div>
     <div id="styleSelector" class="on">
+
+        <script>
+            const signInButton = document.getElementById('signInButton');
+            const signOutButton = document.getElementById('signOutButton');
+            const userStatus = document.getElementById('userStatus');
+
+            // Monitor auth state changes (fires on page load, sign-in, sign-out)
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // User is signed in
+                    signInButton.style.display = 'none';
+                    signOutButton.style.display = 'block';
+                    userStatus.innerHTML = `Welcome, ${user.displayName}!`;
+                    // Optional: You can access user.uid, user.email, etc., and send to your backend if needed
+                } else {
+                    // User is signed out
+                    signInButton.style.display = 'block';
+                    signOutButton.style.display = 'none';
+                    userStatus.innerHTML = 'Not signed in.';
+                }
+            });
+
+            // Sign in with Google popup
+            signInButton.addEventListener('click', () => {
+                signInWithPopup(auth, provider)
+                    .then((result) => {
+                        console.log('Signed in:', result.user);
+                    })
+                    .catch((error) => {
+                        console.error('Sign-in error:', error);
+                        alert('Sign-in failed: ' + error.message);
+                    });
+            });
+
+            // Sign out
+            signOutButton.addEventListener('click', () => {
+                signOut(auth)
+                    .then(() => {
+                        console.log('Signed out');
+                    })
+                    .catch((error) => {
+                        console.error('Sign-out error:', error);
+                        alert('Sign-out failed: ' + error.message);
+                    });
+            });
+        </script>
 
         <div class="switch-container">
             <span class="switch-label">Toggle Style Changes</span>

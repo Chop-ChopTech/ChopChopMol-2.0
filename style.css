@@ -734,6 +734,15 @@ input[type="range"]:focus {
     opacity: 1;
 }
 
+#signInButton {
+    background-color: #2196F3;
+}
+
+#signOutButton {
+
+    background-color: #8e1acd;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
