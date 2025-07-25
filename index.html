@@ -39,6 +39,49 @@
         const analytics = getAnalytics(app);
         const auth = getAuth(app);  // Initialize Auth
         const provider = new GoogleAuthProvider();  // For Google sign-in
+
+        // Get UI elements
+        const signInButton = document.getElementById('signInButton');
+        const signOutButton = document.getElementById('signOutButton');
+        const userStatus = document.getElementById('userStatus');
+
+        // Handle sign-in
+        signInButton.addEventListener('click', () => {
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    const user = result.user;
+                    console.log('Signed in as', user.displayName);
+                })
+                .catch((error) => {
+                    console.error('Sign-in error:', error);
+                });
+        });
+
+        // Handle sign-out
+        signOutButton.addEventListener('click', () => {
+            signOut(auth)
+                .then(() => {
+                    console.log('Signed out');
+                })
+                .catch((error) => {
+                    console.error('Sign-out error:', error);
+                });
+        });
+
+        // Listen for auth state changes and update UI
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
+                signInButton.style.display = 'none';
+                signOutButton.style.display = 'block';
+                userStatus.textContent = `Signed in as ${user.displayName}`;
+            } else {
+                // User is signed out
+                signInButton.style.display = 'block';
+                signOutButton.style.display = 'none';
+                userStatus.textContent = '';
+            }
+        });
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -64,54 +107,8 @@
     </div>
 
     <!-- Add this below #buttons to show user info -->
-    <div id="userStatus" style="margin-top: 10px; font-family: Rubik, sans-serif;"></div>
+    <div id="userStatus" style="margin-top: 10px; font-family: Rubik, sans-serif; color: white;"></div>
     <div id="styleSelector" class="on">
-
-        <script>
-            const signInButton = document.getElementById('signInButton');
-            const signOutButton = document.getElementById('signOutButton');
-            const userStatus = document.getElementById('userStatus');
-
-            // Monitor auth state changes (fires on page load, sign-in, sign-out)
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    // User is signed in
-                    signInButton.style.display = 'none';
-                    signOutButton.style.display = 'block';
-                    userStatus.innerHTML = `Welcome, ${user.displayName}!`;
-                    // Optional: You can access user.uid, user.email, etc., and send to your backend if needed
-                } else {
-                    // User is signed out
-                    signInButton.style.display = 'block';
-                    signOutButton.style.display = 'none';
-                    userStatus.innerHTML = 'Not signed in.';
-                }
-            });
-
-            // Sign in with Google popup
-            signInButton.addEventListener('click', () => {
-                signInWithPopup(auth, provider)
-                    .then((result) => {
-                        console.log('Signed in:', result.user);
-                    })
-                    .catch((error) => {
-                        console.error('Sign-in error:', error);
-                        alert('Sign-in failed: ' + error.message);
-                    });
-            });
-
-            // Sign out
-            signOutButton.addEventListener('click', () => {
-                signOut(auth)
-                    .then(() => {
-                        console.log('Signed out');
-                    })
-                    .catch((error) => {
-                        console.error('Sign-out error:', error);
-                        alert('Sign-out failed: ' + error.message);
-                    });
-            });
-        </script>
 
         <div class="switch-container">
             <span class="switch-label">Toggle Style Changes</span>
@@ -162,6 +159,7 @@
         </div>
     </div>
 
+
     <h1 id="loading">Loading Molecule</h1>
     <div id="analysisResponseContainer">
         <button onclick="closeAnalysisWindow()" id="closeAnalysis" class="fancy-button">Close</button>
@@ -177,8 +175,7 @@
             <input id="chatInput" class="fancy-textbox" type="text"
                 placeholder="Type a real or made up molecule name and press enter or click Generate!"
                 autocomplete="off">
-            <button onclick="sendChatMessage()" class="button, fancy-button" id="generateButton"
-                class="fancy-button">Generate!</button>
+            <button onclick="sendChatMessage()" id="generateButton" class="fancy-button">Generate!</button>
         </div>
         <!-- <br>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
@@ -188,7 +185,7 @@
         <div id="smilesInputContainer">
             <input id="smilesInput" class="fancy-textbox" type="text"
                 placeholder="Type your SMILES string and press enter or click Load!" autocomplete="off">
-            <button onclick="convertToJson()" class="button, fancy-button" id="loadSmilesButton">Load</button>
+            <button onclick="convertToJson()" class="fancy-button" id="loadSmilesButton">Load</button>
         </div>
         <!-- <br>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
@@ -198,7 +195,7 @@
         <div id="jsonInputContainer">
             <input id="jsonInput" class="fancy-textbox" type="text"
                 placeholder="Type your JSON string and press enter or click Load!" autocomplete="off">
-            <button onclick="sendChatMessage()" class="button, fancy-button" id="loadJsonButton"
+            <button onclick="sendChatMessage()" class="fancy-button" id="loadJsonButton"
                 class="fancy-button">Load</button>
         </div>
         <!-- <br>
