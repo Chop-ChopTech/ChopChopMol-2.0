@@ -34,14 +34,14 @@ export default class FileHandler {
                     console.log(rotation, translation);
 
                 }
-                // if (parsedData.numAtoms <= 500) {
-                //     this.main.setNewMode(true);
-                //     document.getElementById("toggleStyleChanges").checked = true;
-                // } else {
-                //     this.main.setNewMode();
-                //     document.getElementById("toggleStyleChanges").checked = false;
+                if (parsedData.numAtoms <= 800) {
+                    this.main.setNewMode(true);
+                    document.getElementById("toggleStyleChanges").checked = true;
+                } else {
+                    this.main.setNewMode();
+                    document.getElementById("toggleStyleChanges").checked = false;
 
-                // }
+                }
                 this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)), overlay, rotation, translation);
 
 
@@ -52,27 +52,44 @@ export default class FileHandler {
         reader.readAsText(file);
     }
 
-    parseXyzToJson(xyzText) {
-        const lines = xyzText.split("\n").map(line => line.trim()).filter(Boolean);
+    parseXyzToJson(content) {
+        const lines = content.trim().split('\n');
+        if (lines.length < 2) {
+            throw new Error('Invalid XYZ format: Too few lines');
+        }
 
-        const numAtoms = parseInt(lines[0]);
+        const numAtoms = parseInt(lines[0].trim(), 10);
+        if (isNaN(numAtoms) || numAtoms <= 0) {
+            throw new Error('Invalid XYZ format: Invalid number of atoms');
+        }
+
+        // Skip the comment line (lines[1])
+
         const atomData = [];
+        const startLine = 2;
+        if (lines.length < startLine + numAtoms) {
+            throw new Error('Invalid XYZ format: Insufficient atom lines');
+        }
 
-        for (let i = 2; i < 2 + numAtoms; i++) {
-            const line = lines[i];
-            const [element, xStr, yStr, zStr] = line.split(/\s+/);
+        for (let i = startLine; i < startLine + numAtoms; i++) {
+            const parts = lines[i].trim().split(/\s+/);
+            if (parts.length !== 4) {
+                throw new Error(`Invalid XYZ format: Incorrect number of fields in line ${i + 1}`);
+            }
 
-            const x = parseFloat(xStr);
-            const y = parseFloat(yStr);
-            const z = parseFloat(zStr);
+            const element = parts[0].trim();
+            const x = parseFloat(parts[1]);
+            const y = parseFloat(parts[2]);
+            const z = parseFloat(parts[3]);
+
+            if (isNaN(x) || isNaN(y) || isNaN(z)) {
+                throw new Error(`Invalid XYZ format: Non-numeric coordinates in line ${i + 1}`);
+            }
 
             atomData.push({ element, x, y, z });
         }
 
-        return {
-            atomData,
-            numAtoms
-        };
+        return { atomData, numAtoms };
     }
 
 

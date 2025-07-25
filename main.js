@@ -73,8 +73,9 @@ export default class Main {
             this.overlayMolecule = new Molecule(this, this.atomSettings, true);
 
         });
-        this.roughness = 1;
-        this.metalness = 0;
+        this.mode = 0
+        this.roughness = 0.17;
+        this.metalness = 0.3;
         this.opacity = 1;
         this.atomSize = 1;
         this.resolution = 16
@@ -102,6 +103,8 @@ export default class Main {
             this.molecule.toggleLabels(true); // Show labels if in label mode
         }
         render();
+        this.zoomCameraToFitMolecule();
+
     }
     toggleLabels() {
         labelMode = !labelMode;
@@ -110,8 +113,43 @@ export default class Main {
     }
     createNewMoleculeFromJSON(json, overlay, rotation, translation) {
         const data = JSON.parse(json);
-        this.newMolecule(data, 0, overlay, rotation, translation);
+        this.newMolecule(data, this.mode, overlay, rotation, translation);
         this.data = data;
+    }
+    setNewMode(style = false) {
+        if (style) {
+            this.mode = { roughness: main.roughness, metalness: main.metalness, opacity: main.opacity, atomSize: main.atomSize, resolution: main.resolution, antialias: antialiasToggled };
+        } else {
+            this.mode = 0
+        }
+        mode = this.mode
+        return this.mode
+    }
+    // Add a method to zoom the camera to fit the molecule
+    zoomCameraToFitMolecule() {
+        if (!this.molecule || !this.molecule.instancedMesh) return;
+        const boundingBox = this.molecule.getBoundingBox();
+        if (!boundingBox) return;
+        const size = new THREE.Vector3();
+        boundingBox.getSize(size);
+        const center = new THREE.Vector3();
+        boundingBox.getCenter(center);
+
+        // Get the largest dimension
+        const maxDim = Math.max(size.x, size.y, size.z);
+        // Camera fov is vertical, so use height
+        const fov = camera.fov * (Math.PI / 180); // vertical fov in radians
+        const fitHeightDistance = maxDim / (2 * Math.tan(fov / 2));
+        const fitWidthDistance = maxDim / (2 * Math.tan(fov / 2) * camera.aspect);
+        const distance = Math.max(fitHeightDistance, fitWidthDistance);
+
+        // Move camera to look at center, at the right distance
+        camera.position.set(center.x, center.y, center.z + distance * 1.1); // 1.1 for padding
+        camera.lookAt(center);
+        if (controls) {
+            controls.target.copy(center);
+            controls.update();
+        }
     }
 }
 
@@ -177,21 +215,19 @@ backgroundColorSelector.addEventListener('input', () => {
     render();
 });
 
-function setNewMode() {
-    return { roughness: main.roughness, metalness: main.metalness, opacity: main.opacity, atomSize: main.atomSize, resolution: main.resolution, antialias: antialiasToggled };
-}
+
 function updateStyles() {
-    mode = setNewMode();
-    main.newMolecule(main.data, mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+    mode = main.setNewMode(true);
+    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
 }
 
 toggleStyleChanges.addEventListener('change', () => {
     if (mode == 0) {
-        mode = setNewMode();
+        mode = main.setNewMode(true);
     } else {
-        mode = 0;
+        mode = main.setNewMode();
     }
-    main.newMolecule(main.data, mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
     console.log(mode);
     render();
 });
@@ -260,14 +296,7 @@ switchModeButton.addEventListener('click', () => {
     // console.log(mode);
     styleSelector.classList.toggle('on');
 });
-roughnessSelector.addEventListener('input', () => {
-    main.molecule.material.roughness = roughnessSelector.value;
-    render();
-});
-metalnessSelector.addEventListener('input', () => {
-    main.molecule.material.metalness = metalnessSelector.value;
-    render();
-});
+
 toggleLabelsButton.addEventListener('click', () => {
     main.toggleLabels();
 });

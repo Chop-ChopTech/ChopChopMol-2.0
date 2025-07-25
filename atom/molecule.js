@@ -440,4 +440,10 @@ export default class Molecule {
     drawMolecule() {
         // Optionally update instanced mesh properties each frame
     }
+
+    // Returns the bounding box of the molecule's instanced mesh
+    getBoundingBox() {
+        if (!this.instancedMesh) return null;
+        return new THREE.Box3().setFromObject(this.instancedMesh);
+    }
 }

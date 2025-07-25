@@ -706,10 +706,32 @@ input[type="range"]:focus {
 
 }
 
-#dragFile.dragover {
+#dragFile.dragOver {
     opacity: 0.4;
     z-index: 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999;
     cursor: pointer;
+}
+
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ff0000;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    margin-bottom: 8px;
+}
+
+.tooltip:hover::after {
+    opacity: 1;
 }
 
 @keyframes fadeIn {
