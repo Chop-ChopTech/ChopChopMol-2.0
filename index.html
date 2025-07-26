@@ -11,6 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 </head>
 
 <body>
@@ -74,11 +76,13 @@
                 // User is signed in
                 signInButton.style.display = 'none';
                 signOutButton.style.display = 'block';
+                userStatus.style.display = 'block';
                 userStatus.textContent = `Signed in as ${user.displayName}`;
             } else {
                 // User is signed out
                 signInButton.style.display = 'block';
                 signOutButton.style.display = 'none';
+                userStatus.style.display = 'none';
                 userStatus.textContent = '';
             }
         });
@@ -89,25 +93,48 @@
     <div id="buttons">
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
         <input id="compare" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
+        <div class="dropdown">
+            <span class="dropdown-icon"><i class="fa-solid fa-file-arrow-up"></i>
+            </span>
+            <div class="dropdown-content" style="left: 50%;">
+                <button class="fancy-button" id="aiGenerate"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
+                    Generate</button>
+                <button class="fancy-button" id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
+                <button class="fancy-button" id="import-smiles"><i class="fas fa-vial"></i> Load SMILES string</button>
+                <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load JSON
+                    <button class="fancy-button" id="compareButton">Compare</button>
 
-        <button class="fancy-button" id="aiGenerate">AI Generate</button>
-        <button class="fancy-button" id="customButton">Open File</button>
-        <button class="fancy-button" id="switchMode">Toggle Style</button>
-        <button class="fancy-button" id="toggleLabels">Atom Labels</button>
-        <button class="fancy-button" id="captureScreen">Save Image</button>
-        <button class="fancy-button" id="compareButton">Compare</button>
-        <button class="fancy-button" id="import-smiles">Load SMILES string</button>
-        <button class="fancy-button" id="import-json">Load JSON string</button>
-        <button class="fancy-button" id="analyze-molecule">Analyze molecule</button>
-        <button class="fancy-button" id="editMolecule">Edit Molecule</button>
-        <button class="fancy-button" id="clear-canvas">Clear</button>
-        <button class="fancy-button" id="signInButton">Sign In with Google</button>
-        <button class="fancy-button" id="signOutButton" style="display: none;">Sign Out</button>
+            </div>
+        </div>
+        <div class="dropdown">
+            <span class="dropdown-icon" style="left: 50%;"><i class="fas fa-chart-bar"></i></span>
+            <div class="dropdown-content">
+                <button class="fancy-button" id="switchMode"><i class="fas fa-paint-brush"></i> Toggle Style</button>
+                <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
+                <button class="fancy-button" id="analyze-molecule">Analyze molecule</button>
+                <button class="fancy-button" id="editMolecule"> <i class="fas fa-edit"></i> Edit Molecule</button>
+                <button class="fancy-button" id="clear-canvas"><i class="fa-solid fa-trash"></i> Clear</button>
+
+
+            </div>
+        </div>
+        <div class="dropdown" id="settings">
+            <span class="dropdown-icon"><i class="fa-solid fa-gear"></i></span>
+            <div class="dropdown-content" style="left: 100px;">
+
+                <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
+                    Google</button>
+                <button class="fancy-button" id="signOutButton" style="display: none;"><i
+                        class="fas fa-sign-out-alt"></i> Sign Out</button>
+            </div>
+        </div>
+
+
 
     </div>
 
     <!-- Add this below #buttons to show user info -->
-    <div id="userStatus" style="margin-top: 10px; font-family: Rubik, sans-serif; color: white;"></div>
+    <div id="userStatus" style="color: white;"></div>
     <div id="styleSelector" class="on">
 
         <div class="switch-container">
@@ -145,8 +172,12 @@
         <div>
             <input type="checkbox" id="style7">
             <span>Toggle Antialising</span>
-
         </div>
+        <div>
+            <input type="checkbox" id="toggleLabels"></button>
+            <span>Toggle Atom labels</span>
+        </div>
+
 
     </div>
     <div id="dragFile">

@@ -743,6 +743,94 @@ input[type="range"]:focus {
     background-color: #8e1acd;
 }
 
+#userStatus {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: #ffffff6a;
+    background-color: #1a5fcd39;
+}
+
+/* Dropdown container */
+.dropdown {
+    position: relative;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+/* Icon styling */
+.dropdown-icon {
+    font-size: 24px;
+    cursor: pointer;
+    padding: 10px;
+    background-color: #00000000;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+
+/* Dropdown content */
+.dropdown-content {
+    position: absolute;
+    top: 100%;
+    /* Position directly below the icon to avoid gaps */
+    background-color: #ffffff56;
+    min-width: 160px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    border-radius: 10px;
+    padding: 10px;
+    opacity: 0;
+    /* Hidden by default */
+    pointer-events: none;
+    /* Prevent interaction when hidden */
+    /* Start slightly below for slide effect */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform: translate(-50%, 10px);
+    backdrop-filter: blur(10px);
+    /* Smooth transition */
+}
+
+/* Show dropdown on hover with fade-in and slide */
+.dropdown:hover .dropdown-content,
+.dropdown-content:hover {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+    /* Allow interaction when visible */
+    transform: translate(-50%, 0);
+
+    /* Slide to original position */
+}
+
+/* Fancy button styling */
+.dropdown-content button {
+    margin: 5px 0;
+}
+
+.fancy-button:hover {
+    background-color: #0056b3;
+}
+
+/* Accessibility: Focus state for keyboard navigation */
+.dropdown-icon:focus+.dropdown-content,
+.dropdown-content:focus-within {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+#settings {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
