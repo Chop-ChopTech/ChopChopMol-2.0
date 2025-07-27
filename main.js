@@ -22,7 +22,7 @@ controls.zoomSpeed = 2.0;
 controls.panSpeed = 1.0;
 controls.dynamicDampingFactor = 1.0; // No drag smoothing
 let shiftDown = false;
-let editingMolecule = false;
+let editingMolecule = true;
 
 
 const light = new THREE.DirectionalLight(0xffffff, 3);
@@ -329,11 +329,11 @@ analyzeMoleculeButton.addEventListener('click', () => {
     console.log(window.imgToAnalyze);
 })
 
-editMoleculeButton.addEventListener('click', () => {
-    editMoleculePanel.classList.toggle('on');
-    editingMolecule = !editingMolecule;
-    console.log(editingMolecule);
-})
+// editMoleculeButton.addEventListener('click', () => {
+//     editMoleculePanel.classList.toggle('on');
+//     editingMolecule = !editingMolecule;
+//     console.log(editingMolecule);
+// })
 renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
 
 function onPointerDown(event) {
@@ -352,6 +352,7 @@ function onPointerDown(event) {
             const instanceId = intersects[0].instanceId;
             if (instanceId !== undefined) {
                 selectAtom(instanceId);
+                editMoleculePanel.classList.remove('on');
                 // Create buttons for editing the molecule
                 const element = main.molecule.atoms[instanceId].type;
                 updateEditingContent(element, main.molecule.atomSettings[element].color);
@@ -392,6 +393,8 @@ function onPointerDown(event) {
                 }
             }
         } else {
+            editMoleculePanel.classList.add('on');
+
             updateEditingContent();
             unselectAtom();
         }
