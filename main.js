@@ -148,13 +148,20 @@ export default class Main {
 }
 
 const main = new Main();
+// Make main globally accessible for use in other scripts
+window.main = main;
 
+const fileInput = document.getElementById("fileInput")
 // File input event listener
-document.getElementById("fileInput").addEventListener("change", (e) => {
+fileInput.addEventListener("change", (e) => {
+    console.log(e)
     main.loader.handleFile(e, false);
 }, false);
+
 document.getElementById("compare").addEventListener("change", (e) => {
-    main.loader.handleFile(e, true);
+    const file = e.target.files[0]
+    const event =
+        main.loader.handleFile(file, true);
 }, false);
 let isLPressed = false;
 

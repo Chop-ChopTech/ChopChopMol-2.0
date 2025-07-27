@@ -342,18 +342,36 @@
             }
         });
 
-        dropZone.addEventListener('dragover', (event) => {
+        window.addEventListener('dragover', (event) => {
             event.preventDefault(); // Prevent default to allow drop
-            dropZone.classList.add('dragOver');
+            dropZone.classList.add('dragover');
         });
 
-        dropZone.addEventListener('dragenter', (event) => {
+        window.addEventListener('dragenter', (event) => {
             event.preventDefault();
-            dropZone.classList.add('dragOver');
+            dropZone.classList.add('dragover');
         });
 
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragOver');
+        window.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        window.droppedFile = null; // global variable to store dropped file
+
+        window.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropZone.classList.remove('dragover');
+
+            const file = event.dataTransfer.files[0];
+            if (file) {
+                // Create a mock event that mimics a file input change event
+                const mockEvent = {
+                    target: {
+                        files: [file]
+                    }
+                };
+                // Call the file handler directly with the mock event
+                window.main.loader.handleFile(mockEvent, false);
+            }
         });
 
         async function sendChatMessage() {

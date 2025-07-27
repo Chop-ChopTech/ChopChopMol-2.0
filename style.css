@@ -706,7 +706,7 @@ input[type="range"]:focus {
 
 }
 
-#dragFile.dragOver {
+#dragFile.dragover {
     opacity: 0.4;
     z-index: 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999;
     cursor: pointer;
