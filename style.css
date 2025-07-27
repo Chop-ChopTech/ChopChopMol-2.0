@@ -535,13 +535,14 @@ body {
     bottom: 10px;
     right: 10px;
     z-index: 9999;
-    background-color: #ffffff;
+    background-color: #ffffff00;
     width: 300px;
     height: 500px;
     padding: 5px;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
+    backdrop-filter: blur(10px);
     gap: 10px;
 }
 
@@ -550,7 +551,7 @@ body {
 }
 
 #editMoleculeContent {
-    background-color: #a0a0a0;
+    background-color: #ffc40075;
     width: 100%;
     height: 100%;
     text-align: center;
@@ -558,12 +559,14 @@ body {
     align-items: center;
     display: flex;
     flex-direction: column;
+    backdrop-filter: blur(10px);
+
     border-radius: 10px;
 
 }
 
 #select-an-atom {
-    color: #0000004b;
+    color: #000000;
     align-self: center;
 }
 
@@ -820,6 +823,11 @@ input[type="range"]:focus {
     pointer-events: none;
     transition: opacity 0.3s ease, transform 0.3s ease;
     backdrop-filter: blur(10px);
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Show dropdown on hover with fade-in and slide */
