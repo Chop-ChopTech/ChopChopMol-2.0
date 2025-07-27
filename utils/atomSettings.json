@@ -35,7 +35,7 @@
         "realRadius": 0.71
     },
     "O": {
-        "color": "red",
+        "color": "#ff3b3b",
         "radius": 0.66,
         "realRadius": 0.66
     },

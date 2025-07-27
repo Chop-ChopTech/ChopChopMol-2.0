@@ -373,6 +373,9 @@ export default class Molecule {
         this.bonds = [];
         this.bondGroup = new THREE.Group();
         this.instancedMesh = null;
+        this.labels = [];
+        this.stretch = 4;
+        this.bondGroup = new THREE.Group();
         this.clearLabels();
     }
 
@@ -380,7 +383,7 @@ export default class Molecule {
         this.bonds = [];
         this.main.scene.remove(this.bondGroup);
         this.bondGroup = new THREE.Group();
-        this.createBonds(this.atoms, 5);
+        this.createBonds(this.atoms, 1);
         if (mode == 0) {
             this.visualizeBondsFast(this.bonds, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
         } else {

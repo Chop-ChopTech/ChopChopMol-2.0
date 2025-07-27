@@ -16,13 +16,7 @@ document.body.appendChild(renderer.domElement);
 
 // const controls = new OrbitControls(camera, renderer.domElement);
 let controls = new TrackballControls(camera, renderer.domElement);
-// controls.minPolarAngle = 0;
-// controls.maxPolarAngle = Math.PI;
-// controls.minAzimuthAngle = -Infinity;
-// controls.maxAzimuthAngle = Infinity;
-// controls.enablePan = false;
-// controls.enableDamping = false;
-// controls.dampingFactor = 0.05;
+
 controls.rotateSpeed = 5.0;
 controls.zoomSpeed = 2.0;
 controls.panSpeed = 1.0;
@@ -104,7 +98,6 @@ export default class Main {
             this.molecule.toggleLabels(true); // Show labels if in label mode
         }
         render();
-        this.zoomCameraToFitMolecule();
 
     }
     toggleLabels() {
@@ -145,7 +138,7 @@ export default class Main {
         const distance = Math.max(fitHeightDistance, fitWidthDistance);
 
         // Move camera to look at center, at the right distance
-        camera.position.set(center.x, center.y, center.z + distance * 1.1); // 1.1 for padding
+        camera.position.set(center.x, center.y, center.z + distance * 1.5); // 1.1 for padding
         camera.lookAt(center);
         if (controls) {
             controls.target.copy(center);
@@ -357,8 +350,18 @@ function onPointerDown(event) {
                 updateEditingContent(element, main.molecule.atomSettings[element].color);
 
 
-                document.getElementById('changeMoleculeBtn').addEventListener('click', () => { /* ... */ });
-                document.getElementById('removeMoleculeBtn').addEventListener('click', () => { /* ... */ });
+                document.getElementById('changeAtomBtn').addEventListener('click', () => {
+                    const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
+                    main.data.atomData[instanceId].element = replacingMolecule
+                    if (replacingMolecule) {
+                        main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+                    }
+                });
+                document.getElementById('removeAtomBtn').addEventListener('click', () => {
+                    main.data.atomData.splice(instanceId, 1);
+                    main.data.numAtoms--;
+                    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+                });
 
                 if (shiftDown) {
                     unselectAtom(instanceId);
@@ -428,8 +431,8 @@ function updateEditingContent(element = null, color = null) {
         editMoleculeContent.innerHTML = `
         <h2 style="color:${color};">Element: ${element}</h2><br>
         <span>Hold shift and drag to move the atom</span>
-        <button id="changeMoleculeBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Change Atom</button>
-        <button id="removeMoleculeBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
+        <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Change Atom</button>
+        <button id="removeAtomBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
     `;
     } else {
         editMoleculeContent.innerHTML = '<h2 id="select-an-atom">Select an atom</h2>';
