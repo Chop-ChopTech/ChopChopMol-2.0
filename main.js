@@ -431,7 +431,7 @@ function updateEditingContent(element = null, color = null) {
         editMoleculeContent.innerHTML = `
         <h2 style="color:${color};">Element: ${element}</h2><br>
         <span>Hold shift and drag to move the atom</span>
-        <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Change Atom</button>
+        <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
         <button id="removeAtomBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
     `;
     } else {
