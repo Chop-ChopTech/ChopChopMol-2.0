@@ -22,6 +22,10 @@ controls.zoomSpeed = 2.0;
 controls.panSpeed = 1.0;
 controls.dynamicDampingFactor = 1.0; // No drag smoothing
 let shiftDown = false;
+let cmdDown = false;
+
+let atomsSelected = [];
+
 let editingMolecule = true;
 
 
@@ -262,6 +266,9 @@ window.addEventListener('keyup', function (e) {
         shiftDown = false;
         controls.enabled = true;
     }
+    if (e.key == "Meta") {
+        cmdDown = false;
+    }
 });
 
 window.addEventListener('keydown', function (e) {
@@ -276,6 +283,9 @@ window.addEventListener('keydown', function (e) {
         if (editingMolecule) {
             controls.enabled = false;
         }
+    }
+    if (e.key == "Meta") {
+        cmdDown = true;
     }
 });
 window.addEventListener('keydown', function (e) {
@@ -352,6 +362,11 @@ function onPointerDown(event) {
             const instanceId = intersects[0].instanceId;
             if (instanceId !== undefined) {
                 selectAtom(instanceId);
+                if (cmdDown) {
+                    if (!atomsSelected.includes(instanceId)) {
+                        atomsSelected.push(instanceId);
+                    }
+                }
                 editMoleculePanel.classList.remove('on');
                 // Create buttons for editing the molecule
                 const element = main.molecule.atoms[instanceId].type;
@@ -394,9 +409,10 @@ function onPointerDown(event) {
             }
         } else {
             editMoleculePanel.classList.add('on');
-
+            atomsSelected = [];
             updateEditingContent();
             unselectAtom();
+
         }
     }
 }
@@ -460,10 +476,12 @@ function selectAtom(index) {
     // Get the color attribute
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
     // Optionally: reset all colors first
-    for (let i = 0; i < colorAttr.count; i++) {
-        const atom = main.molecule.atoms[i];
-        const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
-        colorAttr.setXYZ(i, color.r, color.g, color.b);
+    if (atomsSelected.length == 0) {
+        for (let i = 0; i < colorAttr.count; i++) {
+            const atom = main.molecule.atoms[i];
+            const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+            colorAttr.setXYZ(i, color.r, color.g, color.b);
+        }
     }
     // Highlight selected atom (e.g., yellow)
     colorAttr.setXYZ(index, 1, 1, 0);
