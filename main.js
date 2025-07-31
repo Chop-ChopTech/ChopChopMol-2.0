@@ -362,9 +362,11 @@ function onPointerDown(event) {
             const instanceId = intersects[0].instanceId;
             if (instanceId !== undefined) {
                 selectAtom(instanceId);
-                if (cmdDown) {
+                render();
+                if (cmdDown || atomsSelected.length == 0) {
                     if (!atomsSelected.includes(instanceId)) {
                         atomsSelected.push(instanceId);
+                        console.log(atomsSelected);
                     }
                 }
                 editMoleculePanel.classList.remove('on');
@@ -456,7 +458,10 @@ function updateEditingContent(element = null, color = null) {
     if (element !== null) {
         editMoleculeContent.innerHTML = `
         <h2 style="color:${color};">Element: ${element}</h2><br>
-        <span>Hold shift and drag to move the atom</span>
+        <span style="color:white;">Hold shift and drag to move the atom</span>
+        <br>
+        <span style="color:white;">Hold cmd or ctrl and to select more atoms in a group</span>
+
         <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
         <button id="removeAtomBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
     `;
@@ -474,9 +479,11 @@ function onPointerUp(event) {
 
 function selectAtom(index) {
     // Get the color attribute
+    console.log("Selecting atom", index);
+
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
     // Optionally: reset all colors first
-    if (atomsSelected.length == 0) {
+    if (!cmdDown) {
         for (let i = 0; i < colorAttr.count; i++) {
             const atom = main.molecule.atoms[i];
             const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
