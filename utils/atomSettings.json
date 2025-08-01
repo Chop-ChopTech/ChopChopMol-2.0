@@ -1,147 +1,147 @@
 {
     "H": {
         "color": "lightgray",
-        "radius": 1.32,
-        "realRadius": 0.53
+        "radius": 0.31,
+        "realRadius": 0.31
     },
     "He": {
         "color": "cyan",
-        "radius": 0.78,
-        "realRadius": 0.31
+        "radius": 0.28,
+        "realRadius": 0.28
     },
     "Li": {
         "color": "purple",
-        "radius": 4.17,
-        "realRadius": 1.67
+        "radius": 1.28,
+        "realRadius": 1.28
     },
     "Be": {
         "color": "darkgreen",
-        "radius": 2.8,
-        "realRadius": 1.12
+        "radius": 0.96,
+        "realRadius": 0.96
     },
     "B": {
         "color": "salmon",
-        "radius": 2.17,
-        "realRadius": 0.87
+        "radius": 0.85,
+        "realRadius": 0.85
     },
     "C": {
         "color": "gray",
-        "radius": 1.68,
-        "realRadius": 0.67
+        "radius": 0.76,
+        "realRadius": 0.76
     },
     "N": {
         "color": "blue",
-        "radius": 1.4,
-        "realRadius": 0.56
+        "radius": 0.71,
+        "realRadius": 0.71
     },
     "O": {
-        "color": "red",
-        "radius": 1.2,
-        "realRadius": 0.48
+        "color": "#ff3b3b",
+        "radius": 0.66,
+        "realRadius": 0.66
     },
     "F": {
         "color": "green",
-        "radius": 1.05,
-        "realRadius": 0.42
+        "radius": 0.57,
+        "realRadius": 0.57
     },
     "Ne": {
         "color": "cyan",
-        "radius": 0.95,
-        "realRadius": 0.38
+        "radius": 0.58,
+        "realRadius": 0.58
     },
     "Na": {
         "color": "orange",
-        "radius": 4.75,
-        "realRadius": 1.9
+        "radius": 1.66,
+        "realRadius": 1.66
     },
     "Mg": {
         "color": "green",
-        "radius": 3.62,
-        "realRadius": 1.45
+        "radius": 1.41,
+        "realRadius": 1.41
     },
     "Al": {
         "color": "gray",
-        "radius": 2.95,
-        "realRadius": 1.18
+        "radius": 1.21,
+        "realRadius": 1.21
     },
     "Si": {
         "color": "darkgray",
-        "radius": 2.77,
+        "radius": 1.11,
         "realRadius": 1.11
     },
     "P": {
         "color": "orange",
-        "radius": 2.45,
-        "realRadius": 0.98
+        "radius": 1.07,
+        "realRadius": 1.07
     },
     "S": {
         "color": "yellow",
-        "radius": 2.17,
-        "realRadius": 0.87
+        "radius": 1.05,
+        "realRadius": 1.05
     },
     "Cl": {
         "color": "green",
-        "radius": 1.98,
-        "realRadius": 0.79
+        "radius": 1.02,
+        "realRadius": 1.02
     },
     "Ar": {
         "color": "cyan",
-        "radius": 1.77,
-        "realRadius": 0.71
+        "radius": 1.06,
+        "realRadius": 1.06
     },
     "K": {
         "color": "violet",
-        "radius": 6.08,
-        "realRadius": 2.43
+        "radius": 2.03,
+        "realRadius": 2.03
     },
     "Ca": {
         "color": "lightgreen",
-        "radius": 4.85,
-        "realRadius": 1.94
+        "radius": 1.76,
+        "realRadius": 1.76
     },
     "Fe": {
         "color": "orange",
-        "radius": 3.9,
-        "realRadius": 1.56
+        "radius": 1.32,
+        "realRadius": 1.32
     },
     "Cu": {
         "color": "brown",
-        "radius": 3.62,
-        "realRadius": 1.45
+        "radius": 1.32,
+        "realRadius": 1.32
     },
     "Zn": {
         "color": "lightblue",
-        "radius": 3.55,
-        "realRadius": 1.42
+        "radius": 1.22,
+        "realRadius": 1.22
     },
     "Ag": {
         "color": "silver",
-        "radius": 4.12,
-        "realRadius": 1.65
+        "radius": 1.45,
+        "realRadius": 1.45
     },
     "I": {
         "color": "purple",
-        "radius": 2.88,
-        "realRadius": 1.15
+        "radius": 1.39,
+        "realRadius": 1.39
     },
     "Au": {
         "color": "gold",
-        "radius": 4.35,
-        "realRadius": 1.74
+        "radius": 1.36,
+        "realRadius": 1.36
     },
     "Hg": {
         "color": "silver",
-        "radius": 4.28,
-        "realRadius": 1.71
+        "radius": 1.32,
+        "realRadius": 1.32
     },
     "Pb": {
         "color": "gray",
-        "radius": 3.85,
-        "realRadius": 1.54
+        "radius": 1.46,
+        "realRadius": 1.46
     },
     "U": {
         "color": "gray",
-        "radius": 0,
-        "realRadius": 0
+        "radius": 1.56,
+        "realRadius": 1.56
     }
 }

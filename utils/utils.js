@@ -336,6 +336,12 @@ function alignMolecules(movingMolecule, fixedMolecule) {
     return transformations;
 }
 
+function addToList(itemText, list) {
+    const listItem = document.createElement('li');
+    listItem.textContent = itemText;
+    list.appendChild(listItem);
+}
+
 // Example usage with debug output:
 /*
 const molecule1 = {

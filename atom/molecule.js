@@ -20,7 +20,7 @@ export default class Molecule {
         this.reset();
         console.log(data);
 
-        const bondThreshold = 5;
+        const bondThreshold = 1;
 
         this.createAtoms(data, rotation, translation, mode);
         this.centerMolecule(this.overlay);
@@ -182,7 +182,7 @@ export default class Molecule {
                 const atom2 = atoms[j];
 
                 const dist = atom1.position.distanceTo(atom2.position);
-                const maxBondDistance = atom1.realRadius + atom2.realRadius + threshold;
+                const maxBondDistance = this.stretch * (atom1.realRadius + atom2.realRadius) + threshold;
 
                 if (dist <= maxBondDistance) {
                     const bond = new Bond(this, atom1, atom2, dist);
@@ -279,9 +279,9 @@ export default class Molecule {
             coordinates.forEach((pos, index) => {
                 data.atomData.push({
                     element: elements[index],
-                    x: pos.x / 4,
-                    y: pos.y / 4,
-                    z: pos.z / 4,
+                    x: pos.x / this.stretch,
+                    y: pos.y / this.stretch,
+                    z: pos.z / this.stretch,
                 });
             });
             console.log(data)
@@ -373,6 +373,9 @@ export default class Molecule {
         this.bonds = [];
         this.bondGroup = new THREE.Group();
         this.instancedMesh = null;
+        this.labels = [];
+        this.stretch = 4;
+        this.bondGroup = new THREE.Group();
         this.clearLabels();
     }
 
@@ -380,7 +383,7 @@ export default class Molecule {
         this.bonds = [];
         this.main.scene.remove(this.bondGroup);
         this.bondGroup = new THREE.Group();
-        this.createBonds(this.atoms, 5);
+        this.createBonds(this.atoms, 1);
         if (mode == 0) {
             this.visualizeBondsFast(this.bonds, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
         } else {

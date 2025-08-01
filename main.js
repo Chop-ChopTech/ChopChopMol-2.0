@@ -4,6 +4,7 @@ import { TrackballControls } from 'jsm/controls/TrackballControls.js';
 import Molecule from './atom/molecule.js';
 import FileHandler from './utils/fileHandler.js';
 // WE WILL NOW TRY TO MAKE THIS AMAZING WEBSITE AN APP. IT MAY GO AMAZINGLY OR IT MAY GO HORRIBLY.
+
 // Setup scene
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -15,19 +16,18 @@ document.body.appendChild(renderer.domElement);
 
 // const controls = new OrbitControls(camera, renderer.domElement);
 let controls = new TrackballControls(camera, renderer.domElement);
-// controls.minPolarAngle = 0;
-// controls.maxPolarAngle = Math.PI;
-// controls.minAzimuthAngle = -Infinity;
-// controls.maxAzimuthAngle = Infinity;
-// controls.enablePan = false;
-// controls.enableDamping = false;
-// controls.dampingFactor = 0.05;
+
 controls.rotateSpeed = 5.0;
 controls.zoomSpeed = 2.0;
 controls.panSpeed = 1.0;
 controls.dynamicDampingFactor = 1.0; // No drag smoothing
 let shiftDown = false;
-let editingMolecule = false;
+let cmdDown = false;
+
+let atomsSelected = [];
+let fragments = [];
+
+let editingMolecule = true;
 
 
 const light = new THREE.DirectionalLight(0xffffff, 3);
@@ -103,7 +103,6 @@ export default class Main {
             this.molecule.toggleLabels(true); // Show labels if in label mode
         }
         render();
-        this.zoomCameraToFitMolecule();
 
     }
     toggleLabels() {
@@ -144,7 +143,7 @@ export default class Main {
         const distance = Math.max(fitHeightDistance, fitWidthDistance);
 
         // Move camera to look at center, at the right distance
-        camera.position.set(center.x, center.y, center.z + distance * 1.1); // 1.1 for padding
+        camera.position.set(center.x, center.y, center.z + distance * 1.5); // 1.1 for padding
         camera.lookAt(center);
         if (controls) {
             controls.target.copy(center);
@@ -154,13 +153,20 @@ export default class Main {
 }
 
 const main = new Main();
+// Make main globally accessible for use in other scripts
+window.main = main;
 
+const fileInput = document.getElementById("fileInput")
 // File input event listener
-document.getElementById("fileInput").addEventListener("change", (e) => {
+fileInput.addEventListener("change", (e) => {
+    console.log(e)
     main.loader.handleFile(e, false);
 }, false);
+
 document.getElementById("compare").addEventListener("change", (e) => {
-    main.loader.handleFile(e, true);
+    const file = e.target.files[0]
+    const event =
+        main.loader.handleFile(file, true);
 }, false);
 let isLPressed = false;
 
@@ -261,6 +267,9 @@ window.addEventListener('keyup', function (e) {
         shiftDown = false;
         controls.enabled = true;
     }
+    if (e.key == "Meta") {
+        cmdDown = false;
+    }
 });
 
 window.addEventListener('keydown', function (e) {
@@ -275,6 +284,9 @@ window.addEventListener('keydown', function (e) {
         if (editingMolecule) {
             controls.enabled = false;
         }
+    }
+    if (e.key == "Meta") {
+        cmdDown = true;
     }
 });
 window.addEventListener('keydown', function (e) {
@@ -328,11 +340,11 @@ analyzeMoleculeButton.addEventListener('click', () => {
     console.log(window.imgToAnalyze);
 })
 
-editMoleculeButton.addEventListener('click', () => {
-    editMoleculePanel.classList.toggle('on');
-    editingMolecule = !editingMolecule;
-    console.log(editingMolecule);
-})
+// editMoleculeButton.addEventListener('click', () => {
+//     editMoleculePanel.classList.toggle('on');
+//     editingMolecule = !editingMolecule;
+//     console.log(editingMolecule);
+// })
 renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
 
 function onPointerDown(event) {
@@ -351,13 +363,36 @@ function onPointerDown(event) {
             const instanceId = intersects[0].instanceId;
             if (instanceId !== undefined) {
                 selectAtom(instanceId);
+                render();
+                if (cmdDown || atomsSelected.length == 0) {
+                    if (!atomsSelected.includes(instanceId)) {
+                        atomsSelected.push(instanceId);
+                        console.log(atomsSelected);
+                    }
+                }
+                editMoleculePanel.classList.remove('on');
                 // Create buttons for editing the molecule
                 const element = main.molecule.atoms[instanceId].type;
                 updateEditingContent(element, main.molecule.atomSettings[element].color);
 
 
-                document.getElementById('changeMoleculeBtn').addEventListener('click', () => { /* ... */ });
-                document.getElementById('removeMoleculeBtn').addEventListener('click', () => { /* ... */ });
+                document.getElementById('changeAtomBtn').addEventListener('click', () => {
+                    const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
+                    main.data.atomData[instanceId].element = replacingMolecule
+                    if (replacingMolecule) {
+                        main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+                    }
+                });
+                document.getElementById('removeAtomBtn').addEventListener('click', () => {
+                    main.data.atomData.splice(instanceId, 1);
+                    main.data.numAtoms--;
+                    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+                });
+                document.getElementById('createFragment').addEventListener('click', () => {
+                    const fragment = atomsSelected
+                    fragments.push(fragment)
+                    addToList(fragment, document.getElementById('fragmentList'))
+                })
 
                 if (shiftDown) {
                     unselectAtom(instanceId);
@@ -381,8 +416,11 @@ function onPointerDown(event) {
                 }
             }
         } else {
-            updateEditingContent();
+            editMoleculePanel.classList.add('on');
+            atomsSelected = [];
+            // updateEditingContent();
             unselectAtom();
+
         }
     }
 }
@@ -426,10 +464,21 @@ function updateEditingContent(element = null, color = null) {
     if (element !== null) {
         editMoleculeContent.innerHTML = `
         <h2 style="color:${color};">Element: ${element}</h2><br>
-        <span>Hold shift and drag to move the atom</span>
-        <button id="changeMoleculeBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Change Atom</button>
-        <button id="removeMoleculeBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
+        <span style="color:white;">Hold shift and drag to move the atom</span>
+        <br>
+        <span style="color:white;">Hold cmd or ctrl and to select more atoms in a group</span>
+
+        <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
+        <button id="removeAtomBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
+        <button id="createFragment" style="background-color:rgb(168, 146, 0); margin:10px; display:none; " class="fancy-button">Create Fragment</button>
+        <ul id="fragmentList"></ul>
     `;
+        if (atomsSelected.length > 1) {
+            document.getElementById('createFragment').style.display = 'block';
+        }
+        fragments.forEach((fragment) => {
+            addToList(fragment, document.getElementById('fragmentList'))
+        })
     } else {
         editMoleculeContent.innerHTML = '<h2 id="select-an-atom">Select an atom</h2>';
     }
@@ -444,12 +493,16 @@ function onPointerUp(event) {
 
 function selectAtom(index) {
     // Get the color attribute
+    console.log("Selecting atom", index);
+
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
     // Optionally: reset all colors first
-    for (let i = 0; i < colorAttr.count; i++) {
-        const atom = main.molecule.atoms[i];
-        const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
-        colorAttr.setXYZ(i, color.r, color.g, color.b);
+    if (!cmdDown) {
+        for (let i = 0; i < colorAttr.count; i++) {
+            const atom = main.molecule.atoms[i];
+            const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+            colorAttr.setXYZ(i, color.r, color.g, color.b);
+        }
     }
     // Highlight selected atom (e.g., yellow)
     colorAttr.setXYZ(index, 1, 1, 0);

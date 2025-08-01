@@ -532,25 +532,27 @@ body {
 
 #editMoleculePanel {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
+    top: 50%;
+    left: 10px;
     z-index: 9999;
-    background-color: #ffffff;
+    background-color: #ffffff00;
     width: 300px;
-    height: 500px;
+    height: auto;
     padding: 5px;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
+    backdrop-filter: blur(10px);
+    transform: translate(0%, -50%);
     gap: 10px;
 }
 
 #editMoleculePanel.on {
-    bottom: -600px;
+    left: -600px;
 }
 
 #editMoleculeContent {
-    background-color: #a0a0a0;
+    background-color: #ffc40046;
     width: 100%;
     height: 100%;
     text-align: center;
@@ -558,12 +560,14 @@ body {
     align-items: center;
     display: flex;
     flex-direction: column;
+    backdrop-filter: blur(10px);
+    padding: 20px;
     border-radius: 10px;
 
 }
 
 #select-an-atom {
-    color: #0000004b;
+    color: #000000;
     align-self: center;
 }
 
@@ -706,7 +710,7 @@ input[type="range"]:focus {
 
 }
 
-#dragFile.dragOver {
+#dragFile.dragover {
     opacity: 0.4;
     z-index: 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999;
     cursor: pointer;
@@ -732,6 +736,150 @@ input[type="range"]:focus {
 
 .tooltip:hover::after {
     opacity: 1;
+}
+
+#signInButton {
+    background-color: #2196F3;
+}
+
+#signOutButton {
+
+    background-color: #8e1acd;
+}
+
+#userStatus {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: #ffffff6a;
+    background-color: #1a5fcd39;
+}
+
+/* Dropdown container */
+.dropdown {
+    position: relative;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+/* Icon styling */
+.dropdown-icon {
+    font-size: 24px;
+    cursor: pointer;
+    padding: 10px;
+    background-color: #00000000;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    transition: background 0.3s ease;
+    /* Smooth transition for background */
+}
+
+.dropdown:hover .dropdown-icon {
+    background: linear-gradient(90deg,
+            /* Changed from 90deg to 45deg for diagonal gradient */
+            #ff0000,
+            #ff9900,
+            #33cc33,
+            #00ccff,
+            #cc00ff,
+            #ff0000);
+    background-size: 200% 100%;
+    /* Double width for seamless looping */
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: rainbow 3s linear infinite;
+    /* Loop rainbow animation */
+}
+
+#fragmentList {
+    list-style: none;
+    padding: 0;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: fit-content;
+    color: white;
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#fragmentList li {
+    margin: 5px 0;
+    text-align: center;
+}
+
+@keyframes rainbow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 200% 50%;
+        /* Move gradient for seamless loop */
+    }
+}
+
+/* Dropdown content */
+.dropdown-content {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background-color: #ffffff56;
+    min-width: 160px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    border-radius: 10px;
+    padding: 10px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    backdrop-filter: blur(10px);
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Show dropdown on hover with fade-in and slide */
+.dropdown:hover .dropdown-content,
+.dropdown-content:hover {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Fancy button styling */
+.dropdown-content button {
+    margin: 5px 0;
+}
+
+.fancy-button:hover {
+    background-color: #0056b3;
+}
+
+#settings {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+}
+
+/* Accessibility: Focus state for keyboard navigation */
+.dropdown-icon:focus+.dropdown-content {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
 }
 
 @keyframes fadeIn {
