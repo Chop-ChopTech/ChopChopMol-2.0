@@ -55,9 +55,9 @@ const editMoleculeButton = document.getElementById('editMolecule');
 const editMoleculeContent = document.getElementById('editMoleculeContent');
 
 let dragging = false;
-let draggedAtomIndex = null;
+// let draggedAtomIndex = null; // Remove this, use atomsSelected
 let dragPlane = new THREE.Plane();
-let dragOffset = new THREE.Vector3();
+let dragOffsets = {}; // Store offsets for each selected atom
 
 
 export default class Main {
@@ -375,7 +375,6 @@ function onPointerDown(event) {
                 const element = main.molecule.atoms[instanceId].type;
                 updateEditingContent(element, main.molecule.atomSettings[element].color);
 
-
                 document.getElementById('changeAtomBtn').addEventListener('click', () => {
                     const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
                     main.data.atomData[instanceId].element = replacingMolecule
@@ -397,18 +396,22 @@ function onPointerDown(event) {
                 if (shiftDown) {
                     unselectAtom(instanceId);
                     dragging = true;
-                    draggedAtomIndex = instanceId;
+                    // draggedAtomIndex = instanceId; // Remove this
 
-                    // Set up a plane perpendicular to the camera through the atom
+                    // Set up a plane perpendicular to the camera through the first selected atom
                     const atom = main.molecule.atoms[instanceId];
                     dragPlane.setFromNormalAndCoplanarPoint(
                         camera.getWorldDirection(new THREE.Vector3()),
                         atom.position
                     );
 
-                    // Calculate offset between mouse and atom position
+                    // Calculate offsets for all selected atoms
+                    dragOffsets = {};
                     const intersectPoint = intersects[0].point;
-                    dragOffset.copy(intersectPoint).sub(atom.position);
+                    atomsSelected.forEach(idx => {
+                        const atom = main.molecule.atoms[idx];
+                        dragOffsets[idx] = new THREE.Vector3().copy(intersectPoint).sub(atom.position);
+                    });
 
                     // Listen for move and up
                     window.addEventListener('pointermove', onPointerMove, false);
@@ -420,7 +423,6 @@ function onPointerDown(event) {
             atomsSelected = [];
             // updateEditingContent();
             unselectAtom();
-
         }
     }
 }
@@ -439,19 +441,22 @@ function onPointerMove(event) {
     const intersection = new THREE.Vector3();
     raycaster.ray.intersectPlane(dragPlane, intersection);
 
-    // Update atom position
-    const atom = main.molecule.atoms[draggedAtomIndex];
-    atom.position.copy(intersection.sub(dragOffset));
-    atom.x = atom.position.x;
-    atom.y = atom.position.y;
-    atom.z = atom.position.z;
+    // Move all selected atoms
+    atomsSelected.forEach(idx => {
+        const atom = main.molecule.atoms[idx];
+        const offset = dragOffsets[idx] || new THREE.Vector3();
+        atom.position.copy(new THREE.Vector3().copy(intersection).sub(offset));
+        atom.x = atom.position.x;
+        atom.y = atom.position.y;
+        atom.z = atom.position.z;
 
-    // Update instanced mesh matrix for this atom
-    const matrix = new THREE.Matrix4();
-    let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
-    matrix.makeScale(radius, radius, radius);
-    matrix.setPosition(atom.position);
-    main.molecule.instancedMesh.setMatrixAt(draggedAtomIndex, matrix);
+        // Update instanced mesh matrix for this atom
+        const matrix = new THREE.Matrix4();
+        let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
+        matrix.makeScale(radius, radius, radius);
+        matrix.setPosition(atom.position);
+        main.molecule.instancedMesh.setMatrixAt(idx, matrix);
+    });
     main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
 
     // Update bonds
@@ -486,7 +491,8 @@ function updateEditingContent(element = null, color = null) {
 
 function onPointerUp(event) {
     dragging = false;
-    draggedAtomIndex = null;
+    // draggedAtomIndex = null; // Remove this
+    dragOffsets = {};
     window.removeEventListener('pointermove', onPointerMove, false);
     window.removeEventListener('pointerup', onPointerUp, false);
 }
