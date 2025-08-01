@@ -532,22 +532,23 @@ body {
 
 #editMoleculePanel {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
+    top: 50%;
+    left: 10px;
     z-index: 9999;
     background-color: #ffffff00;
     width: 300px;
-    height: 300px;
+    height: auto;
     padding: 5px;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
     backdrop-filter: blur(10px);
+    transform: translate(0%, -50%);
     gap: 10px;
 }
 
 #editMoleculePanel.on {
-    bottom: -600px;
+    left: -600px;
 }
 
 #editMoleculeContent {
@@ -560,7 +561,7 @@ body {
     display: flex;
     flex-direction: column;
     backdrop-filter: blur(10px);
-
+    padding: 20px;
     border-radius: 10px;
 
 }
@@ -794,6 +795,25 @@ input[type="range"]:focus {
     -webkit-text-fill-color: transparent;
     animation: rainbow 3s linear infinite;
     /* Loop rainbow animation */
+}
+
+#fragmentList {
+    list-style: none;
+    padding: 0;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: fit-content;
+    color: white;
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#fragmentList li {
+    margin: 5px 0;
+    text-align: center;
 }
 
 @keyframes rainbow {

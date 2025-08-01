@@ -25,6 +25,7 @@ let shiftDown = false;
 let cmdDown = false;
 
 let atomsSelected = [];
+let fragments = [];
 
 let editingMolecule = true;
 
@@ -387,6 +388,11 @@ function onPointerDown(event) {
                     main.data.numAtoms--;
                     main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
                 });
+                document.getElementById('createFragment').addEventListener('click', () => {
+                    const fragment = atomsSelected
+                    fragments.push(fragment)
+                    addToList(fragment, document.getElementById('fragmentList'))
+                })
 
                 if (shiftDown) {
                     unselectAtom(instanceId);
@@ -412,7 +418,7 @@ function onPointerDown(event) {
         } else {
             editMoleculePanel.classList.add('on');
             atomsSelected = [];
-            updateEditingContent();
+            // updateEditingContent();
             unselectAtom();
 
         }
@@ -464,7 +470,15 @@ function updateEditingContent(element = null, color = null) {
 
         <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
         <button id="removeAtomBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
+        <button id="createFragment" style="background-color:rgb(168, 146, 0); margin:10px; display:none; " class="fancy-button">Create Fragment</button>
+        <ul id="fragmentList"></ul>
     `;
+        if (atomsSelected.length > 1) {
+            document.getElementById('createFragment').style.display = 'block';
+        }
+        fragments.forEach((fragment) => {
+            addToList(fragment, document.getElementById('fragmentList'))
+        })
     } else {
         editMoleculeContent.innerHTML = '<h2 id="select-an-atom">Select an atom</h2>';
     }
