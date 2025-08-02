@@ -486,6 +486,38 @@ function onPointerDown(event) {
                 // Clicking on an atom
                 const instanceId = intersects[0].instanceId;
                 if (instanceId !== undefined) {
+                    if (shiftDown) {
+                        // Shift + click: start dragging
+                        dragging = true;
+
+                        // If the clicked atom isn't in the selection, add it
+                        if (!atomsSelected.includes(instanceId)) {
+                            atomsSelected.push(instanceId);
+                            selectAtom(instanceId);
+                        }
+
+                        // Set up drag plane through the clicked atom
+                        const atom = main.molecule.atoms[instanceId];
+                        dragPlane.setFromNormalAndCoplanarPoint(
+                            camera.getWorldDirection(new THREE.Vector3()),
+                            atom.position
+                        );
+
+                        // Calculate offsets for ALL selected atoms relative to click point
+                        dragOffsets = {};
+                        const intersectPoint = intersects[0].point;
+                        atomsSelected.forEach(idx => {
+                            const atom = main.molecule.atoms[idx];
+                            dragOffsets[idx] = new THREE.Vector3().copy(atom.position).sub(intersectPoint);
+                        });
+
+                        console.log(`Dragging ${atomsSelected.length} atoms:`, atomsSelected);
+
+                        window.addEventListener('pointermove', onPointerMove, false);
+                        window.addEventListener('pointerup', onPointerUp, false);
+                        return; // Don't do normal selection logic
+                    }
+
                     if (cmdDown) {
                         // Cmd + click: toggle atom in selection
                         if (atomsSelected.includes(instanceId)) {
@@ -532,24 +564,6 @@ function onPointerDown(event) {
                         fragments.push(fragment)
                         addToList(fragment, document.getElementById('fragmentList'))
                     });
-
-                    if (shiftDown) {
-                        // Your existing drag logic...
-                        dragging = true;
-                        const atom = main.molecule.atoms[instanceId];
-                        dragPlane.setFromNormalAndCoplanarPoint(
-                            camera.getWorldDirection(new THREE.Vector3()),
-                            atom.position
-                        );
-                        dragOffsets = {};
-                        const intersectPoint = intersects[0].point;
-                        atomsSelected.forEach(idx => {
-                            const atom = main.molecule.atoms[idx];
-                            dragOffsets[idx] = new THREE.Vector3().copy(intersectPoint).sub(atom.position);
-                        });
-                        window.addEventListener('pointermove', onPointerMove, false);
-                        window.addEventListener('pointerup', onPointerUp, false);
-                    }
                 }
             } else {
                 // Clicking on empty space
@@ -589,11 +603,13 @@ function onPointerMove(event) {
     const intersection = new THREE.Vector3();
     raycaster.ray.intersectPlane(dragPlane, intersection);
 
-    // Move all selected atoms
+    // Move ALL selected atoms
     atomsSelected.forEach(idx => {
         const atom = main.molecule.atoms[idx];
         const offset = dragOffsets[idx] || new THREE.Vector3();
-        atom.position.copy(new THREE.Vector3().copy(intersection).sub(offset));
+
+        // Set new position: intersection point + offset
+        atom.position.copy(intersection).add(offset);
         atom.x = atom.position.x;
         atom.y = atom.position.y;
         atom.z = atom.position.z;
@@ -601,10 +617,14 @@ function onPointerMove(event) {
         // Update instanced mesh matrix for this atom
         const matrix = new THREE.Matrix4();
         let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
+        if (main.mode && main.mode.atomSize) {
+            radius *= main.mode.atomSize;
+        }
         matrix.makeScale(radius, radius, radius);
         matrix.setPosition(atom.position);
         main.molecule.instancedMesh.setMatrixAt(idx, matrix);
     });
+
     main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
 
     // Update bonds
@@ -638,11 +658,32 @@ function updateEditingContent(element = null, color = null) {
 }
 
 function onPointerUp(event) {
-    dragging = false;
-    // draggedAtomIndex = null; // Remove this
-    dragOffsets = {};
-    window.removeEventListener('pointermove', onPointerMove, false);
-    window.removeEventListener('pointerup', onPointerUp, false);
+    if (dragging) {
+        dragging = false;
+        dragOffsets = {};
+        console.log(`Finished dragging ${atomsSelected.length} atoms`);
+        window.removeEventListener('pointermove', onPointerMove, false);
+        window.removeEventListener('pointerup', onPointerUp, false);
+    }
+
+    if (event.button === 0 && isSelecting) {
+        isSelecting = false;
+        selectionBox.style.display = 'none';
+
+        // Finalize the box selection - add atoms in box to selection
+        if (main.molecule && main.molecule.atoms) {
+            for (let i = 0; i < main.molecule.atoms.length; i++) {
+                if (isAtomInSelection(i, camera)) {
+                    if (!atomsSelected.includes(i)) {
+                        atomsSelected.push(i);
+                    }
+                }
+            }
+            console.log('Final selected atoms:', atomsSelected);
+        }
+
+        render();
+    }
 }
 
 function selectAtom(index) {
