@@ -316,7 +316,6 @@ window.addEventListener('resize', () => {
 switchModeButton.addEventListener('click', () => {
     // mode = 1 - mode;
     // main.newMolecule(main.data, mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
-    // console.log(mode);
     styleSelector.classList.toggle('on');
 });
 
@@ -348,14 +347,8 @@ analyzeMoleculeButton.addEventListener('click', () => {
     }
 
     window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
-    console.log(window.imgToAnalyze);
 })
 
-// editMoleculeButton.addEventListener('click', () => {
-//     editMoleculePanel.classList.toggle('on');
-//     editingMolecule = !editingMolecule;
-//     console.log(editingMolecule);
-// })
 renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
 
 // 3D to 2D projection for atoms
@@ -413,25 +406,25 @@ function updateAtomSelection() {
         }
     }
 
-    // For box selection, we want to show what WOULD be selected
-    // Clear visual selection for all atoms first
-    unselectAtom();
-
     // Show selection for: existing selected atoms + atoms in box
     const allSelected = [...new Set([...atomsSelected, ...atomsInBox])];
 
+    // Clear visual selection for all atoms first
+    unselectAtom();
+
+    // Highlight all atoms that should be selected (existing + preview)
     allSelected.forEach(idx => {
-        selectAtom(idx);
-        updateEditingContent(main.molecule.atoms[idx].type, main.molecule.atomSettings[main.molecule.atoms[idx].type].color);
+        selectAtom(idx, false);
     });
 
-    console.log('Preview selection:', allSelected);
 
-    // Update UI
+    // Update UI - Check the TOTAL count of selected atoms (including preview)
     if (allSelected.length > 0) {
         editMoleculePanel.classList.remove('on');
         const element = main.molecule.atoms[allSelected[0]].type;
-        updateEditingContent(element, main.molecule.atomSettings[element].color);
+
+        // Pass the selection count to updateEditingContent
+        updateEditingContent(element, main.molecule.atomSettings[element].color, allSelected.length);
     } else {
         editMoleculePanel.classList.add('on');
     }
@@ -465,12 +458,30 @@ function onSelectionUp(event) {
                     }
                 }
             }
-            console.log('Final selected atoms:', atomsSelected);
+
+            // Refresh the highlighting for the final selection
+            unselectAtom(); // Clear all
+            atomsSelected.forEach(idx => {
+                selectAtom(idx, false); // Highlight final selection
+            });
+
+            // Update the UI with the final selection count
+            if (atomsSelected.length > 0) {
+                editMoleculePanel.classList.remove('on');
+                const element = main.molecule.atoms[atomsSelected[0]].type;
+                updateEditingContent(element, main.molecule.atomSettings[element].color);
+
+                // IMPORTANT: Attach button event listeners after box selection
+                attachButtonEventListeners();
+            } else {
+                editMoleculePanel.classList.add('on');
+            }
         }
 
         render();
     }
 }
+
 
 function onPointerDown(event) {
     if (editingMolecule) {
@@ -512,7 +523,7 @@ function onPointerDown(event) {
                             dragOffsets[idx] = new THREE.Vector3().copy(atom.position).sub(intersectPoint);
                         });
 
-                        console.log(`Dragging ${atomsSelected.length} atoms:`, atomsSelected);
+
 
                         window.addEventListener('pointermove', onPointerMove, false);
                         window.addEventListener('pointerup', onPointerUp, false);
@@ -528,15 +539,13 @@ function onPointerDown(event) {
                         } else {
                             // Add to selection
                             atomsSelected.push(instanceId);
-                            selectAtom(instanceId);
+                            selectAtom(instanceId, false);
                         }
-                        console.log('Selected atoms:', atomsSelected);
                     } else {
                         // Normal click: select only this atom
                         atomsSelected = [instanceId];
                         unselectAtom(); // Clear all
                         selectAtom(instanceId);
-                        console.log('Selected atoms:', atomsSelected);
                     }
 
                     render();
@@ -545,26 +554,10 @@ function onPointerDown(event) {
                         editMoleculePanel.classList.remove('on');
                         const element = main.molecule.atoms[atomsSelected[0]].type;
                         updateEditingContent(element, main.molecule.atomSettings[element].color);
-                    }
 
-                    // Your existing button event listeners...
-                    document.getElementById('changeAtomBtn').addEventListener('click', () => {
-                        const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
-                        main.data.atomData[instanceId].element = replacingMolecule
-                        if (replacingMolecule) {
-                            main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
-                        }
-                    });
-                    document.getElementById('removeAtomBtn').addEventListener('click', () => {
-                        main.data.atomData.splice(instanceId, 1);
-                        main.data.numAtoms--;
-                        main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
-                    });
-                    document.getElementById('createFragment').addEventListener('click', () => {
-                        const fragment = atomsSelected
-                        fragments.push(fragment)
-                        addToList(fragment, document.getElementById('fragmentList'))
-                    });
+                        // Attach button event listeners
+                        attachButtonEventListeners();
+                    }
                 }
             } else {
                 // Clicking on empty space
@@ -589,6 +582,32 @@ function onPointerDown(event) {
         }
     }
 }
+
+function addToList(itemText, list) {
+    const listItem = document.createElement('li');
+    listItem.textContent = `Fragment: [${itemText.join(', ')}]`;
+    listItem.style.cursor = 'pointer';
+    listItem.style.padding = '5px';
+    listItem.style.borderRadius = '3px';
+    listItem.style.transition = 'background-color 0.2s ease';
+
+    // Add hover effect
+    listItem.addEventListener('mouseenter', () => {
+        listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+    });
+
+    listItem.addEventListener('mouseleave', () => {
+        listItem.style.backgroundColor = 'transparent';
+    });
+
+    // Add click handler to select fragment
+    listItem.addEventListener('click', () => {
+        selectFragment(itemText);
+    });
+
+    list.appendChild(listItem);
+}
+
 
 function onPointerMove(event) {
     if (!dragging) return;
@@ -634,6 +653,66 @@ function onPointerMove(event) {
     render();
 }
 
+// Solution 1: Create a separate function to attach button event listeners
+function attachButtonEventListeners() {
+    // Remove any existing listeners first to avoid duplicates
+    const changeBtn = document.getElementById('changeAtomBtn');
+    const removeBtn = document.getElementById('removeAtomBtn');
+    const fragmentBtn = document.getElementById('createFragment');
+
+    // Clone and replace to remove all existing event listeners
+    if (changeBtn) {
+        const newChangeBtn = changeBtn.cloneNode(true);
+        changeBtn.parentNode.replaceChild(newChangeBtn, changeBtn);
+
+        newChangeBtn.addEventListener('click', () => {
+            if (atomsSelected.length > 0) {
+                const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
+                if (replacingMolecule) {
+                    // Update all selected atoms
+                    atomsSelected.forEach(idx => {
+                        main.data.atomData[idx].element = replacingMolecule;
+                    });
+                    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+                }
+            }
+        });
+    }
+
+    if (removeBtn) {
+        const newRemoveBtn = removeBtn.cloneNode(true);
+        removeBtn.parentNode.replaceChild(newRemoveBtn, removeBtn);
+
+        newRemoveBtn.addEventListener('click', () => {
+            // Remove all selected atoms (in reverse order to maintain indices)
+            const sortedIndices = [...atomsSelected].sort((a, b) => b - a);
+            sortedIndices.forEach(idx => {
+                main.data.atomData.splice(idx, 1);
+            });
+            main.data.numAtoms -= atomsSelected.length;
+            atomsSelected = [];
+            main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+        });
+    }
+
+    if (fragmentBtn) {
+        const newFragmentBtn = fragmentBtn.cloneNode(true);
+        fragmentBtn.parentNode.replaceChild(newFragmentBtn, fragmentBtn);
+
+        newFragmentBtn.addEventListener('click', () => {
+            const fragment = [...atomsSelected]; // Create a copy of the array
+            fragments.push(fragment);
+
+            // Update the editing content to show the new fragment
+            if (atomsSelected.length > 0) {
+                const firstAtom = main.molecule.atoms[atomsSelected[0]];
+                updateEditingContent(firstAtom.type, main.molecule.atomSettings[firstAtom.type].color);
+            }
+        });
+    }
+}
+
+// Updated updateEditingContent function in main.js
 function updateEditingContent(element = null, color = null) {
     if (element !== null) {
         editMoleculeContent.innerHTML = `
@@ -650,9 +729,44 @@ function updateEditingContent(element = null, color = null) {
         if (atomsSelected.length > 1) {
             document.getElementById('createFragment').style.display = 'block';
         }
-        fragments.forEach((fragment) => {
-            addToList(fragment, document.getElementById('fragmentList'))
-        })
+
+        // Recreate fragment list with click handlers
+        const fragmentList = document.getElementById('fragmentList');
+        fragments.forEach((fragment, index) => {
+            const listItem = document.createElement('li');
+            listItem.textContent = `Fragment ${index + 1}: [${fragment.join(', ')}]`;
+            listItem.style.cursor = 'pointer';
+            listItem.style.padding = '5px';
+            listItem.style.margin = '2px';
+            listItem.style.borderRadius = '5px';
+            listItem.style.transition = 'background-color 0.3s';
+            listItem.dataset.fragmentIndex = index;
+
+            // Check if this fragment is currently selected
+            if (arraysEqual(fragment, atomsSelected)) {
+                listItem.classList.add('selected');
+                listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+            }
+
+            // Add hover effect
+            listItem.addEventListener('mouseenter', () => {
+                listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+            });
+
+            listItem.addEventListener('mouseleave', () => {
+                if (!listItem.classList.contains('selected')) {
+                    listItem.style.backgroundColor = 'transparent';
+                }
+            });
+
+            // Add click handler
+            listItem.addEventListener('click', () => {
+                selectFragment(fragment, index);
+                updateFragmentListSelection(index);
+            });
+
+            fragmentList.appendChild(listItem);
+        });
     } else {
         editMoleculeContent.innerHTML = '<h2 id="select-an-atom">Select an atom</h2>';
     }
@@ -662,7 +776,6 @@ function onPointerUp(event) {
     if (dragging) {
         dragging = false;
         dragOffsets = {};
-        console.log(`Finished dragging ${atomsSelected.length} atoms`);
         window.removeEventListener('pointermove', onPointerMove, false);
         window.removeEventListener('pointerup', onPointerUp, false);
     }
@@ -688,13 +801,54 @@ function onPointerUp(event) {
     // updateEditingContent(main.molecule.atoms[atomsSelected[0]].type, main.molecule.atomSettings[main.molecule.atoms[atomsSelected[0]].type].color);
 }
 
-function selectAtom(index) {
-    console.log("Selecting atom", index);
+function selectFragment(fragmentAtoms, fragmentIndex) {
+    // Clear current selection
+    unselectAtom();
+
+    // Set atomsSelected to the fragment atoms
+    atomsSelected = [...fragmentAtoms];
+    console.log(atomsSelected);
+
+    // Highlight all atoms in the fragment
+    atomsSelected.forEach(atomIndex => {
+        selectAtom(atomIndex, false);
+        render();
+    });
+    render();
+
+
+}
+
+function updateFragmentListSelection(selectedIndex) {
+    const fragmentList = document.getElementById('fragmentList');
+    if (!fragmentList) return;
+
+    // Remove selection from all items
+    fragmentList.querySelectorAll('li').forEach((item, index) => {
+        item.classList.remove('selected');
+        item.style.backgroundColor = 'transparent';
+
+        // Add selection to the clicked item
+        if (index === selectedIndex) {
+            item.classList.add('selected');
+            item.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+        }
+    });
+}
+
+function arraysEqual(a, b) {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort((x, y) => x - y);
+    const sortedB = [...b].sort((x, y) => y - y);
+    return sortedA.every((val, index) => val === sortedB[index]);
+}
+
+function selectAtom(index, reset = true) {
 
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
 
     // Only reset all colors if we're not in box selection mode
-    if (!isSelecting && !cmdDown) {
+    if ((!isSelecting || !cmdDown) && reset) {
         for (let i = 0; i < colorAttr.count; i++) {
             const atom = main.molecule.atoms[i];
             const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
@@ -761,7 +915,6 @@ function copyTextToClipboard(text) {
 
         try {
             const successful = document.execCommand('copy');
-            console.log(successful ? 'Fallback: Copy successful!' : 'Fallback: Copy failed.');
         } catch (err) {
             console.error('Fallback: Copy error', err);
         }

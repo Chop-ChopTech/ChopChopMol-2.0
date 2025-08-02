@@ -338,7 +338,24 @@ function alignMolecules(movingMolecule, fixedMolecule) {
 
 function addToList(itemText, list) {
     const listItem = document.createElement('li');
-    listItem.textContent = itemText;
+    listItem.textContent = `Fragment: [${itemText.join(', ')}]`;
+    listItem.style.cursor = 'pointer';
+    listItem.style.padding = '5px';
+    listItem.style.margin = '2px';
+    listItem.style.borderRadius = '5px';
+    listItem.style.transition = 'background-color 0.3s';
+
+    // Add hover effect
+    listItem.addEventListener('mouseenter', () => {
+        listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+    });
+
+    listItem.addEventListener('mouseleave', () => {
+        if (!listItem.classList.contains('selected')) {
+            listItem.style.backgroundColor = 'transparent';
+        }
+    });
+
     list.appendChild(listItem);
 }
 
