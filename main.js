@@ -422,6 +422,7 @@ function updateAtomSelection() {
 
     allSelected.forEach(idx => {
         selectAtom(idx);
+        updateEditingContent(main.molecule.atoms[idx].type, main.molecule.atomSettings[main.molecule.atoms[idx].type].color);
     });
 
     console.log('Preview selection:', allSelected);
@@ -636,16 +637,16 @@ function onPointerMove(event) {
 function updateEditingContent(element = null, color = null) {
     if (element !== null) {
         editMoleculeContent.innerHTML = `
-        <h2 style="color:${color};">Element: ${element}</h2><br>
-        <span style="color:white;">Hold shift and drag to move the atom</span>
-        <br>
-        <span style="color:white;">Hold cmd or ctrl and to select more atoms in a group</span>
+            <h2 style="color:${color};">Element: ${element}</h2><br>
+            <span style="color:white;">Hold shift and drag to move the atom</span>
+            <br>
+            <span style="color:white;">Hold cmd or ctrl and to select more atoms in a group</span>
 
-        <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
-        <button id="removeAtomBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
-        <button id="createFragment" style="background-color:rgb(168, 146, 0); margin:10px; display:none; " class="fancy-button">Create Fragment</button>
-        <ul id="fragmentList"></ul>
-    `;
+            <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
+            <button id="removeAtomBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
+            <button id="createFragment" style="background-color:rgb(168, 146, 0); margin:10px; display:none; " class="fancy-button">Create Fragment</button>
+            <ul id="fragmentList"></ul>
+        `;
         if (atomsSelected.length > 1) {
             document.getElementById('createFragment').style.display = 'block';
         }
@@ -684,6 +685,7 @@ function onPointerUp(event) {
 
         render();
     }
+    // updateEditingContent(main.molecule.atoms[atomsSelected[0]].type, main.molecule.atomSettings[main.molecule.atoms[atomsSelected[0]].type].color);
 }
 
 function selectAtom(index) {
@@ -807,6 +809,7 @@ function createRenderer(antialiasOn) {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
+    console.log(atomsSelected)
 }
 function render() {
     renderer.render(scene, camera);
