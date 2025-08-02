@@ -58,6 +58,12 @@ let dragging = false;
 // let draggedAtomIndex = null; // Remove this, use atomsSelected
 let dragPlane = new THREE.Plane();
 let dragOffsets = {}; // Store offsets for each selected atom
+// Add these with your other global variables
+let isSelecting = false;
+let selectionStart = { x: 0, y: 0 };
+let selectionEnd = { x: 0, y: 0 };
+const selectionBox = document.getElementById('selectionBox');
+const projectionVector = new THREE.Vector3();
 
 
 export default class Main {
@@ -269,6 +275,7 @@ window.addEventListener('keyup', function (e) {
     }
     if (e.key == "Meta") {
         cmdDown = false;
+        controls.enabled = true;
     }
 });
 
@@ -285,8 +292,12 @@ window.addEventListener('keydown', function (e) {
             controls.enabled = false;
         }
     }
+
     if (e.key == "Meta") {
         cmdDown = true;
+        if (editingMolecule) {
+            controls.enabled = false;
+        }
     }
 });
 window.addEventListener('keydown', function (e) {
@@ -347,6 +358,105 @@ analyzeMoleculeButton.addEventListener('click', () => {
 // })
 renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
 
+// 3D to 2D projection for atoms
+function worldToScreen(worldPos, camera) {
+    projectionVector.copy(worldPos);
+    projectionVector.project(camera);
+
+    const x = (projectionVector.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (projectionVector.y * -0.5 + 0.5) * window.innerHeight;
+
+    return { x, y };
+}
+
+// Check if atom is in selection box
+function isAtomInSelection(atomIndex, camera) {
+    const atom = main.molecule.atoms[atomIndex];
+    if (!atom) return false;
+
+    const screenPos = worldToScreen(atom.position, camera);
+
+    const minX = Math.min(selectionStart.x, selectionEnd.x);
+    const maxX = Math.max(selectionStart.x, selectionEnd.x);
+    const minY = Math.min(selectionStart.y, selectionEnd.y);
+    const maxY = Math.max(selectionStart.y, selectionEnd.y);
+
+    return screenPos.x >= minX && screenPos.x <= maxX &&
+        screenPos.y >= minY && screenPos.y <= maxY;
+}
+
+// Update visual selection box
+function updateSelectionBox() {
+    const minX = Math.min(selectionStart.x, selectionEnd.x);
+    const maxX = Math.max(selectionStart.x, selectionEnd.x);
+    const minY = Math.min(selectionStart.y, selectionEnd.y);
+    const maxY = Math.max(selectionStart.y, selectionEnd.y);
+
+    selectionBox.style.left = minX + 'px';
+    selectionBox.style.top = minY + 'px';
+    selectionBox.style.width = (maxX - minX) + 'px';
+    selectionBox.style.height = (maxY - minY) + 'px';
+}
+
+// Update atom selection based on box
+// Update atom selection based on box
+// Update atom selection based on box
+function updateAtomSelection() {
+    if (!main.molecule || !main.molecule.atoms) return;
+
+    // Find atoms currently in selection box
+    const atomsInBox = [];
+    for (let i = 0; i < main.molecule.atoms.length; i++) {
+        if (isAtomInSelection(i, camera)) {
+            atomsInBox.push(i);
+        }
+    }
+
+    // Clear visual selection for all atoms first
+    unselectAtom();
+
+    // Update atomsSelected to only include atoms currently in the box
+    atomsSelected = atomsInBox;
+
+    // Apply visual selection to atoms in box
+    atomsSelected.forEach(idx => {
+        selectAtom(idx);
+    });
+
+    console.log('Selected atoms:', atomsSelected);
+
+    // Update UI
+    if (atomsSelected.length > 0) {
+        editMoleculePanel.classList.remove('on');
+        const element = main.molecule.atoms[atomsSelected[0]].type;
+        updateEditingContent(element, main.molecule.atomSettings[element].color);
+    } else {
+        editMoleculePanel.classList.add('on');
+    }
+}
+
+// Add to your existing window event listeners
+window.addEventListener('pointermove', onSelectionMove, false);
+window.addEventListener('pointerup', onSelectionUp, false);
+
+function onSelectionMove(event) {
+    if (isSelecting) {
+        selectionEnd.x = event.clientX;
+        selectionEnd.y = event.clientY;
+        updateSelectionBox();
+        updateAtomSelection();
+        render();
+    }
+}
+
+function onSelectionUp(event) {
+    if (event.button === 0 && isSelecting) {
+        isSelecting = false;
+        selectionBox.style.display = 'none';
+        render();
+    }
+}
+
 function onPointerDown(event) {
     if (editingMolecule) {
         // Convert mouse to normalized device coordinates
@@ -354,75 +464,86 @@ function onPointerDown(event) {
         mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-        raycaster.setFromCamera(mouse, camera);
+        if (event.button === 0) { // Left click
+            // Check if cmd is held for box selection
+            if (cmdDown) {
+                // Start box selection
+                isSelecting = true;
+                selectionStart.x = event.clientX;
+                selectionStart.y = event.clientY;
+                selectionEnd.x = event.clientX;
+                selectionEnd.y = event.clientY;
 
-        // Intersect with the instanced mesh of atoms
-        const intersects = raycaster.intersectObject(main.molecule.instancedMesh);
+                selectionBox.style.display = 'block';
+                updateSelectionBox();
+                return; // Don't do individual atom selection
+            }
 
-        if (intersects.length > 0) {
-            const instanceId = intersects[0].instanceId;
-            if (instanceId !== undefined) {
-                selectAtom(instanceId);
-                render();
-                if (cmdDown || atomsSelected.length == 0) {
+            // Normal individual atom selection
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(main.molecule.instancedMesh);
+
+            if (intersects.length > 0) {
+                const instanceId = intersects[0].instanceId;
+                if (instanceId !== undefined) {
+                    selectAtom(instanceId);
+                    render();
+
+                    // Add to selection array
                     if (!atomsSelected.includes(instanceId)) {
                         atomsSelected.push(instanceId);
                         console.log(atomsSelected);
                     }
-                }
-                editMoleculePanel.classList.remove('on');
-                // Create buttons for editing the molecule
-                const element = main.molecule.atoms[instanceId].type;
-                updateEditingContent(element, main.molecule.atomSettings[element].color);
 
-                document.getElementById('changeAtomBtn').addEventListener('click', () => {
-                    const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
-                    main.data.atomData[instanceId].element = replacingMolecule
-                    if (replacingMolecule) {
+                    editMoleculePanel.classList.remove('on');
+                    const element = main.molecule.atoms[instanceId].type;
+                    updateEditingContent(element, main.molecule.atomSettings[element].color);
+
+                    // Your existing button event listeners...
+                    document.getElementById('changeAtomBtn').addEventListener('click', () => {
+                        const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
+                        main.data.atomData[instanceId].element = replacingMolecule
+                        if (replacingMolecule) {
+                            main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+                        }
+                    });
+                    document.getElementById('removeAtomBtn').addEventListener('click', () => {
+                        main.data.atomData.splice(instanceId, 1);
+                        main.data.numAtoms--;
                         main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
-                    }
-                });
-                document.getElementById('removeAtomBtn').addEventListener('click', () => {
-                    main.data.atomData.splice(instanceId, 1);
-                    main.data.numAtoms--;
-                    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
-                });
-                document.getElementById('createFragment').addEventListener('click', () => {
-                    const fragment = atomsSelected
-                    fragments.push(fragment)
-                    addToList(fragment, document.getElementById('fragmentList'))
-                })
-
-                if (shiftDown) {
-                    unselectAtom(instanceId);
-                    dragging = true;
-                    // draggedAtomIndex = instanceId; // Remove this
-
-                    // Set up a plane perpendicular to the camera through the first selected atom
-                    const atom = main.molecule.atoms[instanceId];
-                    dragPlane.setFromNormalAndCoplanarPoint(
-                        camera.getWorldDirection(new THREE.Vector3()),
-                        atom.position
-                    );
-
-                    // Calculate offsets for all selected atoms
-                    dragOffsets = {};
-                    const intersectPoint = intersects[0].point;
-                    atomsSelected.forEach(idx => {
-                        const atom = main.molecule.atoms[idx];
-                        dragOffsets[idx] = new THREE.Vector3().copy(intersectPoint).sub(atom.position);
+                    });
+                    document.getElementById('createFragment').addEventListener('click', () => {
+                        const fragment = atomsSelected
+                        fragments.push(fragment)
+                        addToList(fragment, document.getElementById('fragmentList'))
                     });
 
-                    // Listen for move and up
-                    window.addEventListener('pointermove', onPointerMove, false);
-                    window.addEventListener('pointerup', onPointerUp, false);
+                    if (shiftDown) {
+                        // Your existing drag logic...
+                        unselectAtom(instanceId);
+                        dragging = true;
+                        const atom = main.molecule.atoms[instanceId];
+                        dragPlane.setFromNormalAndCoplanarPoint(
+                            camera.getWorldDirection(new THREE.Vector3()),
+                            atom.position
+                        );
+                        dragOffsets = {};
+                        const intersectPoint = intersects[0].point;
+                        atomsSelected.forEach(idx => {
+                            const atom = main.molecule.atoms[idx];
+                            dragOffsets[idx] = new THREE.Vector3().copy(intersectPoint).sub(atom.position);
+                        });
+                        window.addEventListener('pointermove', onPointerMove, false);
+                        window.addEventListener('pointerup', onPointerUp, false);
+                    }
                 }
+            } else {
+                // Clicked on empty space - clear selection
+                editMoleculePanel.classList.add('on');
+                atomsSelected = [];
+                unselectAtom();
+                render();
             }
-        } else {
-            editMoleculePanel.classList.add('on');
-            atomsSelected = [];
-            // updateEditingContent();
-            unselectAtom();
         }
     }
 }
@@ -498,30 +619,28 @@ function onPointerUp(event) {
 }
 
 function selectAtom(index) {
-    // Get the color attribute
     console.log("Selecting atom", index);
 
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
-    // Optionally: reset all colors first
-    if (!cmdDown) {
+
+    // Only reset all colors if we're not in box selection mode
+    if (!isSelecting && !cmdDown) {
         for (let i = 0; i < colorAttr.count; i++) {
             const atom = main.molecule.atoms[i];
             const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
             colorAttr.setXYZ(i, color.r, color.g, color.b);
         }
     }
-    // Highlight selected atom (e.g., yellow)
+
+    // Highlight selected atom (yellow)
     colorAttr.setXYZ(index, 1, 1, 0);
     colorAttr.needsUpdate = true;
-
-    // Optionally: show info
-    const atom = main.molecule.atoms[index];
-
 }
 
 
 function unselectAtom(index = null) {
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+
     if (index === null) {
         // Reset all atoms to their default color
         for (let i = 0; i < colorAttr.count; i++) {
