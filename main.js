@@ -401,6 +401,7 @@ function updateSelectionBox() {
 // Update atom selection based on box
 // Update atom selection based on box
 // Update atom selection based on box
+// Update atom selection based on box
 function updateAtomSelection() {
     if (!main.molecule || !main.molecule.atoms) return;
 
@@ -412,23 +413,23 @@ function updateAtomSelection() {
         }
     }
 
+    // For box selection, we want to show what WOULD be selected
     // Clear visual selection for all atoms first
     unselectAtom();
 
-    // Update atomsSelected to only include atoms currently in the box
-    atomsSelected = atomsInBox;
+    // Show selection for: existing selected atoms + atoms in box
+    const allSelected = [...new Set([...atomsSelected, ...atomsInBox])];
 
-    // Apply visual selection to atoms in box
-    atomsSelected.forEach(idx => {
+    allSelected.forEach(idx => {
         selectAtom(idx);
     });
 
-    console.log('Selected atoms:', atomsSelected);
+    console.log('Preview selection:', allSelected);
 
     // Update UI
-    if (atomsSelected.length > 0) {
+    if (allSelected.length > 0) {
         editMoleculePanel.classList.remove('on');
-        const element = main.molecule.atoms[atomsSelected[0]].type;
+        const element = main.molecule.atoms[allSelected[0]].type;
         updateEditingContent(element, main.molecule.atomSettings[element].color);
     } else {
         editMoleculePanel.classList.add('on');
@@ -453,6 +454,19 @@ function onSelectionUp(event) {
     if (event.button === 0 && isSelecting) {
         isSelecting = false;
         selectionBox.style.display = 'none';
+
+        // Finalize the box selection - add atoms in box to selection
+        if (main.molecule && main.molecule.atoms) {
+            for (let i = 0; i < main.molecule.atoms.length; i++) {
+                if (isAtomInSelection(i, camera)) {
+                    if (!atomsSelected.includes(i)) {
+                        atomsSelected.push(i);
+                    }
+                }
+            }
+            console.log('Final selected atoms:', atomsSelected);
+        }
+
         render();
     }
 }
@@ -465,39 +479,40 @@ function onPointerDown(event) {
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
         if (event.button === 0) { // Left click
-            // Check if cmd is held for box selection
-            if (cmdDown) {
-                // Start box selection
-                isSelecting = true;
-                selectionStart.x = event.clientX;
-                selectionStart.y = event.clientY;
-                selectionEnd.x = event.clientX;
-                selectionEnd.y = event.clientY;
-
-                selectionBox.style.display = 'block';
-                updateSelectionBox();
-                return; // Don't do individual atom selection
-            }
-
-            // Normal individual atom selection
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObject(main.molecule.instancedMesh);
 
             if (intersects.length > 0) {
+                // Clicking on an atom
                 const instanceId = intersects[0].instanceId;
                 if (instanceId !== undefined) {
-                    selectAtom(instanceId);
-                    render();
-
-                    // Add to selection array
-                    if (!atomsSelected.includes(instanceId)) {
-                        atomsSelected.push(instanceId);
-                        console.log(atomsSelected);
+                    if (cmdDown) {
+                        // Cmd + click: toggle atom in selection
+                        if (atomsSelected.includes(instanceId)) {
+                            // Remove from selection
+                            atomsSelected = atomsSelected.filter(id => id !== instanceId);
+                            unselectAtom(instanceId);
+                        } else {
+                            // Add to selection
+                            atomsSelected.push(instanceId);
+                            selectAtom(instanceId);
+                        }
+                        console.log('Selected atoms:', atomsSelected);
+                    } else {
+                        // Normal click: select only this atom
+                        atomsSelected = [instanceId];
+                        unselectAtom(); // Clear all
+                        selectAtom(instanceId);
+                        console.log('Selected atoms:', atomsSelected);
                     }
 
-                    editMoleculePanel.classList.remove('on');
-                    const element = main.molecule.atoms[instanceId].type;
-                    updateEditingContent(element, main.molecule.atomSettings[element].color);
+                    render();
+
+                    if (atomsSelected.length > 0) {
+                        editMoleculePanel.classList.remove('on');
+                        const element = main.molecule.atoms[atomsSelected[0]].type;
+                        updateEditingContent(element, main.molecule.atomSettings[element].color);
+                    }
 
                     // Your existing button event listeners...
                     document.getElementById('changeAtomBtn').addEventListener('click', () => {
@@ -520,7 +535,6 @@ function onPointerDown(event) {
 
                     if (shiftDown) {
                         // Your existing drag logic...
-                        unselectAtom(instanceId);
                         dragging = true;
                         const atom = main.molecule.atoms[instanceId];
                         dragPlane.setFromNormalAndCoplanarPoint(
@@ -538,11 +552,24 @@ function onPointerDown(event) {
                     }
                 }
             } else {
-                // Clicked on empty space - clear selection
-                editMoleculePanel.classList.add('on');
-                atomsSelected = [];
-                unselectAtom();
-                render();
+                // Clicking on empty space
+                if (cmdDown) {
+                    // Cmd + drag on empty space: start box selection
+                    isSelecting = true;
+                    selectionStart.x = event.clientX;
+                    selectionStart.y = event.clientY;
+                    selectionEnd.x = event.clientX;
+                    selectionEnd.y = event.clientY;
+
+                    selectionBox.style.display = 'block';
+                    updateSelectionBox();
+                } else {
+                    // Normal click on empty space: clear selection
+                    editMoleculePanel.classList.add('on');
+                    atomsSelected = [];
+                    unselectAtom();
+                    render();
+                }
             }
         }
     }
