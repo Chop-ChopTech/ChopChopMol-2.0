@@ -816,6 +816,18 @@ input[type="range"]:focus {
     text-align: center;
 }
 
+#selectionBox {
+    position: absolute;
+    border: 2px dashed;
+    background: rgba(246, 255, 0, 0.1);
+    pointer-events: none;
+    display: none;
+    z-index: 1000;
+    transition: none;
+    animation: pulse 2s infinite;
+    border-radius: 3px;
+}
+
 @keyframes rainbow {
     0% {
         background-position: 0% 50%;
@@ -824,6 +836,23 @@ input[type="range"]:focus {
     100% {
         background-position: 200% 50%;
         /* Move gradient for seamless loop */
+    }
+}
+
+@keyframes pulse {
+    0% {
+        border-color: #007bff;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+    }
+
+    50% {
+        border-color: #00d4ff;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.7);
+    }
+
+    100% {
+        border-color: #007bff;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
     }
 }
 
