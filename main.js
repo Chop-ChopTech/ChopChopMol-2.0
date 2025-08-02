@@ -809,7 +809,6 @@ function createRenderer(antialiasOn) {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    console.log(atomsSelected)
 }
 function render() {
     renderer.render(scene, camera);
