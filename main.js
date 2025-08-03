@@ -62,6 +62,9 @@ let dragOffsets = {}; // Store offsets for each selected atom
 let isSelecting = false;
 let selectionStart = { x: 0, y: 0 };
 let selectionEnd = { x: 0, y: 0 };
+let rotationAxis = null; // Store the defined axis
+let axisAtoms = []; // Store the two atoms that define the axis
+let axisVisualizer = null; // Three.js object to visualize the axis
 const selectionBox = document.getElementById('selectionBox');
 const projectionVector = new THREE.Vector3();
 
@@ -482,6 +485,106 @@ function onSelectionUp(event) {
     }
 }
 
+function createAxisVisualizer(atom1, atom2) {
+    // Remove existing axis visualizer
+    if (axisVisualizer) {
+        main.scene.remove(axisVisualizer);
+        axisVisualizer.geometry.dispose();
+        axisVisualizer.material.dispose();
+        axisVisualizer = null;
+    }
+
+    // Create a line to visualize the axis
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(6);
+
+    // Get the actual world positions of the atoms
+    const matrix1 = new THREE.Matrix4();
+    const matrix2 = new THREE.Matrix4();
+    main.molecule.instancedMesh.getMatrixAt(axisAtoms[0], matrix1);
+    main.molecule.instancedMesh.getMatrixAt(axisAtoms[1], matrix2);
+
+    const pos1 = new THREE.Vector3();
+    const pos2 = new THREE.Vector3();
+    pos1.setFromMatrixPosition(matrix1);
+    pos2.setFromMatrixPosition(matrix2);
+
+    // Apply the instancedMesh world transformation
+    pos1.applyMatrix4(main.molecule.instancedMesh.matrixWorld);
+    pos2.applyMatrix4(main.molecule.instancedMesh.matrixWorld);
+
+    // Extend the line beyond the atoms for better visibility
+    const direction = new THREE.Vector3().subVectors(pos2, pos1).normalize();
+    const extendDistance = 10; // Extend 10 units in each direction
+
+    const start = new THREE.Vector3().copy(pos1).sub(direction.clone().multiplyScalar(extendDistance));
+    const end = new THREE.Vector3().copy(pos2).add(direction.clone().multiplyScalar(extendDistance));
+
+    positions[0] = start.x;
+    positions[1] = start.y;
+    positions[2] = start.z;
+    positions[3] = end.x;
+    positions[4] = end.y;
+    positions[5] = end.z;
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const material = new THREE.LineBasicMaterial({
+        color: 0xff00ff, // Magenta color for visibility
+        linewidth: 3,
+        opacity: 0.8,
+        transparent: true
+    });
+
+    axisVisualizer = new THREE.Line(geometry, material);
+    main.scene.add(axisVisualizer);
+    render(); // Make sure to render after adding the axis
+}
+
+function rotateAroundAxis(atomIndices, angle) {
+    if (!rotationAxis || !rotationAxis.point || !rotationAxis.direction) {
+        console.error("No axis defined for rotation");
+        return;
+    }
+
+    const axis = new THREE.Vector3(rotationAxis.direction.x, rotationAxis.direction.y, rotationAxis.direction.z).normalize();
+    const point = new THREE.Vector3(rotationAxis.point.x, rotationAxis.point.y, rotationAxis.point.z);
+
+    // Create rotation matrix
+    const rotationMatrix = new THREE.Matrix4().makeRotationAxis(axis, angle);
+
+    atomIndices.forEach(idx => {
+        const atom = main.molecule.atoms[idx];
+
+        // Translate to origin (relative to axis point)
+        const relativePos = new THREE.Vector3().copy(atom.position).sub(point);
+
+        // Apply rotation
+        relativePos.applyMatrix4(rotationMatrix);
+
+        // Translate back
+        atom.position.copy(relativePos).add(point);
+        atom.x = atom.position.x;
+        atom.y = atom.position.y;
+        atom.z = atom.position.z;
+
+        // Update instanced mesh
+        const matrix = new THREE.Matrix4();
+        let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
+        if (main.mode && main.mode.atomSize) {
+            radius *= main.mode.atomSize;
+        }
+        matrix.makeScale(radius, radius, radius);
+        matrix.setPosition(atom.position);
+        main.molecule.instancedMesh.setMatrixAt(idx, matrix);
+    });
+
+    main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+    main.molecule.updateBonds(mode);
+    main.molecule.updateMainCoordinates();
+    render();
+}
+
 
 function onPointerDown(event) {
     if (editingMolecule) {
@@ -710,11 +813,38 @@ function attachButtonEventListeners() {
             }
         });
     }
+
+    // Attach axis event listeners
+    attachAxisEventListeners();
 }
 
 // Updated updateEditingContent function in main.js
 function updateEditingContent(element = null, color = null) {
     if (element !== null) {
+        let axisButtonHtml = '';
+        let axisControlsHtml = '';
+
+        // Show "Define Axis" button only when exactly 2 atoms are selected
+        if (atomsSelected.length === 2) {
+            axisButtonHtml = `<button id="defineAxisBtn" style="background-color:rgb(255, 0, 255); margin:10px;" class="fancy-button">Define Axis</button>`;
+        }
+
+        // Show axis controls if an axis is defined
+        if (rotationAxis) {
+            axisControlsHtml = `
+                <div style="margin-top: 20px; padding: 20px; background-color: rgba(255, 0, 255, 0.2); border-radius: 5px;">
+                    <h3 style="color: white; margin: 5px 0;">Rotation Axis Defined</h3>
+                    <p style="color: white; font-size: 12px; margin: 5px 0;">Atoms: ${axisAtoms[0]} → ${axisAtoms[1]}</p>
+                    <button id="removeAxisBtn" style="background-color:rgb(255, 100, 100); margin:5px;" class="fancy-button">Remove Axis</button>
+                    <div style="margin-top: 10px;">
+                        <label style="color: white; display: block; margin-bottom: 5px;">Rotate ${atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length ? 'Selected Atoms' : 'Entire Molecule'}:</label>
+                        <input type="range" id="rotationSlider" min="-180" max="180" value="0" step="1" style="width: 100%;">
+                        <span id="rotationValue" style="color: white; display: block; text-align: center;">0°</span>
+                    </div>
+                </div>
+            `;
+        }
+
         editMoleculeContent.innerHTML = `
             <h2 style="color:${color};">Element: ${element}</h2><br>
             <span style="color:white;">Hold shift and drag to move the atom</span>
@@ -724,8 +854,11 @@ function updateEditingContent(element = null, color = null) {
             <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
             <button id="removeAtomBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
             <button id="createFragment" style="background-color:rgb(168, 146, 0); margin:10px; display:none; " class="fancy-button">Create Fragment</button>
+            ${axisButtonHtml}
+            ${axisControlsHtml}
             <ul id="fragmentList"></ul>
         `;
+
         if (atomsSelected.length > 1) {
             document.getElementById('createFragment').style.display = 'block';
         }
@@ -767,10 +900,203 @@ function updateEditingContent(element = null, color = null) {
 
             fragmentList.appendChild(listItem);
         });
+
+        // Attach axis-related event listeners
+        attachAxisEventListeners();
     } else {
         editMoleculeContent.innerHTML = '<h2 id="select-an-atom">Select an atom</h2>';
     }
 }
+
+
+function attachAxisEventListeners() {
+    const defineAxisBtn = document.getElementById('defineAxisBtn');
+    const removeAxisBtn = document.getElementById('removeAxisBtn');
+    const rotationSlider = document.getElementById('rotationSlider');
+    const rotationValue = document.getElementById('rotationValue');
+
+    if (defineAxisBtn) {
+        defineAxisBtn.addEventListener('click', () => {
+            if (atomsSelected.length === 2) {
+                const atom1 = main.molecule.atoms[atomsSelected[0]];
+                const atom2 = main.molecule.atoms[atomsSelected[1]];
+
+                // Define the axis
+                const worldPos1 = new THREE.Vector3();
+                const worldPos2 = new THREE.Vector3();
+                const matrix1 = new THREE.Matrix4();
+                const matrix2 = new THREE.Matrix4();
+
+                // Get world positions of the atoms
+                main.molecule.instancedMesh.getMatrixAt(atomsSelected[0], matrix1);
+                main.molecule.instancedMesh.getMatrixAt(atomsSelected[1], matrix2);
+                worldPos1.setFromMatrixPosition(matrix1);
+                worldPos2.setFromMatrixPosition(matrix2);
+
+                // Apply the instancedMesh world transformation
+                worldPos1.applyMatrix4(main.molecule.instancedMesh.matrixWorld);
+                worldPos2.applyMatrix4(main.molecule.instancedMesh.matrixWorld);
+
+                rotationAxis = {
+                    point: worldPos1.clone(),
+                    direction: new THREE.Vector3().subVectors(worldPos2, worldPos1).normalize()
+                };
+
+                axisAtoms = [...atomsSelected];
+
+                // Create visual representation
+                createAxisVisualizer(atom1, atom2);
+
+                // Update UI
+                updateEditingContent(atom1.type, main.molecule.atomSettings[atom1.type].color);
+
+                console.log('Axis defined:', rotationAxis);
+            }
+        });
+    }
+
+    if (removeAxisBtn) {
+        removeAxisBtn.addEventListener('click', () => {
+            // Remove axis
+            rotationAxis = null;
+            axisAtoms = [];
+
+            // Remove visual representation
+            if (axisVisualizer) {
+                main.scene.remove(axisVisualizer);
+                axisVisualizer.geometry.dispose();
+                axisVisualizer.material.dispose();
+                axisVisualizer = null;
+            }
+
+            // Update UI
+            if (atomsSelected.length > 0) {
+                const element = main.molecule.atoms[atomsSelected[0]].type;
+                updateEditingContent(element, main.molecule.atomSettings[element].color);
+            }
+
+            render();
+        });
+    }
+
+    if (rotationSlider && rotationValue) {
+        let previousAngle = 0;
+        let originalPositions = {}; // Store original positions when slider starts
+
+        // Store original positions when starting to drag
+        rotationSlider.addEventListener('mousedown', () => {
+            originalPositions = {};
+
+            // Determine which atoms will be rotated
+            let atomsToRotate = [];
+            if (atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length) {
+                atomsToRotate = atomsSelected;
+            } else {
+                atomsToRotate = Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
+            }
+
+            // Store original positions
+            atomsToRotate.forEach(idx => {
+                const atom = main.molecule.atoms[idx];
+                originalPositions[idx] = atom.position.clone();
+            });
+        });
+
+        rotationSlider.addEventListener('input', (e) => {
+            const angle = parseFloat(e.target.value);
+            rotationValue.textContent = `${angle}°`;
+
+            // Calculate the total angle from 0 (not delta)
+            const totalAngle = angle * Math.PI / 180;
+
+            // Determine which atoms to rotate
+            let atomsToRotate = [];
+
+            if (atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length) {
+                // If some atoms are selected (but not all), rotate only those
+                atomsToRotate = atomsSelected;
+            } else {
+                // If no atoms selected or all atoms selected, rotate the entire molecule
+                atomsToRotate = Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
+            }
+
+            // Rotate atoms from their original positions
+            const axis = new THREE.Vector3(rotationAxis.direction.x, rotationAxis.direction.y, rotationAxis.direction.z).normalize();
+            const point = new THREE.Vector3(rotationAxis.point.x, rotationAxis.point.y, rotationAxis.point.z);
+            const rotationMatrix = new THREE.Matrix4().makeRotationAxis(axis, totalAngle);
+
+            atomsToRotate.forEach(idx => {
+                const atom = main.molecule.atoms[idx];
+                const originalPos = originalPositions[idx];
+
+                if (originalPos) {
+                    // Reset to original position
+                    atom.position.copy(originalPos);
+
+                    // Translate to origin (relative to axis point)
+                    const relativePos = new THREE.Vector3().copy(atom.position).sub(point);
+
+                    // Apply rotation
+                    relativePos.applyMatrix4(rotationMatrix);
+
+                    // Translate back
+                    atom.position.copy(relativePos).add(point);
+                    atom.x = atom.position.x;
+                    atom.y = atom.position.y;
+                    atom.z = atom.position.z;
+
+                    // Update instanced mesh
+                    const matrix = new THREE.Matrix4();
+                    let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
+                    if (main.mode && main.mode.atomSize) {
+                        radius *= main.mode.atomSize;
+                    }
+                    matrix.makeScale(radius, radius, radius);
+                    matrix.setPosition(atom.position);
+                    main.molecule.instancedMesh.setMatrixAt(idx, matrix);
+                }
+            });
+
+            main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+            main.molecule.updateBonds(mode);
+            render();
+        });
+
+        // Reset everything when releasing the slider
+        rotationSlider.addEventListener('change', () => {
+            rotationSlider.value = 0;
+            rotationValue.textContent = '0°';
+
+            // Reset atoms to original positions
+            Object.keys(originalPositions).forEach(idx => {
+                const atom = main.molecule.atoms[idx];
+                atom.position.copy(originalPositions[idx]);
+                atom.x = atom.position.x;
+                atom.y = atom.position.y;
+                atom.z = atom.position.z;
+
+                // Update instanced mesh
+                const matrix = new THREE.Matrix4();
+                let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
+                if (main.mode && main.mode.atomSize) {
+                    radius *= main.mode.atomSize;
+                }
+                matrix.makeScale(radius, radius, radius);
+                matrix.setPosition(atom.position);
+                main.molecule.instancedMesh.setMatrixAt(idx, matrix);
+            });
+
+            main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+            main.molecule.updateBonds(mode);
+            main.molecule.updateMainCoordinates();
+            render();
+
+            originalPositions = {};
+        });
+    }
+}
+
+
 
 function onPointerUp(event) {
     if (dragging) {
