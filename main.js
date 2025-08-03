@@ -515,7 +515,7 @@ function createAxisVisualizer(atom1, atom2) {
 
     // Extend the line beyond the atoms for better visibility
     const direction = new THREE.Vector3().subVectors(pos2, pos1).normalize();
-    const extendDistance = 20; // Extend 10 units in each direction
+    const extendDistance = 1000; // Extend 10 units in each direction
 
     const start = new THREE.Vector3().copy(pos1).sub(direction.clone().multiplyScalar(extendDistance));
     const end = new THREE.Vector3().copy(pos2).add(direction.clone().multiplyScalar(extendDistance));
@@ -726,27 +726,79 @@ function onPointerMove(event) {
     const intersection = new THREE.Vector3();
     raycaster.ray.intersectPlane(dragPlane, intersection);
 
-    // Move ALL selected atoms
-    atomsSelected.forEach(idx => {
-        const atom = main.molecule.atoms[idx];
-        const offset = dragOffsets[idx] || new THREE.Vector3();
+    if (rotationAxis && rotationAxis.direction) {
+        // AXIS-CONSTRAINED DRAGGING
+        // Get the axis direction (normalized)
+        const axisDirection = rotationAxis.direction.clone().normalize();
+        const axisPoint = rotationAxis.point.clone();
 
-        // Set new position: intersection point + offset
-        atom.position.copy(intersection).add(offset);
-        atom.x = atom.position.x;
-        atom.y = atom.position.y;
-        atom.z = atom.position.z;
-
-        // Update instanced mesh matrix for this atom
-        const matrix = new THREE.Matrix4();
-        let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
-        if (main.mode && main.mode.atomSize) {
-            radius *= main.mode.atomSize;
+        // Calculate the movement vector from the original drag start position
+        // We need to store the original intersection point when dragging starts
+        if (!window.dragStartIntersection) {
+            window.dragStartIntersection = intersection.clone();
+            return;
         }
-        matrix.makeScale(radius, radius, radius);
-        matrix.setPosition(atom.position);
-        main.molecule.instancedMesh.setMatrixAt(idx, matrix);
-    });
+
+        // Calculate the full movement vector since drag start
+        const fullMovement = new THREE.Vector3().subVectors(intersection, window.dragStartIntersection);
+
+        // Project the movement onto the axis direction
+        const projectedLength = fullMovement.dot(axisDirection);
+        const projectedMovement = axisDirection.clone().multiplyScalar(projectedLength);
+
+        // Apply the projected movement to all selected atoms
+        atomsSelected.forEach(idx => {
+            const atom = main.molecule.atoms[idx];
+
+            // Get the original position when dragging started
+            if (!window.originalDragPositions) {
+                window.originalDragPositions = {};
+            }
+            if (!window.originalDragPositions[idx]) {
+                window.originalDragPositions[idx] = atom.position.clone();
+            }
+
+            // Set new position: original position + projected movement
+            atom.position.copy(window.originalDragPositions[idx]).add(projectedMovement);
+            atom.x = atom.position.x;
+            atom.y = atom.position.y;
+            atom.z = atom.position.z;
+
+            // Update instanced mesh matrix for this atom
+            const matrix = new THREE.Matrix4();
+            let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
+            if (main.mode && main.mode.atomSize) {
+                radius *= main.mode.atomSize;
+            }
+            matrix.makeScale(radius, radius, radius);
+            matrix.setPosition(atom.position);
+            main.molecule.instancedMesh.setMatrixAt(idx, matrix);
+        });
+
+    } else {
+        // NORMAL FREE DRAGGING (existing behavior)
+        // Move ALL selected atoms
+        atomsSelected.forEach(idx => {
+            const atom = main.molecule.atoms[idx];
+            const offset = dragOffsets[idx] || new THREE.Vector3();
+
+            // Set new position: intersection point + offset
+            atom.position.copy(intersection).add(offset);
+            atom.x = atom.position.x;
+            atom.y = atom.position.y;
+            atom.z = atom.position.z;
+
+            // Update instanced mesh matrix for this atom
+            const matrix = new THREE.Matrix4();
+            let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
+            if (main.mode && main.mode.atomSize) {
+                radius *= main.mode.atomSize;
+            }
+            matrix.makeScale(radius, radius, radius);
+            matrix.setPosition(atom.position);
+            main.molecule.instancedMesh.setMatrixAt(idx, matrix);
+        });
+    }
 
     main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
 
@@ -1108,6 +1160,11 @@ function onPointerUp(event) {
     if (dragging) {
         dragging = false;
         dragOffsets = {};
+
+        // Clean up axis dragging variables
+        window.dragStartIntersection = null;
+        window.originalDragPositions = null;
+
         window.removeEventListener('pointermove', onPointerMove, false);
         window.removeEventListener('pointerup', onPointerUp, false);
     }
@@ -1131,7 +1188,6 @@ function onPointerUp(event) {
         render();
     }
     main.molecule.updateMainCoordinates()
-    // updateEditingContent(main.molecule.atoms[atomsSelected[0]].type, main.molecule.atomSettings[main.molecule.atoms[atomsSelected[0]].type].color);
 }
 
 function selectFragment(fragmentAtoms, fragmentIndex) {
