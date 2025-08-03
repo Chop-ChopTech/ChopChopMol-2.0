@@ -515,7 +515,7 @@ function createAxisVisualizer(atom1, atom2) {
 
     // Extend the line beyond the atoms for better visibility
     const direction = new THREE.Vector3().subVectors(pos2, pos1).normalize();
-    const extendDistance = 10; // Extend 10 units in each direction
+    const extendDistance = 20; // Extend 10 units in each direction
 
     const start = new THREE.Vector3().copy(pos1).sub(direction.clone().multiplyScalar(extendDistance));
     const end = new THREE.Vector3().copy(pos2).add(direction.clone().multiplyScalar(extendDistance));
@@ -832,7 +832,7 @@ function updateEditingContent(element = null, color = null) {
         // Show axis controls if an axis is defined
         if (rotationAxis) {
             axisControlsHtml = `
-                <div style="margin-top: 20px; padding: 20px; background-color: rgba(255, 0, 255, 0.2); border-radius: 5px;">
+                <div style="margin-top: 20px; padding: 20px; background-color: rgba(255, 0, 255, 0.2); border-radius: 15px;">
                     <h3 style="color: white; margin: 5px 0;">Rotation Axis Defined</h3>
                     <p style="color: white; font-size: 12px; margin: 5px 0;">Atoms: ${axisAtoms[0]} → ${axisAtoms[1]}</p>
                     <button id="removeAxisBtn" style="background-color:rgb(255, 100, 100); margin:5px;" class="fancy-button">Remove Axis</button>
