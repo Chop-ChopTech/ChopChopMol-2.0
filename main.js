@@ -26,6 +26,8 @@ let cmdDown = false;
 
 let atomsSelected = [];
 let fragments = [];
+let hoveredAtom = null;
+
 
 let editingMolecule = true;
 
@@ -365,6 +367,101 @@ function worldToScreen(worldPos, camera) {
     return { x, y };
 }
 
+function getAtomWorldPosition(atomIndex, instancedMesh) {
+    const matrix = new THREE.Matrix4();
+    const position = new THREE.Vector3();
+
+    instancedMesh.getMatrixAt(atomIndex, matrix);
+    position.setFromMatrixPosition(matrix);
+    position.applyMatrix4(instancedMesh.matrixWorld);
+
+    return position;
+}
+
+// Helper function to get atom radius from matrix scale
+function getAtomRadius(atomIndex, molecule) {
+    const matrix = new THREE.Matrix4();
+    const scale = new THREE.Vector3();
+
+    molecule.instancedMesh.getMatrixAt(atomIndex, matrix);
+    scale.setFromMatrixScale(matrix);
+
+    // Assuming uniform scale, take X component
+    return scale.x;
+}
+
+// Enhanced raycasting that checks distance to atom centers
+function enhancedRaycast(raycaster, instancedMesh, atoms) {
+    // First try standard raycasting
+    const intersects = raycaster.intersectObject(instancedMesh);
+
+    if (intersects.length > 0) {
+        return intersects;
+    }
+
+    // If no direct hit, check proximity to atom centers
+    const ray = raycaster.ray;
+    const threshold = 0.5; // Proximity threshold multiplier
+
+    let closestAtom = null;
+    let closestDistance = Infinity;
+
+    for (let i = 0; i < atoms.length; i++) {
+        const atomPos = getAtomWorldPosition(i, instancedMesh);
+        const atomRadius = getAtomRadius(i, { instancedMesh }) * threshold;
+
+        // Calculate distance from ray to atom center
+        const rayToAtom = new THREE.Vector3().subVectors(atomPos, ray.origin);
+        const projection = rayToAtom.dot(ray.direction);
+
+        // Skip atoms behind the camera
+        if (projection < 0) continue;
+
+        // Find closest point on ray to atom center
+        const closestPointOnRay = new THREE.Vector3()
+            .copy(ray.direction)
+            .multiplyScalar(projection)
+            .add(ray.origin);
+
+        const distanceToAtom = closestPointOnRay.distanceTo(atomPos);
+
+        // Check if within selection radius
+        if (distanceToAtom < atomRadius && distanceToAtom < closestDistance) {
+            closestDistance = distanceToAtom;
+            closestAtom = {
+                instanceId: i,
+                point: closestPointOnRay,
+                distance: ray.origin.distanceTo(closestPointOnRay),
+                object: instancedMesh
+            };
+        }
+    }
+
+    return closestAtom ? [closestAtom] : [];
+}
+
+// Update the bounding box computation for better selection
+function updateInstancedMeshBounds(instancedMesh, atoms) {
+    if (!instancedMesh) return;
+
+    // Force update of bounding box
+    instancedMesh.computeBoundingBox();
+    instancedMesh.computeBoundingSphere();
+
+    // Manually compute bounds if needed
+    const box = new THREE.Box3();
+    const matrix = new THREE.Matrix4();
+    const position = new THREE.Vector3();
+
+    for (let i = 0; i < atoms.length; i++) {
+        instancedMesh.getMatrixAt(i, matrix);
+        position.setFromMatrixPosition(matrix);
+        box.expandByPoint(position);
+    }
+
+    instancedMesh.boundingBox = box;
+}
+
 // Check if atom is in selection box
 function isAtomInSelection(atomIndex, camera) {
     const atom = main.molecule.atoms[atomIndex];
@@ -436,6 +533,7 @@ function updateAtomSelection() {
 // Add to your existing window event listeners
 window.addEventListener('pointermove', onSelectionMove, false);
 window.addEventListener('pointerup', onSelectionUp, false);
+window.addEventListener('pointermove', onPointerMove2, false);
 
 function onSelectionMove(event) {
     if (isSelecting) {
@@ -594,8 +692,13 @@ function onPointerDown(event) {
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
         if (event.button === 0) { // Left click
+            // Update bounds before raycasting
+            updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
+
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObject(main.molecule.instancedMesh);
+
+            // Use enhanced raycasting
+            const intersects = enhancedRaycast(raycaster, main.molecule.instancedMesh, main.molecule.atoms);
 
             if (intersects.length > 0) {
                 // Clicking on an atom
@@ -613,20 +716,22 @@ function onPointerDown(event) {
 
                         // Set up drag plane through the clicked atom
                         const atom = main.molecule.atoms[instanceId];
+
+                        // Use actual world position for better accuracy
+                        const worldPos = getAtomWorldPosition(instanceId, main.molecule.instancedMesh);
+
                         dragPlane.setFromNormalAndCoplanarPoint(
                             camera.getWorldDirection(new THREE.Vector3()),
-                            atom.position
+                            worldPos
                         );
 
                         // Calculate offsets for ALL selected atoms relative to click point
                         dragOffsets = {};
                         const intersectPoint = intersects[0].point;
                         atomsSelected.forEach(idx => {
-                            const atom = main.molecule.atoms[idx];
-                            dragOffsets[idx] = new THREE.Vector3().copy(atom.position).sub(intersectPoint);
+                            const atomWorldPos = getAtomWorldPosition(idx, main.molecule.instancedMesh);
+                            dragOffsets[idx] = new THREE.Vector3().copy(atomWorldPos).sub(intersectPoint);
                         });
-
-
 
                         window.addEventListener('pointermove', onPointerMove, false);
                         window.addEventListener('pointerup', onPointerUp, false);
@@ -685,7 +790,6 @@ function onPointerDown(event) {
         }
     }
 }
-
 function addToList(itemText, list) {
     const listItem = document.createElement('li');
     listItem.textContent = `Fragment: [${itemText.join(', ')}]`;
@@ -728,29 +832,21 @@ function onPointerMove(event) {
 
     if (rotationAxis && rotationAxis.direction) {
         // AXIS-CONSTRAINED DRAGGING
-        // Get the axis direction (normalized)
         const axisDirection = rotationAxis.direction.clone().normalize();
         const axisPoint = rotationAxis.point.clone();
 
-        // Calculate the movement vector from the original drag start position
-        // We need to store the original intersection point when dragging starts
         if (!window.dragStartIntersection) {
             window.dragStartIntersection = intersection.clone();
             return;
         }
 
-        // Calculate the full movement vector since drag start
         const fullMovement = new THREE.Vector3().subVectors(intersection, window.dragStartIntersection);
-
-        // Project the movement onto the axis direction
         const projectedLength = fullMovement.dot(axisDirection);
         const projectedMovement = axisDirection.clone().multiplyScalar(projectedLength);
 
-        // Apply the projected movement to all selected atoms
         atomsSelected.forEach(idx => {
             const atom = main.molecule.atoms[idx];
 
-            // Get the original position when dragging started
             if (!window.originalDragPositions) {
                 window.originalDragPositions = {};
             }
@@ -758,54 +854,103 @@ function onPointerMove(event) {
                 window.originalDragPositions[idx] = atom.position.clone();
             }
 
-            // Set new position: original position + projected movement
             atom.position.copy(window.originalDragPositions[idx]).add(projectedMovement);
             atom.x = atom.position.x;
             atom.y = atom.position.y;
             atom.z = atom.position.z;
 
-            // Update instanced mesh matrix for this atom
-            const matrix = new THREE.Matrix4();
-            let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
-            if (main.mode && main.mode.atomSize) {
-                radius *= main.mode.atomSize;
-            }
-            matrix.makeScale(radius, radius, radius);
-            matrix.setPosition(atom.position);
-            main.molecule.instancedMesh.setMatrixAt(idx, matrix);
+            updateAtomMatrix(idx);
         });
 
     } else {
-        // NORMAL FREE DRAGGING (existing behavior)
-        // Move ALL selected atoms
+        // NORMAL FREE DRAGGING
         atomsSelected.forEach(idx => {
             const atom = main.molecule.atoms[idx];
             const offset = dragOffsets[idx] || new THREE.Vector3();
 
-            // Set new position: intersection point + offset
-            atom.position.copy(intersection).add(offset);
+            // Apply the transformation accounting for instancedMesh transform
+            const newPos = new THREE.Vector3().copy(intersection).add(offset);
+
+            // Convert from world space to local space of instancedMesh
+            const inverseMatrix = new THREE.Matrix4().copy(main.molecule.instancedMesh.matrixWorld).invert();
+            newPos.applyMatrix4(inverseMatrix);
+
+            atom.position.copy(newPos);
             atom.x = atom.position.x;
             atom.y = atom.position.y;
             atom.z = atom.position.z;
 
-            // Update instanced mesh matrix for this atom
-            const matrix = new THREE.Matrix4();
-            let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
-            if (main.mode && main.mode.atomSize) {
-                radius *= main.mode.atomSize;
-            }
-            matrix.makeScale(radius, radius, radius);
-            matrix.setPosition(atom.position);
-            main.molecule.instancedMesh.setMatrixAt(idx, matrix);
+            updateAtomMatrix(idx);
         });
     }
 
     main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
 
+    // Update bounds after moving atoms
+    updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
+
     // Update bonds
     main.molecule.updateBonds(mode);
 
     render();
+}
+
+
+function onPointerMove2(event) {
+    if (!editingMolecule || dragging || isSelecting) return;
+
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    // Update bounds before raycasting
+    updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
+
+    const intersects = enhancedRaycast(raycaster, main.molecule.instancedMesh, main.molecule.atoms);
+
+    if (intersects.length > 0) {
+        const instanceId = intersects[0].instanceId;
+
+        if (hoveredAtom !== instanceId) {
+            // Reset previous hover
+            if (hoveredAtom !== null && !atomsSelected.includes(hoveredAtom)) {
+                const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+                const atom = main.molecule.atoms[hoveredAtom];
+                const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+                colorAttr.setXYZ(hoveredAtom, color.r, color.g, color.b);
+                colorAttr.needsUpdate = true;
+            }
+
+            // Apply hover effect
+            hoveredAtom = instanceId;
+            if (!atomsSelected.includes(instanceId)) {
+                const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+                const atom = main.molecule.atoms[instanceId];
+                const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+                // Lighten the color for hover
+                const hoverColor = color.clone().lerp(new THREE.Color(1, 1, 1), 0.3);
+                colorAttr.setXYZ(instanceId, hoverColor.r, hoverColor.g, hoverColor.b);
+                colorAttr.needsUpdate = true;
+            }
+
+            renderer.domElement.style.cursor = 'pointer';
+            render();
+        }
+    } else {
+        // No hover
+        if (hoveredAtom !== null && !atomsSelected.includes(hoveredAtom)) {
+            const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+            const atom = main.molecule.atoms[hoveredAtom];
+            const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+            colorAttr.setXYZ(hoveredAtom, color.r, color.g, color.b);
+            colorAttr.needsUpdate = true;
+            render();
+        }
+        hoveredAtom = null;
+        renderer.domElement.style.cursor = 'default';
+    }
 }
 
 // Solution 1: Create a separate function to attach button event listeners
