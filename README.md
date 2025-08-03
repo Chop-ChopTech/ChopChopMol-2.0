@@ -1,6 +1,6 @@
 <h1><b>ChopChopMol 2.0 ⚛️ - Molecular Visualiztion GUI</b></h1>
 
-ChopChopMol 2.0 is a huge improvement over version 1.0. The new version is estimated to be about 17 times faster than the first version. We have implemented A.I. capabilities into 2.0. This gives you the ability to generate molecules with the A.I. Our new model can handle over 55,000 atoms while version 1.0 could only handle 3,800. This is ChopChopMol version 2.0.
+ChopChopMol 2.0 is a huge improvement over version 1.0. The new version is estimated to be about 17 times faster than the first version. We have implemented A.I. capabilities into 2.0. This gives you the ability to generate molecules with the A.I. You can effortlessly edit and modify molecules as well. This is ChopChopMol version 2.0. 
 
 Website:
 https://chop-choptech.github.io/ChopChopMol-2.0/
@@ -12,4 +12,14 @@ Download Here:
 
 Note: For a Mac, you may have to go to settings to confirm the download.
 
-<img src="demo.png"></img>
+<img src="demo2.png"></img>
+
+Here are some different features showcased:
+
+- Editing:
+<img src="editing.png"></img>
+
+- Customize atom looks
+<img src="adjust-style.png"></img>
+
+
