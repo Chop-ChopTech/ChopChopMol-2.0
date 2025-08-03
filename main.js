@@ -798,6 +798,7 @@ function onPointerUp(event) {
 
         render();
     }
+    main.molecule.updateMainCoordinates()
     // updateEditingContent(main.molecule.atoms[atomsSelected[0]].type, main.molecule.atomSettings[main.molecule.atoms[atomsSelected[0]].type].color);
 }
 
