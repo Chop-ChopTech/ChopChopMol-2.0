@@ -99,6 +99,71 @@ export default class Main {
         console.log(this.data);
     }
     reset() {
+        // Clear atoms and bonds
+        this.atoms = [];
+        this.bonds = [];
+
+        // Properly dispose of the instanced mesh
+        if (this.instancedMesh) {
+            // Remove from scene
+            this.main.scene.remove(this.instancedMesh);
+
+            // Dispose geometry
+            if (this.instancedMesh.geometry) {
+                this.instancedMesh.geometry.dispose();
+            }
+
+            // Dispose material
+            if (this.instancedMesh.material) {
+                if (Array.isArray(this.instancedMesh.material)) {
+                    this.instancedMesh.material.forEach(mat => mat.dispose());
+                } else {
+                    this.instancedMesh.material.dispose();
+                }
+            }
+
+            this.instancedMesh = null;
+        }
+
+        // Clear bond group
+        if (this.bondGroup) {
+            // Remove all children and dispose
+            while (this.bondGroup.children.length > 0) {
+                const child = this.bondGroup.children[0];
+                this.bondGroup.remove(child);
+
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => mat.dispose());
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+            }
+
+            this.main.scene.remove(this.bondGroup);
+            this.bondGroup = new THREE.Group();
+        }
+
+        this.labels = [];
+
+        atomsSelected = [];
+        hoveredAtom = null;
+
+        // Clear any axis definitions
+        rotationAxis = null;
+        axisAtoms = [];
+        if (axisVisualizer) {
+            this.scene.remove(axisVisualizer);
+            axisVisualizer.geometry.dispose();
+            axisVisualizer.material.dispose();
+            axisVisualizer = null;
+        }
+
+        // Clear the edit panel
+        editMoleculePanel.classList.add('on');
+
         clearScene(this.scene);
         render();
     }
@@ -234,17 +299,53 @@ backgroundColorSelector.addEventListener('input', () => {
 
 
 function updateStyles() {
+    // Store current selection before updating
+    const previousSelection = [...atomsSelected];
+
     mode = main.setNewMode(true);
     main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+
+    // Restore selection after molecule is recreated
+    atomsSelected = previousSelection;
+
+    // Re-apply visual selection
+    if (atomsSelected.length > 0) {
+        atomsSelected.forEach(idx => {
+            selectAtom(idx, false);
+        });
+
+        // Update UI
+        const element = main.molecule.atoms[atomsSelected[0]].type;
+        updateEditingContent(element, main.molecule.atomSettings[element].color);
+        attachButtonEventListeners();
+    }
+
+    render();
 }
 
 toggleStyleChanges.addEventListener('change', () => {
+    // Store current selection
+    const previousSelection = [...atomsSelected];
+
     if (mode == 0) {
         mode = main.setNewMode(true);
     } else {
         mode = main.setNewMode();
     }
     main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+
+    // Restore selection
+    atomsSelected = previousSelection;
+    if (atomsSelected.length > 0) {
+        atomsSelected.forEach(idx => {
+            selectAtom(idx, false);
+        });
+
+        const element = main.molecule.atoms[atomsSelected[0]].type;
+        updateEditingContent(element, main.molecule.atomSettings[element].color);
+        attachButtonEventListeners();
+    }
+
     console.log(mode);
     render();
 });
@@ -686,6 +787,11 @@ function rotateAroundAxis(atomIndices, angle) {
 
 function onPointerDown(event) {
     if (editingMolecule) {
+        if (!main.molecule || !main.molecule.instancedMesh) {
+            console.warn('Molecule or instancedMesh not initialized');
+            return;
+        }
+
         // Convert mouse to normalized device coordinates
         const rect = renderer.domElement.getBoundingClientRect();
         mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -898,6 +1004,9 @@ function onPointerMove(event) {
 
 function onPointerMove2(event) {
     if (!editingMolecule || dragging || isSelecting) return;
+
+    if (!main.molecule || !main.molecule.instancedMesh || !main.molecule.atoms) return;
+
 
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
