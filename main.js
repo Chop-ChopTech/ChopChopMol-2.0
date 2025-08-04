@@ -1672,6 +1672,484 @@ function rotateCamera(angleToRotate, camera, controls = null) {
     }
 }
 
+// Add this to your index.html after the Firebase auth initialization
+
+// Global variable to track authentication state
+let isUserSignedIn = false;
+let originalEventHandlers = {};
+
+
+// Listen for auth state changes from Firebase (sent from HTML)
+window.addEventListener('authStateChanged', (event) => {
+    const { user, isSignedIn } = event.detail;
+    updateFeatureAccess(user, isSignedIn);
+});
+
+// Function to update feature access based on authentication
+function updateFeatureAccess(user, signedIn) {
+    isUserSignedIn = signedIn;
+
+    if (isUserSignedIn) {
+        enableAllFeatures();
+        hideRestrictionMessage();
+    } else {
+        restrictFeatures();
+        showRestrictionMessage();
+    }
+}
+
+// Function to restrict features for non-signed-in users
+function restrictFeatures() {
+    console.log('Restricting features for non-signed-in user');
+
+    // Store original event handlers before removing them
+    storeOriginalHandlers();
+
+    // Disable editing functionality
+    disableAtomInteraction();
+
+    // Disable specific buttons with visual feedback
+    const restrictedButtons = [
+        'aiGenerate',
+        'import-smiles',
+        'import-json',
+        'compareButton',
+        'analyze-molecule',
+        'clear-canvas',
+        'switchMode'
+    ];
+
+    restrictedButtons.forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        if (button) {
+            // Visual changes
+            button.disabled = true;
+            button.style.opacity = '0.5';
+            button.style.cursor = 'not-allowed';
+            button.title = 'Sign in to use this feature';
+            button.classList.add('feature-tooltip');
+
+            // Remove existing event listeners by cloning
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+
+            // Add restricted click handler
+            newButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                showSignInPrompt();
+            });
+        }
+    });
+
+    // Hide editing panel
+    const editPanel = document.getElementById('editMoleculePanel');
+    if (editPanel) {
+        editPanel.classList.add('restricted');
+    }
+
+    // Disable style controls
+    const styleSelector = document.getElementById('styleSelector');
+    if (styleSelector) {
+        styleSelector.classList.add('restricted');
+    }
+
+    // Hide input panels
+    const panels = ['chatContainer', 'smilesContainer', 'jsonContainer'];
+    panels.forEach(panelId => {
+        const panel = document.getElementById(panelId);
+        if (panel) {
+            panel.classList.remove('on');
+            panel.classList.add('restricted');
+        }
+    });
+}
+
+// Function to store original event handlers
+function storeOriginalHandlers() {
+    // Store original pointer down handler
+    if (renderer && renderer.domElement && renderer.domElement.onpointerdown) {
+        originalEventHandlers.pointerdown = renderer.domElement.onpointerdown;
+    }
+
+    // Store other important handlers as needed
+    originalEventHandlers.keydownHandlers = [];
+}
+
+// Function to disable atom interaction
+function disableAtomInteraction() {
+    // Override pointer events for atom selection
+    if (renderer && renderer.domElement) {
+        originalEventHandlers.pointerdown = renderer.domElement.onpointerdown;
+
+        renderer.domElement.onpointerdown = function (event) {
+            // Only show prompt if user actually clicked on an atom, not empty space
+            if (!isUserSignedIn) {
+                // Check if click hit an atom by using raycaster
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+
+                // Only show prompt if we actually hit something interactive
+                if (main && main.molecule && main.molecule.instancedMesh) {
+                    const intersects = raycaster.intersectObject(main.molecule.instancedMesh);
+                    if (intersects.length > 0) {
+                        // User clicked on an atom, show the sign-in prompt
+                        showSignInPrompt();
+                    }
+                    // If no intersects, just allow normal camera controls (no prompt)
+                }
+                return;
+            }
+
+            // Call original if signed in
+            if (originalEventHandlers.pointerdown) {
+                originalEventHandlers.pointerdown.call(this, event);
+            }
+        };
+    }
+
+    // Override keyboard events for editing
+    const restrictedKeyHandler = function (event) {
+        if (!isUserSignedIn) {
+            // Block editing keys
+            if (event.key === 'Shift' || event.key === 'Meta' || event.key === 'Control' ||
+                event.key === 'j' || (event.key === 'l' && event.type === 'keydown')) {
+                event.preventDefault();
+                event.stopPropagation();
+                showSignInPrompt();
+                return false;
+            }
+        }
+    };
+
+    document.addEventListener('keydown', restrictedKeyHandler, true);
+    document.addEventListener('keyup', restrictedKeyHandler, true);
+    originalEventHandlers.restrictedKeyHandler = restrictedKeyHandler;
+
+    // Clear any existing atom selections
+    if (typeof atomsSelected !== 'undefined') {
+        atomsSelected = [];
+    }
+
+    // Disable editing mode
+    if (typeof editingMolecule !== 'undefined') {
+        editingMolecule = false;
+    }
+}
+
+// Function to enable all features for signed-in users
+function enableAllFeatures() {
+    console.log('Enabling all features for signed-in user');
+
+    // Remove restrictions from buttons
+    const allButtons = document.querySelectorAll('.fancy-button');
+    allButtons.forEach(button => {
+        button.disabled = false;
+        button.style.opacity = '1';
+        button.style.cursor = 'pointer';
+        button.title = '';
+        button.classList.remove('feature-tooltip');
+    });
+
+    // Show editing panel
+    const editPanel = document.getElementById('editMoleculePanel');
+    if (editPanel) {
+        editPanel.classList.remove('restricted');
+        editPanel.style.display = 'block';
+    }
+
+    // Enable style controls
+    const styleSelector = document.getElementById('styleSelector');
+    if (styleSelector) {
+        styleSelector.classList.remove('restricted');
+    }
+
+    // Enable input panels
+    const panels = ['chatContainer', 'smilesContainer', 'jsonContainer'];
+    panels.forEach(panelId => {
+        const panel = document.getElementById(panelId);
+        if (panel) {
+            panel.classList.remove('restricted');
+        }
+    });
+
+    // Restore atom interaction
+    enableAtomInteraction();
+
+    // Re-attach original event listeners
+    restoreOriginalHandlers();
+}
+
+// Function to restore atom interaction
+function enableAtomInteraction() {
+    // Restore original pointer events
+    if (renderer && renderer.domElement && originalEventHandlers.pointerdown) {
+        renderer.domElement.onpointerdown = originalEventHandlers.pointerdown;
+    }
+
+    // Remove restricted key handlers
+    if (originalEventHandlers.restrictedKeyHandler) {
+        document.removeEventListener('keydown', originalEventHandlers.restrictedKeyHandler, true);
+        document.removeEventListener('keyup', originalEventHandlers.restrictedKeyHandler, true);
+    }
+
+    // Re-enable editing mode
+    if (typeof editingMolecule !== 'undefined') {
+        editingMolecule = true;
+    }
+}
+
+// Function to restore original event handlers
+function restoreOriginalHandlers() {
+    // Re-attach AI Generate button
+    const aiGenerateButton = document.getElementById('aiGenerate');
+    if (aiGenerateButton) {
+        const newButton = aiGenerateButton.cloneNode(true);
+        aiGenerateButton.parentNode.replaceChild(newButton, aiGenerateButton);
+
+        newButton.addEventListener('click', () => {
+            const aiGeneratePanel = document.getElementById('chatContainer');
+            const smilesPanel = document.getElementById('smilesContainer');
+            const jsonPanel = document.getElementById('jsonContainer');
+
+            if (aiGeneratePanel) aiGeneratePanel.classList.toggle('on');
+            if (smilesPanel) smilesPanel.classList.remove('on');
+            if (jsonPanel) jsonPanel.classList.remove('on');
+        });
+    }
+
+    // Re-attach SMILES button
+    const smilesButton = document.getElementById('import-smiles');
+    if (smilesButton) {
+        const newButton = smilesButton.cloneNode(true);
+        smilesButton.parentNode.replaceChild(newButton, smilesButton);
+
+        newButton.addEventListener('click', () => {
+            const smilesPanel = document.getElementById('smilesContainer');
+            const aiGeneratePanel = document.getElementById('chatContainer');
+            const jsonPanel = document.getElementById('jsonContainer');
+
+            if (smilesPanel) smilesPanel.classList.toggle('on');
+            if (aiGeneratePanel) aiGeneratePanel.classList.remove('on');
+            if (jsonPanel) jsonPanel.classList.remove('on');
+        });
+    }
+
+    // Re-attach JSON button
+    const jsonButton = document.getElementById('import-json');
+    if (jsonButton) {
+        const newButton = jsonButton.cloneNode(true);
+        jsonButton.parentNode.replaceChild(newButton, jsonButton);
+
+        newButton.addEventListener('click', () => {
+            const jsonPanel = document.getElementById('jsonContainer');
+            const smilesPanel = document.getElementById('smilesContainer');
+            const aiGeneratePanel = document.getElementById('chatContainer');
+
+            if (jsonPanel) jsonPanel.classList.toggle('on');
+            if (smilesPanel) smilesPanel.classList.remove('on');
+            if (aiGeneratePanel) aiGeneratePanel.classList.remove('on');
+        });
+    }
+
+    // Re-attach analyze molecule button
+    const analyzeMoleculeButton = document.getElementById('analyze-molecule');
+    if (analyzeMoleculeButton) {
+        const newButton = analyzeMoleculeButton.cloneNode(true);
+        analyzeMoleculeButton.parentNode.replaceChild(newButton, analyzeMoleculeButton);
+
+        newButton.addEventListener('click', () => {
+            const images = [];
+            const numImages = 3;
+            for (let i = 0; i < numImages; i++) {
+                if (typeof getScreenUrl === 'function') {
+                    const imgData = getScreenUrl();
+                    images.push(imgData);
+                }
+                if (typeof rotateCamera === 'function' && typeof camera !== 'undefined' && typeof controls !== 'undefined') {
+                    rotateCamera(Math.PI / (numImages / 2), camera, controls);
+                }
+            }
+            if (typeof main !== 'undefined' && main.data) {
+                window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
+            }
+        });
+    }
+
+    // Re-attach clear canvas button
+    const clearSceneButton = document.getElementById('clear-canvas');
+    if (clearSceneButton) {
+        const newButton = clearSceneButton.cloneNode(true);
+        clearSceneButton.parentNode.replaceChild(newButton, clearSceneButton);
+
+        newButton.addEventListener('click', () => {
+            if (typeof main !== 'undefined' && typeof main.reset === 'function') {
+                main.reset();
+            }
+        });
+    }
+
+    // Re-attach switch mode button
+    const switchModeButton = document.getElementById('switchMode');
+    if (switchModeButton) {
+        const newButton = switchModeButton.cloneNode(true);
+        switchModeButton.parentNode.replaceChild(newButton, switchModeButton);
+
+        newButton.addEventListener('click', () => {
+            const styleSelector = document.getElementById('styleSelector');
+            if (styleSelector) {
+                styleSelector.classList.toggle('on');
+            }
+        });
+    }
+}
+
+// Function to show sign-in prompt
+function showSignInPrompt() {
+    const message = 'Sign in with Google to unlock editing, AI generation, and analysis features!';
+
+    // Create a nicer modal instead of alert
+    let modal = document.getElementById('signInModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'signInModal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20000;
+            backdrop-filter: blur(5px);
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        `;
+
+        modalContent.innerHTML = `
+            <h3 style="color: #333; margin-bottom: 15px;">🔒 Feature Locked</h3>
+            <p style="color: #666; margin-bottom: 25px;">${message}</p>
+            <button id="modalSignIn" style="
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                cursor: pointer;
+                margin-right: 10px;
+                font-weight: 600;
+            ">Sign In with Google</button>
+            <button id="modalCancel" style="
+                background: #f0f0f0;
+                color: #666;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+            ">Maybe Later</button>
+        `;
+
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+
+        // Handle modal buttons
+        document.getElementById('modalSignIn').addEventListener('click', () => {
+            const signInButton = document.getElementById('signInButton');
+            if (signInButton) {
+                signInButton.click();
+            }
+            modal.remove();
+        });
+
+        document.getElementById('modalCancel').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+}
+
+// Function to show restriction message
+function showRestrictionMessage() {
+    let restrictionMessage = document.getElementById('restrictionMessage');
+    if (!restrictionMessage) {
+        restrictionMessage = document.createElement('div');
+        restrictionMessage.id = 'restrictionMessage';
+        restrictionMessage.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            z-index: 10000;
+            font-family: 'Rubik', sans-serif;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            text-align: center;
+            animation: slideInFromTop 0.5s ease-out;
+        `;
+        document.body.appendChild(restrictionMessage);
+    }
+
+    restrictionMessage.innerHTML = `
+        <i class="fas fa-eye" style="margin-right: 8px;"></i>
+        <strong>View Mode:</strong> Sign in to unlock editing, AI generation, and analysis features
+    `;
+    restrictionMessage.style.display = 'block';
+
+    // Enhance sign-in button
+    const signInButton = document.getElementById('signInButton');
+    if (signInButton) {
+        signInButton.classList.add('featured');
+    }
+}
+
+// Function to hide restriction message
+function hideRestrictionMessage() {
+    const restrictionMessage = document.getElementById('restrictionMessage');
+    if (restrictionMessage) {
+        restrictionMessage.style.display = 'none';
+    }
+
+    // Remove enhancement from sign-in button
+    const signInButton = document.getElementById('signInButton');
+    if (signInButton) {
+        signInButton.classList.remove('featured');
+    }
+}
+
+// Initialize with restrictions (will be overridden when auth state is determined)
+document.addEventListener('DOMContentLoaded', () => {
+    // Start with restricted access
+    restrictFeatures();
+});
+
+// Also listen for when the main object is ready
+if (typeof main !== 'undefined') {
+    restrictFeatures();
+}
 function createRenderer(antialiasOn) {
     if (renderer) {
         // Remove old canvas

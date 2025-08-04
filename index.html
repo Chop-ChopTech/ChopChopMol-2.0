@@ -71,6 +71,16 @@
                 });
         });
 
+        function updateFeatureAccess(user) {
+            isUserSignedIn = !!user;
+
+            if (isUserSignedIn) {
+                enableAllFeatures();
+            } else {
+                restrictFeatures();
+            }
+        }
+
         // Listen for auth state changes and update UI
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -79,12 +89,22 @@
                 signOutButton.style.display = 'block';
                 userStatus.style.display = 'block';
                 userStatus.textContent = `Signed in as ${user.displayName}`;
+
+                // Notify main.js about auth state
+                window.dispatchEvent(new CustomEvent('authStateChanged', {
+                    detail: { user: user, isSignedIn: true }
+                }));
             } else {
                 // User is signed out
                 signInButton.style.display = 'block';
                 signOutButton.style.display = 'none';
                 userStatus.style.display = 'none';
                 userStatus.textContent = '';
+
+                // Notify main.js about auth state
+                window.dispatchEvent(new CustomEvent('authStateChanged', {
+                    detail: { user: null, isSignedIn: false }
+                }));
             }
         });
     </script>
