@@ -683,7 +683,7 @@ function updateAtomSelection() {
         // Pass the selection count to updateEditingContent
         updateEditingContent(element, main.molecule.atomSettings[element].color, allSelected.length);
     } else {
-        editMoleculePanel.classList.add('on');
+        // editMoleculePanel.classList.add('on');
     }
 }
 
@@ -732,7 +732,7 @@ function onSelectionUp(event) {
                 // IMPORTANT: Attach button event listeners after box selection
                 attachButtonEventListeners();
             } else {
-                editMoleculePanel.classList.add('on');
+                // editMoleculePanel.classList.add('on');
             }
         }
 
@@ -943,7 +943,7 @@ function onPointerDown(event) {
                     updateSelectionBox();
                 } else {
                     // Normal click on empty space: clear selection
-                    editMoleculePanel.classList.add('on');
+                    // editMoleculePanel.classList.add('on');
                     atomsSelected = [];
                     unselectAtom();
                     render();
@@ -1124,6 +1124,8 @@ function attachButtonEventListeners() {
     const changeBtn = document.getElementById('changeAtomBtn');
     const removeBtn = document.getElementById('removeAtomBtn');
     const fragmentBtn = document.getElementById('createFragment');
+    const closeEditing = document.getElementById('closeEditing');
+
 
     // Clone and replace to remove all existing event listeners
     if (changeBtn) {
@@ -1176,6 +1178,15 @@ function attachButtonEventListeners() {
         });
     }
 
+    if (closeEditing) {
+        const newCloseEditing = closeEditing.cloneNode(true);
+        closeEditing.parentNode.replaceChild(newCloseEditing, closeEditing);
+
+        newCloseEditing.addEventListener('click', () => {
+            editMoleculePanel.classList.add('on');
+        });
+    }
+
     // Attach axis event listeners
     attachAxisEventListeners();
 }
@@ -1208,6 +1219,8 @@ function updateEditingContent(element = null, color = null) {
         }
 
         editMoleculeContent.innerHTML = `
+            <button id="closeEditing" class="dismiss" title="Dismiss">×</button>
+
             <h2 style="color:${color};">Element: ${element}</h2><br>
             <span style="color:white;">Hold shift and drag to move the atom</span>
             <br>
@@ -2120,21 +2133,7 @@ function showRestrictionMessage() {
             <i class="fas fa-eye"></i>
             <span><strong>View Mode:</strong> Sign in to unlock editing, AI generation, and analysis features</span>
         </div>
-        <button id="dismissBanner" style="
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            transition: background 0.2s;
-            flex-shrink: 0;
-        " title="Dismiss">×</button>
+        <button id="dismissBanner" class="dismiss" title="Dismiss">×</button>
     `;
     restrictionMessage.style.display = 'flex';
 
