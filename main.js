@@ -1678,7 +1678,6 @@ function rotateCamera(angleToRotate, camera, controls = null) {
 let isUserSignedIn = false;
 let originalEventHandlers = {};
 
-
 // Listen for auth state changes from Firebase (sent from HTML)
 window.addEventListener('authStateChanged', (event) => {
     const { user, isSignedIn } = event.detail;
@@ -1723,7 +1722,6 @@ function restrictFeatures() {
         const button = document.getElementById(buttonId);
         if (button) {
             // Visual changes
-            button.disabled = true;
             button.style.opacity = '0.5';
             button.style.cursor = 'not-allowed';
             button.title = 'Sign in to use this feature';
@@ -1733,10 +1731,11 @@ function restrictFeatures() {
             const newButton = button.cloneNode(true);
             button.parentNode.replaceChild(newButton, button);
 
-            // Add restricted click handler
+            // Add restricted click handler - DON'T disable the button
             newButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                console.log('Restricted button clicked:', buttonId);
                 showSignInPrompt();
             });
         }
@@ -1813,12 +1812,11 @@ function disableAtomInteraction() {
     // Override keyboard events for editing
     const restrictedKeyHandler = function (event) {
         if (!isUserSignedIn) {
-            // Block editing keys
+            // Block editing keys silently - no prompts
             if (event.key === 'Shift' || event.key === 'Meta' || event.key === 'Control' ||
                 event.key === 'j' || (event.key === 'l' && event.type === 'keydown')) {
                 event.preventDefault();
                 event.stopPropagation();
-                showSignInPrompt();
                 return false;
             }
         }
@@ -2109,15 +2107,69 @@ function showRestrictionMessage() {
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             text-align: center;
             animation: slideInFromTop 0.5s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 15px;
         `;
         document.body.appendChild(restrictionMessage);
     }
 
     restrictionMessage.innerHTML = `
-        <i class="fas fa-eye" style="margin-right: 8px;"></i>
-        <strong>View Mode:</strong> Sign in to unlock editing, AI generation, and analysis features
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-eye"></i>
+            <span><strong>View Mode:</strong> Sign in to unlock editing, AI generation, and analysis features</span>
+        </div>
+        <button id="dismissBanner" style="
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        " title="Dismiss">×</button>
     `;
-    restrictionMessage.style.display = 'block';
+    restrictionMessage.style.display = 'flex';
+
+    // Add dismiss functionality
+    const dismissButton = document.getElementById('dismissBanner');
+    if (dismissButton) {
+        dismissButton.addEventListener('click', () => {
+            restrictionMessage.style.animation = 'slideOutToTop 0.3s ease-in forwards';
+            setTimeout(() => {
+                if (restrictionMessage.parentNode) {
+                    restrictionMessage.remove();
+                }
+            }, 300);
+        });
+
+        // Hover effect for dismiss button
+        dismissButton.addEventListener('mouseenter', () => {
+            dismissButton.style.background = 'rgba(255, 255, 255, 0.3)';
+        });
+
+        dismissButton.addEventListener('mouseleave', () => {
+            dismissButton.style.background = 'rgba(255, 255, 255, 0.2)';
+        });
+    }
+
+    // Auto-dismiss after 8 seconds
+    setTimeout(() => {
+        if (restrictionMessage && restrictionMessage.parentNode && !isUserSignedIn) {
+            restrictionMessage.style.animation = 'slideOutToTop 0.3s ease-in forwards';
+            setTimeout(() => {
+                if (restrictionMessage.parentNode) {
+                    restrictionMessage.remove();
+                }
+            }, 300);
+        }
+    }, 8000);
 
     // Enhance sign-in button
     const signInButton = document.getElementById('signInButton');
