@@ -985,6 +985,36 @@ input[type="range"]:focus {
     transform: translateX(-50%) translateY(0);
 }
 
+.shake-button:hover {
+    animation: angry-shake 0.8s infinite;
+}
+
+#modalSignIn:hover {
+    animation: glowButton 3s infinite;
+    transition: 0.4s all ease;
+}
+
+@keyframes glowButton {
+    0% {
+        box-shadow: 0 0 20px #00a6ff;
+        transform: scale(1);
+        color: #fff;
+    }
+
+    50% {
+        box-shadow: 0 0 30px #00ffe1;
+        /* color: #00ffea; */
+        transform: scale(1.1);
+
+    }
+
+    100% {
+        box-shadow: 0 0 20px #009dff;
+        color: #fff;
+        transform: scale(1);
+
+    }
+}
 
 
 @keyframes fadeIn {
@@ -1018,6 +1048,93 @@ input[type="range"]:focus {
         color: #00ffea;
     }
 }
+
+@keyframes angry-shake {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    5% {
+        transform: translate(1.2px, -0.8px);
+    }
+
+    10% {
+        transform: translate(-1.7px, 1.1px);
+    }
+
+    15% {
+        transform: translate(0.3px, -1.9px);
+    }
+
+    20% {
+        transform: translate(-1.1px, 0.6px);
+    }
+
+    25% {
+        transform: translate(1.9px, -1.4px);
+    }
+
+    30% {
+        transform: translate(-0.5px, 1.7px);
+    }
+
+    35% {
+        transform: translate(1.3px, -0.3px);
+    }
+
+    40% {
+        transform: translate(-2px, 1px);
+    }
+
+    45% {
+        transform: translate(0.7px, -1.8px);
+    }
+
+    50% {
+        transform: translate(-1.6px, 1.4px);
+    }
+
+    55% {
+        transform: translate(1.5px, -0.9px);
+    }
+
+    60% {
+        transform: translate(-0.4px, 1.2px);
+    }
+
+    65% {
+        transform: translate(0.9px, -1.6px);
+    }
+
+    70% {
+        transform: translate(-1.3px, 0.2px);
+    }
+
+    75% {
+        transform: translate(1.8px, -1.1px);
+    }
+
+    80% {
+        transform: translate(-0.7px, 1.9px);
+    }
+
+    85% {
+        transform: translate(0.2px, -1.3px);
+    }
+
+    90% {
+        transform: translate(-1.9px, 0.5px);
+    }
+
+    95% {
+        transform: translate(1.1px, -0.6px);
+    }
+
+    100% {
+        transform: translate(0, 0.5);
+    }
+}
+
 
 @keyframes typing {
     from {

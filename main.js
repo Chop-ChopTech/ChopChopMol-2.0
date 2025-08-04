@@ -2006,7 +2006,7 @@ function restoreOriginalHandlers() {
 
 // Function to show sign-in prompt
 function showSignInPrompt() {
-    const message = 'Sign in with Google to unlock editing, AI generation, and analysis features!';
+    const message = '';
 
     // Create a nicer modal instead of alert
     let modal = document.getElementById('signInModal');
@@ -2038,7 +2038,7 @@ function showSignInPrompt() {
         `;
 
         modalContent.innerHTML = `
-            <h3 style="color: #333; margin-bottom: 15px;">🔒 Feature Locked</h3>
+            <h3 style="color: #333; margin-bottom: 15px;"><span style="font-size: 35px;">🔒</span><br> Sign in with Google to unlock this feature!</h3>
             <p style="color: #666; margin-bottom: 25px;">${message}</p>
             <button id="modalSignIn" style="
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -2050,9 +2050,9 @@ function showSignInPrompt() {
                 margin-right: 10px;
                 font-weight: 600;
             ">Sign In with Google</button>
-            <button id="modalCancel" style="
+            <button id="modalCancel" class="shake-button" style="
                 background: #f0f0f0;
-                color: #666;
+                color:rgb(255, 141, 141);
                 border: none;
                 padding: 12px 24px;
                 border-radius: 8px;
@@ -2060,6 +2060,7 @@ function showSignInPrompt() {
                 font-weight: 600;
             ">Maybe Later</button>
         `;
+
 
         modal.appendChild(modalContent);
         document.body.appendChild(modal);
