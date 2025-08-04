@@ -816,6 +816,92 @@ input[type="range"]:focus {
     text-align: center;
 }
 
+#selectionBox {
+    position: absolute;
+    border: 2px dashed;
+    background: rgba(246, 255, 0, 0.1);
+    pointer-events: none;
+    display: none;
+    z-index: 1000;
+    transition: none;
+    animation: pulse 2s infinite;
+    border-radius: 3px;
+}
+
+#rotationSlider {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: linear-gradient(to right, #ff0080 0%, #ff00ff 50%, #ff0080 100%);
+    border-radius: 5px;
+    outline: none;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
+
+#rotationSlider:hover {
+    opacity: 1;
+}
+
+#rotationSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #ff00ff;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(255, 0, 255, 0.5);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#rotationSlider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 3px 8px rgba(255, 0, 255, 0.7);
+}
+
+#rotationSlider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #ff00ff;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(255, 0, 255, 0.5);
+}
+
+/* Axis control panel styling */
+#defineAxisBtn {
+    animation: pulse-magenta 2s infinite;
+}
+
+@keyframes pulse-magenta {
+    0% {
+        box-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.8);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+    }
+}
+
+#removeAxisBtn:hover {
+    background-color: #ff3333 !important;
+    transform: scale(1.05);
+}
+
+/* Rotation value display */
+#rotationValue {
+    font-weight: bold;
+    font-size: 14px;
+    text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+}
+
 @keyframes rainbow {
     0% {
         background-position: 0% 50%;
@@ -824,6 +910,23 @@ input[type="range"]:focus {
     100% {
         background-position: 200% 50%;
         /* Move gradient for seamless loop */
+    }
+}
+
+@keyframes pulse {
+    0% {
+        border-color: #007bff;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+    }
+
+    50% {
+        border-color: #00d4ff;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.7);
+    }
+
+    100% {
+        border-color: #007bff;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
     }
 }
 

@@ -266,32 +266,35 @@ export default class Molecule {
         if (!overlay) {
             this.instancedMesh.position.sub(center);
             this.offset = center.clone();
-            const coordinates = this.getAtomCoordinates()
-
-            const elements = []
-            this.atoms.forEach(atom => {
-                elements.push(atom.type)
-            })
-            const data = {
-                atomData: [],
-                numAtoms: this.atoms.length,
-            }
-            coordinates.forEach((pos, index) => {
-                data.atomData.push({
-                    element: elements[index],
-                    x: pos.x / this.stretch,
-                    y: pos.y / this.stretch,
-                    z: pos.z / this.stretch,
-                });
-            });
-            console.log(data)
-            this.main.data = data
+            this.updateMainCoordinates()
         } else {
 
             this.offset = new THREE.Vector3();
 
         }
 
+    }
+    updateMainCoordinates() {
+        const coordinates = this.getAtomCoordinates()
+
+        const elements = []
+        this.atoms.forEach(atom => {
+            elements.push(atom.type)
+        })
+        const data = {
+            atomData: [],
+            numAtoms: this.atoms.length,
+        }
+        coordinates.forEach((pos, index) => {
+            data.atomData.push({
+                element: elements[index],
+                x: pos.x / this.stretch,
+                y: pos.y / this.stretch,
+                z: pos.z / this.stretch,
+            });
+        });
+        console.log(data)
+        this.main.data = data
     }
 
     visualizeBondsFast(bonds, rotation, translation) {
