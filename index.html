@@ -81,14 +81,35 @@
             }
         }
 
+        // Add this function to extract initials from user's display name
+        function getUserInitials(displayName) {
+            if (!displayName) return '??';
+
+            const names = displayName.trim().split(' ');
+            if (names.length === 1) {
+                // Single name, take first two characters
+                return names[0].substring(0, 2).toUpperCase();
+            } else {
+                // Multiple names, take first letter of first and last name
+                return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+            }
+        }
+
         // Listen for auth state changes and update UI
         onAuthStateChanged(auth, (user) => {
+            const userIcon = document.querySelector('#settings .dropdown-icon');
+
             if (user) {
                 // User is signed in
                 signInButton.style.display = 'none';
                 signOutButton.style.display = 'block';
                 userStatus.style.display = 'block';
                 userStatus.textContent = `Signed in as ${user.displayName}`;
+
+                // Update user icon to show initials
+                const initials = getUserInitials(user.displayName);
+                userIcon.innerHTML = `<span class="user-initials">${initials}</span>`;
+                userIcon.classList.add('signed-in');
 
                 // Notify main.js about auth state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
@@ -100,6 +121,10 @@
                 signOutButton.style.display = 'none';
                 userStatus.style.display = 'none';
                 userStatus.textContent = '';
+
+                // Reset user icon to default
+                userIcon.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
+                userIcon.classList.remove('signed-in');
 
                 // Notify main.js about auth state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
