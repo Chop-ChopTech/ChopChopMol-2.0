@@ -95,7 +95,7 @@
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
         <input id="compare" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
         <div class="dropdown">
-            <span class="dropdown-icon"><i class="fa-solid fa-file-arrow-up"></i>
+            <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
             </span>
             <div class="dropdown-content" style="left: 50%;">
                 <button class="fancy-button" id="aiGenerate"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
@@ -104,17 +104,14 @@
                 <button class="fancy-button" id="import-smiles"><i class="fas fa-vial"></i> Load SMILES string</button>
                 <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load JSON</button>
                 <button class="fancy-button" id="compareButton">Compare</button>
-                <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255);"><i
-                        class="fas fa-file-download"></i> Save as XYZ</button>
 
 
             </div>
         </div>
         <div class="dropdown">
-            <span class="dropdown-icon" style="left: 50%;"><i class="fas fa-chart-bar"></i></span>
+            <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-wand-sparkles"></i></span>
             <div class="dropdown-content">
                 <button class="fancy-button" id="switchMode"><i class="fas fa-paint-brush"></i> Toggle Style</button>
-                <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
                 <button class="fancy-button" id="analyze-molecule">Analyze molecule</button>
                 <!-- <button class="fancy-button" id="editMolecule"> <i class="fas fa-edit"></i> Edit Molecule</button> -->
                 <button class="fancy-button" id="clear-canvas"><i class="fa-solid fa-trash"></i> Clear</button>
@@ -122,8 +119,16 @@
 
             </div>
         </div>
+        <div class="dropdown">
+            <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
+            <div class="dropdown-content">
+                <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
+                <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255);"><i
+                        class="fas fa-file-download"></i> Save XYZ</button>
+            </div>
+        </div>
         <div class="dropdown" id="settings">
-            <span class="dropdown-icon"><i class="fa-solid fa-gear"></i></span>
+            <span class="dropdown-icon"><i class="fa-solid fa-circle-user"></i></span>
             <div class="dropdown-content" style="left: 100px;">
 
                 <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
