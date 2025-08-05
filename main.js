@@ -6,6 +6,7 @@ import FileHandler from './utils/fileHandler.js';
 // WE WILL NOW TRY TO MAKE THIS AMAZING WEBSITE AN APP. IT MAY GO AMAZINGLY OR IT MAY GO HORRIBLY.
 // It went well!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // Please refer the the README.md file for more information
+// CLEANUP TIME!!!!
 
 // Setup scene
 const scene = new THREE.Scene();
@@ -2044,7 +2045,8 @@ function showSignInPrompt() {
             <h3 style="color: #333; margin-bottom: 15px;"><span style="font-size: 35px;">🔒</span><br> Sign in with Google to unlock this feature!</h3>
             <p style="color: #666; margin-bottom: 25px;">${message}</p>
             <button id="modalSignIn" style="
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg,rgb(102, 130, 255) 0%,rgb(124, 39, 208) 100%);
+
                 color: white;
                 border: none;
                 padding: 12px 24px;

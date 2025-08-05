@@ -1079,11 +1079,12 @@ input[type="range"]:focus {
 }
 
 .shake-button:hover {
-    animation: angry-shake 0.8s infinite;
+    animation: angry-shake 1s infinite;
 }
 
 #modalSignIn:hover {
-    animation: glowButton 3s infinite;
+    box-shadow: 0 4px 12px rgba(25, 98, 255, 0.473);
+    transform: scale(1.1);
     transition: 0.4s all ease;
 }
 
@@ -1242,7 +1243,7 @@ input[type="range"]:focus {
     }
 
     5% {
-        transform: translate(1.2px, -0.8px);
+        transform: translate(1.2px, 0.8px);
     }
 
     10% {
@@ -1254,11 +1255,11 @@ input[type="range"]:focus {
     }
 
     20% {
-        transform: translate(-1.1px, 0.6px);
+        transform: translate(-1.1px, -0.6px);
     }
 
     25% {
-        transform: translate(1.9px, -1.4px);
+        transform: translate(-1.9px, -1.4px);
     }
 
     30% {
@@ -1270,7 +1271,7 @@ input[type="range"]:focus {
     }
 
     40% {
-        transform: translate(-2px, 1px);
+        transform: translate(2px, 1px);
     }
 
     45% {
