@@ -21,6 +21,10 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+        // After initializing Firebase app
+
         // TODO: Add SDKs for Firebase products that you want to use
         // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -41,7 +45,10 @@
         const analytics = getAnalytics(app);
         const auth = getAuth(app);  // Initialize Auth
         const provider = new GoogleAuthProvider();  // For Google sign-in
+        const db = getFirestore(app);
 
+        // Make db available globally
+        window.firebaseDB = db;
 
         // Get UI elements
         const signInButton = document.getElementById('signInButton');
@@ -97,8 +104,6 @@
 
         // Listen for auth state changes and update UI
         onAuthStateChanged(auth, (user) => {
-            const userIcon = document.querySelector('#settings .dropdown-icon');
-
             if (user) {
                 // User is signed in
                 signInButton.style.display = 'none';
@@ -106,15 +111,23 @@
                 userStatus.style.display = 'block';
                 userStatus.textContent = `Signed in as ${user.displayName}`;
 
-                // Update user icon to show initials
-                const initials = getUserInitials(user.displayName);
-                userIcon.innerHTML = `<span class="user-initials">${initials}</span>`;
-                userIcon.classList.add('signed-in');
+                // Show the Make Default button
+                const makeDefaultBtn = document.getElementById('makeDefaultButton');
+                if (makeDefaultBtn) {
+                    makeDefaultBtn.style.display = 'block';
+                }
 
                 // Notify main.js about auth state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: { user: user, isSignedIn: true }
                 }));
+
+                // Load user's style preferences after a short delay
+                setTimeout(() => {
+                    if (window.loadStylePreferences) {
+                        window.loadStylePreferences(user.uid);
+                    }
+                }, 1000); // Increased delay to ensure everything is loaded
             } else {
                 // User is signed out
                 signInButton.style.display = 'block';
@@ -122,9 +135,14 @@
                 userStatus.style.display = 'none';
                 userStatus.textContent = '';
 
-                // Reset user icon to default
-                userIcon.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
-                userIcon.classList.remove('signed-in');
+                // Hide the Make Default button
+                const makeDefaultBtn = document.getElementById('makeDefaultButton');
+                if (makeDefaultBtn) {
+                    makeDefaultBtn.style.display = 'none';
+                }
+
+                // Reset to default values when signed out
+                resetToDefaults();
 
                 // Notify main.js about auth state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
@@ -232,7 +250,13 @@
             <input type="checkbox" id="toggleLabels"></button>
             <span>Toggle Atom labels</span>
         </div>
-
+        <button class="fancy-button" id="makeDefaultButton" style="
+            margin-top: 20px;
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;">
+            <i class="fas fa-save"></i> Make Default
+        </button>
 
     </div>
     <div id="dragFile">

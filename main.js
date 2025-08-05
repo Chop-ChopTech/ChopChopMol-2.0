@@ -353,18 +353,8 @@ toggleStyleChanges.addEventListener('change', () => {
 });
 
 toggleAntialiasing.addEventListener('change', () => {
-    antialiasToggled = !antialiasToggled;
-    renderer = createRenderer(antialiasToggled);
-    document.body.appendChild(renderer.domElement);
-    controls = new TrackballControls(camera, renderer.domElement);
-    controls.addEventListener('change', () => {
-        render();
-    });
-    controls.rotateSpeed = 5.0;
-    controls.zoomSpeed = 2.0;
-    controls.panSpeed = 1.0;
-    controls.dynamicDampingFactor = 1.0; // No drag smoothing
-    render();
+    antialiasToggled = toggleAntialiasing.checked;
+    recreateRenderer(antialiasToggled);
 });
 
 window.addEventListener('keydown', function (e) {
@@ -2198,6 +2188,291 @@ document.addEventListener('DOMContentLoaded', () => {
     restrictFeatures();
 });
 
+// Function to save style preferences to Firestore
+async function saveStylePreferences(userId) {
+    if (!window.firebaseDB || !userId) {
+        console.error('Firebase DB not initialized or no user ID');
+        return false;
+    }
+
+    try {
+        const stylePrefs = {
+            roughness: parseFloat(document.getElementById('style1').value),
+            metalness: parseFloat(document.getElementById('style2').value),
+            opacity: parseFloat(document.getElementById('style3').value),
+            bonds: parseFloat(document.getElementById('style4').value) || 1, // Default if no value
+            atomSize: parseFloat(document.getElementById('style5').value),
+            resolution: parseInt(document.getElementById('style6').value),
+            antialias: document.getElementById('style7').checked,
+            backgroundColor: document.getElementById('style8').value,
+            toggleStyleChanges: document.getElementById('toggleStyleChanges').checked,
+            toggleLabels: document.getElementById('toggleLabels').checked,
+            lastUpdated: new Date().toISOString()
+        };
+
+        console.log('Saving preferences:', stylePrefs);
+
+        const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');
+        await setDoc(doc(window.firebaseDB, 'userPreferences', userId), {
+            stylePreferences: stylePrefs
+        }, { merge: true });
+
+        // Show success feedback
+        showNotification('Style preferences saved as default!', 'success');
+        return true;
+    } catch (error) {
+        console.error('Error saving style preferences:', error);
+        showNotification('Failed to save preferences', 'error');
+        return false;
+    }
+}
+
+// Function to load style preferences from Firestore
+async function loadStylePreferences(userId) {
+    if (!window.firebaseDB || !userId) {
+        console.error('Firebase DB not initialized or no user ID');
+        return null;
+    }
+
+    try {
+        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');
+        const docRef = doc(window.firebaseDB, 'userPreferences', userId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.stylePreferences) {
+                console.log('Loading preferences:', data.stylePreferences);
+                applyStylePreferences(data.stylePreferences);
+                showNotification('Default styles loaded!', 'info');
+                return data.stylePreferences;
+            }
+        }
+        console.log('No saved preferences found for user');
+        return null;
+    } catch (error) {
+        console.error('Error loading style preferences:', error);
+        return null;
+    }
+}
+
+// Function to apply loaded style preferences
+function applyStylePreferences(prefs) {
+    // Apply roughness
+    if (prefs.roughness !== undefined) {
+        document.getElementById('style1').value = prefs.roughness;
+        main.roughness = prefs.roughness;
+    }
+
+    // Apply metalness
+    if (prefs.metalness !== undefined) {
+        document.getElementById('style2').value = prefs.metalness;
+        main.metalness = prefs.metalness;
+    }
+
+    // Apply opacity
+    if (prefs.opacity !== undefined) {
+        document.getElementById('style3').value = prefs.opacity;
+        main.opacity = prefs.opacity;
+    }
+
+    // Apply bonds
+    if (prefs.bonds !== undefined) {
+        document.getElementById('style4').value = prefs.bonds;
+        // Note: You may need to add main.bonds or similar variable
+    }
+
+    // Apply atom size
+    if (prefs.atomSize !== undefined) {
+        document.getElementById('style5').value = prefs.atomSize;
+        main.atomSize = prefs.atomSize;
+    }
+
+    // Apply resolution
+    if (prefs.resolution !== undefined) {
+        document.getElementById('style6').value = prefs.resolution;
+        main.resolution = prefs.resolution;
+    }
+
+    // Apply antialias
+    if (prefs.antialias !== undefined) {
+        document.getElementById('style7').checked = prefs.antialias;
+        antialiasToggled = prefs.antialias;
+
+        // If antialias setting changed, recreate renderer
+        if (renderer.antialias !== prefs.antialias) {
+            recreateRenderer(prefs.antialias);
+        }
+    }
+
+    // Apply background color
+    if (prefs.backgroundColor !== undefined && prefs.backgroundColor !== '#ff0000') {
+        document.getElementById('style8').value = prefs.backgroundColor;
+        const color = prefs.backgroundColor;
+        scene.background = new THREE.Color(color);
+        document.body.style.backgroundColor = color;
+    }
+
+    // Apply toggle style changes
+    if (prefs.toggleStyleChanges !== undefined) {
+        document.getElementById('toggleStyleChanges').checked = prefs.toggleStyleChanges;
+        // Trigger the toggle event if needed
+        if (prefs.toggleStyleChanges && mode === 0) {
+            document.getElementById('toggleStyleChanges').dispatchEvent(new Event('change'));
+        }
+    }
+
+    // Apply toggle labels
+    if (prefs.toggleLabels !== undefined) {
+        document.getElementById('toggleLabels').checked = prefs.toggleLabels;
+        labelMode = prefs.toggleLabels;
+        if (main && main.molecule) {
+            main.molecule.toggleLabels(labelMode);
+        }
+    }
+
+    // Update the visualization if a molecule is loaded
+    if (main && main.molecule && mode !== 0) {
+        updateStyles();
+    }
+
+    render();
+}
+
+// Function to recreate renderer with new antialias setting
+function recreateRenderer(antialiasEnabled) {
+    // Store current renderer size
+    const width = renderer.domElement.width;
+    const height = renderer.domElement.height;
+
+    // Remove old renderer
+    document.body.removeChild(renderer.domElement);
+
+    // Create new renderer with updated antialias
+    renderer = new THREE.WebGLRenderer({
+        antialias: antialiasEnabled,
+        powerPreference: "high-performance"
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    // Recreate controls
+    controls = new TrackballControls(camera, renderer.domElement);
+    controls.rotateSpeed = 5.0;
+    controls.zoomSpeed = 2.0;
+    controls.panSpeed = 1.0;
+    controls.dynamicDampingFactor = 1.0;
+
+    // IMPORTANT: Re-attach the controls change event listener
+    controls.addEventListener('change', () => {
+        render();
+    });
+
+    // IMPORTANT: Re-attach the pointer down event for atom selection
+    renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
+
+    render();
+}
+
+// Function to show notification
+function showNotification(message, type) {
+    // Remove existing notification if any
+    const existingNotif = document.getElementById('styleNotification');
+    if (existingNotif) {
+        existingNotif.remove();
+    }
+
+    const notification = document.createElement('div');
+    notification.id = 'styleNotification';
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+        ${type === 'success' ? 'background: linear-gradient(135deg, #00c851 0%, #00ff00 100%);' : ''}
+        ${type === 'error' ? 'background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);' : ''}
+        ${type === 'info' ? 'background: linear-gradient(135deg, #33b5e5 0%, #0099cc 100%);' : ''}
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Add this after other event listeners in main.js
+const makeDefaultButton = document.getElementById('makeDefaultButton');
+if (makeDefaultButton) {
+    makeDefaultButton.addEventListener('click', async () => {
+        // Get current user from Firebase Auth
+        const { getAuth } = await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js');
+        const auth = getAuth();
+        const user = auth.currentUser;
+
+        if (user) {
+            makeDefaultButton.disabled = true;
+            makeDefaultButton.innerHTML = ' Saving...';
+
+            const success = await saveStylePreferences(user.uid);
+
+            setTimeout(() => {
+                makeDefaultButton.disabled = false;
+                makeDefaultButton.innerHTML = ' Make Default';
+            }, 1000);
+        } else {
+            showNotification('Please sign in to save preferences', 'error');
+        }
+    });
+}
+
+// Make functions available globally
+window.loadStylePreferences = loadStylePreferences;
+window.saveStylePreferences = saveStylePreferences;
+
+// Function to reset to default values
+function resetToDefaults() {
+    // Reset sliders to default values
+    document.getElementById('style1').value = 0.17; // Roughness
+    document.getElementById('style2').value = 0.3;  // Metalness
+    document.getElementById('style3').value = 1;    // Opacity
+    document.getElementById('style4').value = 1;    // Bonds
+    document.getElementById('style5').value = 1;    // Atom Size
+    document.getElementById('style6').value = 16;   // Resolution
+    document.getElementById('style7').checked = false; // Antialias
+    document.getElementById('style8').value = '#000000'; // Background (black, not red)
+    document.getElementById('toggleStyleChanges').checked = false;
+    document.getElementById('toggleLabels').checked = false;
+
+    // Reset main object values
+    main.roughness = 0.17;
+    main.metalness = 0.3;
+    main.opacity = 1;
+    main.atomSize = 1;
+    main.resolution = 16;
+
+    // Reset background
+    scene.background = new THREE.Color('#000000');
+    document.body.style.backgroundColor = '#000000';
+
+    // Reset other states
+    antialiasToggled = false;
+    labelMode = false;
+
+    render();
+}
+
+// Make it globally available
+window.resetToDefaults = resetToDefaults;
 // Also listen for when the main object is ready
 if (typeof main !== 'undefined') {
     restrictFeatures();
