@@ -2471,6 +2471,16 @@ function resetToDefaults() {
     render();
 }
 
+const resetToDefaultsButton = document.getElementById('resetToDefaultButton');
+if (resetToDefaultsButton) {
+    resetToDefaultsButton.addEventListener('click', function () {
+        resetToDefaults();
+        updateStyles();
+        render();
+    });
+
+}
+
 // Make it globally available
 window.resetToDefaults = resetToDefaults;
 // Also listen for when the main object is ready
