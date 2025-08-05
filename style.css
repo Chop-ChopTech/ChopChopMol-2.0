@@ -518,7 +518,9 @@ body {
     z-index: 9999;
     background-color: #eaeaea;
     width: 300px;
-    height: 500px;
+    height: 670px;
+    /* max-height: 600px; */
+    overflow-y: scroll;
     padding: 30px;
     border-radius: 10px;
     display: flex;
@@ -527,7 +529,7 @@ body {
 }
 
 #styleSelector.on {
-    bottom: -600px;
+    bottom: -900px;
 }
 
 #editMoleculePanel {
@@ -902,6 +904,97 @@ input[type="range"]:focus {
     text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
 }
 
+/* Enhanced user initials styling - add this to your style.css */
+
+/* User initials container */
+.user-initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    font-family: 'Rubik', sans-serif;
+}
+
+/* Signed-in state for dropdown icon - prevents rainbow effect */
+
+
+
+.dropdown-icon.signed-in {
+    background: transparent !important;
+    padding: 6px !important;
+}
+
+/* Override the rainbow hover effect for signed-in users */
+.dropdown:hover .dropdown-icon.signed-in {
+    background: transparent !important;
+    background-clip: initial !important;
+    -webkit-background-clip: initial !important;
+    -webkit-text-fill-color: initial !important;
+    animation: none !important;
+}
+
+/* Hover effect for user initials - replaces the rainbow effect */
+.dropdown-icon.signed-in:hover .user-initials {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Animation for when user signs in */
+.user-initials {
+    animation: fadeInScale 0.5s ease-out;
+}
+
+@keyframes fadeInScale {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Optional: Different color themes for variety */
+.user-initials.blue-theme {
+    background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
+}
+
+.user-initials.purple-theme {
+    background: linear-gradient(135deg, #9C27B0 0%, #E91E63 100%);
+}
+
+.user-initials.green-theme {
+    background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+}
+
+.user-initials.orange-theme {
+    background: linear-gradient(135deg, #FF9800 0%, #FF5722 100%);
+}
+
+/* Ensure the settings dropdown positioning remains correct */
+#settings .dropdown-icon {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 @keyframes rainbow {
     0% {
         background-position: 0% 50%;
@@ -1057,6 +1150,10 @@ input[type="range"]:focus {
 /* Animation for when user signs in */
 .user-initials {
     animation: fadeInScale 0.5s ease-out;
+}
+
+#settings.dropdown-icon {
+    margin: 20px !important;
 }
 
 @keyframes fadeInScale {

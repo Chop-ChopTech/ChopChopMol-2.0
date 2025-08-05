@@ -108,8 +108,20 @@
                 // User is signed in
                 signInButton.style.display = 'none';
                 signOutButton.style.display = 'block';
-                userStatus.style.display = 'block';
-                userStatus.textContent = `Signed in as ${user.displayName}`;
+
+                // Hide the separate user status box
+                userStatus.style.display = 'none';
+
+                // Get the dropdown icon and update it with user initials
+                const dropdownIcon = document.querySelector('#settings .dropdown-icon');
+                const userInitials = getUserInitials(user.displayName);
+
+                // Replace the generic user icon with initials
+                dropdownIcon.innerHTML = `<div class="user-initials">${userInitials}</div>`;
+                dropdownIcon.classList.add('signed-in');
+
+                // Add tooltip with full name on hover
+                dropdownIcon.title = `Signed in as ${user.displayName}`;
 
                 // Show the Make Default button
                 const makeDefaultBtn = document.getElementById('makeDefaultButton');
@@ -127,13 +139,18 @@
                     if (window.loadStylePreferences) {
                         window.loadStylePreferences(user.uid);
                     }
-                }, 1000); // Increased delay to ensure everything is loaded
+                }, 1000);
             } else {
                 // User is signed out
                 signInButton.style.display = 'block';
                 signOutButton.style.display = 'none';
                 userStatus.style.display = 'none';
-                userStatus.textContent = '';
+
+                // Reset the dropdown icon to the generic user icon
+                const dropdownIcon = document.querySelector('#settings .dropdown-icon');
+                dropdownIcon.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
+                dropdownIcon.classList.remove('signed-in');
+                dropdownIcon.title = '';
 
                 // Hide the Make Default button
                 const makeDefaultBtn = document.getElementById('makeDefaultButton');
@@ -253,9 +270,18 @@
         <button class="fancy-button" id="makeDefaultButton" style="
             margin-top: 20px;
             width: 100%;
+            padding: 10px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: none;">
             <i class="fas fa-save"></i> Make Default
+        </button>
+        <button class="fancy-button" id="resetToDefaultButton" style="
+            margin-top: 20px;
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #ea9466 0%, #c9bc2a 100%);
+            ">
+            <i class="fa-solid fa-arrow-rotate-left"></i> Reset to Default
         </button>
 
     </div>
