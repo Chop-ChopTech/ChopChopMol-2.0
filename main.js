@@ -3,6 +3,30 @@ import { OrbitControls } from 'jsm/controls/OrbitControls.js';
 import { TrackballControls } from 'jsm/controls/TrackballControls.js';
 import Molecule from './atom/molecule.js';
 import FileHandler from './utils/fileHandler.js';
+import {
+    hideRestrictionMessage,
+    showRestrictionMessage,
+    showSignInPrompt,
+    restoreOriginalHandlers,
+    enableAtomInteraction,
+    enableAllFeatures,
+    disableAtomInteraction,
+    storeOriginalHandlers,
+    restrictFeatures,
+    updateFeatureAccess,
+    originalEventHandlers,
+    isUserSignedIn
+
+} from './handleFeatures.js';
+
+import {
+    saveStylePreferences,
+    loadStylePreferences,
+    applyStylePreferences,
+    showNotification,
+    resetToDefaults,
+
+} from './handleStyles.js';
 // WE WILL NOW TRY TO MAKE THIS AMAZING WEBSITE AN APP. IT MAY GO AMAZINGLY OR IT MAY GO HORRIBLY.
 // It went well!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // Please refer the the README.md file for more information
@@ -377,6 +401,7 @@ window.addEventListener('keyup', function (e) {
         controls.enabled = true;
     }
 });
+
 
 window.addEventListener('keydown', function (e) {
     if (isLPressed && e.key === 'Enter') {
@@ -834,110 +859,112 @@ function rotateAroundAxis(atomIndices, angle) {
 
 function onPointerDown(event) {
     if (editingMolecule) {
-        if (!main.molecule || !main.molecule.instancedMesh) {
-            console.warn('Molecule or instancedMesh not initialized');
-            return;
-        }
+        if (isUserSignedIn) {
+            if (!main.molecule || !main.molecule.instancedMesh) {
+                console.warn('Molecule or instancedMesh not initialized');
+                return;
+            }
 
-        // Convert mouse to normalized device coordinates
-        const rect = renderer.domElement.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            // Convert mouse to normalized device coordinates
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-        if (event.button === 0) { // Left click
-            // Update bounds before raycasting
-            updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
+            if (event.button === 0) { // Left click
+                // Update bounds before raycasting
+                updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
 
-            raycaster.setFromCamera(mouse, camera);
+                raycaster.setFromCamera(mouse, camera);
 
-            // Use enhanced raycasting
-            const intersects = enhancedRaycast(raycaster, main.molecule.instancedMesh, main.molecule.atoms);
+                // Use enhanced raycasting
+                const intersects = enhancedRaycast(raycaster, main.molecule.instancedMesh, main.molecule.atoms);
 
-            if (intersects.length > 0) {
-                // Clicking on an atom
-                const instanceId = intersects[0].instanceId;
-                if (instanceId !== undefined) {
-                    if (shiftDown) {
-                        // Shift + click: start dragging
-                        dragging = true;
+                if (intersects.length > 0) {
+                    // Clicking on an atom
+                    const instanceId = intersects[0].instanceId;
+                    if (instanceId !== undefined) {
+                        if (shiftDown) {
+                            // Shift + click: start dragging
+                            dragging = true;
 
-                        // If the clicked atom isn't in the selection, add it
-                        if (!atomsSelected.includes(instanceId)) {
-                            atomsSelected.push(instanceId);
+                            // If the clicked atom isn't in the selection, add it
+                            if (!atomsSelected.includes(instanceId)) {
+                                atomsSelected.push(instanceId);
+                                selectAtom(instanceId);
+                            }
+
+                            // Set up drag plane through the clicked atom
+                            const atom = main.molecule.atoms[instanceId];
+
+                            // Use actual world position for better accuracy
+                            const worldPos = getAtomWorldPosition(instanceId, main.molecule.instancedMesh);
+
+                            dragPlane.setFromNormalAndCoplanarPoint(
+                                camera.getWorldDirection(new THREE.Vector3()),
+                                worldPos
+                            );
+
+                            // Calculate offsets for ALL selected atoms relative to click point
+                            dragOffsets = {};
+                            const intersectPoint = intersects[0].point;
+                            atomsSelected.forEach(idx => {
+                                const atomWorldPos = getAtomWorldPosition(idx, main.molecule.instancedMesh);
+                                dragOffsets[idx] = new THREE.Vector3().copy(atomWorldPos).sub(intersectPoint);
+                            });
+
+                            window.addEventListener('pointermove', onPointerMove, false);
+                            window.addEventListener('pointerup', onPointerUp, false);
+                            return; // Don't do normal selection logic
+                        }
+
+                        if (cmdDown) {
+                            // Cmd + click: toggle atom in selection
+                            if (atomsSelected.includes(instanceId)) {
+                                // Remove from selection
+                                atomsSelected = atomsSelected.filter(id => id !== instanceId);
+                                unselectAtom(instanceId);
+                            } else {
+                                // Add to selection
+                                atomsSelected.push(instanceId);
+                                selectAtom(instanceId, false);
+                            }
+                        } else {
+                            // Normal click: select only this atom
+                            atomsSelected = [instanceId];
+                            unselectAtom(); // Clear all
                             selectAtom(instanceId);
                         }
 
-                        // Set up drag plane through the clicked atom
-                        const atom = main.molecule.atoms[instanceId];
+                        render();
 
-                        // Use actual world position for better accuracy
-                        const worldPos = getAtomWorldPosition(instanceId, main.molecule.instancedMesh);
+                        if (atomsSelected.length > 0) {
+                            editMoleculePanel.classList.remove('on');
+                            const element = main.molecule.atoms[atomsSelected[0]].type;
+                            updateEditingContent(element, main.molecule.atomSettings[element].color);
 
-                        dragPlane.setFromNormalAndCoplanarPoint(
-                            camera.getWorldDirection(new THREE.Vector3()),
-                            worldPos
-                        );
-
-                        // Calculate offsets for ALL selected atoms relative to click point
-                        dragOffsets = {};
-                        const intersectPoint = intersects[0].point;
-                        atomsSelected.forEach(idx => {
-                            const atomWorldPos = getAtomWorldPosition(idx, main.molecule.instancedMesh);
-                            dragOffsets[idx] = new THREE.Vector3().copy(atomWorldPos).sub(intersectPoint);
-                        });
-
-                        window.addEventListener('pointermove', onPointerMove, false);
-                        window.addEventListener('pointerup', onPointerUp, false);
-                        return; // Don't do normal selection logic
-                    }
-
-                    if (cmdDown) {
-                        // Cmd + click: toggle atom in selection
-                        if (atomsSelected.includes(instanceId)) {
-                            // Remove from selection
-                            atomsSelected = atomsSelected.filter(id => id !== instanceId);
-                            unselectAtom(instanceId);
-                        } else {
-                            // Add to selection
-                            atomsSelected.push(instanceId);
-                            selectAtom(instanceId, false);
+                            // Attach button event listeners
+                            attachButtonEventListeners();
                         }
-                    } else {
-                        // Normal click: select only this atom
-                        atomsSelected = [instanceId];
-                        unselectAtom(); // Clear all
-                        selectAtom(instanceId);
                     }
-
-                    render();
-
-                    if (atomsSelected.length > 0) {
-                        editMoleculePanel.classList.remove('on');
-                        const element = main.molecule.atoms[atomsSelected[0]].type;
-                        updateEditingContent(element, main.molecule.atomSettings[element].color);
-
-                        // Attach button event listeners
-                        attachButtonEventListeners();
-                    }
-                }
-            } else {
-                // Clicking on empty space
-                if (cmdDown) {
-                    // Cmd + drag on empty space: start box selection
-                    isSelecting = true;
-                    selectionStart.x = event.clientX;
-                    selectionStart.y = event.clientY;
-                    selectionEnd.x = event.clientX;
-                    selectionEnd.y = event.clientY;
-
-                    selectionBox.style.display = 'block';
-                    updateSelectionBox();
                 } else {
-                    // Normal click on empty space: clear selection
-                    // editMoleculePanel.classList.add('on');
-                    atomsSelected = [];
-                    unselectAtom();
-                    render();
+                    // Clicking on empty space
+                    if (cmdDown) {
+                        // Cmd + drag on empty space: start box selection
+                        isSelecting = true;
+                        selectionStart.x = event.clientX;
+                        selectionStart.y = event.clientY;
+                        selectionEnd.x = event.clientX;
+                        selectionEnd.y = event.clientY;
+
+                        selectionBox.style.display = 'block';
+                        updateSelectionBox();
+                    } else {
+                        // Normal click on empty space: clear selection
+                        // editMoleculePanel.classList.add('on');
+                        atomsSelected = [];
+                        unselectAtom();
+                        render();
+                    }
                 }
             }
         }
@@ -1486,6 +1513,43 @@ function attachAxisEventListeners() {
     }
 }
 
+function recreateRenderer(antialiasEnabled) {
+    // Store current renderer size
+    const width = renderer.domElement.width;
+    const height = renderer.domElement.height;
+
+    // Remove old renderer
+    document.body.removeChild(renderer.domElement);
+
+    // Create new renderer with updated antialias
+    renderer = new THREE.WebGLRenderer({
+        antialias: antialiasEnabled,
+        powerPreference: "high-performance"
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+    window.renderer = renderer;
+
+
+    // Recreate controls
+    controls = new TrackballControls(camera, renderer.domElement);
+    controls.rotateSpeed = 5.0;
+    controls.zoomSpeed = 2.0;
+    controls.panSpeed = 1.0;
+    controls.dynamicDampingFactor = 1.0;
+
+    // IMPORTANT: Re-attach the controls change event listener
+    controls.addEventListener('change', () => {
+        render();
+    });
+
+    // IMPORTANT: Re-attach the pointer down event for atom selection
+    renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
+
+    render();
+}
+
 
 function updateAtomMatrix(atomIndex) {
     const atom = main.molecule.atoms[atomIndex];
@@ -1679,740 +1743,27 @@ function rotateCamera(angleToRotate, camera, controls = null) {
 // Add this to your index.html after the Firebase auth initialization
 
 // Global variable to track authentication state
-let isUserSignedIn = false;
-let originalEventHandlers = {};
 
-// Listen for auth state changes from Firebase (sent from HTML)
+
+// Function to save style preferences to Firestore
+
+
+// Function to recreate renderer with new antialias setting
+
+
+// Function to show notification
+
 window.addEventListener('authStateChanged', (event) => {
     const { user, isSignedIn } = event.detail;
     updateFeatureAccess(user, isSignedIn);
+    editingMolecule = isSignedIn
 });
 
-// Function to update feature access based on authentication
-function updateFeatureAccess(user, signedIn) {
-    isUserSignedIn = signedIn;
-
-    if (isUserSignedIn) {
-        enableAllFeatures();
-        hideRestrictionMessage();
-    } else {
-        restrictFeatures();
-        showRestrictionMessage();
-    }
-}
-
-// Function to restrict features for non-signed-in users
-function restrictFeatures() {
-    console.log('Restricting features for non-signed-in user');
-
-    // Store original event handlers before removing them
-    storeOriginalHandlers();
-
-    // Disable editing functionality
-    disableAtomInteraction();
-
-    // Disable specific buttons with visual feedback
-    const restrictedButtons = [
-        'aiGenerate',
-        'import-smiles',
-        'import-json',
-        'compareButton',
-        'analyze-molecule',
-        'clear-canvas',
-        'switchMode'
-    ];
-
-    restrictedButtons.forEach(buttonId => {
-        const button = document.getElementById(buttonId);
-        if (button) {
-            // Visual changes
-            button.style.opacity = '0.5';
-            button.style.cursor = 'not-allowed';
-            button.title = 'Sign in to use this feature';
-            button.classList.add('feature-tooltip');
-
-            // Remove existing event listeners by cloning
-            const newButton = button.cloneNode(true);
-            button.parentNode.replaceChild(newButton, button);
-
-            // Add restricted click handler - DON'T disable the button
-            newButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Restricted button clicked:', buttonId);
-                showSignInPrompt();
-            });
-        }
-    });
-
-    // Hide editing panel
-    const editPanel = document.getElementById('editMoleculePanel');
-    if (editPanel) {
-        editPanel.classList.add('restricted');
-    }
-
-    // Disable style controls
-    const styleSelector = document.getElementById('styleSelector');
-    if (styleSelector) {
-        styleSelector.classList.add('restricted');
-    }
-
-    // Hide input panels
-    const panels = ['chatContainer', 'smilesContainer', 'jsonContainer'];
-    panels.forEach(panelId => {
-        const panel = document.getElementById(panelId);
-        if (panel) {
-            panel.classList.remove('on');
-            panel.classList.add('restricted');
-        }
-    });
-}
-
-// Function to store original event handlers
-function storeOriginalHandlers() {
-    // Store original pointer down handler
-    if (renderer && renderer.domElement && renderer.domElement.onpointerdown) {
-        originalEventHandlers.pointerdown = renderer.domElement.onpointerdown;
-    }
-
-    // Store other important handlers as needed
-    originalEventHandlers.keydownHandlers = [];
-}
-
-// Function to disable atom interaction
-function disableAtomInteraction() {
-    // Override pointer events for atom selection
-    if (renderer && renderer.domElement) {
-        originalEventHandlers.pointerdown = renderer.domElement.onpointerdown;
-
-        renderer.domElement.onpointerdown = function (event) {
-            // Only show prompt if user actually clicked on an atom, not empty space
-            if (!isUserSignedIn) {
-                // Check if click hit an atom by using raycaster
-                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-                raycaster.setFromCamera(mouse, camera);
-
-                // Only show prompt if we actually hit something interactive
-                if (main && main.molecule && main.molecule.instancedMesh) {
-                    const intersects = raycaster.intersectObject(main.molecule.instancedMesh);
-                    if (intersects.length > 0) {
-                        // User clicked on an atom, show the sign-in prompt
-                        showSignInPrompt();
-                    }
-                    // If no intersects, just allow normal camera controls (no prompt)
-                }
-                return;
-            }
-
-            // Call original if signed in
-            if (originalEventHandlers.pointerdown) {
-                originalEventHandlers.pointerdown.call(this, event);
-            }
-        };
-    }
-
-    // Override keyboard events for editing
-    const restrictedKeyHandler = function (event) {
-        if (!isUserSignedIn) {
-            // Block editing keys silently - no prompts
-            if (event.key === 'Shift' || event.key === 'Meta' || event.key === 'Control' ||
-                event.key === 'j' || (event.key === 'l' && event.type === 'keydown')) {
-                event.preventDefault();
-                event.stopPropagation();
-                return false;
-            }
-        }
-    };
-
-    document.addEventListener('keydown', restrictedKeyHandler, true);
-    document.addEventListener('keyup', restrictedKeyHandler, true);
-    originalEventHandlers.restrictedKeyHandler = restrictedKeyHandler;
-
-    // Clear any existing atom selections
-    if (typeof atomsSelected !== 'undefined') {
-        atomsSelected = [];
-    }
-
-    // Disable editing mode
-    if (typeof editingMolecule !== 'undefined') {
-        editingMolecule = false;
-    }
-}
-
-// Function to enable all features for signed-in users
-function enableAllFeatures() {
-    console.log('Enabling all features for signed-in user');
-
-    // Remove restrictions from buttons
-    const allButtons = document.querySelectorAll('.fancy-button');
-    allButtons.forEach(button => {
-        button.disabled = false;
-        button.style.opacity = '1';
-        button.style.cursor = 'pointer';
-        button.title = '';
-        button.classList.remove('feature-tooltip');
-    });
-
-    // Show editing panel
-    const editPanel = document.getElementById('editMoleculePanel');
-    if (editPanel) {
-        editPanel.classList.remove('restricted');
-        editPanel.style.display = 'block';
-    }
-
-    // Enable style controls
-    const styleSelector = document.getElementById('styleSelector');
-    if (styleSelector) {
-        styleSelector.classList.remove('restricted');
-    }
-
-    // Enable input panels
-    const panels = ['chatContainer', 'smilesContainer', 'jsonContainer'];
-    panels.forEach(panelId => {
-        const panel = document.getElementById(panelId);
-        if (panel) {
-            panel.classList.remove('restricted');
-        }
-    });
-
-    // Restore atom interaction
-    enableAtomInteraction();
-
-    // Re-attach original event listeners
-    restoreOriginalHandlers();
-}
-
-// Function to restore atom interaction
-function enableAtomInteraction() {
-    // Restore original pointer events
-    if (renderer && renderer.domElement && originalEventHandlers.pointerdown) {
-        renderer.domElement.onpointerdown = originalEventHandlers.pointerdown;
-    }
-
-    // Remove restricted key handlers
-    if (originalEventHandlers.restrictedKeyHandler) {
-        document.removeEventListener('keydown', originalEventHandlers.restrictedKeyHandler, true);
-        document.removeEventListener('keyup', originalEventHandlers.restrictedKeyHandler, true);
-    }
-
-    // Re-enable editing mode
-    if (typeof editingMolecule !== 'undefined') {
-        editingMolecule = true;
-    }
-}
-
-// Function to restore original event handlers
-function restoreOriginalHandlers() {
-    // Re-attach AI Generate button
-    const aiGenerateButton = document.getElementById('aiGenerate');
-    if (aiGenerateButton) {
-        const newButton = aiGenerateButton.cloneNode(true);
-        aiGenerateButton.parentNode.replaceChild(newButton, aiGenerateButton);
-
-        newButton.addEventListener('click', () => {
-            const aiGeneratePanel = document.getElementById('chatContainer');
-            const smilesPanel = document.getElementById('smilesContainer');
-            const jsonPanel = document.getElementById('jsonContainer');
-
-            if (aiGeneratePanel) aiGeneratePanel.classList.toggle('on');
-            if (smilesPanel) smilesPanel.classList.remove('on');
-            if (jsonPanel) jsonPanel.classList.remove('on');
-        });
-    }
-
-    // Re-attach SMILES button
-    const smilesButton = document.getElementById('import-smiles');
-    if (smilesButton) {
-        const newButton = smilesButton.cloneNode(true);
-        smilesButton.parentNode.replaceChild(newButton, smilesButton);
-
-        newButton.addEventListener('click', () => {
-            const smilesPanel = document.getElementById('smilesContainer');
-            const aiGeneratePanel = document.getElementById('chatContainer');
-            const jsonPanel = document.getElementById('jsonContainer');
-
-            if (smilesPanel) smilesPanel.classList.toggle('on');
-            if (aiGeneratePanel) aiGeneratePanel.classList.remove('on');
-            if (jsonPanel) jsonPanel.classList.remove('on');
-        });
-    }
-
-    // Re-attach JSON button
-    const jsonButton = document.getElementById('import-json');
-    if (jsonButton) {
-        const newButton = jsonButton.cloneNode(true);
-        jsonButton.parentNode.replaceChild(newButton, jsonButton);
-
-        newButton.addEventListener('click', () => {
-            const jsonPanel = document.getElementById('jsonContainer');
-            const smilesPanel = document.getElementById('smilesContainer');
-            const aiGeneratePanel = document.getElementById('chatContainer');
-
-            if (jsonPanel) jsonPanel.classList.toggle('on');
-            if (smilesPanel) smilesPanel.classList.remove('on');
-            if (aiGeneratePanel) aiGeneratePanel.classList.remove('on');
-        });
-    }
-
-    // Re-attach analyze molecule button
-    const analyzeMoleculeButton = document.getElementById('analyze-molecule');
-    if (analyzeMoleculeButton) {
-        const newButton = analyzeMoleculeButton.cloneNode(true);
-        analyzeMoleculeButton.parentNode.replaceChild(newButton, analyzeMoleculeButton);
-
-        newButton.addEventListener('click', () => {
-            const images = [];
-            const numImages = 3;
-            for (let i = 0; i < numImages; i++) {
-                if (typeof getScreenUrl === 'function') {
-                    const imgData = getScreenUrl();
-                    images.push(imgData);
-                }
-                if (typeof rotateCamera === 'function' && typeof camera !== 'undefined' && typeof controls !== 'undefined') {
-                    rotateCamera(Math.PI / (numImages / 2), camera, controls);
-                }
-            }
-            if (typeof main !== 'undefined' && main.data) {
-                window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
-            }
-        });
-    }
-
-    // Re-attach clear canvas button
-    const clearSceneButton = document.getElementById('clear-canvas');
-    if (clearSceneButton) {
-        const newButton = clearSceneButton.cloneNode(true);
-        clearSceneButton.parentNode.replaceChild(newButton, clearSceneButton);
-
-        newButton.addEventListener('click', () => {
-            if (typeof main !== 'undefined' && typeof main.reset === 'function') {
-                main.reset();
-            }
-        });
-    }
-
-    // Re-attach switch mode button
-    const switchModeButton = document.getElementById('switchMode');
-    if (switchModeButton) {
-        const newButton = switchModeButton.cloneNode(true);
-        switchModeButton.parentNode.replaceChild(newButton, switchModeButton);
-
-        newButton.addEventListener('click', () => {
-            const styleSelector = document.getElementById('styleSelector');
-            if (styleSelector) {
-                styleSelector.classList.toggle('on');
-            }
-        });
-    }
-}
-
-// Function to show sign-in prompt
-function showSignInPrompt() {
-    const message = '';
-
-    // Create a nicer modal instead of alert
-    let modal = document.getElementById('signInModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'signInModal';
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 20000;
-            backdrop-filter: blur(5px);
-        `;
-
-        const modalContent = document.createElement('div');
-        modalContent.style.cssText = `
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            max-width: 400px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        `;
-
-        modalContent.innerHTML = `
-            <h3 style="color: #333; margin-bottom: 15px;"><span style="font-size: 35px;">🔒</span><br> Sign in with Google to unlock this feature!</h3>
-            <p style="color: #666; margin-bottom: 25px;">${message}</p>
-            <button id="modalSignIn" style="
-                background: linear-gradient(135deg,rgb(102, 130, 255) 0%,rgb(124, 39, 208) 100%);
-
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 8px;
-                cursor: pointer;
-                margin-right: 10px;
-                font-weight: 600;
-            ">Sign In with Google</button>
-            <button id="modalCancel" class="shake-button" style="
-                background: #f0f0f0;
-                color:rgb(255, 141, 141);
-                border: none;
-                padding: 12px 24px;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 600;
-            ">Maybe Later</button>
-        `;
-
-
-        modal.appendChild(modalContent);
-        document.body.appendChild(modal);
-
-        // Handle modal buttons
-        document.getElementById('modalSignIn').addEventListener('click', () => {
-            const signInButton = document.getElementById('signInButton');
-            if (signInButton) {
-                signInButton.click();
-            }
-            modal.remove();
-        });
-
-        document.getElementById('modalCancel').addEventListener('click', () => {
-            modal.remove();
-        });
-
-        // Close on background click
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
-    }
-}
-
-// Function to show restriction message
-function showRestrictionMessage() {
-    let restrictionMessage = document.getElementById('restrictionMessage');
-    if (!restrictionMessage) {
-        restrictionMessage = document.createElement('div');
-        restrictionMessage.id = 'restrictionMessage';
-        restrictionMessage.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 10px;
-            z-index: 10000;
-            font-family: 'Rubik', sans-serif;
-            font-size: 14px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            text-align: center;
-            animation: slideInFromTop 0.5s ease-out;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        `;
-        document.body.appendChild(restrictionMessage);
-    }
-
-    restrictionMessage.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <i class="fas fa-eye"></i>
-            <span><strong>View Mode:</strong> Sign in to unlock editing, AI generation, and analysis features</span>
-        </div>
-        <button id="dismissBanner" class="dismiss" title="Dismiss">×</button>
-    `;
-    restrictionMessage.style.display = 'flex';
-
-    // Add dismiss functionality
-    const dismissButton = document.getElementById('dismissBanner');
-    if (dismissButton) {
-        dismissButton.addEventListener('click', () => {
-            restrictionMessage.style.animation = 'slideOutToTop 0.3s ease-in forwards';
-            setTimeout(() => {
-                if (restrictionMessage.parentNode) {
-                    restrictionMessage.remove();
-                }
-            }, 300);
-        });
-
-        // Hover effect for dismiss button
-        dismissButton.addEventListener('mouseenter', () => {
-            dismissButton.style.background = 'rgba(255, 255, 255, 0.3)';
-        });
-
-        dismissButton.addEventListener('mouseleave', () => {
-            dismissButton.style.background = 'rgba(255, 255, 255, 0.2)';
-        });
-    }
-
-    // Auto-dismiss after 8 seconds
-    setTimeout(() => {
-        if (restrictionMessage && restrictionMessage.parentNode && !isUserSignedIn) {
-            restrictionMessage.style.animation = 'slideOutToTop 0.3s ease-in forwards';
-            setTimeout(() => {
-                if (restrictionMessage.parentNode) {
-                    restrictionMessage.remove();
-                }
-            }, 300);
-        }
-    }, 8000);
-
-    // Enhance sign-in button
-    const signInButton = document.getElementById('signInButton');
-    if (signInButton) {
-        signInButton.classList.add('featured');
-    }
-}
-
-// Function to hide restriction message
-function hideRestrictionMessage() {
-    const restrictionMessage = document.getElementById('restrictionMessage');
-    if (restrictionMessage) {
-        restrictionMessage.style.display = 'none';
-    }
-
-    // Remove enhancement from sign-in button
-    const signInButton = document.getElementById('signInButton');
-    if (signInButton) {
-        signInButton.classList.remove('featured');
-    }
-}
-
-// Initialize with restrictions (will be overridden when auth state is determined)
 document.addEventListener('DOMContentLoaded', () => {
     // Start with restricted access
     restrictFeatures();
 });
 
-// Function to save style preferences to Firestore
-async function saveStylePreferences(userId) {
-    if (!window.firebaseDB || !userId) {
-        console.error('Firebase DB not initialized or no user ID');
-        return false;
-    }
-
-    try {
-        const stylePrefs = {
-            roughness: parseFloat(document.getElementById('style1').value),
-            metalness: parseFloat(document.getElementById('style2').value),
-            opacity: parseFloat(document.getElementById('style3').value),
-            bonds: parseFloat(document.getElementById('style4').value) || 1, // Default if no value
-            atomSize: parseFloat(document.getElementById('style5').value),
-            resolution: parseInt(document.getElementById('style6').value),
-            antialias: document.getElementById('style7').checked,
-            backgroundColor: document.getElementById('style8').value,
-            toggleStyleChanges: document.getElementById('toggleStyleChanges').checked,
-            toggleLabels: document.getElementById('toggleLabels').checked,
-            lastUpdated: new Date().toISOString()
-        };
-
-        console.log('Saving preferences:', stylePrefs);
-
-        const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');
-        await setDoc(doc(window.firebaseDB, 'userPreferences', userId), {
-            stylePreferences: stylePrefs
-        }, { merge: true });
-
-        // Show success feedback
-        showNotification('Style preferences saved as default!', 'success');
-        return true;
-    } catch (error) {
-        console.error('Error saving style preferences:', error);
-        showNotification('Failed to save preferences', 'error');
-        return false;
-    }
-}
-
-// Function to load style preferences from Firestore
-async function loadStylePreferences(userId) {
-    if (!window.firebaseDB || !userId) {
-        console.error('Firebase DB not initialized or no user ID');
-        return null;
-    }
-
-    try {
-        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');
-        const docRef = doc(window.firebaseDB, 'userPreferences', userId);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.stylePreferences) {
-                console.log('Loading preferences:', data.stylePreferences);
-                applyStylePreferences(data.stylePreferences);
-                showNotification('Default styles loaded!', 'info');
-                return data.stylePreferences;
-            }
-        }
-        console.log('No saved preferences found for user');
-        return null;
-    } catch (error) {
-        console.error('Error loading style preferences:', error);
-        return null;
-    }
-}
-
-// Function to apply loaded style preferences
-function applyStylePreferences(prefs) {
-    // Apply roughness
-    if (prefs.roughness !== undefined) {
-        document.getElementById('style1').value = prefs.roughness;
-        main.roughness = prefs.roughness;
-    }
-
-    // Apply metalness
-    if (prefs.metalness !== undefined) {
-        document.getElementById('style2').value = prefs.metalness;
-        main.metalness = prefs.metalness;
-    }
-
-    // Apply opacity
-    if (prefs.opacity !== undefined) {
-        document.getElementById('style3').value = prefs.opacity;
-        main.opacity = prefs.opacity;
-    }
-
-    // Apply bonds
-    if (prefs.bonds !== undefined) {
-        document.getElementById('style4').value = prefs.bonds;
-        // Note: You may need to add main.bonds or similar variable
-    }
-
-    // Apply atom size
-    if (prefs.atomSize !== undefined) {
-        document.getElementById('style5').value = prefs.atomSize;
-        main.atomSize = prefs.atomSize;
-    }
-
-    // Apply resolution
-    if (prefs.resolution !== undefined) {
-        document.getElementById('style6').value = prefs.resolution;
-        main.resolution = prefs.resolution;
-    }
-
-    // Apply antialias
-    if (prefs.antialias !== undefined) {
-        document.getElementById('style7').checked = prefs.antialias;
-        antialiasToggled = prefs.antialias;
-
-        // If antialias setting changed, recreate renderer
-        if (renderer.antialias !== prefs.antialias) {
-            recreateRenderer(prefs.antialias);
-        }
-    }
-
-    // Apply background color
-    if (prefs.backgroundColor !== undefined && prefs.backgroundColor !== '#ff0000') {
-        document.getElementById('style8').value = prefs.backgroundColor;
-        const color = prefs.backgroundColor;
-        scene.background = new THREE.Color(color);
-        document.body.style.backgroundColor = color;
-    }
-
-    // Apply toggle style changes
-    if (prefs.toggleStyleChanges !== undefined) {
-        document.getElementById('toggleStyleChanges').checked = prefs.toggleStyleChanges;
-        // Trigger the toggle event if needed
-        if (prefs.toggleStyleChanges && mode === 0) {
-            document.getElementById('toggleStyleChanges').dispatchEvent(new Event('change'));
-        }
-    }
-
-    // Apply toggle labels
-    if (prefs.toggleLabels !== undefined) {
-        document.getElementById('toggleLabels').checked = prefs.toggleLabels;
-        labelMode = prefs.toggleLabels;
-        if (main && main.molecule) {
-            main.molecule.toggleLabels(labelMode);
-        }
-    }
-
-    // Update the visualization if a molecule is loaded
-    if (main && main.molecule && mode !== 0) {
-        updateStyles();
-    }
-
-    render();
-}
-
-// Function to recreate renderer with new antialias setting
-function recreateRenderer(antialiasEnabled) {
-    // Store current renderer size
-    const width = renderer.domElement.width;
-    const height = renderer.domElement.height;
-
-    // Remove old renderer
-    document.body.removeChild(renderer.domElement);
-
-    // Create new renderer with updated antialias
-    renderer = new THREE.WebGLRenderer({
-        antialias: antialiasEnabled,
-        powerPreference: "high-performance"
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    document.body.appendChild(renderer.domElement);
-
-    // Recreate controls
-    controls = new TrackballControls(camera, renderer.domElement);
-    controls.rotateSpeed = 5.0;
-    controls.zoomSpeed = 2.0;
-    controls.panSpeed = 1.0;
-    controls.dynamicDampingFactor = 1.0;
-
-    // IMPORTANT: Re-attach the controls change event listener
-    controls.addEventListener('change', () => {
-        render();
-    });
-
-    // IMPORTANT: Re-attach the pointer down event for atom selection
-    renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
-
-    render();
-}
-
-// Function to show notification
-function showNotification(message, type) {
-    // Remove existing notification if any
-    const existingNotif = document.getElementById('styleNotification');
-    if (existingNotif) {
-        existingNotif.remove();
-    }
-
-    const notification = document.createElement('div');
-    notification.id = 'styleNotification';
-    notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        padding: 15px 25px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 600;
-        z-index: 10000;
-        animation: slideIn 0.3s ease-out;
-        ${type === 'success' ? 'background: linear-gradient(135deg, #00c851 0%, #00ff00 100%);' : ''}
-        ${type === 'error' ? 'background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);' : ''}
-        ${type === 'info' ? 'background: linear-gradient(135deg, #33b5e5 0%, #0099cc 100%);' : ''}
-    `;
-
-    document.body.appendChild(notification);
-
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-// Add this after other event listeners in main.js
 const makeDefaultButton = document.getElementById('makeDefaultButton');
 if (makeDefaultButton) {
     makeDefaultButton.addEventListener('click', async () => {
@@ -2437,41 +1788,25 @@ if (makeDefaultButton) {
     });
 }
 
-// Make functions available globally
+if (typeof main !== 'undefined') {
+    restrictFeatures();
+}
+
 window.loadStylePreferences = loadStylePreferences;
 window.saveStylePreferences = saveStylePreferences;
+window.resetToDefaults = resetToDefaults;
+window.recreateRenderer = recreateRenderer;
+window.render = render;
+window.renderer = renderer;
+window.mode = mode
+window.labelMode = labelMode
+window.mouse = mouse
+window.raycaster = raycaster
+window.camera = camera
 
-// Function to reset to default values
-function resetToDefaults() {
-    // Reset sliders to default values
-    document.getElementById('style1').value = 0.17; // Roughness
-    document.getElementById('style2').value = 0.3;  // Metalness
-    document.getElementById('style3').value = 1;    // Opacity
-    document.getElementById('style4').value = 1;    // Bonds
-    document.getElementById('style5').value = 1;    // Atom Size
-    document.getElementById('style6').value = 16;   // Resolution
-    document.getElementById('style7').checked = false; // Antialias
-    document.getElementById('style8').value = '#000000'; // Background (black, not red)
-    document.getElementById('toggleStyleChanges').checked = false;
-    document.getElementById('toggleLabels').checked = false;
 
-    // Reset main object values
-    main.roughness = 0.17;
-    main.metalness = 0.3;
-    main.opacity = 1;
-    main.atomSize = 1;
-    main.resolution = 16;
 
-    // Reset background
-    scene.background = new THREE.Color('#000000');
-    document.body.style.backgroundColor = '#000000';
 
-    // Reset other states
-    antialiasToggled = false;
-    labelMode = false;
-
-    render();
-}
 
 const resetToDefaultsButton = document.getElementById('resetToDefaultButton');
 if (resetToDefaultsButton) {
@@ -2484,11 +1819,7 @@ if (resetToDefaultsButton) {
 }
 
 // Make it globally available
-window.resetToDefaults = resetToDefaults;
-// Also listen for when the main object is ready
-if (typeof main !== 'undefined') {
-    restrictFeatures();
-}
+
 function createRenderer(antialiasOn) {
     if (renderer) {
         // Remove old canvas

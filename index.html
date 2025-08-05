@@ -137,7 +137,7 @@
                 // Load user's style preferences after a short delay
                 setTimeout(() => {
                     if (window.loadStylePreferences) {
-                        window.loadStylePreferences(user.uid);
+                        window.loadStylePreferences(user.uid, window.renderer);
                     }
                 }, 1000);
             } else {
@@ -159,7 +159,7 @@
                 }
 
                 // Reset to default values when signed out
-                resetToDefaults();
+
 
                 // Notify main.js about auth state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
