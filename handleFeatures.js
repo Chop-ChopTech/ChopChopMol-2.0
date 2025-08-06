@@ -17,12 +17,10 @@ export function updateFeatureAccess(user, signedIn) {
     if (isUserSignedIn) {
         enableAllFeatures();
         hideRestrictionMessage();
-        editingMolecule = true
 
     } else {
         restrictFeatures();
         showRestrictionMessage();
-        editingMolecule = false
 
     }
 }

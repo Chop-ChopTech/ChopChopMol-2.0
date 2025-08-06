@@ -1792,11 +1792,16 @@ if (typeof main !== 'undefined') {
     restrictFeatures();
 }
 
+function setSceneColor(color) {
+    scene.background = new THREE.Color(color);
+}
+
 window.loadStylePreferences = loadStylePreferences;
 window.saveStylePreferences = saveStylePreferences;
 window.resetToDefaults = resetToDefaults;
 window.recreateRenderer = recreateRenderer;
 window.render = render;
+window.setSceneColor = setSceneColor;
 window.renderer = renderer;
 window.mode = mode
 window.labelMode = labelMode

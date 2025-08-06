@@ -121,7 +121,7 @@ export function applyStylePreferences(prefs, renderer) {
     if (prefs.backgroundColor !== undefined && prefs.backgroundColor !== '#ff0000') {
         document.getElementById('style8').value = prefs.backgroundColor;
         const color = prefs.backgroundColor;
-        scene.background = new THREE.Color(color);
+        window.setSceneColor(color);
         document.body.style.backgroundColor = color;
     }
 
