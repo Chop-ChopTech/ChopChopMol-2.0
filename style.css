@@ -1076,6 +1076,8 @@ input[type="range"]:focus {
 }
 
 
+
+
 @keyframes slideIn {
     from {
         transform: translateX(100%);

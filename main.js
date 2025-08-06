@@ -1185,10 +1185,46 @@ function attachButtonEventListeners() {
         fragmentBtn.parentNode.replaceChild(newFragmentBtn, fragmentBtn);
 
         newFragmentBtn.addEventListener('click', () => {
-            const fragment = [...atomsSelected]; // Create a copy of the array
-            fragments.push(fragment);
+            // Create a copy of the selected atoms for the new fragment
+            const newFragment = [...atomsSelected];
 
-            // Update the editing content to show the new fragment
+            // Get all atom indices in the molecule
+            const totalAtoms = main.molecule.atoms.length;
+            const allAtomIndices = Array.from({ length: totalAtoms }, (_, i) => i);
+
+            // Process existing fragments to remove atoms that are now in the new fragment
+            let updatedFragments = fragments.map(fragment => {
+                // Remove atoms from existing fragments if they're in the new fragment
+                return fragment.filter(atomIndex => !newFragment.includes(atomIndex));
+            }).filter(fragment => fragment.length > 0); // Remove empty fragments
+
+            // Find all atoms that are not in any fragment (including the new one)
+            const atomsInFragments = new Set([
+                ...newFragment,
+                ...updatedFragments.flat()
+            ]);
+
+            const unassignedAtoms = allAtomIndices.filter(index => !atomsInFragments.has(index));
+
+            // Create a new fragment for unassigned atoms if there are any
+            if (unassignedAtoms.length > 0) {
+                // Check if there's already an "unassigned" fragment (could be from previous operations)
+                // If not, create one
+                updatedFragments.push(unassignedAtoms);
+            }
+
+            // Add the new fragment
+            updatedFragments.push(newFragment);
+
+            // Update the global fragments array
+            fragments = updatedFragments;
+
+            // Log for debugging
+            console.log('Fragment created:', newFragment);
+            console.log('All fragments:', fragments);
+            console.log('Total atoms covered:', fragments.flat().length, '/', totalAtoms);
+
+            // Update the editing content to show the new fragment list
             if (atomsSelected.length > 0) {
                 const firstAtom = main.molecule.atoms[atomsSelected[0]];
                 updateEditingContent(firstAtom.type, main.molecule.atomSettings[firstAtom.type].color);
@@ -1207,6 +1243,106 @@ function attachButtonEventListeners() {
 
     // Attach axis event listeners
     attachAxisEventListeners();
+}
+
+function validateFragments() {
+    const totalAtoms = main.molecule.atoms.length;
+    const allAtomIndices = Array.from({ length: totalAtoms }, (_, i) => i);
+
+    // Remove duplicates within each fragment
+    fragments = fragments.map(fragment => [...new Set(fragment)]);
+
+    // Check for atoms that appear in multiple fragments
+    const atomCounts = new Map();
+    fragments.forEach((fragment, fragmentIndex) => {
+        fragment.forEach(atomIndex => {
+            if (!atomCounts.has(atomIndex)) {
+                atomCounts.set(atomIndex, []);
+            }
+            atomCounts.get(atomIndex).push(fragmentIndex);
+        });
+    });
+
+    // Remove atoms from later fragments if they appear in multiple
+    atomCounts.forEach((fragmentIndices, atomIndex) => {
+        if (fragmentIndices.length > 1) {
+            // Keep the atom only in the first fragment
+            for (let i = 1; i < fragmentIndices.length; i++) {
+                const fragIndex = fragmentIndices[i];
+                fragments[fragIndex] = fragments[fragIndex].filter(idx => idx !== atomIndex);
+            }
+        }
+    });
+
+    // Remove empty fragments
+    fragments = fragments.filter(fragment => fragment.length > 0);
+
+    // Find unassigned atoms
+    const assignedAtoms = new Set(fragments.flat());
+    const unassignedAtoms = allAtomIndices.filter(index => !assignedAtoms.has(index));
+
+    // Add unassigned atoms as a new fragment if any exist
+    if (unassignedAtoms.length > 0) {
+        fragments.push(unassignedAtoms);
+    }
+
+    return fragments;
+}
+
+
+
+
+function highlightFragment(fragmentIndex) {
+    if (fragmentIndex >= fragments.length) {
+        console.error('Invalid fragment index');
+        return;
+    }
+
+    const fragment = fragments[fragmentIndex];
+    const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+
+    // Define distinct colors for fragments
+    const fragmentColors = [
+        new THREE.Color(0x0352ff),
+        new THREE.Color(0xf5b638),
+        new THREE.Color(0x7af538),
+        new THREE.Color(0xd75eff),
+        new THREE.Color(0x5eb9ff),
+        new THREE.Color(0x00ffff),
+        new THREE.Color(0x715eff),
+        new THREE.Color(0xf7baff),
+    ];
+
+    const color = fragmentColors[fragmentIndex % fragmentColors.length];
+
+    // Apply the fragment color
+    fragment.forEach(atomIndex => {
+        colorAttr.setXYZ(atomIndex, color.r, color.g, color.b);
+    });
+
+    colorAttr.needsUpdate = true;
+    render();
+}
+
+function resetFragments() {
+    fragments = [];
+
+    // Reset atom colors to their original element colors
+    const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+    for (let i = 0; i < colorAttr.count; i++) {
+        const atom = main.molecule.atoms[i];
+        const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+        colorAttr.setXYZ(i, color.r, color.g, color.b);
+    }
+    colorAttr.needsUpdate = true;
+
+    // Update UI
+    if (atomsSelected.length > 0) {
+        const firstAtom = main.molecule.atoms[atomsSelected[0]];
+        updateEditingContent(firstAtom.type, main.molecule.atomSettings[firstAtom.type].color);
+    }
+
+    render();
 }
 
 // Updated updateEditingContent function in main.js
@@ -1606,10 +1742,11 @@ function selectFragment(fragmentAtoms, fragmentIndex) {
     console.log(atomsSelected);
 
     // Highlight all atoms in the fragment
-    atomsSelected.forEach(atomIndex => {
-        selectAtom(atomIndex, false);
-        render();
-    });
+    highlightFragment(fragmentIndex);
+    // atomsSelected.forEach(atomIndex => {
+    //     selectAtom(atomIndex, false);
+    //     render();
+    // });
     render();
 
 
@@ -1809,6 +1946,14 @@ window.mouse = mouse
 window.raycaster = raycaster
 window.camera = camera
 
+const buttonSound = new Audio()
+buttonSound.src = "Create.wav"
+
+document.querySelectorAll('button').forEach(button => {
+    button.addEventListener('click', (event) => {
+        buttonSound.play()
+    });
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     // Save molecule
