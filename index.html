@@ -22,6 +22,8 @@
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        import { collection, addDoc, getDocs, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
 
         // After initializing Firebase app
 
@@ -102,6 +104,122 @@
             }
         }
 
+        async function saveMolecule(moleculeName) {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('Please sign in to save molecules');
+                return;
+            }
+
+            if (!window.main || !window.main.data) {
+                alert('No molecule loaded to save');
+                return;
+            }
+
+            try {
+                const moleculesRef = collection(db, 'users', user.uid, 'molecules');
+                await addDoc(moleculesRef, {
+                    name: moleculeName,
+                    data: window.main.data,
+                    timestamp: serverTimestamp(),
+                    atomCount: window.main.data.numAtoms
+                });
+
+                showSaveNotification('Molecule saved successfully!');
+                return true;
+            } catch (error) {
+                console.error('Error saving molecule:', error);
+                alert('Error saving molecule');
+                return false;
+            }
+        }
+
+        async function loadMoleculesList() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('Please sign in to load molecules');
+                return [];
+            }
+
+            try {
+                const moleculesRef = collection(db, 'users', user.uid, 'molecules');
+                const q = query(moleculesRef, orderBy('timestamp', 'desc'));
+                const snapshot = await getDocs(q);
+
+                const molecules = [];
+                snapshot.forEach((doc) => {
+                    molecules.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                return molecules;
+            } catch (error) {
+                console.error('Error loading molecules:', error);
+                return [];
+            }
+        }
+
+        function loadMolecule(moleculeData) {
+            if (!moleculeData || !moleculeData.data) return;
+
+            window.main.data = moleculeData.data;
+            window.main.newMolecule(
+                moleculeData.data,
+                window.main.mode || 0,
+                false,
+                { x: 0, y: 0, z: 0 },
+                { x: 0, y: 0, z: 0 }
+            );
+
+            showSaveNotification(`Loaded: ${moleculeData.name}`);
+        }
+
+        async function deleteMolecule(moleculeId) {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            if (!confirm('Delete this molecule?')) return;
+
+            try {
+                await deleteDoc(doc(db, 'users', user.uid, 'molecules', moleculeId));
+                showSaveNotification('Molecule deleted');
+                return true;
+            } catch (error) {
+                console.error('Error deleting:', error);
+                return false;
+            }
+        }
+
+        function showSaveNotification(message) {
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                font-family: 'Rubik', sans-serif;
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 2000);
+        }
+
+        window.saveMolecule = saveMolecule;
+        window.loadMoleculesList = loadMoleculesList;
+        window.loadMolecule = loadMolecule;
+        window.deleteMolecule = deleteMolecule;
+
         // Listen for auth state changes and update UI
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -166,6 +284,17 @@
                     detail: { user: null, isSignedIn: false }
                 }));
             }
+            const saveSection = document.getElementById('molecule-save-section');
+            if (saveSection) {
+                saveSection.style.display = user ? 'block' : 'none';
+
+                if (!user) {
+                    // Add sign-in prompt
+                    const prompt = document.createElement('div');
+                    prompt.innerHTML = '<p style="color: white; padding: 10px;">Sign in to save molecules</p>';
+                    saveSection.parentElement.insertBefore(prompt, saveSection);
+                }
+            }
         });
     </script>
 
@@ -205,6 +334,37 @@
                 <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
                 <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255);"><i
                         class="fas fa-file-download"></i> Save XYZ</button>
+            </div>
+        </div>
+
+        <div class="dropdown" id="saveMoleculeToCloud">
+            <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
+            <div class="dropdown-content" style="width: 200px;">
+                <div id="molecule-save-section">
+                    <input type="text" id="molecule-name-input" placeholder="Molecule name..." class="fancy-textbox"
+                        style="margin: 10px; width: calc(100% - 40px);">
+                    <button class="fancy-button" id="save-molecule-btn"
+                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100%;">
+                        <i class="fas fa-cloud-upload-alt"></i> Save to Cloud
+                    </button>
+                    <hr style="margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">
+                    <button class="fancy-button" id="load-molecules-btn"
+                        style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); width: 100%;">
+                        <i class="fas fa-folder-open"></i> My Molecules
+                    </button>
+                    <select id="molecules-list" class="fancy-textbox"
+                        style="display: none; margin: 5px; width: calc(100% - 10px);">
+                        <option value="">Select a molecule...</option>
+                    </select>
+                    <div id="molecule-actions" style="display: none;">
+                        <button class="fancy-button" id="load-selected-btn" style="background: #4CAF50; margin: 5px;">
+                            Load
+                        </button>
+                        <button class="fancy-button" id="delete-selected-btn" style="background: #f44336; margin: 5px;">
+                            Delete
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="dropdown" id="settings">

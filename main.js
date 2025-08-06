@@ -1810,7 +1810,80 @@ window.raycaster = raycaster
 window.camera = camera
 
 
+document.addEventListener('DOMContentLoaded', () => {
+    // Save molecule
+    document.getElementById('save-molecule-btn')?.addEventListener('click', async () => {
+        const nameInput = document.getElementById('molecule-name-input');
+        const name = nameInput.value.trim();
 
+        if (!name) {
+            alert('Please enter a molecule name');
+            return;
+        }
+
+        const saved = await saveMolecule(name);
+        if (saved) {
+            nameInput.value = '';
+        }
+    });
+
+    // Load molecules list
+    document.getElementById('load-molecules-btn')?.addEventListener('click', async () => {
+        const molecules = await loadMoleculesList();
+        const select = document.getElementById('molecules-list');
+        const actions = document.getElementById('molecule-actions');
+
+        if (molecules.length === 0) {
+            alert('No saved molecules found');
+            return;
+        }
+
+        // Clear and populate
+        select.innerHTML = '<option value="">Select a molecule...</option>';
+        molecules.forEach(mol => {
+            const option = document.createElement('option');
+            option.value = JSON.stringify(mol);
+            option.textContent = `${mol.name} (${mol.atomCount} atoms)`;
+            select.appendChild(option);
+        });
+
+        select.style.display = 'block';
+        actions.style.display = 'block';
+    });
+
+    // Load selected
+    document.getElementById('load-selected-btn')?.addEventListener('click', () => {
+        const select = document.getElementById('molecules-list');
+        if (!select.value) {
+            alert('Please select a molecule');
+            return;
+        }
+
+        const moleculeData = JSON.parse(select.value);
+        loadMolecule(moleculeData);
+
+        // Hide the selection UI
+        select.style.display = 'none';
+        document.getElementById('molecule-actions').style.display = 'none';
+    });
+
+    // Delete selected
+    document.getElementById('delete-selected-btn')?.addEventListener('click', async () => {
+        const select = document.getElementById('molecules-list');
+        if (!select.value) {
+            alert('Please select a molecule');
+            return;
+        }
+
+        const moleculeData = JSON.parse(select.value);
+        const deleted = await deleteMolecule(moleculeData.id);
+
+        if (deleted) {
+            // Refresh the list
+            document.getElementById('load-molecules-btn').click();
+        }
+    });
+});
 
 
 const resetToDefaultsButton = document.getElementById('resetToDefaultButton');

@@ -1075,6 +1075,19 @@ input[type="range"]:focus {
     left: 10px;
 }
 
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
 /* Accessibility: Focus state for keyboard navigation */
 .dropdown-icon:focus+.dropdown-content {
     display: block;
