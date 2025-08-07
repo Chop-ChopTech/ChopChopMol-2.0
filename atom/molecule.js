@@ -16,14 +16,14 @@ export default class Molecule {
         this.bondGroup = new THREE.Group();
     }
 
-    init(data, mode, rotation, translation) {
+    init(data, mode, rotation, translation, center) {
         this.reset();
         console.log(data);
 
         const bondThreshold = 1;
 
         this.createAtoms(data, rotation, translation, mode);
-        this.centerMolecule(this.overlay);
+        this.centerMolecule(!center);
 
 
         this.main.scene.add(this.instancedMesh);

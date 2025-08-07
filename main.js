@@ -197,13 +197,13 @@ export default class Main {
         clearScene(this.scene);
         render();
     }
-    newMolecule(data, mode, overlay, rotation, translation) {
+    newMolecule(data, mode, overlay, rotation, translation, center = true) {
 
         if (overlay) {
-            this.overlayMolecule.init(data, mode, rotation, translation);
+            this.overlayMolecule.init(data, mode, rotation, translation, center);
         } else {
             this.reset();
-            this.molecule.init(data, mode, rotation, translation);
+            this.molecule.init(data, mode, rotation, translation, center);
         }
         if (labelMode) {
             this.molecule.toggleLabels(true); // Show labels if in label mode
@@ -216,9 +216,9 @@ export default class Main {
         this.molecule.toggleLabels(labelMode);
         render();
     }
-    createNewMoleculeFromJSON(json, overlay, rotation, translation) {
+    createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true) {
         const data = JSON.parse(json);
-        this.newMolecule(data, this.mode, overlay, rotation, translation);
+        this.newMolecule(data, this.mode, overlay, rotation, translation, center);
         this.data = data;
     }
     setNewMode(style = false) {
@@ -333,7 +333,7 @@ function updateStyles() {
     const previousSelection = [...atomsSelected];
 
     mode = main.setNewMode(true);
-    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false);
 
     // Restore selection after molecule is recreated
     atomsSelected = previousSelection;
@@ -362,7 +362,7 @@ toggleStyleChanges.addEventListener('change', () => {
     } else {
         mode = main.setNewMode();
     }
-    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false);
 
     // Restore selection
     atomsSelected = previousSelection;
@@ -442,7 +442,6 @@ window.addEventListener('resize', () => {
 
 switchModeButton.addEventListener('click', () => {
     // mode = 1 - mode;
-    // main.newMolecule(main.data, mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
     styleSelector.classList.toggle('on');
 });
 
@@ -1185,7 +1184,7 @@ function attachButtonEventListeners() {
                     atomsSelected.forEach(idx => {
                         main.data.atomData[idx].element = replacingMolecule;
                     });
-                    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+                    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false);
                 }
             }
         });
@@ -1203,7 +1202,7 @@ function attachButtonEventListeners() {
             });
             main.data.numAtoms -= atomsSelected.length;
             atomsSelected = [];
-            main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+            main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false);
         });
     }
 
@@ -1677,7 +1676,7 @@ function attachAxisEventListeners() {
         // Reset everything when releasing the slider
         rotationSlider.addEventListener('mouseup', () => {
             if (!isSliderActive) return;
-
+            saveUndoState("Rotate Atoms");
             // Instead of resetting the slider to 0, just set the flag to false
             isSliderActive = false;
 
@@ -1770,6 +1769,7 @@ function updateAtomMatrix(atomIndex) {
 function onPointerUp(event) {
     if (dragging) {
         dragging = false;
+        saveUndoState("Move Atoms");
         dragOffsets = {};
 
         // Clean up axis dragging variables
