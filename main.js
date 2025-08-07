@@ -1737,20 +1737,12 @@ function onPointerUp(event) {
 function selectFragment(fragmentAtoms, fragmentIndex) {
     // Clear current selection
     unselectAtom();
-
     // Set atomsSelected to the fragment atoms
     atomsSelected = [...fragmentAtoms];
     console.log(atomsSelected);
-
     // Highlight all atoms in the fragment
     highlightFragment(fragmentIndex);
-    // atomsSelected.forEach(atomIndex => {
-    //     selectAtom(atomIndex, false);
-    //     render();
-    // });
     render();
-
-
 }
 
 function updateFragmentListSelection(selectedIndex) {
