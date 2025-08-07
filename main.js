@@ -53,6 +53,7 @@ let cmdDown = false;
 
 let atomsSelected = [];
 let fragments = [];
+let fragmentsSelected = [];
 let hoveredAtom = null;
 
 
