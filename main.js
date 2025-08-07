@@ -191,6 +191,8 @@ export default class Main {
 
         // Clear the edit panel
         editMoleculePanel.classList.add('on');
+        fragments = [];
+        fragmentsSelected = [];
 
         clearScene(this.scene);
         render();
@@ -932,6 +934,16 @@ function onPointerDown(event) {
                         } else {
                             // Normal click: select only this atom
                             atomsSelected = [instanceId];
+                            fragments.forEach((fragment, fragIdx) => {
+                                // Check if atomsSelected matches this fragment exactly
+                                if (fragment.length === atomsSelected.length &&
+                                    fragment.every(atom => atomsSelected.includes(atom))) {
+                                    // This selection matches a fragment - add to fragmentsSelected if not there
+                                    if (!fragmentsSelected.includes(fragIdx)) {
+                                        fragmentsSelected.push(fragIdx);
+                                    }
+                                }
+                            });
                             unselectAtom(); // Clear all
                             selectAtom(instanceId);
                         }
@@ -960,10 +972,24 @@ function onPointerDown(event) {
                         selectionBox.style.display = 'block';
                         updateSelectionBox();
                     } else {
-                        // Normal click on empty space: clear selection
-                        // editMoleculePanel.classList.add('on');
-                        atomsSelected = [];
-                        unselectAtom();
+                        // Normal click on empty space: clear atom selection but keep fragments selected
+                        // Don't clear fragmentsSelected - fragments stay selected
+                        // Only clear atomsSelected if no fragments are selected
+                        if (fragmentsSelected.length === 0) {
+                            atomsSelected = [];
+                            unselectAtom();
+                        }
+                        // If fragments are selected, keep their atoms selected
+                        else {
+                            atomsSelected = [];
+                            fragmentsSelected.forEach(fragIdx => {
+                                if (fragIdx < fragments.length) {
+                                    atomsSelected.push(...fragments[fragIdx]);
+                                }
+                            });
+                            // Re-highlight the fragment atoms
+                            selectFragment([], -1); // Call with empty to just update highlighting
+                        }
                         render();
                     }
                 }
@@ -1319,6 +1345,7 @@ function highlightFragment(fragmentIndex) {
     // Apply the fragment color
     fragment.forEach(atomIndex => {
         colorAttr.setXYZ(atomIndex, color.r, color.g, color.b);
+        main.molecule.atoms[atomIndex].displayColor = color;
     });
 
     colorAttr.needsUpdate = true;
@@ -1333,6 +1360,7 @@ function resetFragments() {
     for (let i = 0; i < colorAttr.count; i++) {
         const atom = main.molecule.atoms[i];
         const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+        atom.displayColor = color;
         colorAttr.setXYZ(i, color.r, color.g, color.b);
     }
     colorAttr.needsUpdate = true;
@@ -1395,41 +1423,7 @@ function updateEditingContent(element = null, color = null) {
 
         // Recreate fragment list with click handlers
         const fragmentList = document.getElementById('fragmentList');
-        fragments.forEach((fragment, index) => {
-            const listItem = document.createElement('li');
-            listItem.textContent = `Fragment ${index + 1}: [${fragment.join(', ')}]`;
-            listItem.style.cursor = 'pointer';
-            listItem.style.padding = '5px';
-            listItem.style.margin = '2px';
-            listItem.style.borderRadius = '5px';
-            listItem.style.transition = 'background-color 0.3s';
-            listItem.dataset.fragmentIndex = index;
-
-            // Check if this fragment is currently selected
-            if (arraysEqual(fragment, atomsSelected)) {
-                listItem.classList.add('selected');
-                listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-            }
-
-            // Add hover effect
-            listItem.addEventListener('mouseenter', () => {
-                listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-            });
-
-            listItem.addEventListener('mouseleave', () => {
-                if (!listItem.classList.contains('selected')) {
-                    listItem.style.backgroundColor = 'transparent';
-                }
-            });
-
-            // Add click handler
-            listItem.addEventListener('click', () => {
-                selectFragment(fragment, index);
-                updateFragmentListSelection(index);
-            });
-
-            fragmentList.appendChild(listItem);
-        });
+        updateFragmentList(fragmentList);
 
         // Attach axis-related event listeners
         attachAxisEventListeners();
@@ -1438,6 +1432,79 @@ function updateEditingContent(element = null, color = null) {
     }
 }
 
+function updateFragmentList(fragmentList) {
+    fragments.forEach((fragment, index) => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `Fragment ${index + 1}: [${fragment.join(', ')}]`;
+        listItem.style.cursor = 'pointer';
+        listItem.style.padding = '5px';
+        listItem.style.margin = '2px';
+        listItem.style.borderRadius = '5px';
+        listItem.style.transition = 'background-color 0.3s';
+        listItem.dataset.fragmentIndex = index;
+
+        // Check if this fragment is currently selected
+        if (fragmentsSelected.includes(index)) {
+            listItem.classList.add('selected');
+            listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+        }
+
+        // Add hover effect
+        listItem.addEventListener('mouseenter', () => {
+            if (!fragmentsSelected.includes(index)) {
+                listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+            }
+        });
+
+        listItem.addEventListener('mouseleave', () => {
+            if (!fragmentsSelected.includes(index)) {
+                listItem.style.backgroundColor = 'transparent';
+            }
+        });
+
+        // Add click handler with cmd/ctrl support
+        listItem.addEventListener('click', (event) => {
+            if (event.metaKey || event.ctrlKey) {
+                // Cmd/Ctrl + click: toggle fragment in selection
+                if (fragmentsSelected.includes(index)) {
+                    // Remove from selection
+                    fragmentsSelected = fragmentsSelected.filter(idx => idx !== index);
+                    listItem.classList.remove('selected');
+                    listItem.style.backgroundColor = 'transparent';
+                } else {
+                    // Add to selection
+                    fragmentsSelected.push(index);
+                    listItem.classList.add('selected');
+                    listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                }
+            } else {
+                // Normal click: toggle this fragment only if it's already selected
+                if (fragmentsSelected.includes(index)) {
+                    // Fragment is selected, unselect it
+                    fragmentsSelected = fragmentsSelected.filter(idx => idx !== index);
+                    listItem.classList.remove('selected');
+                    listItem.style.backgroundColor = 'transparent';
+                } else {
+                    // Fragment not selected, clear others and select this one
+                    // Clear all previous selections
+                    fragmentList.querySelectorAll('li').forEach(item => {
+                        item.classList.remove('selected');
+                        item.style.backgroundColor = 'transparent';
+                    });
+
+                    fragmentsSelected = [index];
+                    listItem.classList.add('selected');
+                    listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                }
+            }
+
+            // Update the fragment selection
+            selectFragment(fragment, index);
+        });
+
+        fragmentList.appendChild(listItem);
+    });
+}
 
 function attachAxisEventListeners() {
     const defineAxisBtn = document.getElementById('defineAxisBtn');
@@ -1734,14 +1801,37 @@ function onPointerUp(event) {
     main.molecule.updateMainCoordinates()
 }
 
+// function selectFragment(fragmentAtoms, fragmentIndex) {
+//     // Clear current selection
+//     unselectAtom();
+//     // Set atomsSelected to the fragment atoms
+//     atomsSelected = [...fragmentAtoms];
+//     console.log(atomsSelected);
+//     // Highlight all atoms in the fragment
+//     highlightFragment(fragmentIndex);
+//     render();
+// }
+
 function selectFragment(fragmentAtoms, fragmentIndex) {
-    // Clear current selection
-    unselectAtom();
-    // Set atomsSelected to the fragment atoms
-    atomsSelected = [...fragmentAtoms];
-    console.log(atomsSelected);
-    // Highlight all atoms in the fragment
-    highlightFragment(fragmentIndex);
+    atomsSelected = [];
+    fragmentsSelected.forEach(fragIdx => {
+        if (fragIdx < fragments.length) {
+            atomsSelected.push(...fragments[fragIdx]);
+        }
+    });
+    const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+    for (let i = 0; i < colorAttr.count; i++) {
+        const atom = main.molecule.atoms[i];
+        const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+        atom.displayColor = color;
+        colorAttr.setXYZ(i, color.r, color.g, color.b);
+    }
+    fragmentsSelected.forEach(fragIdx => {
+        if (fragIdx < fragments.length) {
+            highlightFragment(fragIdx);
+        }
+    });
+    colorAttr.needsUpdate = true;
     render();
 }
 
@@ -1778,11 +1868,13 @@ function selectAtom(index, reset = true) {
         for (let i = 0; i < colorAttr.count; i++) {
             const atom = main.molecule.atoms[i];
             const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+            atom.displayColor = color;
             colorAttr.setXYZ(i, color.r, color.g, color.b);
         }
     }
 
     // Highlight selected atom (yellow)
+    main.molecule.atoms[index].displayColor = new THREE.Color(1, 1, 0);
     colorAttr.setXYZ(index, 1, 1, 0);
     colorAttr.needsUpdate = true;
 }
@@ -1796,12 +1888,14 @@ function unselectAtom(index = null) {
         for (let i = 0; i < colorAttr.count; i++) {
             const atom = main.molecule.atoms[i];
             const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+            atom.displayColor = color;
             colorAttr.setXYZ(i, color.r, color.g, color.b);
         }
     } else {
         // Reset only the specified atom to its default color
         const atom = main.molecule.atoms[index];
         const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+        atom.displayColor = color;
         colorAttr.setXYZ(index, color.r, color.g, color.b);
     }
     colorAttr.needsUpdate = true;
