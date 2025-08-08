@@ -83,6 +83,7 @@ const analyzeMoleculeButton = document.getElementById('analyze-molecule');
 const editMoleculePanel = document.getElementById('editMoleculePanel');
 const editMoleculeButton = document.getElementById('editMolecule');
 const editMoleculeContent = document.getElementById('editMoleculeContent');
+const closeStyleSelectorButton = document.getElementById('closeStyleSelector');
 
 let dragging = false;
 // let draggedAtomIndex = null; // Remove this, use atomsSelected
@@ -441,8 +442,11 @@ window.addEventListener('resize', () => {
 });
 
 switchModeButton.addEventListener('click', () => {
-    // mode = 1 - mode;
-    styleSelector.classList.toggle('on');
+    styleSelector.classList.remove('on');
+});
+
+closeStyleSelectorButton.addEventListener('click', () => {
+    styleSelector.classList.add('on');
 });
 
 toggleLabelsButton.addEventListener('click', () => {

@@ -527,7 +527,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    color: #fff !important;
+    color: #b2b421 !important;
     border: 3px solid #1a5185;
 }
 
@@ -602,7 +602,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
+    background-color: #cccccc;
     transition: .4s;
     border-radius: 34px;
 }
@@ -620,7 +620,7 @@ body {
 }
 
 input:checked+.slider {
-    background-color: #2196F3;
+    background-color: #166bb0;
 }
 
 input:checked+.slider:before {
@@ -1109,7 +1109,7 @@ input[type="range"]:focus {
 }
 
 .dismiss {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.232);
     border: none;
     color: white;
     border-radius: 30%;
@@ -1122,6 +1122,12 @@ input[type="range"]:focus {
     font-size: 12px;
     transition: background 0.2s;
     flex-shrink: 0;
+
+}
+
+.dismiss:hover {
+    background: rgba(255, 67, 67, 0.316);
+
 
 }
 
