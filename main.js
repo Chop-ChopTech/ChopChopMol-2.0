@@ -1080,6 +1080,7 @@ function onPointerMove(event) {
         });
         main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
         main.molecule.updateBonds(mode);
+
         updateAllBondLengthLabels(); // ADD THIS LINE
         render();
     } else {
@@ -1111,6 +1112,10 @@ function onPointerMove(event) {
 
     // Update bonds
     main.molecule.updateBonds(mode);
+    if (main.molecule.labels && main.molecule.labels.length > 0) {
+        main.molecule.updateLabels();
+        render()
+    }
 
     render();
 }
@@ -1731,6 +1736,9 @@ function rotateSelectedAtoms(angle, originalPositions, isSliderActive) {
     });
     main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
     main.molecule.updateBonds(mode);
+    if (main.molecule.labels && main.molecule.labels.length > 0) {
+        main.molecule.updateLabels();
+    }
     render();
 }
 
@@ -1793,7 +1801,10 @@ function onPointerUp(event) {
         // Clean up axis dragging variables
         window.dragStartIntersection = null;
         window.originalDragPositions = null;
-
+        if (main.molecule && main.molecule.labels && main.molecule.labels.length > 0) {
+            main.molecule.updateLabels();
+            render()
+        }
         window.removeEventListener('pointermove', onPointerMove, false);
         window.removeEventListener('pointerup', onPointerUp, false);
     }

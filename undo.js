@@ -49,7 +49,10 @@ function restoreMoleculeState(state) {
         if (typeof window.render === 'function') {
             window.render();
         }
-
+        if (window.main.molecule && window.main.molecule.labels && window.main.molecule.labels.length > 0) {
+            window.main.molecule.updateLabels();
+            window.render()
+        }
     } catch (error) {
         console.error('Error restoring state:', error);
     }
