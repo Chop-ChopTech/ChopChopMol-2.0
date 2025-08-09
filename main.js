@@ -2147,7 +2147,7 @@ function calculateBondLength(atom1, atom2) {
 }
 
 // Add this function to create a bond length label
-function createBondLengthLabel(atom1Index, atom2Index) {
+function createInfoLabel(atom1Index, atom2Index) {
     const atom1 = main.molecule.atoms[atom1Index];
     const atom2 = main.molecule.atoms[atom2Index];
 
@@ -2365,7 +2365,7 @@ function createContextMenu(x, y, atom1Index, atom2Index) {
             showLengthOption.style.backgroundColor = 'transparent';
         };
         showLengthOption.onclick = () => {
-            createBondLengthLabel(atom1Index, atom2Index);
+            createInfoLabel(atom1Index, atom2Index);
             removeContextMenu();
         };
         menu.appendChild(showLengthOption);
@@ -2518,7 +2518,7 @@ document.addEventListener('keydown', (event) => {
             );
 
             if (existingLabel === -1) {
-                createBondLengthLabel(atomsSelected[0], atomsSelected[1]);
+                createInfoLabel(atomsSelected[0], atomsSelected[1]);
             } else {
                 removeBondLengthLabel(existingLabel);
             }
