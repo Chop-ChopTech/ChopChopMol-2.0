@@ -405,7 +405,7 @@ export default class Molecule {
 
         // Draw text only
         ctx.fillStyle = color; // Use atom color for text
-        ctx.font = 'bold 40px Comfortaa';
+        ctx.font = 'bold 40px arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(text, canvas.width / 2, canvas.height / 2);
@@ -416,22 +416,79 @@ export default class Molecule {
 
     toggleLabels(show) {
         if (show) {
-            this.instancedMesh.visible = true; // Hide atom spheres
-            this.atoms.forEach(atom => {
+            // Keep atoms visible - remove this line if you want to hide atoms
+            // this.instancedMesh.visible = true;
+
+            // Create a helper matrix and position vector for extracting world positions
+            const matrix = new THREE.Matrix4();
+            const position = new THREE.Vector3();
+            const scale = new THREE.Vector3();
+            const rotation = new THREE.Quaternion();
+
+            this.atoms.forEach((atom, index) => {
+                // Get the instance's transformation matrix
+                this.instancedMesh.getMatrixAt(index, matrix);
+
+                // Decompose the matrix to get position and scale
+                matrix.decompose(position, rotation, scale);
+
+                // Apply the instancedMesh's world transformation to get final world position
+                const worldPosition = position.clone();
+                worldPosition.applyMatrix4(this.instancedMesh.matrixWorld);
+
+                // Create the label sprite
                 const spriteMaterial = new THREE.SpriteMaterial({
-                    map: this.createLabelTexture(atom.type, this.atomSettings[atom.type].color),
-                    transparent: true
+                    map: this.createLabelTexture(atom.type, "white"),
+                    transparent: true,
+                    depthTest: false,  // Ensure label renders on top
+                    depthWrite: false  // Ensure label renders on top
                 });
                 const sprite = new THREE.Sprite(spriteMaterial);
-                sprite.position.copy(atom.position).sub(this.offset);
-                sprite.scale.set(1.5, 1.5, 1.5); // Adjust size for visibility
+
+                // Position the sprite at the exact world position of the atom
+                sprite.position.copy(worldPosition);
+
+                // Scale the sprite to match or slightly exceed the atom size
+                // The scale.x represents the radius of the atom sphere
+                const labelScale = scale.x * 2.0; // Adjust multiplier as needed (2.0 covers the full atom)
+                sprite.scale.set(labelScale, labelScale, labelScale);
+
+                // Optionally set render order to ensure labels appear on top
+                sprite.renderOrder = 999;
+
                 this.main.scene.add(sprite);
                 this.labels.push(sprite);
             });
         } else {
-            this.instancedMesh.visible = true; // Show atom spheres
+            this.instancedMesh.visible = true; // Ensure atoms are visible
             this.clearLabels();
         }
+    }
+
+    updateLabels() {
+        if (this.labels.length === 0) return;
+
+        const matrix = new THREE.Matrix4();
+        const position = new THREE.Vector3();
+        const scale = new THREE.Vector3();
+        const rotation = new THREE.Quaternion();
+
+        this.labels.forEach((label, index) => {
+            // Get the updated position of the atom
+            this.instancedMesh.getMatrixAt(index, matrix);
+            matrix.decompose(position, rotation, scale);
+
+            // Apply world transformation
+            const worldPosition = position.clone();
+            worldPosition.applyMatrix4(this.instancedMesh.matrixWorld);
+
+            // Update label position
+            label.position.copy(worldPosition);
+
+            // Update label scale if needed
+            const labelScale = scale.x * 2.0;
+            label.scale.set(labelScale, labelScale, labelScale);
+        });
     }
 
     clearLabels() {
