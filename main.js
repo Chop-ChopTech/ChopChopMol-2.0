@@ -2143,7 +2143,7 @@ if (resetToDefaultsButton) {
 }
 function calculateBondLength(atom1, atom2) {
     const distance = atom1.position.distanceTo(atom2.position);
-    return (distance / 4).toFixed(3); // Return distance with 3 decimal places
+    return (distance / 4).toFixed(2); // Return distance with 3 decimal places
 }
 
 // Add this function to create a bond length label
@@ -2153,9 +2153,13 @@ function createBondLengthLabel(atom1Index, atom2Index) {
 
     if (!atom1 || !atom2) return;
 
+    // Get actual world positions from the instanced mesh
+    const atom1WorldPos = getAtomWorldPosition(atom1Index, main.molecule.instancedMesh);
+    const atom2WorldPos = getAtomWorldPosition(atom2Index, main.molecule.instancedMesh);
+
     // Calculate midpoint between atoms
     const midpoint = new THREE.Vector3()
-        .addVectors(atom1.position, atom2.position)
+        .addVectors(atom1WorldPos, atom2WorldPos)
         .multiplyScalar(0.5);
 
     // Calculate bond length
@@ -2164,27 +2168,62 @@ function createBondLengthLabel(atom1Index, atom2Index) {
     // Create CSS2D label for the bond length
     const labelDiv = document.createElement('div');
     labelDiv.className = 'bond-length-label';
-    labelDiv.textContent = `${distance} Å`;
+    labelDiv.textContent = `${distance}`;
     labelDiv.style.cssText = `
-        color: #00ff00;
+        color:rgb(0, 170, 255);
         font-family: Arial, sans-serif;
-        font-size: 14px;
-        font-weight: bold;
-        background: rgba(0, 0, 0, 0.7);
+        font-size: 20px;
+        font-weight: normal;
+        background: none;
         padding: 4px 8px;
         border-radius: 4px;
         pointer-events: none;
         user-select: none;
         white-space: nowrap;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        transition: none;
     `;
 
-    // Store the label info
+    // CREATE DOTTED LINE BETWEEN ATOMS
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(6);
+
+    // Set start and end points using world positions
+    positions[0] = atom1WorldPos.x;
+    positions[1] = atom1WorldPos.y;
+    positions[2] = atom1WorldPos.z;
+    positions[3] = atom2WorldPos.x;
+    positions[4] = atom2WorldPos.y;
+    positions[5] = atom2WorldPos.z;
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    // Create a dashed line material
+    const material = new THREE.LineDashedMaterial({
+        color: 0x52a3fa,  // Same green color as the label
+        linewidth: 2,
+        scale: 1,
+        dashSize: 1,    // Length of dashes
+        gapSize: 1,     // Length of gaps between dashes
+        opacity: 0.8,
+        transparent: true,
+        depthTest: true,
+        depthWrite: false  // Prevents z-fighting with other objects
+    });
+
+    const line = new THREE.Line(geometry, material);
+    line.computeLineDistances(); // IMPORTANT: Required for dashed lines to work
+
+    // Add the line to the scene
+    scene.add(line);
+
+    // Store the label info with the line object
     const labelInfo = {
         element: labelDiv,
         atom1Index: atom1Index,
         atom2Index: atom2Index,
-        midpoint: midpoint
+        midpoint: midpoint,
+        line: line  // Store the line object for later removal
     };
 
     bondLengthLabels.push(labelInfo);
@@ -2198,13 +2237,17 @@ function createBondLengthLabel(atom1Index, atom2Index) {
 
 // Function to update bond length label position
 function updateBondLengthLabel(labelInfo) {
-    // Recalculate midpoint in case atoms moved
     const atom1 = main.molecule.atoms[labelInfo.atom1Index];
     const atom2 = main.molecule.atoms[labelInfo.atom2Index];
 
     if (!atom1 || !atom2) return;
 
-    labelInfo.midpoint.addVectors(atom1.position, atom2.position).multiplyScalar(0.5);
+    // Get actual world positions from the instanced mesh
+    const atom1WorldPos = getAtomWorldPosition(labelInfo.atom1Index, main.molecule.instancedMesh);
+    const atom2WorldPos = getAtomWorldPosition(labelInfo.atom2Index, main.molecule.instancedMesh);
+
+    // Recalculate midpoint
+    labelInfo.midpoint.addVectors(atom1WorldPos, atom2WorldPos).multiplyScalar(0.5);
 
     // Convert 3D position to 2D screen position
     const screenPos = worldToScreen(labelInfo.midpoint, camera);
@@ -2217,7 +2260,21 @@ function updateBondLengthLabel(labelInfo) {
 
     // Update distance value if atoms have moved
     const newDistance = calculateBondLength(atom1, atom2);
-    labelInfo.element.textContent = `${newDistance} Å`;
+    labelInfo.element.textContent = `${newDistance}`;
+
+    // UPDATE THE DOTTED LINE POSITIONS
+    if (labelInfo.line) {
+        const positions = labelInfo.line.geometry.attributes.position.array;
+        positions[0] = atom1WorldPos.x;
+        positions[1] = atom1WorldPos.y;
+        positions[2] = atom1WorldPos.z;
+        positions[3] = atom2WorldPos.x;
+        positions[4] = atom2WorldPos.y;
+        positions[5] = atom2WorldPos.z;
+
+        labelInfo.line.geometry.attributes.position.needsUpdate = true;
+        labelInfo.line.computeLineDistances(); // Recompute for dashed line
+    }
 }
 
 // Function to update all bond length labels
@@ -2230,7 +2287,17 @@ function updateAllBondLengthLabels() {
 // Function to remove a specific bond length label
 function removeBondLengthLabel(index) {
     if (bondLengthLabels[index]) {
+        // Remove the label from DOM
         document.body.removeChild(bondLengthLabels[index].element);
+
+        // Remove the dotted line from the scene
+        if (bondLengthLabels[index].line) {
+            scene.remove(bondLengthLabels[index].line);
+            // Dispose of geometry and material to free memory
+            bondLengthLabels[index].line.geometry.dispose();
+            bondLengthLabels[index].line.material.dispose();
+        }
+
         bondLengthLabels.splice(index, 1);
     }
 }
@@ -2238,10 +2305,21 @@ function removeBondLengthLabel(index) {
 // Function to clear all bond length labels
 function clearAllBondLengthLabels() {
     bondLengthLabels.forEach(labelInfo => {
+        // Remove label from DOM
         document.body.removeChild(labelInfo.element);
+
+        // Remove dotted line from scene
+        if (labelInfo.line) {
+            scene.remove(labelInfo.line);
+            // Dispose of geometry and material to free memory
+            labelInfo.line.geometry.dispose();
+            labelInfo.line.material.dispose();
+        }
     });
     bondLengthLabels = [];
 }
+
+
 
 // Create context menu
 function createContextMenu(x, y, atom1Index, atom2Index) {
