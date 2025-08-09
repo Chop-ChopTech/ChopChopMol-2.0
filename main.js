@@ -55,6 +55,8 @@ let atomsSelected = [];
 let fragments = [];
 let fragmentsSelected = [];
 let hoveredAtom = null;
+let bondLengthLabels = []; // Store bond length label objects
+let contextMenuOpen = false;
 
 
 let editingMolecule = true;
@@ -196,6 +198,7 @@ export default class Main {
         fragmentsSelected = [];
 
         clearScene(this.scene);
+        clearAllBondLengthLabels(); // ADD THIS LINE
         render();
     }
     newMolecule(data, mode, overlay, rotation, translation, center = true) {
@@ -479,7 +482,11 @@ analyzeMoleculeButton.addEventListener('click', () => {
     window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
 })
 
-renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
+renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
+renderer.domElement.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    return false;
+});
 
 // 3D to 2D projection for atoms
 function worldToScreen(worldPos, camera) {
@@ -1071,7 +1078,10 @@ function onPointerMove(event) {
 
             updateAtomMatrix(idx);
         });
-
+        main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+        main.molecule.updateBonds(mode);
+        updateAllBondLengthLabels(); // ADD THIS LINE
+        render();
     } else {
         // NORMAL FREE DRAGGING
         atomsSelected.forEach(idx => {
@@ -2131,7 +2141,319 @@ if (resetToDefaultsButton) {
     });
 
 }
+function calculateBondLength(atom1, atom2) {
+    const distance = atom1.position.distanceTo(atom2.position);
+    return (distance / 4).toFixed(3); // Return distance with 3 decimal places
+}
 
+// Add this function to create a bond length label
+function createBondLengthLabel(atom1Index, atom2Index) {
+    const atom1 = main.molecule.atoms[atom1Index];
+    const atom2 = main.molecule.atoms[atom2Index];
+
+    if (!atom1 || !atom2) return;
+
+    // Calculate midpoint between atoms
+    const midpoint = new THREE.Vector3()
+        .addVectors(atom1.position, atom2.position)
+        .multiplyScalar(0.5);
+
+    // Calculate bond length
+    const distance = calculateBondLength(atom1, atom2);
+
+    // Create CSS2D label for the bond length
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'bond-length-label';
+    labelDiv.textContent = `${distance} Å`;
+    labelDiv.style.cssText = `
+        color: #00ff00;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        font-weight: bold;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 4px 8px;
+        border-radius: 4px;
+        pointer-events: none;
+        user-select: none;
+        white-space: nowrap;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    `;
+
+    // Store the label info
+    const labelInfo = {
+        element: labelDiv,
+        atom1Index: atom1Index,
+        atom2Index: atom2Index,
+        midpoint: midpoint
+    };
+
+    bondLengthLabels.push(labelInfo);
+
+    // Update label position on screen
+    updateBondLengthLabel(labelInfo);
+
+    // Add to DOM
+    document.body.appendChild(labelDiv);
+}
+
+// Function to update bond length label position
+function updateBondLengthLabel(labelInfo) {
+    // Recalculate midpoint in case atoms moved
+    const atom1 = main.molecule.atoms[labelInfo.atom1Index];
+    const atom2 = main.molecule.atoms[labelInfo.atom2Index];
+
+    if (!atom1 || !atom2) return;
+
+    labelInfo.midpoint.addVectors(atom1.position, atom2.position).multiplyScalar(0.5);
+
+    // Convert 3D position to 2D screen position
+    const screenPos = worldToScreen(labelInfo.midpoint, camera);
+
+    // Update label position
+    labelInfo.element.style.position = 'absolute';
+    labelInfo.element.style.left = `${screenPos.x}px`;
+    labelInfo.element.style.top = `${screenPos.y}px`;
+    labelInfo.element.style.transform = 'translate(-50%, -50%)';
+
+    // Update distance value if atoms have moved
+    const newDistance = calculateBondLength(atom1, atom2);
+    labelInfo.element.textContent = `${newDistance} Å`;
+}
+
+// Function to update all bond length labels
+function updateAllBondLengthLabels() {
+    bondLengthLabels.forEach(labelInfo => {
+        updateBondLengthLabel(labelInfo);
+    });
+}
+
+// Function to remove a specific bond length label
+function removeBondLengthLabel(index) {
+    if (bondLengthLabels[index]) {
+        document.body.removeChild(bondLengthLabels[index].element);
+        bondLengthLabels.splice(index, 1);
+    }
+}
+
+// Function to clear all bond length labels
+function clearAllBondLengthLabels() {
+    bondLengthLabels.forEach(labelInfo => {
+        document.body.removeChild(labelInfo.element);
+    });
+    bondLengthLabels = [];
+}
+
+// Create context menu
+function createContextMenu(x, y, atom1Index, atom2Index) {
+    // Remove any existing context menu
+    removeContextMenu();
+
+    const menu = document.createElement('div');
+    menu.id = 'atom-context-menu';
+    menu.style.cssText = `
+        position: absolute;
+        left: ${x}px;
+        top: ${y}px;
+        background: rgba(30, 30, 30, 0.95);
+        border: 1px solid #444;
+        border-radius: 4px;
+        padding: 4px 0;
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+        z-index: 10000;
+        min-width: 150px;
+    `;
+
+    // Check if label already exists for this pair
+    const existingLabel = bondLengthLabels.findIndex(label =>
+        (label.atom1Index === atom1Index && label.atom2Index === atom2Index) ||
+        (label.atom1Index === atom2Index && label.atom2Index === atom1Index)
+    );
+
+    if (existingLabel === -1) {
+        // Add "Show Bond Length" option
+        const showLengthOption = document.createElement('div');
+        showLengthOption.textContent = 'Show Bond Length';
+        showLengthOption.style.cssText = `
+            padding: 8px 16px;
+            cursor: pointer;
+            color: white;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        `;
+        showLengthOption.onmouseover = () => {
+            showLengthOption.style.backgroundColor = 'rgba(0, 132, 255, 0.3)';
+        };
+        showLengthOption.onmouseout = () => {
+            showLengthOption.style.backgroundColor = 'transparent';
+        };
+        showLengthOption.onclick = () => {
+            createBondLengthLabel(atom1Index, atom2Index);
+            removeContextMenu();
+        };
+        menu.appendChild(showLengthOption);
+    } else {
+        // Add "Hide Bond Length" option
+        const hideLengthOption = document.createElement('div');
+        hideLengthOption.textContent = 'Hide Bond Length';
+        hideLengthOption.style.cssText = `
+            padding: 8px 16px;
+            cursor: pointer;
+            color: white;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        `;
+        hideLengthOption.onmouseover = () => {
+            hideLengthOption.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+        };
+        hideLengthOption.onmouseout = () => {
+            hideLengthOption.style.backgroundColor = 'transparent';
+        };
+        hideLengthOption.onclick = () => {
+            removeBondLengthLabel(existingLabel);
+            removeContextMenu();
+        };
+        menu.appendChild(hideLengthOption);
+    }
+
+    // Add separator
+    const separator = document.createElement('hr');
+    separator.style.cssText = `
+        margin: 4px 0;
+        border: none;
+        border-top: 1px solid #444;
+    `;
+    menu.appendChild(separator);
+
+    // Add "Clear All Labels" option
+    const clearAllOption = document.createElement('div');
+    clearAllOption.textContent = 'Clear All Labels';
+    clearAllOption.style.cssText = `
+        padding: 8px 16px;
+        cursor: pointer;
+        color: white;
+        font-size: 14px;
+        transition: background-color 0.2s;
+    `;
+    clearAllOption.onmouseover = () => {
+        clearAllOption.style.backgroundColor = 'rgba(255, 132, 0, 0.3)';
+    };
+    clearAllOption.onmouseout = () => {
+        clearAllOption.style.backgroundColor = 'transparent';
+    };
+    clearAllOption.onclick = () => {
+        clearAllBondLengthLabels();
+        removeContextMenu();
+    };
+    menu.appendChild(clearAllOption);
+
+    document.body.appendChild(menu);
+    contextMenuOpen = true;
+}
+
+// Remove context menu
+function removeContextMenu() {
+    const menu = document.getElementById('atom-context-menu');
+    if (menu) {
+        document.body.removeChild(menu);
+    }
+    contextMenuOpen = false;
+}
+
+// Modify your existing onPointerDown function to add right-click handling
+// Add this to your onPointerDown function after the existing left-click logic:
+function enhancedOnPointerDown(event) {
+    // Call your existing onPointerDown logic first for left clicks
+    if (event.button === 0) {
+        // Your existing left-click code here
+        onPointerDown(event);
+    }
+
+    // Handle right-click or two-finger tap
+    if (event.button === 2) { // Right-click
+        event.preventDefault();
+
+        // Check if exactly 2 atoms are selected
+        if (atomsSelected.length === 2) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            const menuX = event.clientX;
+            const menuY = event.clientY;
+
+            createContextMenu(menuX, menuY, atomsSelected[0], atomsSelected[1]);
+        }
+    }
+}
+
+// Replace the existing event listener
+renderer.domElement.removeEventListener('pointerdown', onPointerDown, false);
+renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
+
+// Prevent default context menu
+renderer.domElement.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    return false;
+});
+
+// Close context menu when clicking elsewhere
+document.addEventListener('click', (event) => {
+    if (contextMenuOpen && !event.target.closest('#atom-context-menu')) {
+        removeContextMenu();
+    }
+});
+
+// Add to your render/animation loop to update label positions
+// Add this to your existing render() function:
+function enhancedRender() {
+    // Call your existing render function
+    render();
+
+    // Update bond length labels
+    updateAllBondLengthLabels();
+}
+
+// Hook into camera controls to update labels when view changes
+if (controls) {
+    controls.addEventListener('change', () => {
+        updateAllBondLengthLabels();
+    });
+}
+
+// Update labels when atoms are moved
+// Add this to your atom movement functions (like in onPointerMove when dragging atoms)
+function onAtomsMoved() {
+    updateAllBondLengthLabels();
+}
+
+// Clear labels when molecule is reset or changed
+// Add this to your molecule reset/clear functions
+function onMoleculeReset() {
+    clearAllBondLengthLabels();
+}
+
+// Optional: Add keyboard shortcut to toggle bond length display
+document.addEventListener('keydown', (event) => {
+    // Press 'B' to show/hide bond length for selected atoms
+    if (event.key === 'b' || event.key === 'B') {
+        if (atomsSelected.length === 2) {
+            const existingLabel = bondLengthLabels.findIndex(label =>
+                (label.atom1Index === atomsSelected[0] && label.atom2Index === atomsSelected[1]) ||
+                (label.atom1Index === atomsSelected[1] && label.atom2Index === atomsSelected[0])
+            );
+
+            if (existingLabel === -1) {
+                createBondLengthLabel(atomsSelected[0], atomsSelected[1]);
+            } else {
+                removeBondLengthLabel(existingLabel);
+            }
+        }
+    }
+
+    // Press 'L' to clear all labels
+    if (event.key === 'l' || event.key === 'L') {
+        if (event.shiftKey) {
+            clearAllBondLengthLabels();
+        }
+    }
+});
 // Make it globally available
 
 function createRenderer(antialiasOn) {
@@ -2155,7 +2477,7 @@ function animate() {
 }
 function render() {
     renderer.render(scene, camera);
-
+    updateAllBondLengthLabels(); // ADD THIS LINE
 }
 render();
 controls.addEventListener('change', () => {
