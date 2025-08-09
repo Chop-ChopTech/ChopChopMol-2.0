@@ -2146,31 +2146,64 @@ function calculateBondLength(atom1, atom2) {
     return (distance / 4).toFixed(2); // Return distance with 3 decimal places
 }
 
-// Add this function to create a bond length label
-function createInfoLabel(atom1Index, atom2Index) {
+function calculateAngle(atom1, atom2, atom3) {
+    // atom2 is the vertex/middle atom
+    // Calculate vectors from middle atom to the other two
+    const vector1 = new THREE.Vector3().subVectors(atom1.position, atom2.position);
+    const vector2 = new THREE.Vector3().subVectors(atom3.position, atom2.position);
+
+    // Calculate angle in radians, then convert to degrees
+    const angleRadians = vector1.angleTo(vector2);
+    const angleDegrees = (angleRadians * 180 / Math.PI).toFixed(1);
+
+    return angleDegrees;
+}
+function createInfoLabel(atom1Index, atom2Index, atom3Index = null) {
     const atom1 = main.molecule.atoms[atom1Index];
     const atom2 = main.molecule.atoms[atom2Index];
+    const atom3 = atom3Index !== null ? main.molecule.atoms[atom3Index] : null;
 
     if (!atom1 || !atom2) return;
 
     // Get actual world positions from the instanced mesh
     const atom1WorldPos = getAtomWorldPosition(atom1Index, main.molecule.instancedMesh);
     const atom2WorldPos = getAtomWorldPosition(atom2Index, main.molecule.instancedMesh);
+    const atom3WorldPos = atom3 ? getAtomWorldPosition(atom3Index, main.molecule.instancedMesh) : null;
 
-    // Calculate midpoint between atoms
-    const midpoint = new THREE.Vector3()
-        .addVectors(atom1WorldPos, atom2WorldPos)
-        .multiplyScalar(0.5);
+    // Determine if we're measuring angle or bond length
+    const isAngle = atom3 !== null;
 
-    // Calculate bond length
-    const distance = calculateBondLength(atom1, atom2);
+    // Calculate the value and position for the label
+    let value, labelPosition, color;
 
-    // Create CSS2D label for the bond length
+    if (isAngle) {
+        // For angle: atom2 is the vertex (middle atom)
+        value = calculateAngle(atom1, atom2, atom3) + "°";
+        // Position label closer to the vertex atom (atom2)
+        // We'll place it 30% of the way from vertex to centroid
+        const centroid = new THREE.Vector3()
+            .add(atom1WorldPos)
+            .add(atom2WorldPos)
+            .add(atom3WorldPos)
+            .divideScalar(3);
+        // Interpolate between vertex position and centroid
+        labelPosition = new THREE.Vector3().lerpVectors(atom2WorldPos, centroid, 0.3);
+        color = "rgb(221, 255, 0)"; // Orange for angles
+    } else {
+        // For bond length: calculate midpoint between two atoms
+        value = calculateBondLength(atom1, atom2);
+        labelPosition = new THREE.Vector3()
+            .addVectors(atom1WorldPos, atom2WorldPos)
+            .multiplyScalar(0.5);
+        color = "rgb(0, 170, 255)"; // Blue for bond lengths
+    }
+
+    // Create CSS2D label
     const labelDiv = document.createElement('div');
-    labelDiv.className = 'bond-length-label';
-    labelDiv.textContent = `${distance}`;
+    labelDiv.className = isAngle ? 'angle-label' : 'bond-length-label';
+    labelDiv.textContent = value;
     labelDiv.style.cssText = `
-        color:rgb(0, 170, 255);
+        color: ${color};
         font-family: Arial, sans-serif;
         font-size: 20px;
         font-weight: normal;
@@ -2184,46 +2217,108 @@ function createInfoLabel(atom1Index, atom2Index) {
         transition: none;
     `;
 
-    // CREATE DOTTED LINE BETWEEN ATOMS
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(6);
+    // CREATE VISUALIZATION (plane for angles, line for bonds)
+    let visualElement;
 
-    // Set start and end points using world positions
-    positions[0] = atom1WorldPos.x;
-    positions[1] = atom1WorldPos.y;
-    positions[2] = atom1WorldPos.z;
-    positions[3] = atom2WorldPos.x;
-    positions[4] = atom2WorldPos.y;
-    positions[5] = atom2WorldPos.z;
+    if (isAngle) {
+        // For angle: create a triangular plane with gradient coloring
+        const geometry = new THREE.BufferGeometry();
 
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        // Define the three vertices of the triangle
+        const vertices = new Float32Array([
+            atom1WorldPos.x, atom1WorldPos.y, atom1WorldPos.z,
+            atom2WorldPos.x, atom2WorldPos.y, atom2WorldPos.z,
+            atom3WorldPos.x, atom3WorldPos.y, atom3WorldPos.z
+        ]);
 
-    // Create a dashed line material
-    const material = new THREE.LineDashedMaterial({
-        color: 0x52a3fa,  // Same green color as the label
-        linewidth: 2,
-        scale: 1,
-        dashSize: 1,    // Length of dashes
-        gapSize: 1,     // Length of gaps between dashes
-        opacity: 0.8,
-        transparent: true,
-        depthTest: true,
-        depthWrite: false  // Prevents z-fighting with other objects
-    });
+        // Create vertex colors for gradient effect
+        // Bright orange at vertex (atom2), fading to white at the other atoms
+        const colors = new Float32Array([
+            1.0, 1.0, 1.0, //rgb(255, 255, 255)
 
-    const line = new THREE.Line(geometry, material);
-    line.computeLineDistances(); // IMPORTANT: Required for dashed lines to work
+            0.0353, 1.0, 0.0,   // #09ff00
+            1.0, 1.0, 1.0,    // #ffffff
 
-    // Add the line to the scene
-    scene.add(line);
+        ]);
 
-    // Store the label info with the line object
+
+
+        // Define the face (triangle) using vertex indices
+        const indices = new Uint16Array([0, 1, 2]);
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+
+        // Calculate normal for proper lighting
+        geometry.computeVertexNormals();
+
+        // Create a material that uses vertex colors for gradient
+        const material = new THREE.MeshBasicMaterial({
+            vertexColors: true,  // Use vertex colors
+            opacity: 0.5,        // Semi-transparent
+            transparent: true,
+            side: THREE.DoubleSide,  // Visible from both sides
+            depthWrite: false,  // Prevents z-fighting
+            depthTest: true
+        });
+
+        visualElement = new THREE.Mesh(geometry, material);
+
+        // Also add edge lines to make the triangle more visible
+        const edgeGeometry = new THREE.EdgesGeometry(geometry);
+        const edgeMaterial = new THREE.LineBasicMaterial({
+            color: 0x00ff00,
+            opacity: 0,
+            transparent: true,
+            linewidth: 2
+        });
+        const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+        visualElement.add(edges);  // Add edges as a child of the plane mesh
+
+    } else {
+        // For bond length: single dashed line between two atoms
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(6);
+
+        positions[0] = atom1WorldPos.x;
+        positions[1] = atom1WorldPos.y;
+        positions[2] = atom1WorldPos.z;
+        positions[3] = atom2WorldPos.x;
+        positions[4] = atom2WorldPos.y;
+        positions[5] = atom2WorldPos.z;
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        // Create a dashed line material
+        const material = new THREE.LineDashedMaterial({
+            color: 0x52a3fa,  // Blue for bonds
+            linewidth: 2,
+            scale: 1,
+            dashSize: 1,
+            gapSize: 1,
+            opacity: 0.8,
+            transparent: true,
+            depthTest: true,
+            depthWrite: false
+        });
+
+        visualElement = new THREE.Line(geometry, material);
+        visualElement.computeLineDistances();
+    }
+
+    // Add the visual element to the scene
+    scene.add(visualElement);
+
+    // Store the label info
     const labelInfo = {
         element: labelDiv,
         atom1Index: atom1Index,
         atom2Index: atom2Index,
-        midpoint: midpoint,
-        line: line  // Store the line object for later removal
+        atom3Index: atom3Index,  // Will be null for bond lengths
+        midpoint: labelPosition,
+        line: visualElement,  // Keeping the name 'line' for backward compatibility
+        isAngle: isAngle
     };
 
     bondLengthLabels.push(labelInfo);
@@ -2239,15 +2334,29 @@ function createInfoLabel(atom1Index, atom2Index) {
 function updateBondLengthLabel(labelInfo) {
     const atom1 = main.molecule.atoms[labelInfo.atom1Index];
     const atom2 = main.molecule.atoms[labelInfo.atom2Index];
+    const atom3 = labelInfo.atom3Index !== null ? main.molecule.atoms[labelInfo.atom3Index] : null;
 
     if (!atom1 || !atom2) return;
 
     // Get actual world positions from the instanced mesh
     const atom1WorldPos = getAtomWorldPosition(labelInfo.atom1Index, main.molecule.instancedMesh);
     const atom2WorldPos = getAtomWorldPosition(labelInfo.atom2Index, main.molecule.instancedMesh);
+    const atom3WorldPos = atom3 ? getAtomWorldPosition(labelInfo.atom3Index, main.molecule.instancedMesh) : null;
 
-    // Recalculate midpoint
-    labelInfo.midpoint.addVectors(atom1WorldPos, atom2WorldPos).multiplyScalar(0.5);
+    // Recalculate position based on type
+    if (labelInfo.isAngle) {
+        // For angle: position closer to vertex atom
+        const centroid = new THREE.Vector3()
+            .add(atom1WorldPos)
+            .add(atom2WorldPos)
+            .add(atom3WorldPos)
+            .divideScalar(3);
+        // Place label 30% of the way from vertex to centroid
+        labelInfo.midpoint.lerpVectors(atom2WorldPos, centroid, 0.3);
+    } else {
+        // For bond length: midpoint between two atoms
+        labelInfo.midpoint.addVectors(atom1WorldPos, atom2WorldPos).multiplyScalar(0.5);
+    }
 
     // Convert 3D position to 2D screen position
     const screenPos = worldToScreen(labelInfo.midpoint, camera);
@@ -2258,22 +2367,55 @@ function updateBondLengthLabel(labelInfo) {
     labelInfo.element.style.top = `${screenPos.y}px`;
     labelInfo.element.style.transform = 'translate(-50%, -50%)';
 
-    // Update distance value if atoms have moved
-    const newDistance = calculateBondLength(atom1, atom2);
-    labelInfo.element.textContent = `${newDistance}`;
+    // Update value if atoms have moved
+    if (labelInfo.isAngle) {
+        const newAngle = calculateAngle(atom1, atom2, atom3);
+        labelInfo.element.textContent = `${newAngle}°`;
+    } else {
+        const newDistance = calculateBondLength(atom1, atom2);
+        labelInfo.element.textContent = `${newDistance}`;
+    }
 
-    // UPDATE THE DOTTED LINE POSITIONS
+    // UPDATE THE VISUALIZATION GEOMETRY
     if (labelInfo.line) {
-        const positions = labelInfo.line.geometry.attributes.position.array;
-        positions[0] = atom1WorldPos.x;
-        positions[1] = atom1WorldPos.y;
-        positions[2] = atom1WorldPos.z;
-        positions[3] = atom2WorldPos.x;
-        positions[4] = atom2WorldPos.y;
-        positions[5] = atom2WorldPos.z;
+        if (labelInfo.isAngle) {
+            // Update plane geometry for angle
+            const geometry = labelInfo.line.geometry;
+            const vertices = geometry.attributes.position.array;
 
-        labelInfo.line.geometry.attributes.position.needsUpdate = true;
-        labelInfo.line.computeLineDistances(); // Recompute for dashed line
+            // Update the three vertices of the triangle
+            vertices[0] = atom1WorldPos.x;
+            vertices[1] = atom1WorldPos.y;
+            vertices[2] = atom1WorldPos.z;
+            vertices[3] = atom2WorldPos.x;
+            vertices[4] = atom2WorldPos.y;
+            vertices[5] = atom2WorldPos.z;
+            vertices[6] = atom3WorldPos.x;
+            vertices[7] = atom3WorldPos.y;
+            vertices[8] = atom3WorldPos.z;
+
+            geometry.attributes.position.needsUpdate = true;
+            geometry.computeVertexNormals();  // Recalculate normals for proper shading
+
+            // Update the edge lines (they're a child of the mesh)
+            if (labelInfo.line.children[0]) {
+                const edgeGeometry = labelInfo.line.children[0].geometry;
+                edgeGeometry.dispose();
+                labelInfo.line.children[0].geometry = new THREE.EdgesGeometry(geometry);
+            }
+        } else {
+            // Update bond line
+            const positions = labelInfo.line.geometry.attributes.position.array;
+            positions[0] = atom1WorldPos.x;
+            positions[1] = atom1WorldPos.y;
+            positions[2] = atom1WorldPos.z;
+            positions[3] = atom2WorldPos.x;
+            positions[4] = atom2WorldPos.y;
+            positions[5] = atom2WorldPos.z;
+
+            labelInfo.line.geometry.attributes.position.needsUpdate = true;
+            labelInfo.line.computeLineDistances();
+        }
     }
 }
 
@@ -2509,16 +2651,33 @@ function onMoleculeReset() {
 
 // Optional: Add keyboard shortcut to toggle bond length display
 document.addEventListener('keydown', (event) => {
-    // Press 'B' to show/hide bond length for selected atoms
+    // Press 'B' to show/hide bond length for 2 atoms OR angle for 3 atoms
     if (event.key === 'b' || event.key === 'B') {
         if (atomsSelected.length === 2) {
+            // Bond length functionality for 2 atoms
             const existingLabel = bondLengthLabels.findIndex(label =>
-                (label.atom1Index === atomsSelected[0] && label.atom2Index === atomsSelected[1]) ||
-                (label.atom1Index === atomsSelected[1] && label.atom2Index === atomsSelected[0])
+                !label.isAngle &&
+                ((label.atom1Index === atomsSelected[0] && label.atom2Index === atomsSelected[1]) ||
+                    (label.atom1Index === atomsSelected[1] && label.atom2Index === atomsSelected[0]))
             );
 
             if (existingLabel === -1) {
                 createInfoLabel(atomsSelected[0], atomsSelected[1]);
+            } else {
+                removeBondLengthLabel(existingLabel);
+            }
+        } else if (atomsSelected.length === 3) {
+            // Angle functionality for 3 atoms
+            // The middle atom (vertex) is atomsSelected[1]
+            const existingLabel = bondLengthLabels.findIndex(label =>
+                label.isAngle &&
+                label.atom1Index === atomsSelected[0] &&
+                label.atom2Index === atomsSelected[1] &&
+                label.atom3Index === atomsSelected[2]
+            );
+
+            if (existingLabel === -1) {
+                createInfoLabel(atomsSelected[0], atomsSelected[1], atomsSelected[2]);
             } else {
                 removeBondLengthLabel(existingLabel);
             }
@@ -2532,7 +2691,6 @@ document.addEventListener('keydown', (event) => {
         }
     }
 });
-// Make it globally available
 
 function createRenderer(antialiasOn) {
     if (renderer) {
