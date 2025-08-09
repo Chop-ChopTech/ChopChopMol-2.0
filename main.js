@@ -1633,58 +1633,9 @@ function attachAxisEventListeners() {
         rotationSlider.addEventListener('input', (e) => {
             if (!isSliderActive || !rotationAxis) return;
 
-            const angle = parseFloat(e.target.value);
-            rotationValue.textContent = `${angle}°`;
+            const angle = parseFloat(e.target.value); rotationValue.textContent = `${angle}°`;
 
-            // Calculate the total angle from 0 (not delta)
-            const totalAngle = angle * Math.PI / 180;
-
-            // Determine which atoms to rotate
-            let atomsToRotate = [];
-            if (atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length) {
-                atomsToRotate = atomsSelected;
-            } else {
-                atomsToRotate = Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
-            }
-
-            // Create rotation matrix
-            const axis = rotationAxis.direction.clone().normalize();
-            const point = rotationAxis.point.clone();
-            const rotationMatrix = new THREE.Matrix4().makeRotationAxis(axis, totalAngle);
-
-            // Rotate atoms from their original positions
-            atomsToRotate.forEach(idx => {
-                const atom = main.molecule.atoms[idx];
-                const originalPos = originalPositions[idx];
-
-                if (originalPos) {
-                    // Start from original position
-                    const tempPos = originalPos.clone();
-
-                    // Translate to origin (relative to axis point)
-                    tempPos.sub(point);
-
-                    // Apply rotation
-                    tempPos.applyMatrix4(rotationMatrix);
-
-                    // Translate back
-                    tempPos.add(point);
-
-                    // Update atom position
-                    atom.position.copy(tempPos);
-                    atom.x = atom.position.x;
-                    atom.y = atom.position.y;
-                    atom.z = atom.position.z;
-
-                    // Update instanced mesh
-                    updateAtomMatrix(idx);
-                }
-            });
-
-            // Update rendering
-            main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-            main.molecule.updateBonds(mode);
-            render();
+            rotateSelectedAtoms(angle, originalPositions, isSliderActive);
         });
 
         // Reset everything when releasing the slider
@@ -1728,6 +1679,59 @@ function attachAxisEventListeners() {
             }
         });
     }
+}
+
+function rotateSelectedAtoms(angle, originalPositions, isSliderActive) {
+    const rotationValue = document.getElementById('rotationValue');
+    rotationValue.textContent = `${angle}°`;
+
+    // Calculate the total angle from 0 (not delta)
+    const totalAngle = angle * Math.PI / 180;
+
+    // Determine which atoms to rotate
+    let atomsToRotate = [];
+    if (atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length) {
+        atomsToRotate = atomsSelected;
+    } else {
+        atomsToRotate = Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
+    }
+
+    // Create rotation matrix
+    const axis = rotationAxis.direction.clone().normalize();
+    const point = rotationAxis.point.clone();
+    const rotationMatrix = new THREE.Matrix4().makeRotationAxis(axis, totalAngle);
+
+    // Rotate atoms from their original positions
+    atomsToRotate.forEach(idx => {
+        const atom = main.molecule.atoms[idx];
+        const originalPos = originalPositions[idx];
+
+        if (originalPos) {
+            // Start from original position
+            const tempPos = originalPos.clone();
+
+            // Translate to origin (relative to axis point)
+            tempPos.sub(point);
+
+            // Apply rotation
+            tempPos.applyMatrix4(rotationMatrix);
+
+            // Translate back
+            tempPos.add(point);
+
+            // Update atom position
+            atom.position.copy(tempPos);
+            atom.x = atom.position.x;
+            atom.y = atom.position.y;
+            atom.z = atom.position.z;
+
+            // Update instanced mesh
+            updateAtomMatrix(idx);
+        }
+    });
+    main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+    main.molecule.updateBonds(mode);
+    render();
 }
 
 function recreateRenderer(antialiasEnabled) {
@@ -2054,6 +2058,29 @@ document.querySelectorAll('button').forEach(button => {
     button.addEventListener('click', (event) => {
         buttonSound.play()
     });
+});
+
+window.addEventListener('wheel', function (e) {
+    if (shiftDown && rotationAxis && main.molecule && main.molecule.atoms) {
+        e.preventDefault(); // Prevent page scrolling when rotating
+        // Determine which atoms to rotate
+        let atomsToRotate = atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length
+            ? atomsSelected
+            : Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
+
+        // Store original positions if not already stored
+        let originalPositions = {};
+        atomsToRotate.forEach(idx => {
+            const atom = main.molecule.atoms[idx];
+            originalPositions[idx] = atom.position.clone();
+        });
+
+        // Calculate rotation angle (e.deltaY is typically in pixels, so scale it down)
+        const angle = e.deltaY * 0.5; // Adjust multiplier for sensitivity (radians)
+
+        // Call rotateSelectedAtoms with the correct parameters
+        rotateSelectedAtoms(angle, originalPositions, false);
+    }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
