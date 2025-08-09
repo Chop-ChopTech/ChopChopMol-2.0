@@ -1009,7 +1009,7 @@ function onPointerDown(event) {
 }
 function addToList(itemText, list) {
     const listItem = document.createElement('li');
-    listItem.textContent = `Fragment: [${itemText.join(', ')}]`;
+    listItem.textContent = `Fragment:`;
     listItem.style.cursor = 'pointer';
     listItem.style.padding = '5px';
     listItem.style.borderRadius = '3px';
@@ -1453,7 +1453,7 @@ function updateEditingContent(element = null, color = null) {
 function updateFragmentList(fragmentList) {
     fragments.forEach((fragment, index) => {
         const listItem = document.createElement('li');
-        listItem.textContent = `Fragment ${index + 1}: [${fragment.join(', ')}]`;
+        listItem.textContent = `Fragment ${index + 1}`;
         listItem.style.cursor = 'pointer';
         listItem.style.padding = '5px';
         listItem.style.margin = '2px';
@@ -2366,6 +2366,7 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null) {
 
     // Add to DOM
     document.body.appendChild(labelDiv);
+    render()
 }
 
 // Function to update bond length label position
