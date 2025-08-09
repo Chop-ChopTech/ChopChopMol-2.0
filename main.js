@@ -98,6 +98,7 @@ let selectionEnd = { x: 0, y: 0 };
 let rotationAxis = null; // Store the defined axis
 let axisAtoms = []; // Store the two atoms that define the axis
 let axisVisualizer = null; // Three.js object to visualize the axis
+let labels = [];
 const selectionBox = document.getElementById('selectionBox');
 const projectionVector = new THREE.Vector3();
 
@@ -129,7 +130,7 @@ export default class Main {
         render()
         console.log(this.data);
     }
-    reset() {
+    reset(soft = false) {
         // Clear atoms and bonds
         this.atoms = [];
         this.bonds = [];
@@ -183,30 +184,34 @@ export default class Main {
         hoveredAtom = null;
 
         // Clear any axis definitions
-        rotationAxis = null;
-        axisAtoms = [];
-        if (axisVisualizer) {
-            this.scene.remove(axisVisualizer);
-            axisVisualizer.geometry.dispose();
-            axisVisualizer.material.dispose();
-            axisVisualizer = null;
+        if (!soft) {
+            rotationAxis = null;
+            axisAtoms = [];
+            if (axisVisualizer) {
+                this.scene.remove(axisVisualizer);
+                axisVisualizer.geometry.dispose();
+                axisVisualizer.material.dispose();
+                axisVisualizer = null;
+            }
+            fragments = [];
+            labels = [];
+            clearAllBondLengthLabels();
+
         }
-
-        // Clear the edit panel
         editMoleculePanel.classList.add('on');
-        fragments = [];
         fragmentsSelected = [];
-
         clearScene(this.scene);
-        clearAllBondLengthLabels(); // ADD THIS LINE
+        labels.forEach(label => {
+            createInfoLabel(label[0], label[1], label[2] ?? null);
+        })
         render();
     }
-    newMolecule(data, mode, overlay, rotation, translation, center = true) {
+    newMolecule(data, mode, overlay, rotation, translation, center = true, soft = false) {
 
         if (overlay) {
             this.overlayMolecule.init(data, mode, rotation, translation, center);
         } else {
-            this.reset();
+            this.reset(soft);
             this.molecule.init(data, mode, rotation, translation, center);
         }
         if (labelMode) {
@@ -2701,6 +2706,8 @@ document.addEventListener('keydown', (event) => {
             );
 
             if (existingLabel === -1) {
+                labels.push([atomsSelected[0], atomsSelected[1]]);
+                console.log(labels);
                 createInfoLabel(atomsSelected[0], atomsSelected[1]);
             } else {
                 removeBondLengthLabel(existingLabel);
@@ -2716,6 +2723,8 @@ document.addEventListener('keydown', (event) => {
             );
 
             if (existingLabel === -1) {
+                labels.push([atomsSelected[0], atomsSelected[1], atomsSelected[2]]);
+                console.log(labels);
                 createInfoLabel(atomsSelected[0], atomsSelected[1], atomsSelected[2]);
             } else {
                 removeBondLengthLabel(existingLabel);

@@ -1,4 +1,6 @@
 const undoManager = new UndoManager();
+let savedLabels = [];
+
 undoManager.setLimit(30); // Keep last 30 actions
 
 // Helper to get current state
@@ -8,10 +10,22 @@ function getMoleculeState() {
         return null;
     }
 
+    // Save bond/angle labels state
+    let labelsState = [];
+    if (window.bondLengthLabels && window.bondLengthLabels.length > 0) {
+        labelsState = window.bondLengthLabels.map(label => ({
+            atom1Index: label.atom1Index,
+            atom2Index: label.atom2Index,
+            atom3Index: label.atom3Index || null,
+            isAngle: label.isAngle || false
+        }));
+    }
+
     // Only save the essential data
     return {
         moleculeData: JSON.parse(JSON.stringify(window.main.data)),
-        selectedAtoms: [...(window.atomsSelected || [])]
+        selectedAtoms: [...(window.atomsSelected || [])],
+        labels: labelsState  // ADD THIS: Save labels state
     };
 }
 
@@ -30,7 +44,8 @@ function restoreMoleculeState(state) {
             false,
             { x: 0, y: 0, z: 0 },
             { x: 0, y: 0, z: 0 },
-            false
+            false,
+            true
         );
 
         // Restore atom selection
@@ -41,6 +56,25 @@ function restoreMoleculeState(state) {
             window.atomsSelected.forEach(idx => {
                 if (idx < window.main.molecule.atoms.length) {
                     window.selectAtom(idx, false);
+                }
+            });
+        }
+
+        // ADD THIS: Restore bond/angle labels
+        if (state.labels && state.labels.length > 0) {
+            // Clear existing labels first
+            if (typeof window.clearAllBondLengthLabels === 'function') {
+                window.clearAllBondLengthLabels();
+            }
+
+            // Recreate each label
+            state.labels.forEach(labelData => {
+                if (typeof window.createInfoLabel === 'function') {
+                    if (labelData.isAngle && labelData.atom3Index !== null) {
+                        window.createInfoLabel(labelData.atom1Index, labelData.atom2Index, labelData.atom3Index);
+                    } else {
+                        window.createInfoLabel(labelData.atom1Index, labelData.atom2Index);
+                    }
                 }
             });
         }
@@ -116,6 +150,7 @@ document.addEventListener('keydown', function (e) {
     }
 });
 
+
 // Simple notification
 function showNotification(text) {
     const notification = document.createElement('div');
@@ -136,7 +171,6 @@ function showNotification(text) {
 
     setTimeout(() => notification.remove(), 1500);
 }
-
 // Create UI buttons
 function createUndoButtons() {
     if (document.getElementById('undoContainer')) return;
@@ -229,6 +263,8 @@ function updateUndoButtons() {
         redoBtn.disabled = !undoManager.hasRedo();
     }
 }
+
+
 
 // Initialize when ready
 document.addEventListener('DOMContentLoaded', function () {
