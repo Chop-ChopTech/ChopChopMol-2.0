@@ -416,7 +416,7 @@ export default class Molecule {
 
     toggleLabels(show) {
         if (show) {
-            this.instancedMesh.visible = false; // Hide atom spheres
+            this.instancedMesh.visible = true; // Hide atom spheres
             this.atoms.forEach(atom => {
                 const spriteMaterial = new THREE.SpriteMaterial({
                     map: this.createLabelTexture(atom.type, this.atomSettings[atom.type].color),
