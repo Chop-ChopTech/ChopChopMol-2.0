@@ -120,6 +120,7 @@ export default class Main {
         this.opacity = 1;
         this.atomSize = 1;
         this.resolution = 16
+        initializeSelectionBox();
 
 
     }
@@ -496,10 +497,14 @@ renderer.domElement.addEventListener('contextmenu', (event) => {
 });
 
 function worldToScreen(worldPos, camera) {
-    projectionVector.copy(worldPos);
-    projectionVector.project(camera);
-    const x = (projectionVector.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (projectionVector.y * -0.5 + 0.5) * window.innerHeight;
+    const vector = new THREE.Vector3();
+    vector.copy(worldPos);
+    vector.project(camera);
+
+    // Correct viewport transformation
+    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
+
     return { x, y };
 }
 
@@ -638,10 +643,13 @@ function updateInstancedMeshBounds(instancedMesh, atoms) {
 
 // Check if atom is in selection box
 function isAtomInSelection(atomIndex, camera) {
-    const atom = main.molecule.atoms[atomIndex];
-    if (!atom) return false;
+    if (!main.molecule || !main.molecule.atoms || !main.molecule.atoms[atomIndex]) {
+        return false;
+    }
 
-    const screenPos = worldToScreen(atom.position, camera);
+    // Get the actual world position from the instanced mesh
+    const worldPos = getAtomWorldPosition(atomIndex, main.molecule.instancedMesh);
+    const screenPos = worldToScreen(worldPos, camera);
 
     const minX = Math.min(selectionStart.x, selectionEnd.x);
     const maxX = Math.max(selectionStart.x, selectionEnd.x);
@@ -710,7 +718,7 @@ window.addEventListener('pointerup', onSelectionUp, false);
 window.addEventListener('pointermove', onPointerMove2, false);
 
 function onSelectionMove(event) {
-    if (isSelecting) {
+    if (isSelecting && cmdDown) {  // Check cmdDown to ensure we're still in selection mode
         selectionEnd.x = event.clientX;
         selectionEnd.y = event.clientY;
         updateSelectionBox();
@@ -724,32 +732,38 @@ function onSelectionUp(event) {
         isSelecting = false;
         selectionBox.style.display = 'none';
 
+        // Remove the selection-specific event listeners
+        window.removeEventListener('pointermove', onSelectionMove, false);
+        window.removeEventListener('pointerup', onSelectionUp, false);
+
         // Finalize the box selection - add atoms in box to selection
         if (main.molecule && main.molecule.atoms) {
+            const newlySelected = [];
             for (let i = 0; i < main.molecule.atoms.length; i++) {
                 if (isAtomInSelection(i, camera)) {
                     if (!atomsSelected.includes(i)) {
+                        newlySelected.push(i);
                         atomsSelected.push(i);
                     }
                 }
             }
 
             // Refresh the highlighting for the final selection
-            unselectAtom(); // Clear all
-            atomsSelected.forEach(idx => {
-                selectAtom(idx, false); // Highlight final selection
-            });
+            if (newlySelected.length > 0) {
+                unselectAtom(); // Clear all
+                atomsSelected.forEach(idx => {
+                    selectAtom(idx, false); // Highlight final selection
+                });
 
-            // Update the UI with the final selection count
-            if (atomsSelected.length > 0) {
-                editMoleculePanel.classList.remove('on');
-                const element = main.molecule.atoms[atomsSelected[0]].type;
-                updateEditingContent(element, main.molecule.atomSettings[element].color);
+                // Update the UI with the final selection count
+                if (atomsSelected.length > 0) {
+                    editMoleculePanel.classList.remove('on');
+                    const element = main.molecule.atoms[atomsSelected[0]].type;
+                    updateEditingContent(element, main.molecule.atomSettings[element].color);
 
-                // IMPORTANT: Attach button event listeners after box selection
-                attachButtonEventListeners();
-            } else {
-                // editMoleculePanel.classList.add('on');
+                    // IMPORTANT: Attach button event listeners after box selection
+                    attachButtonEventListeners();
+                }
             }
         }
 
@@ -895,9 +909,6 @@ function onPointerDown(event) {
                             }
 
                             // Set up drag plane through the clicked atom
-                            const atom = main.molecule.atoms[instanceId];
-
-                            // Use actual world position for better accuracy
                             const worldPos = getAtomWorldPosition(instanceId, main.molecule.instancedMesh);
 
                             dragPlane.setFromNormalAndCoplanarPoint(
@@ -969,6 +980,10 @@ function onPointerDown(event) {
 
                         selectionBox.style.display = 'block';
                         updateSelectionBox();
+
+                        // Add the selection event listeners
+                        window.addEventListener('pointermove', onSelectionMove, false);
+                        window.addEventListener('pointerup', onSelectionUp, false);
                     } else {
                         // Normal click on empty space: clear atom selection but keep fragments selected
                         // Don't clear fragmentsSelected - fragments stay selected
@@ -1087,10 +1102,10 @@ function onPointerMove(event) {
 
 
 function onPointerMove2(event) {
-    if (!editingMolecule || dragging || isSelecting) return;
+    // Skip if we're selecting or dragging
+    if (dragging || isSelecting) return;
 
-    if (!main.molecule || !main.molecule.instancedMesh || !main.molecule.atoms) return;
-
+    if (!editingMolecule || !main.molecule || !main.molecule.instancedMesh || !main.molecule.atoms) return;
 
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1766,6 +1781,7 @@ function updateAtomMatrix(atomIndex) {
 }
 
 function onPointerUp(event) {
+    // Handle dragging cleanup
     if (dragging) {
         dragging = false;
         saveUndoState("Move Atoms");
@@ -1776,31 +1792,20 @@ function onPointerUp(event) {
         window.originalDragPositions = null;
         if (main.molecule && main.molecule.labels && main.molecule.labels.length > 0) {
             main.molecule.updateLabels();
-            render()
+            render();
         }
         window.removeEventListener('pointermove', onPointerMove, false);
         window.removeEventListener('pointerup', onPointerUp, false);
     }
 
+    // Handle selection box cleanup (backup in case onSelectionUp wasn't called)
     if (event.button === 0 && isSelecting) {
-        isSelecting = false;
-        selectionBox.style.display = 'none';
-
-        // Finalize the box selection - add atoms in box to selection
-        if (main.molecule && main.molecule.atoms) {
-            for (let i = 0; i < main.molecule.atoms.length; i++) {
-                if (isAtomInSelection(i, camera)) {
-                    if (!atomsSelected.includes(i)) {
-                        atomsSelected.push(i);
-                    }
-                }
-            }
-            console.log('Final selected atoms:', atomsSelected);
-        }
-
-        render();
+        onSelectionUp(event);
     }
-    main.molecule.updateMainCoordinates()
+
+    if (main.molecule) {
+        main.molecule.updateMainCoordinates();
+    }
 }
 
 // function selectFragment(fragmentAtoms, fragmentIndex) {
@@ -1852,6 +1857,21 @@ function updateFragmentListSelection(selectedIndex) {
             item.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
         }
     });
+}
+function initializeSelectionBox() {
+    if (!document.getElementById('selectionBox')) {
+        const selectionBoxElement = document.createElement('div');
+        selectionBoxElement.id = 'selectionBox';
+        selectionBoxElement.style.cssText = `
+            position: fixed;
+            border: 2px dashed rgba(255, 255, 255, 0.7);
+            background-color: rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+        `;
+        document.body.appendChild(selectionBoxElement);
+    }
 }
 
 function arraysEqual(a, b) {
