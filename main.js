@@ -1012,30 +1012,7 @@ function onPointerDown(event) {
         }
     }
 }
-function addToList(itemText, list) {
-    const listItem = document.createElement('li');
-    listItem.textContent = `Fragment:`;
-    listItem.style.cursor = 'pointer';
-    listItem.style.padding = '5px';
-    listItem.style.borderRadius = '3px';
-    listItem.style.transition = 'background-color 0.2s ease';
 
-    // Add hover effect
-    listItem.addEventListener('mouseenter', () => {
-        listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-    });
-
-    listItem.addEventListener('mouseleave', () => {
-        listItem.style.backgroundColor = 'transparent';
-    });
-
-    // Add click handler to select fragment
-    listItem.addEventListener('click', () => {
-        selectFragment(itemText);
-    });
-
-    list.appendChild(listItem);
-}
 
 
 function onPointerMove(event) {
@@ -1441,7 +1418,6 @@ function updateEditingContent(element = null, color = null) {
             <button id="createFragment" style="background-color:rgb(168, 146, 0); margin:10px; display:none; " class="fancy-button">Create Fragment</button>
             ${axisButtonHtml}
             ${axisControlsHtml}
-            <ul id="fragmentList"></ul>
         `;
 
         if (atomsSelected.length > 1) {
@@ -1460,9 +1436,13 @@ function updateEditingContent(element = null, color = null) {
 }
 
 function updateFragmentList(fragmentList) {
+    fragmentList.innerHTML = '';
+
     fragments.forEach((fragment, index) => {
         const listItem = document.createElement('li');
+        listItem.innerHTML = '';
         listItem.textContent = `Fragment ${index + 1}`;
+        // listItem.innerHTML += `   <i class="fa-solid fa-eye"></i>`
         listItem.style.cursor = 'pointer';
         listItem.style.padding = '5px';
         listItem.style.margin = '2px';

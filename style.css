@@ -811,6 +811,7 @@ input[type="range"]:focus {
 }
 
 #fragmentList {
+
     list-style: none;
     padding: 0;
     margin: 0 auto;
@@ -819,9 +820,28 @@ input[type="range"]:focus {
     align-items: center;
     width: fit-content;
     color: white;
-    max-height: 300px;
+    max-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+#fragmentListContainer {
+    display: flex;
+    align-items: center;
+    justify-content: top;
+    flex-direction: column;
+    width: 130px;
+    height: 100vh;
+    padding: 10px 0;
+    position: absolute;
+    top: 0;
+    right: 0;
+    /* background-color: chartreuse; */
+}
+
+#fragmentListTitle {
+    color: white;
+    position: relative;
 }
 
 #fragmentList li {
@@ -1207,6 +1227,27 @@ input[type="range"]:focus {
 .user-initials.green-theme {
     background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
 }
+
+/* For WebKit browsers */
+::-webkit-scrollbar {
+    width: 4px;
+    /* scrollbar width */
+}
+
+::-webkit-scrollbar-track {
+    background: #111;
+    /* background behind scrollbar */
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #009dff, #af4dff, #ffffff);
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ffffff, #0095ff, #8400ff);
+}
+
 
 @keyframes glowButton {
     0% {
