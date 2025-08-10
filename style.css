@@ -527,8 +527,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    color: #b2b421 !important;
-    border: 3px solid #1a5185;
+    color: #0091ff !important;
+    border: 3px solid #002c55;
 }
 
 #styleSelector.on {
