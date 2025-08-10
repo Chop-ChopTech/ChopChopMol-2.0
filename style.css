@@ -786,9 +786,17 @@ input[type="range"]:focus {
     /* Smooth transition for background */
 }
 
-.dropdown:hover .dropdown-icon {
+/* Show dropdown when active class is present */
+.dropdown.active .dropdown-content {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Optional: Rainbow effect when dropdown is active instead of hover */
+.dropdown.active .dropdown-icon {
     background: linear-gradient(90deg,
-            /* Changed from 90deg to 45deg for diagonal gradient */
             #ff0000,
             #ff9900,
             #33cc33,
@@ -796,12 +804,10 @@ input[type="range"]:focus {
             #cc00ff,
             #ff0000);
     background-size: 200% 100%;
-    /* Double width for seamless looping */
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: rainbow 3s linear infinite;
-    /* Loop rainbow animation */
 }
 
 #fragmentList {
@@ -1052,13 +1058,7 @@ input[type="range"]:focus {
 }
 
 /* Show dropdown on hover with fade-in and slide */
-.dropdown:hover .dropdown-content,
-.dropdown-content:hover {
-    display: block;
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(-50%) translateY(0);
-}
+
 
 /* Fancy button styling */
 .dropdown-content button {

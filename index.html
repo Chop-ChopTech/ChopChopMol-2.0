@@ -721,6 +721,51 @@
                 loadingText.classList.remove('on');
             }
         }
+
+        // Initialize dropdown click behavior
+        document.addEventListener('DOMContentLoaded', function () {
+            // Get all dropdown elements
+            const dropdowns = document.querySelectorAll('.dropdown');
+
+            // Add click event listener to each dropdown icon
+            dropdowns.forEach(dropdown => {
+                const dropdownIcon = dropdown.querySelector('.dropdown-icon');
+
+                if (dropdownIcon) {
+                    dropdownIcon.addEventListener('click', function (e) {
+                        e.stopPropagation();
+
+                        // Close all other dropdowns first
+                        dropdowns.forEach(otherDropdown => {
+                            if (otherDropdown !== dropdown) {
+                                otherDropdown.classList.remove('active');
+                            }
+                        });
+
+                        // Toggle current dropdown
+                        dropdown.classList.toggle('active');
+                    });
+                }
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function (e) {
+                // Check if click is outside any dropdown
+                if (!e.target.closest('.dropdown')) {
+                    dropdowns.forEach(dropdown => {
+                        dropdown.classList.remove('active');
+                    });
+                }
+            });
+
+            // Prevent dropdown from closing when clicking inside dropdown content
+            const dropdownContents = document.querySelectorAll('.dropdown-content');
+            dropdownContents.forEach(content => {
+                content.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            });
+        });
         function loadJson() {
             jsonPanel.classList.remove('on');
             window.reply = document.getElementById('jsonInput').value;
