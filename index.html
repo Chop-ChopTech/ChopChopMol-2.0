@@ -313,12 +313,12 @@
             <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
             </span>
             <div class="dropdown-content" style="left: 50%;">
-                <button class="fancy-button" id="aiGenerate"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
-                    Generate</button>
+                <!-- <button class="fancy-button" id="aiGenerate"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
+                    Generate</button> -->
                 <button class="fancy-button" id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
-                <button class="fancy-button" id="import-smiles"><i class="fas fa-vial"></i> Load SMILES string</button>
+                <!-- <button class="fancy-button" id="import-smiles"><i class="fas fa-vial"></i> Load SMILES string</button> -->
                 <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load JSON</button>
-                <button class="fancy-button" id="compareButton">Compare</button>
+                <!-- <button class="fancy-button" id="compareButton">Compare</button> -->
 
 
             </div>
@@ -328,7 +328,6 @@
             <div class="dropdown-content">
                 <button class="fancy-button" id="switchMode"><i class="fas fa-paint-brush"></i> Toggle Style</button>
                 <button class="fancy-button" id="analyze-molecule">Analyze molecule</button>
-                <!-- <button class="fancy-button" id="editMolecule"> <i class="fas fa-edit"></i> Edit Molecule</button> -->
                 <button class="fancy-button" id="clear-canvas"><i class="fa-solid fa-trash"></i> Clear</button>
 
 
@@ -520,12 +519,12 @@
         customButton.addEventListener('click', () => {
             fileInput.click();
         });
-        const compareFileInput = document.getElementById('compare');
-        const compareButton = document.getElementById('compareButton');
+        //const compareFileInput = document.getElementById('compare');
+        //const compareButton = document.getElementById('compareButton');
 
-        compareButton.addEventListener('click', () => {
-            compareFileInput.click();
-        });
+        //compareButton.addEventListener('click', () => {
+        //    compareFileInput.click();
+        //}); 
     </script>
     <script>
         let _reply = null;
@@ -566,18 +565,18 @@
             smilesPanel.classList.remove('on');
             aiGeneratePanel.classList.remove('on');
         })
-        aiGenerateButton.addEventListener('click', () => {
-            aiGeneratePanel.classList.toggle('on');
-            smilesPanel.classList.remove('on');
-            jsonPanel.classList.remove('on');
-        });
+        //aiGenerateButton.addEventListener('click', () => {
+        //    aiGeneratePanel.classList.toggle('on');
+        //    smilesPanel.classList.remove('on');
+        //    jsonPanel.classList.remove('on');
+        //});
 
-        smilesButton.addEventListener('click', () => {
-            // aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'flex' : 'none'; 
-            smilesPanel.classList.toggle('on');
-            aiGeneratePanel.classList.remove('on');
-            jsonPanel.classList.remove('on');
-        });
+        //smilesButton.addEventListener('click', () => {
+        //    // aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'flex' : 'none'; 
+        //    smilesPanel.classList.toggle('on');
+        //    aiGeneratePanel.classList.remove('on');
+        //    jsonPanel.classList.remove('on');
+        //});
 
 
         let enterPressed = false;
