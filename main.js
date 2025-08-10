@@ -1203,7 +1203,7 @@ function attachButtonEventListeners() {
             });
             main.data.numAtoms -= atomsSelected.length;
             atomsSelected = [];
-            main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false);
+            main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false, true);
         });
     }
 
