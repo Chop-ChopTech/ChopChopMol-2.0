@@ -1283,12 +1283,15 @@ function attachButtonEventListeners() {
     }
 
     if (closeEditing) {
-        const newCloseEditing = closeEditing.cloneNode(true);
-        closeEditing.parentNode.replaceChild(newCloseEditing, closeEditing);
+        // const newCloseEditing = closeEditing.cloneNode(true);
+        // closeEditing.parentNode.replaceChild(newCloseEditing, closeEditing);
 
-        newCloseEditing.addEventListener('click', () => {
-            editMoleculePanel.classList.add('on');
-        });
+        // newCloseEditing.addEventListener('click', () => {
+        //     editMoleculePanel.classList.add('on');
+        // });
+        closeEditing.addEventListener('click', () => {
+            editMoleculePanel.classList.toggle('on');
+        })
     }
 
     // Attach axis event listeners
@@ -1426,8 +1429,9 @@ function updateEditingContent(element = null, color = null) {
 
         editMoleculeContent.innerHTML = `
             <button id="closeEditing" class="dismiss" title="Dismiss">×</button>
-
-            <h2 style="color:${color};">Element: ${element}</h2><br>
+        `;
+        editMoleculeContent.innerHTML += `
+                    <h2 style="color:${color};">Element: ${element}</h2><br>
             <span style="color:white;">Hold shift and drag to move the atom</span>
             <br>
             <span style="color:white;">Hold cmd or ctrl and to select more atoms in a group</span>
@@ -1527,6 +1531,7 @@ function updateFragmentList(fragmentList) {
 
         fragmentList.appendChild(listItem);
     });
+    attachButtonEventListeners();
 }
 
 function attachAxisEventListeners() {
