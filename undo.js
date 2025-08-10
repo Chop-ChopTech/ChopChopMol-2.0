@@ -12,11 +12,12 @@ function getMoleculeState() {
 
     // Save bond/angle labels state
     let labelsState = [];
-    if (window.bondLengthLabels && window.bondLengthLabels.length > 0) {
-        labelsState = window.bondLengthLabels.map(label => ({
-            atom1Index: label.atom1Index,
-            atom2Index: label.atom2Index,
-            atom3Index: label.atom3Index || null,
+    if (window.labels && window.labels.length > 0) {
+        labelsState = window.labels.map(label => ({
+            atom1Index: label[0],
+            atom2Index: label[1],
+            atom3Index: label[2] || null,
+            atom4Index: label[3] || null,
             isAngle: label.isAngle || false
         }));
     }
@@ -70,10 +71,8 @@ function restoreMoleculeState(state) {
             // Recreate each label
             state.labels.forEach(labelData => {
                 if (typeof window.createInfoLabel === 'function') {
-                    if (labelData.isAngle && labelData.atom3Index !== null) {
-                        window.createInfoLabel(labelData.atom1Index, labelData.atom2Index, labelData.atom3Index);
-                    } else {
-                        window.createInfoLabel(labelData.atom1Index, labelData.atom2Index);
+                    if (labelData.isAngle) {
+                        window.createInfoLabel(labelData.atom1Index, labelData.atom2Index, labelData.atom3Index || null, labelData.atom4Index || null);
                     }
                 }
             });
