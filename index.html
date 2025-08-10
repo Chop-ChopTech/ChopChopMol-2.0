@@ -112,6 +112,10 @@
                 alert('Please sign in to save molecules');
                 return;
             }
+            if (!window.main.data || !window.main.data.atomData || window.main.data.atomData.length === 0) {
+                alert('No molecule loaded to save!');
+                return;
+            }
 
             if (!window.main || !window.main.data) {
                 alert('No molecule loaded to save');

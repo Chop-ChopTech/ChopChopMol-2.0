@@ -272,6 +272,14 @@ const main = new Main();
 window.main = main;
 
 const fileInput = document.getElementById("fileInput")
+
+document.addEventListener('keydown', (event) => {
+    if (event.metaKey && event.key.toLowerCase() === 'o') {
+        event.preventDefault(); // stop browser's default "Open File" dialog
+        fileInput.click();
+        // Your custom code here
+    }
+});
 // File input event listener
 fileInput.addEventListener("change", (e) => {
     console.log(e)
@@ -1921,7 +1929,10 @@ function unselectAtom(index = null) {
 }
 
 function saveImage() {
-
+    if (!main.data || !main.data.atomData || main.data.atomData.length === 0) {
+        alert('No molecule loaded to save!');
+        return;
+    }
     renderer.render(scene, camera);
     let imgData = renderer.domElement.toDataURL("image/png", 1.0);
     const link = document.createElement('a');
