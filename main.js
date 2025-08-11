@@ -57,7 +57,7 @@ let fragmentsSelected = [];
 let hoveredAtom = null;
 let bondLengthLabels = []; // Store bond length label objects
 let contextMenuOpen = false;
-let arrowKeyRotationStep = 1; // degrees per arrow key press
+let arrowKeyRotationStep = 0.1; // degrees per arrow key press
 let arrowKeyTranslationStep = 0.1; // units per arrow key press
 let currentRotationAngle = 0; // Track the current rotation angle globally
 let baseAtomPositions = {}; // The TRUE original positions before ANY rotation
@@ -1388,40 +1388,42 @@ function updateEditingContent(element = null, color = null) {
 
         // Show "Define Axis" button only when exactly 2 atoms are selected
         if (atomsSelected.length === 2) {
-            axisButtonHtml = `<button id="defineAxisBtn" style="background-color:rgb(255, 0, 255); margin:10px;" class="fancy-button">Define Axis</button>`;
+            axisButtonHtml = `<button id="defineAxisBtn" style="background-color:rgb(255, 0, 255); margin:10px; " class="fancy-button">Define Axis</button>`;
         }
 
         // Show axis controls if an axis is defined
         if (rotationAxis) {
             axisControlsHtml = `
                 <div style="margin-top: 20px; padding: 20px; background-color: rgba(255, 0, 255, 0.2); border-radius: 15px;">
-                    <h3 style="color: white; margin: 5px 0;">Rotation Axis Defined</h3>
-                    <p style="color: white; font-size: 12px; margin: 5px 0;">Atoms: ${axisAtoms[0]} → ${axisAtoms[1]}</p>
                     <button id="removeAxisBtn" style="background-color:rgb(255, 100, 100); margin:5px;" class="fancy-button">Remove Axis</button>
                     <div style="margin-top: 10px;">
                         <label style="color: white; display: block; margin-bottom: 5px;">Rotate ${atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length ? 'Selected Atoms' : 'Entire Molecule'}:</label>
                         <input type="range" id="rotationSlider" min="-180" max="180" value="0" step="1" style="width: 100%;">
-                        <span id="rotationValue" style="color: white; display: block; text-align: center;">0°</span>
                     </div>
                 </div>
             `;
         }
 
         editMoleculeContent.innerHTML = `
-            <button id="closeEditing" class="dismiss" title="Dismiss">×</button>
+            <button id="closeEditing" class="dismiss" title="Dismiss" style="position: absolute; top: 0%; left: 0%; margin: 10px">×</button>
         `;
         editMoleculeContent.innerHTML += `
-                    <h2 style="color:${color};">Element: ${element}</h2><br>
-            <span style="color:white;">Hold shift and drag to move the atom</span>
-            <br>
-            <span style="color:white;">Hold cmd or ctrl and to select more atoms in a group</span>
-
             <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
             <button id="removeAtomBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
-            <button id="createFragment" style="background-color:rgb(168, 146, 0); margin:10px; display:none; " class="fancy-button">Create Fragment</button>
             ${axisButtonHtml}
             ${axisControlsHtml}
         `;
+        const createFragmentButton = document.createElement('button');
+        createFragmentButton.id = 'createFragment';
+        createFragmentButton.textContent = 'Create Fragment';
+        createFragmentButton.className = 'fancy-button';
+        createFragmentButton.style.backgroundColor = 'rgb(168, 146, 0)';
+        createFragmentButton.style.margin = '10px';
+        createFragmentButton.style.display = 'none';
+        createFragmentButton.style.position = 'absolute';
+        createFragmentButton.style.top = '0px';
+        createFragmentButton.style.right = '0px';
+        document.body.appendChild(createFragmentButton);
 
         if (atomsSelected.length > 1) {
             document.getElementById('createFragment').style.display = 'block';
@@ -1682,7 +1684,7 @@ function attachAxisEventListeners() {
 
 function rotateSelectedAtoms(angle, originalPositions, isSliderActive) {
     const rotationValue = document.getElementById('rotationValue');
-    rotationValue.textContent = `${angle}°`;
+    // rotationValue.textContent = `${angle}°`;
 
     // Calculate the total angle from 0 (not delta)
     const totalAngle = angle * Math.PI / 180;
@@ -2095,7 +2097,7 @@ window.addEventListener('wheel', function (e) {
 
         // TRACK THE CUMULATIVE ANGLE
         currentRotationAngle += angle;
-        currentRotationAngle = Math.max(-180, Math.min(180, currentRotationAngle));
+        currentRotationAngle = currentRotationAngle % 360;
 
         // Update the slider and display to show current angle
         const rotationSlider = document.getElementById('rotationSlider');

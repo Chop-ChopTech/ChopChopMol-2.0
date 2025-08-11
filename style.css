@@ -558,7 +558,7 @@ body {
 
 #editMoleculeContent {
     background-color: #ffc40046;
-    width: 100%;
+    width: 230px;
     height: 100%;
     text-align: center;
     justify-content: center;
@@ -823,6 +823,7 @@ input[type="range"]:focus {
     max-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
+    padding-top: 35px;
 }
 
 #fragmentListContainer {
