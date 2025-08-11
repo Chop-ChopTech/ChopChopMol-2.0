@@ -2566,7 +2566,7 @@ window.addEventListener('keydown', function (e) {
                 const point = rotationAxis.point.clone();
                 const inverseRotation = new THREE.Matrix4().makeRotationAxis(
                     axis,
-                    -currentRotationAngle * Math.PI / 180  // CHANGED THIS LINE
+                    -currentRotationAngle * Math.PI / 180
                 );
 
                 atomsToRotate.forEach(idx => {
@@ -2579,6 +2579,7 @@ window.addEventListener('keydown', function (e) {
                 });
             }
 
+
             // NOW update tracked angle after we've calculated base positions
             currentRotationAngle += increment;
             currentRotationAngle = Math.max(-180, Math.min(180, currentRotationAngle));
@@ -2588,10 +2589,7 @@ window.addEventListener('keydown', function (e) {
             if (rotationSlider) {
                 rotationSlider.value = currentRotationAngle;
             }
-            const rotationValue = document.getElementById('rotationValue');
-            if (rotationValue) {
-                rotationValue.textContent = `${currentRotationAngle.toFixed(1)}°`;
-            }
+
 
             // Now rotate from base to new angle
             const axis = rotationAxis.direction.clone().normalize();
