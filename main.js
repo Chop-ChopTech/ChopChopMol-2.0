@@ -478,17 +478,17 @@ saveImageButton.addEventListener('click', () => {
 clearSceneButton.addEventListener('click', () => {
     main.reset();
 });
-analyzeMoleculeButton.addEventListener('click', () => {
-    const images = []
-    const numImages = 3;
-    for (let i = 0; i < numImages; i++) {
-        const imgData = getScreenUrl();
-        images.push(imgData)
-        rotateCamera(Math.PI / (numImages / 2), camera, controls);
-    }
+// analyzeMoleculeButton.addEventListener('click', () => {
+//     const images = []
+//     const numImages = 3;
+//     for (let i = 0; i < numImages; i++) {
+//         const imgData = getScreenUrl();
+//         images.push(imgData)
+//         rotateCamera(Math.PI / (numImages / 2), camera, controls);
+//     }
 
-    window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
-})
+//     window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
+// })
 
 renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
 renderer.domElement.addEventListener('contextmenu', (event) => {
