@@ -2102,7 +2102,7 @@ window.addEventListener('wheel', function (e) {
 
         // TRACK THE CUMULATIVE ANGLE
         currentRotationAngle += angle;
-        currentRotationAngle = currentRotationAngle % 360;
+        currentRotationAngle = loopAround180(currentRotationAngle);
 
         // Update the slider and display to show current angle
         const rotationSlider = document.getElementById('rotationSlider');
@@ -2136,6 +2136,16 @@ window.addEventListener('wheel', function (e) {
         }
     }
 });
+
+function loopAround180(value) {
+    if (value > 180 || value < -180) {
+        let sign = value < 0 ? -1 : 1;
+        let absVal = Math.abs(value);
+        return sign * (absVal % 180);
+    }
+    return value;
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // Save molecule
@@ -3188,6 +3198,7 @@ function createRenderer(antialiasOn) {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
+    console.log(currentRotationAngle);
 }
 function render() {
     renderer.render(scene, camera);
