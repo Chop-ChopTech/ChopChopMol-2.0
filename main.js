@@ -1397,8 +1397,12 @@ function updateEditingContent(element = null, color = null) {
                 <div style="margin-top: 20px; padding: 20px; background-color: rgba(255, 0, 255, 0.2); border-radius: 15px;">
                     <button id="removeAxisBtn" style="background-color:rgb(255, 100, 100); margin:5px;" class="fancy-button">Remove Axis</button>
                     <div style="margin-top: 10px;">
-                        <label style="color: white; display: block; margin-bottom: 5px;">Rotate ${atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length ? 'Selected Atoms' : 'Entire Molecule'}:</label>
+                        <label style="color: white; display: block; margin-bottom: 5px;">Rotate ${atomsSelected.length > 0 ? 'Selected Atoms' : 'Entire Molecule'}:</label>
                         <input type="range" id="rotationSlider" min="-180" max="180" value="0" step="1" style="width: 100%;">
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="color: white; display: block; margin-bottom: 5px;">Translate ${atomsSelected.length > 0 ? 'Selected Atoms' : 'Entire Molecule'}:</label>
+                        <input type="range" id="translationSlider" min="-180" max="180" value="0" step="0.1" style="width: 100%;">
                     </div>
                 </div>
             `;
@@ -1523,6 +1527,7 @@ function attachAxisEventListeners() {
     const defineAxisBtn = document.getElementById('defineAxisBtn');
     const removeAxisBtn = document.getElementById('removeAxisBtn');
     const rotationSlider = document.getElementById('rotationSlider');
+    const translationSlider = document.getElementById('translationSlider');
     const rotationValue = document.getElementById('rotationValue');
 
     if (defineAxisBtn) {
@@ -1578,7 +1583,7 @@ function attachAxisEventListeners() {
         });
     }
 
-    if (rotationSlider && rotationValue) {
+    if (rotationSlider) {
         let previousAngle = 0;
         let originalPositions = {}; // Store original positions when slider starts
         let isSliderActive = false;
@@ -1683,7 +1688,7 @@ function attachAxisEventListeners() {
 }
 
 function rotateSelectedAtoms(angle, originalPositions, isSliderActive) {
-    const rotationValue = document.getElementById('rotationValue');
+    // const rotationValue = document.getElementById('rotationValue');
     // rotationValue.textContent = `${angle}°`;
 
     // Calculate the total angle from 0 (not delta)

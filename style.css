@@ -541,7 +541,7 @@ body {
     left: 10px;
     z-index: 9999;
     background-color: #ffffff00;
-    width: 300px;
+    width: 240px;
     height: auto;
     padding: 5px;
     border-radius: 10px;
@@ -558,7 +558,7 @@ body {
 
 #editMoleculeContent {
     background-color: #ffc40046;
-    width: 230px;
+    width: 240px;
     height: 100%;
     text-align: center;
     justify-content: center;
@@ -867,7 +867,6 @@ input[type="range"]:focus {
     -webkit-appearance: none;
     width: 100%;
     height: 8px;
-    background: linear-gradient(to right, #ff0080 0%, #ff00ff 50%, #ff0080 100%);
     border-radius: 5px;
     outline: none;
     opacity: 0.8;
@@ -878,17 +877,7 @@ input[type="range"]:focus {
     opacity: 1;
 }
 
-#rotationSlider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 20px;
-    height: 20px;
-    background: #ff00ff;
-    border: 2px solid #fff;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(255, 0, 255, 0.5);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
+
 
 #rotationSlider::-webkit-slider-thumb:hover {
     transform: scale(1.2);
