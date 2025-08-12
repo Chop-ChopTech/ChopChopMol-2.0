@@ -62,7 +62,13 @@ let arrowKeyTranslationStep = 0.1; // units per arrow key press
 let currentRotationAngle = 0; // Track the current rotation angle globally
 let baseAtomPositions = {}; // The TRUE original positions before ANY rotation
 let rotationBasePositions = {}; // Original positions before any rotation
-
+let rotationState = {
+    basePositions: {},           // Original positions before any transformation
+    currentAngle: 0,             // Current rotation angle in degrees
+    isActive: false,              // Whether rotation is currently active
+    axis: null,                   // Current rotation axis {point: Vector3, direction: Vector3}
+    selectedAtoms: []             // Indices of atoms to rotate
+};
 
 let editingMolecule = true;
 
@@ -831,51 +837,6 @@ function createAxisVisualizer(atom1, atom2) {
     main.scene.add(axisVisualizer);
     render(); // Make sure to render after adding the axis
 }
-
-function rotateAroundAxis(atomIndices, angle) {
-    if (!rotationAxis || !rotationAxis.point || !rotationAxis.direction) {
-        console.error("No axis defined for rotation");
-        return;
-    }
-
-    const axis = new THREE.Vector3(rotationAxis.direction.x, rotationAxis.direction.y, rotationAxis.direction.z).normalize();
-    const point = new THREE.Vector3(rotationAxis.point.x, rotationAxis.point.y, rotationAxis.point.z);
-
-    // Create rotation matrix
-    const rotationMatrix = new THREE.Matrix4().makeRotationAxis(axis, angle);
-
-    atomIndices.forEach(idx => {
-        const atom = main.molecule.atoms[idx];
-
-        // Translate to origin (relative to axis point)
-        const relativePos = new THREE.Vector3().copy(atom.position).sub(point);
-
-        // Apply rotation
-        relativePos.applyMatrix4(rotationMatrix);
-
-        // Translate back
-        atom.position.copy(relativePos).add(point);
-        atom.x = atom.position.x;
-        atom.y = atom.position.y;
-        atom.z = atom.position.z;
-
-        // Update instanced mesh
-        const matrix = new THREE.Matrix4();
-        let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
-        if (main.mode && main.mode.atomSize) {
-            radius *= main.mode.atomSize;
-        }
-        matrix.makeScale(radius, radius, radius);
-        matrix.setPosition(atom.position);
-        main.molecule.instancedMesh.setMatrixAt(idx, matrix);
-    });
-
-    main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-    main.molecule.updateBonds(mode);
-    main.molecule.updateMainCoordinates();
-    render();
-}
-
 
 function onPointerDown(event) {
     if (editingMolecule) {
@@ -1687,43 +1648,131 @@ function attachAxisEventListeners() {
     }
 }
 
-function rotateSelectedAtoms(angle, originalPositions, isSliderActive) {
-    // const rotationValue = document.getElementById('rotationValue');
-    // rotationValue.textContent = `${angle}°`;
+function rotateSelectedAtoms(angle, options = {}) {
+    // Default options
+    const defaults = {
+        relative: false,
+        updateUI: true,
+        atomIndices: null,
+        axis: null
+    };
 
-    // Calculate the total angle from 0 (not delta)
-    const totalAngle = angle * Math.PI / 180;
+    const opts = { ...defaults, ...options };
 
-    // Determine which atoms to rotate
-    let atomsToRotate = [];
-    if (atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length) {
-        atomsToRotate = atomsSelected;
-    } else {
-        atomsToRotate = Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
+    // Validate molecule exists
+    if (!main?.molecule?.atoms || main.molecule.atoms.length === 0) {
+        console.warn('No molecule or atoms available for rotation');
+        return false;
     }
 
-    // Create rotation matrix
-    const axis = rotationAxis.direction.clone().normalize();
-    const point = rotationAxis.point.clone();
-    const rotationMatrix = new THREE.Matrix4().makeRotationAxis(axis, totalAngle);
+    // Use provided axis or global rotationAxis
+    const axis = opts.axis || rotationAxis;
+    if (!axis?.direction || !axis?.point) {
+        console.warn('No rotation axis defined');
+        return false;
+    }
 
-    // Rotate atoms from their original positions
-    atomsToRotate.forEach(idx => {
+    // Determine which atoms to rotate
+    let atomsToRotate = opts.atomIndices;
+    if (!atomsToRotate) {
+        if (atomsSelected && atomsSelected.length > 0) {
+            atomsToRotate = atomsSelected;
+        } else {
+            // Rotate all atoms if none selected
+            atomsToRotate = Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
+        }
+    }
+
+    // Initialize base positions if needed
+    if (!rotationState.isActive || Object.keys(rotationState.basePositions).length === 0) {
+        initializeRotationState(atomsToRotate, axis);
+    }
+
+    // Calculate the actual angle to apply
+    let targetAngle;
+    if (opts.relative) {
+        // Relative rotation: add to current angle
+        targetAngle = rotationState.currentAngle + angle;
+    } else {
+        // Absolute rotation: set to specific angle
+        targetAngle = angle;
+    }
+
+    // Clamp angle to -180 to 180 range
+    targetAngle = clampAngle(targetAngle);
+
+    // Perform the rotation
+    performRotation(atomsToRotate, targetAngle, axis);
+
+    // Update state
+    rotationState.currentAngle = targetAngle;
+    rotationState.isActive = true;
+
+    // Update UI if requested
+    if (opts.updateUI) {
+        updateRotationUI(targetAngle);
+    }
+
+    // Update molecule visualization
+    updateMoleculeVisualization();
+
+    return true;
+}
+
+function initializeRotationState(atomIndices, axis) {
+    rotationState.basePositions = {};
+    rotationState.selectedAtoms = atomIndices;
+    rotationState.axis = {
+        point: axis.point.clone(),
+        direction: axis.direction.clone().normalize()
+    };
+
+    // If there's already a rotation applied, reverse it to get base positions
+    if (rotationState.currentAngle !== 0 && rotationState.isActive) {
+        const reverseMatrix = new THREE.Matrix4().makeRotationAxis(
+            rotationState.axis.direction,
+            -rotationState.currentAngle * Math.PI / 180
+        );
+
+        atomIndices.forEach(idx => {
+            const atom = main.molecule.atoms[idx];
+            const tempPos = atom.position.clone();
+            tempPos.sub(rotationState.axis.point);
+            tempPos.applyMatrix4(reverseMatrix);
+            tempPos.add(rotationState.axis.point);
+            rotationState.basePositions[idx] = tempPos;
+        });
+    } else {
+        // Store current positions as base
+        atomIndices.forEach(idx => {
+            const atom = main.molecule.atoms[idx];
+            rotationState.basePositions[idx] = atom.position.clone();
+        });
+    }
+}
+
+function performRotation(atomIndices, targetAngle, axis) {
+    const angleRadians = targetAngle * Math.PI / 180;
+    const axisDirection = axis.direction.clone().normalize();
+    const axisPoint = axis.point.clone();
+    const rotationMatrix = new THREE.Matrix4().makeRotationAxis(axisDirection, angleRadians);
+
+    atomIndices.forEach(idx => {
         const atom = main.molecule.atoms[idx];
-        const originalPos = originalPositions[idx];
+        const basePos = rotationState.basePositions[idx];
 
-        if (originalPos) {
-            // Start from original position
-            const tempPos = originalPos.clone();
+        if (basePos) {
+            // Start from base position
+            const tempPos = basePos.clone();
 
             // Translate to origin (relative to axis point)
-            tempPos.sub(point);
+            tempPos.sub(axisPoint);
 
             // Apply rotation
             tempPos.applyMatrix4(rotationMatrix);
 
             // Translate back
-            tempPos.add(point);
+            tempPos.add(axisPoint);
 
             // Update atom position
             atom.position.copy(tempPos);
@@ -1731,16 +1780,326 @@ function rotateSelectedAtoms(angle, originalPositions, isSliderActive) {
             atom.y = atom.position.y;
             atom.z = atom.position.z;
 
-            // Update instanced mesh
+            // Update visual matrix
             updateAtomMatrix(idx);
         }
     });
-    main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-    main.molecule.updateBonds(mode);
-    if (main.molecule.labels && main.molecule.labels.length > 0) {
-        main.molecule.updateLabels();
+}
+
+function translateSelectedAtoms(distance, options = {}) {
+    const defaults = {
+        atomIndices: null,
+        axis: null,
+        updateUI: true
+    };
+
+    const opts = { ...defaults, ...options };
+
+    // Validate
+    if (!main?.molecule?.atoms) {
+        console.warn('No molecule available for translation');
+        return false;
     }
-    render();
+
+    const axis = opts.axis || rotationAxis;
+    if (!axis?.direction) {
+        console.warn('No axis defined for translation');
+        return false;
+    }
+
+    // Determine atoms to translate
+    let atomsToTranslate = opts.atomIndices;
+    if (!atomsToTranslate) {
+        if (atomsSelected && atomsSelected.length > 0) {
+            atomsToTranslate = atomsSelected;
+        } else {
+            atomsToTranslate = Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
+        }
+    }
+
+    // Calculate translation vector
+    const axisDirection = axis.direction.clone().normalize();
+    const translationVector = axisDirection.multiplyScalar(distance);
+
+    // Apply translation
+    atomsToTranslate.forEach(idx => {
+        const atom = main.molecule.atoms[idx];
+        atom.position.add(translationVector);
+        atom.x = atom.position.x;
+        atom.y = atom.position.y;
+        atom.z = atom.position.z;
+
+        // Update base positions if rotation is active
+        if (rotationState.basePositions[idx]) {
+            rotationState.basePositions[idx].add(translationVector);
+        }
+
+        updateAtomMatrix(idx);
+    });
+
+    // Update axis point if it moves with the atoms
+    if (axisAtoms && axisAtoms.length > 0) {
+        const movingAxisAtoms = axisAtoms.filter(idx => atomsToTranslate.includes(idx));
+        if (movingAxisAtoms.length > 0) {
+            if (axis.point) {
+                axis.point.add(translationVector);
+            }
+            if (rotationState.axis?.point) {
+                rotationState.axis.point.add(translationVector);
+            }
+
+            // Update axis visualizer if it exists
+            if (axisVisualizer && axisAtoms.length === 2) {
+                const atom1 = main.molecule.atoms[axisAtoms[0]];
+                const atom2 = main.molecule.atoms[axisAtoms[1]];
+                main.scene.remove(axisVisualizer);
+                axisVisualizer.geometry.dispose();
+                axisVisualizer.material.dispose();
+                createAxisVisualizer(atom1, atom2);
+            }
+        }
+    }
+
+    // Update visualization
+    updateMoleculeVisualization();
+
+    return true;
+}
+function resetRotation() {
+    if (Object.keys(rotationState.basePositions).length === 0) {
+        console.log('No rotation to reset');
+        return;
+    }
+
+    // Restore base positions
+    Object.keys(rotationState.basePositions).forEach(idx => {
+        const atom = main.molecule.atoms[idx];
+        const basePos = rotationState.basePositions[idx];
+
+        if (atom && basePos) {
+            atom.position.copy(basePos);
+            atom.x = atom.position.x;
+            atom.y = atom.position.y;
+            atom.z = atom.position.z;
+            updateAtomMatrix(parseInt(idx));
+        }
+    });
+
+    // Reset state
+    rotationState.currentAngle = 0;
+    rotationState.isActive = false;
+
+    // Update UI
+    updateRotationUI(0);
+    updateMoleculeVisualization();
+}
+
+function finalizeRotation() {
+    if (!rotationState.isActive) return;
+
+    // Save undo state if available
+    if (typeof saveUndoState === 'function') {
+        saveUndoState("Rotate Atoms");
+    }
+
+    // Update base positions to current positions
+    rotationState.selectedAtoms.forEach(idx => {
+        const atom = main.molecule.atoms[idx];
+        if (atom) {
+            rotationState.basePositions[idx] = atom.position.clone();
+        }
+    });
+
+    // Update molecule coordinates
+    if (main.molecule.updateMainCoordinates) {
+        main.molecule.updateMainCoordinates();
+    }
+
+    // Keep the current angle and state
+    // This allows for continued rotation from the new position
+    console.log(`Rotation finalized at ${rotationState.currentAngle}°`);
+}
+
+function clampAngle(angle) {
+    while (angle > 180) angle -= 360;
+    while (angle < -180) angle += 360;
+    return angle;
+}
+
+function updateRotationUI(angle) {
+    const rotationSlider = document.getElementById('rotationSlider');
+    if (rotationSlider) {
+        rotationSlider.value = angle;
+    }
+
+    const rotationValue = document.getElementById('rotationValue');
+    if (rotationValue) {
+        rotationValue.textContent = `${angle.toFixed(1)}°`;
+    }
+}
+
+function updateMoleculeVisualization() {
+    if (main?.molecule) {
+        // Update instanced mesh
+        if (main.molecule.instancedMesh) {
+            main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+        }
+
+        // Update bonds
+        if (main.molecule.updateBonds) {
+            main.molecule.updateBonds(mode);
+        }
+
+        // Update labels
+        if (main.molecule.labels && main.molecule.labels.length > 0 && main.molecule.updateLabels) {
+            main.molecule.updateLabels();
+        }
+
+        // Update bond length labels if function exists
+        if (typeof updateAllBondLengthLabels === 'function') {
+            updateAllBondLengthLabels();
+        }
+    }
+
+    // Render the scene
+    if (typeof render === 'function') {
+        render();
+    }
+}
+
+function attachEnhancedRotationHandlers() {
+    const rotationSlider = document.getElementById('rotationSlider');
+    const rotationValue = document.getElementById('rotationValue');
+
+    if (!rotationSlider) return;
+
+    let sliderActive = false;
+
+    // Mouse down - prepare for rotation
+    rotationSlider.addEventListener('mousedown', () => {
+        sliderActive = true;
+
+        // Initialize rotation state if needed
+        if (!rotationState.isActive) {
+            const atomsToRotate = atomsSelected.length > 0
+                ? atomsSelected
+                : Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
+
+            if (rotationAxis) {
+                initializeRotationState(atomsToRotate, rotationAxis);
+                rotationState.isActive = true;
+            }
+        }
+    });
+
+    // Input - perform rotation
+    rotationSlider.addEventListener('input', (e) => {
+        if (!sliderActive || !rotationAxis) return;
+
+        const angle = parseFloat(e.target.value);
+
+        // Rotate to absolute angle
+        rotateSelectedAtoms(angle, {
+            relative: false,
+            updateUI: false  // Don't update slider since we're already handling it
+        });
+
+        // Update display
+        if (rotationValue) {
+            rotationValue.textContent = `${angle.toFixed(1)}°`;
+        }
+    });
+
+    // Mouse up - finalize rotation
+    rotationSlider.addEventListener('mouseup', () => {
+        if (!sliderActive) return;
+        sliderActive = false;
+        finalizeRotation();
+    });
+
+    // Touch support
+    rotationSlider.addEventListener('touchend', () => {
+        if (!sliderActive) return;
+        sliderActive = false;
+        finalizeRotation();
+    });
+}
+
+function attachKeyboardShortcuts() {
+    const ROTATION_STEP = 0.1;     // degrees
+    const TRANSLATION_STEP = 0.1; // units
+
+    window.addEventListener('keydown', (e) => {
+        if (!editingMolecule || !rotationAxis) return;
+
+        // Check for shift key
+        if (!e.shiftKey) return;
+
+        // Prevent default behavior for arrow keys
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            e.preventDefault();
+
+            // Disable orbit controls temporarily
+            if (controls) controls.enabled = false;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                    // Rotate forward
+                    rotateSelectedAtoms(ROTATION_STEP, { relative: true });
+                    break;
+
+                case 'ArrowDown':
+                    // Rotate backward
+                    rotateSelectedAtoms(-ROTATION_STEP, { relative: true });
+                    break;
+
+                case 'ArrowRight':
+                    // Translate forward along axis
+                    translateSelectedAtoms(TRANSLATION_STEP);
+                    break;
+
+                case 'ArrowLeft':
+                    // Translate backward along axis
+                    translateSelectedAtoms(-TRANSLATION_STEP);
+                    break;
+            }
+        }
+
+        // Reset rotation with R key
+        if (e.key === 'r' || e.key === 'R') {
+            resetRotation();
+        }
+
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'Shift' && controls) {
+            controls.enabled = true;
+
+            // Finalize any ongoing transformations
+            if (rotationState.isActive) {
+                finalizeRotation();
+            }
+        }
+    });
+}
+
+function initializeRotationSystem() {
+    // Attach all event handlers
+    attachEnhancedRotationHandlers();
+    attachKeyboardShortcuts();
+    attachMouseWheelRotation();
+
+    // Reset state
+    rotationState = {
+        basePositions: {},
+        currentAngle: 0,
+        isActive: false,
+        axis: null,
+        selectedAtoms: []
+    };
+
+    console.log('Enhanced rotation system initialized');
 }
 
 function recreateRenderer(antialiasEnabled) {
@@ -2071,7 +2430,32 @@ window.mouse = mouse
 window.raycaster = raycaster
 window.camera = camera
 window.labels = labels
+window.rotateSelectedAtoms = rotateSelectedAtoms;
+window.translateSelectedAtoms = translateSelectedAtoms;
+window.resetRotation = resetRotation;
+window.finalizeRotation = finalizeRotation;
+window.initializeRotationSystem = initializeRotationSystem;
+window.rotationState = rotationState;
 
+// Auto-initialize if the script is loaded after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeRotationSystem);
+} else {
+    initializeRotationSystem();
+}
+function attachMouseWheelRotation() {
+    window.addEventListener('wheel', (e) => {
+        if (!shiftDown || !rotationAxis || !main?.molecule?.atoms) return;
+
+        e.preventDefault();
+
+        // Calculate rotation angle from wheel delta
+        const angle = e.deltaY * 0.5; // Scale factor for sensitivity
+
+        // Apply relative rotation
+        rotateSelectedAtoms(angle, { relative: true });
+    });
+}
 const buttonSound = new Audio()
 buttonSound.src = "Create.wav"
 
@@ -2079,62 +2463,6 @@ document.querySelectorAll('button').forEach(button => {
     button.addEventListener('click', (event) => {
         buttonSound.play()
     });
-});
-
-window.addEventListener('wheel', function (e) {
-    if (shiftDown && rotationAxis && main.molecule && main.molecule.atoms) {
-        e.preventDefault();
-
-        // Determine which atoms to rotate
-        let atomsToRotate = atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length
-            ? atomsSelected
-            : Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
-
-        // Store original positions if not already stored
-        let originalPositions = {};
-        atomsToRotate.forEach(idx => {
-            const atom = main.molecule.atoms[idx];
-            originalPositions[idx] = atom.position.clone();
-        });
-
-        // Calculate rotation angle (e.deltaY is typically in pixels, so scale it down)
-        const angle = e.deltaY * 0.5; // This is RELATIVE rotation in degrees
-
-        // TRACK THE CUMULATIVE ANGLE
-        currentRotationAngle += angle;
-        currentRotationAngle = loopAround180(currentRotationAngle);
-
-        // Update the slider and display to show current angle
-        const rotationSlider = document.getElementById('rotationSlider');
-        if (rotationSlider) {
-            rotationSlider.value = currentRotationAngle;
-        }
-        const rotationValue = document.getElementById('rotationValue');
-        if (rotationValue) {
-            rotationValue.textContent = `${currentRotationAngle.toFixed(1)}°`;
-        }
-
-        // Call your existing rotateSelectedAtoms with RELATIVE angle
-        // Your function already handles this correctly!
-        rotateSelectedAtoms(angle, originalPositions, false);
-
-        // Store base positions on first rotation if needed
-        if (Object.keys(rotationBasePositions).length === 0) {
-            // Calculate base positions by reversing current rotation
-            const axis = rotationAxis.direction.clone().normalize();
-            const point = rotationAxis.point.clone();
-            const inverseRotation = new THREE.Matrix4().makeRotationAxis(axis, -currentRotationAngle * Math.PI / 180);
-
-            atomsToRotate.forEach(idx => {
-                const atom = main.molecule.atoms[idx];
-                const tempPos = atom.position.clone();
-                tempPos.sub(point);
-                tempPos.applyMatrix4(inverseRotation);
-                tempPos.add(point);
-                rotationBasePositions[idx] = tempPos;
-            });
-        }
-    }
 });
 
 function loopAround180(value) {
@@ -2536,155 +2864,7 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
     render();
 }
 
-window.addEventListener('keydown', function (e) {
-    if (!editingMolecule || !rotationAxis || !rotationAxis.direction) return;
-    if (!e.shiftKey) return;
 
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-        controls.enabled = false;
-
-        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            // Rotation
-            const increment = e.key === 'ArrowUp' ? arrowKeyRotationStep : -arrowKeyRotationStep;
-
-            // Get atoms to rotate
-            let atomsToRotate = [];
-            if (atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length) {
-                atomsToRotate = atomsSelected;
-            } else {
-                atomsToRotate = Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
-            }
-
-            // Get base positions if we don't have them
-            if (Object.keys(rotationBasePositions).length === 0 ||
-                !atomsToRotate.every(idx => rotationBasePositions[idx])) {
-
-                // FIX: Use currentRotationAngle WITHOUT subtracting the increment
-                // because we haven't applied the increment to the atoms yet!
-                const axis = rotationAxis.direction.clone().normalize();
-                const point = rotationAxis.point.clone();
-                const inverseRotation = new THREE.Matrix4().makeRotationAxis(
-                    axis,
-                    -currentRotationAngle * Math.PI / 180
-                );
-
-                atomsToRotate.forEach(idx => {
-                    const atom = main.molecule.atoms[idx];
-                    const tempPos = atom.position.clone();
-                    tempPos.sub(point);
-                    tempPos.applyMatrix4(inverseRotation);
-                    tempPos.add(point);
-                    rotationBasePositions[idx] = tempPos;
-                });
-            }
-
-
-            // NOW update tracked angle after we've calculated base positions
-            currentRotationAngle += increment;
-            currentRotationAngle = Math.max(-180, Math.min(180, currentRotationAngle));
-
-            // Update UI
-            const rotationSlider = document.getElementById('rotationSlider');
-            if (rotationSlider) {
-                rotationSlider.value = currentRotationAngle;
-            }
-
-
-            // Now rotate from base to new angle
-            const axis = rotationAxis.direction.clone().normalize();
-            const point = rotationAxis.point.clone();
-            const rotationMatrix = new THREE.Matrix4().makeRotationAxis(
-                axis,
-                currentRotationAngle * Math.PI / 180
-            );
-
-            atomsToRotate.forEach(idx => {
-                const atom = main.molecule.atoms[idx];
-                const basePos = rotationBasePositions[idx];
-
-                if (basePos) {
-                    const tempPos = basePos.clone();
-                    tempPos.sub(point);
-                    tempPos.applyMatrix4(rotationMatrix);
-                    tempPos.add(point);
-
-                    atom.position.copy(tempPos);
-                    atom.x = atom.position.x;
-                    atom.y = atom.position.y;
-                    atom.z = atom.position.z;
-
-                    updateAtomMatrix(idx);
-                }
-            });
-
-            main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-            main.molecule.updateBonds(mode);
-            if (main.molecule.labels && main.molecule.labels.length > 0) {
-                main.molecule.updateLabels();
-            }
-        }
-
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-            // Translation along axis
-            const distance = e.key === 'ArrowRight' ? arrowKeyTranslationStep : -arrowKeyTranslationStep;
-            const axisDirection = rotationAxis.direction.clone().normalize();
-            const translationVector = axisDirection.multiplyScalar(distance);
-
-            let atomsToTranslate = atomsSelected.length > 0
-                ? atomsSelected
-                : Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
-
-            atomsToTranslate.forEach(idx => {
-                const atom = main.molecule.atoms[idx];
-                atom.position.add(translationVector);
-                atom.x = atom.position.x;
-                atom.y = atom.position.y;
-                atom.z = atom.position.z;
-
-                // Update base positions too when translating
-                if (rotationBasePositions[idx]) {
-                    rotationBasePositions[idx].add(translationVector);
-                }
-
-                updateAtomMatrix(idx);
-            });
-
-            // Update axis point if needed
-            if (axisAtoms && axisAtoms.length === 2) {
-                const movingAxisAtoms = axisAtoms.filter(idx => atomsToTranslate.includes(idx));
-                if (movingAxisAtoms.length > 0) {
-                    const atom1 = main.molecule.atoms[axisAtoms[0]];
-                    rotationAxis.point = atom1.position.clone();
-
-                    if (axisVisualizer) {
-                        const atom2 = main.molecule.atoms[axisAtoms[1]];
-                        main.scene.remove(axisVisualizer);
-                        axisVisualizer.geometry.dispose();
-                        axisVisualizer.material.dispose();
-                        createAxisVisualizer(atom1, atom2);
-                    }
-                }
-            }
-
-            main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-            main.molecule.updateBonds(mode);
-            if (main.molecule.labels && main.molecule.labels.length > 0) {
-                main.molecule.updateLabels();
-            }
-        }
-
-        if (typeof updateAllBondLengthLabels === 'function') {
-            updateAllBondLengthLabels();
-        }
-        render();
-    }
-});
-
-// Function to handle arrow key rotation
-
-
-// Function to rotate from base positions to a specific angle
 function performRotationFromBase(targetAngle, atomIndices) {
     if (!rotationAxis || !rotationAxis.direction) return;
 
@@ -3176,6 +3356,33 @@ document.addEventListener('keydown', (event) => {
             clearAllBondLengthLabels();
         }
     }
+    if (event.key == ' ') {
+        if (atomsSelected.length === 2) {
+            const atom1 = main.molecule.atoms[atomsSelected[0]];
+            const atom2 = main.molecule.atoms[atomsSelected[1]];
+
+            // Use atom positions directly (they're already in the correct coordinate system)
+            const pos1 = atom1.position.clone();
+            const pos2 = atom2.position.clone();
+
+            rotationAxis = {
+                point: pos1.clone(),
+                direction: new THREE.Vector3().subVectors(pos2, pos1).normalize()
+            };
+
+            axisAtoms = [...atomsSelected];
+
+            // Create visual representation
+            createAxisVisualizer(atom1, atom2);
+
+            // Update UI
+            updateEditingContent(atom1.type, main.molecule.atomSettings[atom1.type].color);
+
+            console.log('Axis defined:', rotationAxis);
+        }
+
+    }
+
 });
 
 function createRenderer(antialiasOn) {
