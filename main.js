@@ -1483,6 +1483,9 @@ function updateFragmentList(fragmentList) {
     });
     attachButtonEventListeners();
 }
+let rotationSliderOn = false
+let translationSliderOn = false
+let lastPosition = 0
 
 function attachAxisEventListeners() {
     const defineAxisBtn = document.getElementById('defineAxisBtn');
@@ -1550,100 +1553,29 @@ function attachAxisEventListeners() {
         let isSliderActive = false;
 
         // Store original positions when starting to drag
-        rotationSlider.addEventListener('mousedown', () => {
-            isSliderActive = true;
-            originalPositions = {};
 
-            // Store the current slider angle as the base angle
-            const currentAngle = parseFloat(rotationSlider.value) || 0;
-
-            // Determine which atoms will be rotated
-            let atomsToRotate = [];
-            if (atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length) {
-                atomsToRotate = atomsSelected;
-            } else {
-                atomsToRotate = Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
-            }
-
-            // If the slider is not at 0, we need to "undo" the current rotation first
-            // to get back to the true original positions
-            if (currentAngle !== 0 && rotationAxis) {
-                const axis = rotationAxis.direction.clone().normalize();
-                const point = rotationAxis.point.clone();
-                const inverseRotation = new THREE.Matrix4().makeRotationAxis(axis, -currentAngle * Math.PI / 180);
-
-                atomsToRotate.forEach(idx => {
-                    const atom = main.molecule.atoms[idx];
-                    const tempPos = atom.position.clone();
-
-                    // Translate to origin
-                    tempPos.sub(point);
-                    // Apply inverse rotation
-                    tempPos.applyMatrix4(inverseRotation);
-                    // Translate back
-                    tempPos.add(point);
-
-                    // Store this as the original position
-                    originalPositions[idx] = tempPos;
-                });
-            } else {
-                // If slider is at 0, just store current positions
-                atomsToRotate.forEach(idx => {
-                    const atom = main.molecule.atoms[idx];
-                    originalPositions[idx] = atom.position.clone();
-                });
-            }
-
-            console.log('Stored original positions for', Object.keys(originalPositions).length, 'atoms');
-        });
 
         rotationSlider.addEventListener('input', (e) => {
-            if (!isSliderActive || !rotationAxis) return;
-
-            const angle = parseFloat(e.target.value); rotationValue.textContent = `${angle}°`;
-
-            rotateSelectedAtoms(angle, originalPositions, isSliderActive);
-        });
-
-        // Reset everything when releasing the slider
-        rotationSlider.addEventListener('mouseup', () => {
-            if (!isSliderActive) return;
-            saveUndoState("Rotate Atoms");
-            // Instead of resetting the slider to 0, just set the flag to false
-            isSliderActive = false;
-
-            // Update the stored positions to the current rotated positions
-            // This makes the current rotation the new "original" position
-            let atomsToRotate = [];
-            if (atomsSelected.length > 0 && atomsSelected.length < main.molecule.atoms.length) {
-                atomsToRotate = atomsSelected;
-            } else {
-                atomsToRotate = Array.from({ length: main.molecule.atoms.length }, (_, i) => i);
+            if (rotationSliderOn) {
+                previousAngle = rotationState.currentAngle
+                rotationSliderOn = false
             }
 
-            // Store the current (rotated) positions as the new base positions
-            atomsToRotate.forEach(idx => {
-                const atom = main.molecule.atoms[idx];
-                originalPositions[idx] = atom.position.clone();
-            });
+            const angle = previousAngle + parseFloat(e.target.value);
+            console.log('Rotation angle:', angle);
 
-            // Update the molecule's main coordinates to reflect the new positions
-            main.molecule.updateMainCoordinates();
-
-            // Don't reset the slider value or the rotation value display
-            // rotationSlider.value = 0;  // REMOVE THIS LINE
-            // rotationValue.textContent = '0°';  // REMOVE THIS LINE
-
-            // Don't reset atom positions - they should stay where they are
-            // Remove all the code that resets atoms to original positions
+            rotateSelectedAtoms(angle, { relative: false });
         });
-
-        // Also handle the change event as backup
-        rotationSlider.addEventListener('change', () => {
-            if (isSliderActive) {
-                // Trigger mouseup behavior
-                rotationSlider.dispatchEvent(new Event('mouseup'));
+    }
+    if (translationSlider) {
+        translationSlider.addEventListener('input', (e) => {
+            if (translationSliderOn) {
+                lastPosition = 0
+                translationSliderOn = false
             }
+            const pos = parseFloat(e.target.value) - lastPosition;
+            lastPosition = parseFloat(e.target.value)
+            translateSelectedAtoms(pos / 10);
         });
     }
 }
@@ -3403,7 +3335,6 @@ function createRenderer(antialiasOn) {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    console.log(currentRotationAngle);
 }
 function render() {
     renderer.render(scene, camera);
