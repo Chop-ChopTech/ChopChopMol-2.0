@@ -11,15 +11,18 @@ const camera = window.camera
 
 
 // Function to update feature access based on authentication
-export function updateFeatureAccess(user, signedIn) {
+export function updateFeatureAccess(user, signedIn, isPremium) {
     isUserSignedIn = signedIn;
+    restrictFeatures();
 
     if (isUserSignedIn) {
-        enableAllFeatures();
+        if (isPremium) {
+            enableAllFeatures();
+        } else {
+            enableFreeFeatures();
+        }
         hideRestrictionMessage();
-
     } else {
-        restrictFeatures();
         showRestrictionMessage();
 
     }
@@ -43,7 +46,9 @@ export function restrictFeatures() {
         'compareButton',
         'analyze-molecule',
         'clear-canvas',
-        'switchMode'
+        'switchMode',
+        'saveXYZ',
+        'captureScreen',
     ];
 
     restrictedButtons.forEach(buttonId => {
@@ -207,6 +212,50 @@ export function enableAllFeatures() {
 
     // Re-attach original event listeners
     restoreOriginalHandlers();
+}
+
+export function enableFreeFeatures() {
+    storeOriginalHandlers();
+
+    // Disable specific buttons with visual feedback
+    const enabledButtons = [
+        'import-json',
+        'clear-canvas',
+    ];
+
+    enabledButtons.forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        if (button) {
+            button.disabled = false;
+            button.style.opacity = '1';
+            button.style.cursor = 'pointer';
+            button.title = '';
+            button.classList.remove('feature-tooltip');
+        }
+    });
+
+    // Hide editing panel
+    const editPanel = document.getElementById('editMoleculePanel');
+    if (editPanel) {
+        editPanel.classList.add('restricted');
+    }
+
+    // Disable style controls
+    const styleSelector = document.getElementById('styleSelector');
+    if (styleSelector) {
+        styleSelector.classList.add('restricted');
+    }
+
+    // Hide input panels
+    const panels = ['chatContainer', 'smilesContainer', 'jsonContainer'];
+    panels.forEach(panelId => {
+        const panel = document.getElementById(panelId);
+        if (panel) {
+            panel.classList.remove('on');
+            panel.classList.add('restricted');
+        }
+    });
+
 }
 
 // Function to restore atom interaction

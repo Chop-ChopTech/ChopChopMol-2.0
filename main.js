@@ -108,6 +108,7 @@ let rotationAxis = null; // Store the defined axis
 let axisAtoms = []; // Store the two atoms that define the axis
 let axisVisualizer = null; // Three.js object to visualize the axis
 let labels = [];
+let premiumActive = false
 const selectionBox = document.getElementById('selectionBox');
 const projectionVector = new THREE.Vector3();
 
@@ -2307,8 +2308,9 @@ function rotateCamera(angleToRotate, camera, controls = null) {
 // Function to show notification
 
 window.addEventListener('authStateChanged', (event) => {
-    const { user, isSignedIn } = event.detail;
-    updateFeatureAccess(user, isSignedIn);
+    const { user, isSignedIn, premiumState } = event.detail;
+    premiumActive = premiumState.isActive
+    updateFeatureAccess(user, isSignedIn, premiumActive);
     editingMolecule = isSignedIn
     window.currentUserEmail = user.email
     console.log(window.currentUserEmail)

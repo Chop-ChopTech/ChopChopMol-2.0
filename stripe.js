@@ -196,7 +196,9 @@ async function cancelPremium() {
 // Activate premium features
 function activatePremium() {
     premiumState.isActive = true;
-
+    window.dispatchEvent(new CustomEvent('authStateChanged', {
+        detail: { user: window.currentUser, isSignedIn: true, premiumState: premiumState }
+    }));
     // Update button
     const btn = document.getElementById('premiumUpgradeBtn');
     if (btn) {
@@ -345,10 +347,16 @@ function showLimitNotification(message) {
     const notification = document.getElementById('limitNotification');
     document.getElementById('limitMessage').textContent = message;
     notification.classList.add('show');
+    notification.style.display = 'block';
 
     setTimeout(() => {
         notification.classList.remove('show');
     }, 4000);
+}
+
+function closeLimitNotification() {
+    const notification = document.getElementById('limitNotification');
+    notification.classList.remove('show');
 }
 
 // Show success notification
@@ -356,12 +364,12 @@ function showSuccessNotification(message) {
     const notification = document.getElementById('limitNotification');
     notification.classList.add('success');
     document.getElementById('limitMessage').textContent = message;
-    notification.classList.add('show');
+    // notification.classList.add('show');
 
     setTimeout(() => {
         notification.classList.remove('show');
         notification.classList.remove('success');
-    }, 4000);
+    }, 2000);
 }
 
 // Update UI based on premium status

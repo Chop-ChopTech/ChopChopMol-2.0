@@ -264,7 +264,14 @@
 
                 // Notify main.js about auth state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
-                    detail: { user: user, isSignedIn: true }
+                    detail: {
+                        user: user, isSignedIn: true, premiumState: {
+                            isActive: false,
+                            customerId: null,
+                            subscriptionId: null,
+                            userId: null
+                        }
+                    }
                 }));
 
                 // Load user's style preferences after a short delay
@@ -570,7 +577,7 @@
     </div>
 
     <!-- Limit notification popup -->
-    <div id="limitNotification" class="limit-notification">
+    <div id="limitNotification" style="display: none;" class="limit-notification">
         <i class="fas fa-lock"></i>
         <span id="limitMessage">Premium feature</span>
     </div>

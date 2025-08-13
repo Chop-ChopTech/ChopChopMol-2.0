@@ -1267,7 +1267,7 @@ input[type="range"]:focus {
 }
 
 .premium-upgrade-btn.premium-active {
-    background: linear-gradient(135deg, #28a745, #20c997);
+    background: linear-gradient(135deg, #10812b, #00fa21);
     color: white;
 }
 
