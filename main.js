@@ -2310,6 +2310,9 @@ window.addEventListener('authStateChanged', (event) => {
     const { user, isSignedIn } = event.detail;
     updateFeatureAccess(user, isSignedIn);
     editingMolecule = isSignedIn
+    window.currentUserEmail = user.email
+    console.log(window.currentUserEmail)
+
 });
 
 document.addEventListener('DOMContentLoaded', () => {

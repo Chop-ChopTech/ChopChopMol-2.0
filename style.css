@@ -1238,6 +1238,320 @@ input[type="range"]:focus {
     background: linear-gradient(180deg, #ffffff, #0095ff, #8400ff);
 }
 
+/* ============ STRIPE PREMIUM STYLES ============ */
+
+/* Premium upgrade button */
+.premium-upgrade-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #1a1a1a;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.premium-upgrade-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
+}
+
+.premium-upgrade-btn.premium-active {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.premium-upgrade-btn i {
+    font-size: 16px;
+}
+
+/* Premium modal */
+.premium-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.309);
+    z-index: 10000;
+    backdrop-filter: blur(10px);
+    animation: fadeIn 0.3s ease;
+}
+
+.premium-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.premium-modal-content {
+    background: linear-gradient(135deg, #1c2553, #21163e);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    animation: slideUp 0.3s ease;
+    position: relative;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+}
+
+.close-premium-modal {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 28px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.close-premium-modal:hover {
+    color: #fff;
+}
+
+.premium-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.premium-crown {
+    font-size: 48px;
+    color: #FFD700;
+    /* margin-bottom: 15px; */
+    animation: float 3s ease-in-out infinite;
+    perspective: 1000px;
+}
+
+.premium-header h2 {
+    font-size: 32px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.premium-header p {
+    color: #aaa;
+    font-size: 16px;
+}
+
+.premium-price-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 215, 0, 0.2);
+    border-radius: 15px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    text-align: center;
+    font-size: 15px;
+}
+
+.price-tag {
+    font-size: 38px;
+    font-weight: bold;
+    margin-bottom: 25px;
+    color: #fff;
+}
+
+.price-tag .currency {
+    font-size: 24px;
+    vertical-align: super;
+    color: #FFD700;
+}
+
+.price-tag .period {
+    font-size: 18px;
+    color: #aaa;
+}
+
+.premium-features {
+    list-style: none;
+    padding: 0;
+    margin: 25px 0;
+    text-align: left;
+}
+
+.premium-features li {
+    padding: 12px 0;
+    color: #ddd;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.premium-features li:last-child {
+    border-bottom: none;
+}
+
+.premium-features i {
+    color: #28a745;
+    font-size: 14px;
+}
+
+.subscribe-premium-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+    position: relative;
+}
+
+.subscribe-premium-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+.subscribe-premium-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.subscribe-premium-btn.loading .btn-text {
+    display: none;
+}
+
+.subscribe-premium-btn.loading .loading-spinner {
+    display: block;
+}
+
+.loading-spinner {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto;
+}
+
+.trial-text {
+    color: #888;
+    font-size: 12px;
+    margin-top: 15px;
+}
+
+/* Limit notification */
+.limit-notification {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(220, 53, 69, 0.4);
+    display: none;
+    animation: slideInRight 0.3s ease;
+    z-index: 2000;
+    max-width: 300px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.limit-notification.show {
+    display: flex;
+}
+
+.limit-notification.success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.limit-notification i {
+    font-size: 20px;
+}
+
+/* Tool locked state */
+.tool-locked {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    position: relative;
+}
+
+.tool-locked:after {
+    content: "🔒";
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 12px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1.1);
+    }
+
+    50% {
+        transform: translateY(-10px) scale(0.9) rotateX(15deg);
+
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 @keyframes glowButton {
     0% {

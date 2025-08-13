@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    <script src="https://js.stripe.com/v3/"></script>
 </head>
 
 <body>
@@ -53,6 +53,14 @@
 
         // Make db available globally
         window.firebaseDB = db;
+        // In your existing Firebase auth code, add this to make Firestore functions global
+        window.db = db;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+        window.serverTimestamp = serverTimestamp;
+        window.auth = auth;
+        window.onAuthStateChanged = onAuthStateChanged;
 
         // Get UI elements
         const signInButton = document.getElementById('signInButton');
@@ -225,6 +233,7 @@
         window.loadMoleculesList = loadMoleculesList;
         window.loadMolecule = loadMolecule;
         window.deleteMolecule = deleteMolecule;
+        window.currentUser = null;
 
         // Listen for auth state changes and update UI
         onAuthStateChanged(auth, (user) => {
@@ -264,6 +273,9 @@
                         window.loadStylePreferences(user.uid, window.renderer);
                     }
                 }, 1000);
+                window.currentUserEmail = user.email
+                window.currentUser = user
+                console.log('Current user email:', window.currentUserEmail);
             } else {
                 // User is signed out
                 signInButton.style.display = 'block';
@@ -289,6 +301,10 @@
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: { user: null, isSignedIn: false }
                 }));
+                window.currentUser = null
+                window.currentUserEmail = null
+                console.log('Current user email:', window.currentUserEmail);
+
             }
             const saveSection = document.getElementById('molecule-save-section');
             if (saveSection) {
@@ -511,7 +527,53 @@
         <!-- <br>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
     </div>
+    <!-- Premium Upgrade Button - Add this after your settings dropdown -->
+    <button id="premiumUpgradeBtn" class="premium-upgrade-btn" onclick="showPremiumModal()">
+        <i class="fa-solid fa-gem"></i>
+        <span id="premiumBtnText">Upgrade</span>
+    </button>
 
+    <!-- Premium Modal - Add this before closing body tag -->
+    <div id="premiumModal" class="premium-modal">
+        <div class="premium-modal-content">
+            <button class="close-premium-modal" onclick="closePremiumModal()">&times;</button>
+
+            <div class="premium-header">
+                <i class="fa-solid fa-gem premium-crown"></i>
+                <h2>ChopChopMol Premium</h2>
+                <p>Unlock all features for molecular visualization</p>
+            </div>
+
+            <div class="premium-price-card">
+                <div class="price-tag">
+                    <span class="currency">$</span>
+                    <span class="amount">2</span>
+                    <span class="period">/month</span>
+                </div>
+
+                <ul class="premium-features">
+                    <li><i class="fas fa-check"></i> Advanced editing tools</li>
+                    <li><i class="fas fa-check"></i> All export formats (PDB, MOL2, XYZ)</li>
+                    <li><i class="fas fa-check"></i> Measurement & analysis tools</li>
+                    <li><i class="fas fa-check"></i> Cloud storage & sync</li>
+                    <li><i class="fas fa-check"></i> Priority support</li>
+                </ul>
+
+                <button id="subscribePremiumBtn" class="subscribe-premium-btn" onclick="subscribeToPremium()">
+                    <span class="btn-text">Start Premium - $2/month</span>
+                    <div class="loading-spinner"></div>
+                </button>
+
+                <p class="trial-text">Cancel anytime • Secure payment via Stripe</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Limit notification popup -->
+    <div id="limitNotification" class="limit-notification">
+        <i class="fas fa-lock"></i>
+        <span id="limitMessage">Premium feature</span>
+    </div>
     <!-- Scripts -->
     <script src="utils/utils.js"></script>
     <script>
@@ -809,6 +871,8 @@
         }
     </script>
     <pre id="output"></pre>
+    <script src="stripe.js"></script>
+
     <script type="module" src="main.js"></script>
 </body>
 
