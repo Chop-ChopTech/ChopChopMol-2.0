@@ -1,7 +1,8 @@
 // ChopChopMol Stripe Integration
 // Initialize Stripe
 const stripe = Stripe('pk_live_51Rot4oJFioirLp8GF7O6F8kr0PLQwRRrRXCjoQCgj0LIqtGnm9mh0Km7zoRFtKHiIiiXS4dhVwTQQLmLhihDwoiR00W0pdTUAa'); // REPLACE THIS!
-const PREMIUM_PRICE_ID = 'price_1RvRIeJFioirLp8GzChWVboO';
+const PREMIUM_PRICE_ID = 'price_1RvRIeJFioirLp8GzChWVboO'; // REPLACE THIS!
+
 // Premium state management
 let premiumState = {
     isActive: false,
@@ -221,17 +222,215 @@ function activatePremium() {
     enablePremiumFeatures();
 }
 
-// Rest of the functions remain the same...
-// (Keep all the other functions from the previous code)
 
-// Initialize on page load
+// Enable premium features in the app
+function enablePremiumFeatures() {
+    // Remove locked state from tools
+    document.querySelectorAll('.tool-locked').forEach(tool => {
+        tool.classList.remove('tool-locked');
+        tool.removeAttribute('disabled');
+    });
+
+    // Update export options
+    const exportButtons = document.querySelectorAll('[data-export-format]');
+    exportButtons.forEach(btn => btn.disabled = false);
+}
+
+// Subscribe to premium
+async function subscribeToPremium() {
+    const btn = document.getElementById('subscribePremiumBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+        // Get user email from Firebase auth if available
+        const userEmail = window.currentUserEmail || '';
+
+        const { error } = await stripe.redirectToCheckout({
+            lineItems: [{
+                price: PREMIUM_PRICE_ID,
+                quantity: 1
+            }],
+            mode: 'subscription',
+            successUrl: window.location.origin + window.location.pathname + '?session_id={CHECKOUT_SESSION_ID}',
+            cancelUrl: window.location.origin + window.location.pathname,
+            customerEmail: userEmail
+        });
+
+        if (error) {
+            console.error('Stripe error:', error);
+            showLimitNotification('Error: ' + error.message);
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    } catch (err) {
+        console.error('Subscription error:', err);
+        showLimitNotification('Failed to start subscription. Please try again.');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    }
+}
+
+// Check if user can add molecule
+function canAddMolecule() {
+    const limits = premiumState.isActive ? FEATURE_LIMITS.premium : FEATURE_LIMITS.free;
+
+    // Count current molecules in scene
+    const moleculeCount = window.main?.molecule?.getMoleculeCount() || 0;
+
+    if (moleculeCount >= limits.maxMolecules) {
+        showLimitNotification(`Free tier limited to ${limits.maxMolecules} molecules`);
+        showPremiumModal();
+        return false;
+    }
+
+    return true;
+}
+
+// Check if user can use feature
+function canUsePremiumFeature(feature) {
+    const limits = premiumState.isActive ? FEATURE_LIMITS.premium : FEATURE_LIMITS.free;
+
+    switch (feature) {
+        case 'export':
+            if (!limits.canExport) {
+                showLimitNotification('Export requires Premium subscription');
+                showPremiumModal();
+                return false;
+            }
+            return true;
+
+        case 'edit':
+            if (!limits.canEdit) {
+                showLimitNotification('Editing tools require Premium');
+                showPremiumModal();
+                return false;
+            }
+            return true;
+
+        case 'measure':
+            if (!limits.canMeasure) {
+                showLimitNotification('Measurement tools require Premium');
+                showPremiumModal();
+                return false;
+            }
+            return true;
+
+        case 'ai':
+            // Check AI generation limit
+            const aiUsage = parseInt(localStorage.getItem('ai_usage_today') || '0');
+            if (!premiumState.isActive && aiUsage >= limits.aiGenerations) {
+                showLimitNotification(`Free tier limited to ${limits.aiGenerations} AI generations per day`);
+                showPremiumModal();
+                return false;
+            }
+            return true;
+
+        default:
+            return true;
+    }
+}
+
+// Show/hide premium modal
+function showPremiumModal() {
+    document.getElementById('premiumModal').classList.add('active');
+}
+
+function closePremiumModal() {
+    document.getElementById('premiumModal').classList.remove('active');
+}
+
+// Show limit notification
+function showLimitNotification(message) {
+    const notification = document.getElementById('limitNotification');
+    document.getElementById('limitMessage').textContent = message;
+    notification.classList.add('show');
+
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 4000);
+}
+
+// Show success notification
+function showSuccessNotification(message) {
+    const notification = document.getElementById('limitNotification');
+    notification.classList.add('success');
+    document.getElementById('limitMessage').textContent = message;
+    notification.classList.add('show');
+
+    setTimeout(() => {
+        notification.classList.remove('show');
+        notification.classList.remove('success');
+    }, 4000);
+}
+
+// Update UI based on premium status
+function updatePremiumUI() {
+    if (premiumState.isActive) {
+        document.getElementById('premiumUpgradeBtn')?.classList.add('premium-active');
+        enablePremiumFeatures();
+    }
+}
+
+// Override file handler to check limits
+if (window.main && window.main.loader) {
+    const originalHandleFile = window.main.loader.handleFile;
+    window.main.loader.handleFile = function (event, append) {
+        if (!append && !canAddMolecule()) {
+            return false;
+        }
+        return originalHandleFile.apply(this, arguments);
+    };
+}
+
+// Override export functions
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize premium
     initializePremium();
 
-    // Re-check premium when window regains focus (in case user subscribed in another tab)
-    window.addEventListener('focus', () => {
-        if (window.currentUser) {
-            checkFirebasePremium(window.currentUser.uid);
+    // Override save buttons
+    const savePDBBtn = document.getElementById('savePDB');
+    if (savePDBBtn) {
+        const originalClick = savePDBBtn.onclick;
+        savePDBBtn.onclick = function () {
+            if (canUsePremiumFeature('export')) {
+                originalClick?.call(this);
+            }
+        };
+    }
+
+    const saveXYZBtn = document.getElementById('saveXYZ');
+    if (saveXYZBtn) {
+        const originalClick = saveXYZBtn.onclick;
+        saveXYZBtn.onclick = function () {
+            if (canUsePremiumFeature('export')) {
+                originalClick?.call(this);
+            }
+        };
+    }
+
+    // Override edit molecule button
+    const editBtn = document.getElementById('editMolecule');
+    if (editBtn) {
+        const originalClick = editBtn.onclick;
+        editBtn.onclick = function () {
+            if (canUsePremiumFeature('edit')) {
+                originalClick?.call(this);
+            }
+        };
+    }
+
+    // Close modal on escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closePremiumModal();
+        }
+    });
+
+    // Close modal on overlay click
+    document.getElementById('premiumModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'premiumModal') {
+            closePremiumModal();
         }
     });
 });
