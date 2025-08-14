@@ -2316,7 +2316,27 @@ window.addEventListener('authStateChanged', (event) => {
     editingMolecule = isSignedIn
     window.currentUserEmail = user.email
     console.log(window.currentUserEmail)
+    const saveSection = document.getElementById('molecule-save-section');
+    const message = document.getElementById('molecule-save-message');
+    if (saveSection) {
+        saveSection.style.display = 'none'
+        const prompt = document.createElement('div');
+        prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
 
+
+        if (!user) {
+            saveSection.style.display = 'none'
+            prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
+        } else {
+            if (premiumState.isActive) {
+                prompt.innerHTML = '';
+
+                saveSection.style.display = 'block'
+            }
+        }
+        saveSection.parentElement.insertBefore(prompt, saveSection);
+
+    }
 });
 
 document.addEventListener('DOMContentLoaded', () => {

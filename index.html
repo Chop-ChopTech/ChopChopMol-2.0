@@ -235,6 +235,14 @@
         window.deleteMolecule = deleteMolecule;
         window.currentUser = null;
 
+        const saveSection = document.getElementById('load-save-message');
+        if (saveSection) {
+            saveSection.style.display = 'none'
+            const prompt = document.createElement('div');
+            prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
+            saveSection.parentElement.insertBefore(prompt, saveSection);
+        }
+
         // Listen for auth state changes and update UI
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -306,23 +314,19 @@
 
                 // Notify main.js about auth state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
-                    detail: { user: null, isSignedIn: false }
+                    detail: {
+                        user: null, isSignedIn: false, premiumState: {
+                            isActive: false,
+                            customerId: null,
+                            subscriptionId: null,
+                            userId: null
+                        }
+                    }
                 }));
                 window.currentUser = null
                 window.currentUserEmail = null
                 console.log('Current user email:', window.currentUserEmail);
 
-            }
-            const saveSection = document.getElementById('molecule-save-section');
-            if (saveSection) {
-                saveSection.style.display = user ? 'block' : 'none';
-
-                if (!user) {
-                    // Add sign-in prompt
-                    const prompt = document.createElement('div');
-                    prompt.innerHTML = '<p style="color: white; padding: 10px;">Sign in to save molecules</p>';
-                    saveSection.parentElement.insertBefore(prompt, saveSection);
-                }
             }
         });
     </script>
@@ -360,6 +364,7 @@
             <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
             <div class="dropdown-content" style="width: 200px;">
                 <div id="molecule-save-section">
+                    <div id="load-save-message"></div>
                     <input type="text" id="molecule-name-input" placeholder="Molecule name..." class="fancy-textbox"
                         style="margin: 10px; width: calc(100% - 40px);">
                     <button class="fancy-button" id="save-molecule-btn"
