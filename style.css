@@ -1081,7 +1081,7 @@ input[type="range"]:focus {
 
 #settings {
     position: absolute;
-    top: -5px;
+    top: -9px;
     left: 10px;
 }
 
@@ -1244,8 +1244,8 @@ input[type="range"]:focus {
 .premium-upgrade-btn {
     position: fixed;
     top: 20px;
-    right: 20px;
-    padding: 10px 20px;
+    left: 75px;
+    padding: 5px 15px;
     background: linear-gradient(135deg, #FFD700, #FFA500);
     color: #1a1a1a;
     border: none;

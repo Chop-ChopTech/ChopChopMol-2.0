@@ -19,6 +19,7 @@ export async function saveStylePreferences(userId) {
             antialias: document.getElementById('style7').checked,
             backgroundColor: document.getElementById('style8').value,
             toggleStyleChanges: document.getElementById('toggleStyleChanges').checked,
+            labelsToggled: document.getElementById('toggleLabels').checked,
             toggleLabels: document.getElementById('toggleLabels').checked,
             lastUpdated: new Date().toISOString()
         };
@@ -104,6 +105,11 @@ export function applyStylePreferences(prefs, renderer) {
     if (prefs.resolution !== undefined) {
         document.getElementById('style6').value = prefs.resolution;
         main.resolution = prefs.resolution;
+    }
+
+    if (prefs.labelsToggled !== undefined) {
+        document.getElementById('toggleLabels').value = prefs.labelsToggled;
+        main.labelsToggled = prefs.labelsToggled;
     }
 
     // Apply antialias
@@ -211,6 +217,7 @@ export function resetToDefaults() {
     main.opacity = 1;
     main.atomSize = 1;
     main.resolution = 16;
+    main.labelsToggled = false;
 
     // Reset background
     scene.background = new THREE.Color('#000000');

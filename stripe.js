@@ -203,7 +203,7 @@ function activatePremium() {
     const btn = document.getElementById('premiumUpgradeBtn');
     if (btn) {
         btn.classList.add('premium-active');
-        document.getElementById('premiumBtnText').textContent = 'Premium ✓';
+        document.getElementById('premiumBtnText').textContent = 'Premium';
 
         // Add click handler to manage subscription
         btn.onclick = function () {

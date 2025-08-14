@@ -132,6 +132,7 @@ export default class Main {
         this.opacity = 1;
         this.atomSize = 1;
         this.resolution = 16
+        this.labelsToggled = false;
         initializeSelectionBox();
 
 
@@ -226,7 +227,7 @@ export default class Main {
             this.molecule.init(data, mode, rotation, translation, center);
         }
         if (labelMode) {
-            this.molecule.toggleLabels(true); // Show labels if in label mode
+            this.molecule.toggleLabels(true);
         }
         render();
 
@@ -243,7 +244,7 @@ export default class Main {
     }
     setNewMode(style = false) {
         if (style) {
-            this.mode = { roughness: main.roughness, metalness: main.metalness, opacity: main.opacity, atomSize: main.atomSize, resolution: main.resolution, antialias: antialiasToggled };
+            this.mode = { roughness: main.roughness, metalness: main.metalness, opacity: main.opacity, atomSize: main.atomSize, resolution: main.resolution, antialias: antialiasToggled, labels: main.labelsToggled };
         } else {
             this.mode = 0
         }
@@ -357,6 +358,7 @@ function updateStyles() {
     const previousSelection = [...atomsSelected];
 
     mode = main.setNewMode(true);
+
     main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false);
 
     // Restore selection after molecule is recreated
