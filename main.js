@@ -294,6 +294,7 @@ document.addEventListener('keydown', (event) => {
         fileInput.click();
     }
 });
+
 fileInput.addEventListener("change", (e) => {
     console.log(e)
     main.loader.handleFile(e, false);

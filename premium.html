@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChopChopMol Premium - Unlock All Features</title>
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 50px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            text-decoration: none;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .logo i {
+            color: #FFD700;
+            font-size: 28px;
+        }
+
+        .back-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 150px 50px 80px;
+            text-align: center;
+            position: relative;
+        }
+
+        .premium-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #1a1a1a;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .hero h1 {
+            font-size: 56px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fff 0%, #FFD700 50%, #FFA500 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+
+        @keyframes gradientShift {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: #b8b8b8;
+            max-width: 600px;
+            margin: 0 auto 40px;
+            line-height: 1.6;
+        }
+
+        /* Pricing Cards */
+        .pricing-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 0 50px;
+            margin-bottom: 80px;
+            flex-wrap: wrap;
+        }
+
+        .pricing-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            width: 400px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(255, 215, 0, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .pricing-card.recommended {
+            border-color: rgba(255, 215, 0, 0.5);
+            transform: scale(1.05);
+        }
+
+        .pricing-card.recommended::before {
+            content: "MOST POPULAR";
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #1a1a1a;
+            padding: 5px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .plan-name {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .price {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 20px 0;
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+        }
+
+        .price .currency {
+            font-size: 24px;
+            margin-right: 5px;
+            color: #FFD700;
+        }
+
+        .price .period {
+            font-size: 18px;
+            color: #888;
+            margin-left: 5px;
+        }
+
+        .features-list {
+            list-style: none;
+            margin: 30px 0;
+        }
+
+        .features-list li {
+            padding: 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #ddd;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .features-list li:last-child {
+            border-bottom: none;
+        }
+
+        .features-list i {
+            color: #4CAF50;
+            font-size: 16px;
+        }
+
+        .features-list .disabled {
+            color: #666;
+        }
+
+        .features-list .disabled i {
+            color: #666;
+        }
+
+        .cta-button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .cta-button.primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .cta-button.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .cta-button.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .cta-button.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Features Grid */
+        .features-section {
+            padding: 80px 50px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .features-section h2 {
+            text-align: center;
+            font-size: 42px;
+            margin-bottom: 60px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+
+        .feature-card i {
+            font-size: 48px;
+            color: #FFD700;
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .feature-card p {
+            color: #aaa;
+            line-height: 1.6;
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            padding: 80px 50px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-section h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 50px;
+        }
+
+        .faq-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .faq-question {
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .faq-answer {
+            padding: 0 20px;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            color: #aaa;
+        }
+
+        .faq-item.active .faq-answer {
+            padding: 20px;
+            max-height: 500px;
+        }
+
+        .faq-item.active .faq-icon {
+            transform: rotate(180deg);
+        }
+
+        .faq-icon {
+            transition: transform 0.3s ease;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 40px 50px;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888;
+        }
+
+        .footer a {
+            color: #FFD700;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 15px 20px;
+            }
+
+            .hero {
+                padding: 120px 20px 60px;
+            }
+
+            .hero h1 {
+                font-size: 36px;
+            }
+
+            .pricing-container {
+                padding: 0 20px;
+            }
+
+            .pricing-card {
+                width: 100%;
+            }
+
+            .features-section {
+                padding: 60px 20px;
+            }
+
+            .faq-section {
+                padding: 60px 20px;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading .loading-spinner {
+            display: block;
+        }
+
+        .loading .btn-text {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="logo">
+            <i class="fas fa-atom"></i>
+            ChopChopMol
+        </a>
+        <a href="index.html" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            Back to App
+        </a>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <span class="premium-badge">
+            <i class="fas fa-gem"></i> PREMIUM FEATURES
+        </span>
+        <h1>Unlock the Full Power of ChopChopMol</h1>
+        <p>Get unlimited access to all advanced features for molecular visualization, editing, and analysis. Perfect for
+            researchers, students, and professionals.</p>
+    </section>
+
+    <!-- Pricing Cards -->
+    <div class="pricing-container">
+        <!-- Free Plan -->
+        <div class="pricing-card">
+            <h3 class="plan-name">Free Plan</h3>
+            <div class="price">
+                <span class="currency">$</span>
+                <span>0</span>
+                <span class="period">/month</span>
+            </div>
+            <ul class="features-list">
+                <li><i class="fas fa-check"></i> Basic molecule visualization</li>
+                <li><i class="fas fa-check"></i> Load up to 3 molecules</li>
+                <li><i class="fas fa-check"></i> Basic rotation & zoom</li>
+                <li><i class="fas fa-check"></i> 3 AI generations per day</li>
+                <li class="disabled"><i class="fas fa-times"></i> Advanced editing tools</li>
+                <li class="disabled"><i class="fas fa-times"></i> Export to PDB/MOL2/XYZ</li>
+                <li class="disabled"><i class="fas fa-times"></i> Measurement tools</li>
+                <li class="disabled"><i class="fas fa-times"></i> Cloud storage</li>
+            </ul>
+            <button class="cta-button secondary" onclick="window.location.href='index.html'">
+                Continue with Free
+            </button>
+        </div>
+
+        <!-- Premium Plan -->
+        <div class="pricing-card recommended">
+            <h3 class="plan-name">Premium Plan</h3>
+            <div class="price">
+                <span class="currency">$</span>
+                <span>2</span>
+                <span class="period">/month</span>
+            </div>
+            <ul class="features-list">
+                <li><i class="fas fa-check"></i> Everything in Free</li>
+                <li><i class="fas fa-check"></i> <strong>Unlimited molecules</strong></li>
+                <li><i class="fas fa-check"></i> <strong>Advanced editing tools</strong></li>
+                <li><i class="fas fa-check"></i> <strong>All export formats</strong></li>
+                <li><i class="fas fa-check"></i> <strong>Measurement & analysis</strong></li>
+                <li><i class="fas fa-check"></i> <strong>Unlimited AI generations</strong></li>
+                <li><i class="fas fa-check"></i> <strong>Cloud storage & sync</strong></li>
+                <li><i class="fas fa-check"></i> <strong>Priority support</strong></li>
+            </ul>
+            <button class="cta-button primary" onclick="subscribeToPremium()">
+                <span class="btn-text">Start Premium Now</span>
+                <div class="loading-spinner"></div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <h2>Premium Features in Detail</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <i class="fas fa-edit"></i>
+                <h3>Advanced Editing</h3>
+                <p>Add, remove, and modify atoms and bonds. Build complex molecules from scratch with our intuitive
+                    tools.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-file-export"></i>
+                <h3>Multiple Export Formats</h3>
+                <p>Export your molecules in PDB, MOL2, XYZ, and other popular formats for use in other software.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-ruler"></i>
+                <h3>Measurement Tools</h3>
+                <p>Measure bond lengths, angles, and dihedral angles. Analyze molecular geometry with precision.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-cloud"></i>
+                <h3>Cloud Storage</h3>
+                <p>Save your molecules to the cloud and access them from any device. Never lose your work again.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-brain"></i>
+                <h3>Unlimited AI</h3>
+                <p>Generate unlimited molecules with our AI assistant. No daily limits on creativity.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-headset"></i>
+                <h3>Priority Support</h3>
+                <p>Get help when you need it with priority email support from our expert team.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFAQ(this)">
+                <span>How does the free trial work?</span>
+                <i class="fas fa-chevron-down faq-icon"></i>
+            </div>
+            <div class="faq-answer">
+                New users get a 6-month free trial with full access to all premium features. No credit card required to
+                start. After the trial, you can continue with the free plan or upgrade to premium.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFAQ(this)">
+                <span>Can I cancel anytime?</span>
+                <i class="fas fa-chevron-down faq-icon"></i>
+            </div>
+            <div class="faq-answer">
+                Yes! You can cancel your subscription at any time. You'll continue to have access to premium features
+                until the end of your billing period.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFAQ(this)">
+                <span>What payment methods do you accept?</span>
+                <i class="fas fa-chevron-down faq-icon"></i>
+            </div>
+            <div class="faq-answer">
+                We accept all major credit cards, debit cards, and digital wallets through our secure payment processor,
+                Stripe.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFAQ(this)">
+                <span>Is my data secure?</span>
+                <i class="fas fa-chevron-down faq-icon"></i>
+            </div>
+            <div class="faq-answer">
+                Absolutely! We use industry-standard encryption and security practices. Your molecules and personal data
+                are stored securely in the cloud with automatic backups.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFAQ(this)">
+                <span>Do I need to sign in to use premium features?</span>
+                <i class="fas fa-chevron-down faq-icon"></i>
+            </div>
+            <div class="faq-answer">
+                Yes, you need to sign in with Google to access premium features and maintain your subscription. This
+                allows us to sync your data across devices.
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 ChopChopMol. All rights reserved.</p>
+        <p>
+            <a href="#">Terms of Service</a> •
+            <a href="#">Privacy Policy</a> •
+            <a href="#">Contact Support</a>
+        </p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        // Initialize Stripe (use your publishable key)
+        const stripe = Stripe('pk_live_51Rot4oJFioirLp8GF7O6F8kr0PLQwRRrRXCjoQCgj0LIqtGnm9mh0Km7zoRFtKHiIiiXS4dhVwTQQLmLhihDwoiR00W0pdTUAa');
+        const PREMIUM_PRICE_ID = 'price_1RvRIeJFioirLp8GzChWVboO';
+
+        // FAQ Toggle
+        function toggleFAQ(element) {
+            const faqItem = element.parentElement;
+            faqItem.classList.toggle('active');
+        }
+
+        // Subscribe to Premium
+        async function subscribeToPremium() {
+            const btn = event.target.closest('button');
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            try {
+                // Check if user is signed in (you'll need to implement this check)
+                const userEmail = localStorage.getItem('userEmail') || '';
+                const userId = localStorage.getItem('userId') || '';
+
+                if (!userId) {
+                    alert('Please sign in first to upgrade to Premium');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // Redirect to Stripe Checkout
+                const { error } = await stripe.redirectToCheckout({
+                    lineItems: [{
+                        price: PREMIUM_PRICE_ID,
+                        quantity: 1
+                    }],
+                    mode: 'subscription',
+                    successUrl: window.location.origin + '/index.html?session_id={CHECKOUT_SESSION_ID}&premium=success',
+                    cancelUrl: window.location.origin + '/premium.html?cancelled=true',
+                    customerEmail: userEmail,
+                    clientReferenceId: userId
+                });
+
+                if (error) {
+                    console.error('Stripe error:', error);
+                    alert('Error: ' + error.message);
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error('Subscription error:', err);
+                alert('Failed to start subscription. Please try again.');
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Check URL parameters for cancellation
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('cancelled') === 'true') {
+            // Show a notification that the payment was cancelled
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 100px;
+                right: 20px;
+                background: linear-gradient(135deg, #dc3545, #c82333);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 10px;
+                box-shadow: 0 4px 20px rgba(220, 53, 69, 0.4);
+                z-index: 2000;
+                animation: slideInRight 0.3s ease;
+            `;
+            notification.innerHTML = '<i class="fas fa-info-circle"></i> Payment cancelled. You can upgrade anytime!';
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+
+</html>

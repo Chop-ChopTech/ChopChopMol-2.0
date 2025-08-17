@@ -301,6 +301,8 @@ body {
     cursor: pointer;
     position: relative;
     overflow: hidden;
+    /* backdrop-filter: blur(10px); */
+    /* opacity: 0.1 !important; */
     transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
 }
 
@@ -1050,7 +1052,10 @@ input[type="range"]:focus {
     top: 100%;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
-    background-color: #ffffff56;
+    /* background-color: #ffffff56;
+     */
+    background: linear-gradient(135deg, rgba(188, 94, 255, 0.13), rgba(100, 201, 255, 0.393));
+
     min-width: 160px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     z-index: 1;
