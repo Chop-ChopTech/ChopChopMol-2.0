@@ -415,6 +415,8 @@ export default class Molecule {
     }
 
     toggleLabels(show) {
+        this.labels.forEach(label => this.main.scene.remove(label));
+        this.labels = [];
         if (show) {
             // Keep atoms visible - remove this line if you want to hide atoms
             // this.instancedMesh.visible = true;
@@ -466,6 +468,7 @@ export default class Molecule {
     }
 
     updateLabels() {
+        this.toggleLabels(true);
         if (this.labels.length === 0) return;
 
         const matrix = new THREE.Matrix4();

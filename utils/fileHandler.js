@@ -42,7 +42,7 @@ export default class FileHandler {
                     document.getElementById("toggleStyleChanges").checked = false;
 
                 }
-                this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)), overlay, rotation, translation);
+                this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)), overlay, rotation, translation, true, false);
                 this.main.zoomCameraToFitMolecule();
 
 

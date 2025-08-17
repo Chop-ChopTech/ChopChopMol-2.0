@@ -210,6 +210,8 @@ export default class Main {
             clearAllBondLengthLabels();
 
         }
+        this.molecule.reset();
+
         editMoleculePanel.classList.add('on');
         fragmentsSelected = [];
         clearScene(this.scene);
@@ -226,20 +228,22 @@ export default class Main {
             this.reset(soft);
             this.molecule.init(data, mode, rotation, translation, center);
         }
+
         if (labelMode) {
-            this.molecule.toggleLabels(true);
+            this.toggleLabels(true);
+            this.molecule.updateLabels();
         }
         render();
 
     }
-    toggleLabels() {
-        labelMode = !labelMode;
-        this.molecule.toggleLabels(labelMode);
+    toggleLabels(override = null) {
+        labelMode = override ?? !labelMode;
+        this.molecule.toggleLabels(true);
         render();
     }
-    createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true) {
+    createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true, soft = false) {
         const data = JSON.parse(json);
-        this.newMolecule(data, this.mode, overlay, rotation, translation, center, false);
+        this.newMolecule(data, this.mode, overlay, rotation, translation, center, false, soft);
         this.data = data;
     }
     setNewMode(style = false) {
