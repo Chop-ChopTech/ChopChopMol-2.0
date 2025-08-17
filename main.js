@@ -32,6 +32,7 @@ import {
 // Please refer the the README.md file for more information
 // CLEANUP TIME!!!!
 
+
 // Setup scene
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -285,6 +286,7 @@ export default class Main {
 
 const main = new Main();
 window.main = main;
+
 
 const fileInput = document.getElementById("fileInput")
 

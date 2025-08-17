@@ -207,7 +207,7 @@ export function resetToDefaults() {
     document.getElementById('style5').value = 1;    // Atom Size
     document.getElementById('style6').value = 16;   // Resolution
     document.getElementById('style7').checked = false; // Antialias
-    document.getElementById('style8').value = '#000000'; // Background (black, not red)
+    document.getElementById('style8').value = '#01101f'; // Background (black, not red)
     document.getElementById('toggleStyleChanges').checked = false;
     document.getElementById('toggleLabels').checked = false;
 
@@ -220,8 +220,8 @@ export function resetToDefaults() {
     main.labelsToggled = false;
 
     // Reset background
-    scene.background = new THREE.Color('#000000');
-    document.body.style.backgroundColor = '#000000';
+    scene.background = new THREE.Color('#01101f');
+    document.body.style.backgroundColor = '#01101f';
 
     // Reset other states
     antialiasToggled = false;
