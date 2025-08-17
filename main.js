@@ -239,7 +239,7 @@ export default class Main {
     }
     createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true) {
         const data = JSON.parse(json);
-        this.newMolecule(data, this.mode, overlay, rotation, translation, center);
+        this.newMolecule(data, this.mode, overlay, rotation, translation, center, false);
         this.data = data;
     }
     setNewMode(style = false) {
@@ -359,7 +359,7 @@ function updateStyles() {
 
     mode = main.setNewMode(true);
 
-    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false);
+    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
 
     // Restore selection after molecule is recreated
     atomsSelected = previousSelection;
@@ -388,7 +388,7 @@ toggleStyleChanges.addEventListener('change', () => {
     } else {
         mode = main.setNewMode();
     }
-    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false);
+    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
 
     // Restore selection
     atomsSelected = previousSelection;
@@ -1152,7 +1152,7 @@ function attachButtonEventListeners() {
                     atomsSelected.forEach(idx => {
                         main.data.atomData[idx].element = replacingMolecule;
                     });
-                    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false);
+                    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
                 }
             }
         });
@@ -1170,7 +1170,7 @@ function attachButtonEventListeners() {
             });
             main.data.numAtoms -= atomsSelected.length;
             atomsSelected = [];
-            main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false, true);
+            main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
         });
     }
 
