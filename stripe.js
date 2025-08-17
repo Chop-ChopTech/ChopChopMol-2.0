@@ -33,34 +33,16 @@ const FEATURE_LIMITS = {
 
 // Initialize premium status - connected to Firebase Auth
 async function initializePremium() {
+    // Hide button initially
+    const premiumBtn = document.getElementById('premiumUpgradeBtn');
+    if (premiumBtn) {
+        premiumBtn.style.display = 'none';
+    }
+
     // Wait for Firebase auth to be ready
     if (typeof window.onAuthStateChanged === 'function') {
-        window.onAuthStateChanged(window.auth, async (user) => {
-            if (user) {
-                // User is signed in
-                premiumState.userId = user.uid;
-
-                // Check if just subscribed
-                const urlParams = new URLSearchParams(window.location.search);
-                const sessionId = urlParams.get('session_id');
-
-                if (sessionId) {
-                    // Just subscribed - save to Firebase
-                    await savePremiumToFirebase(user.uid, sessionId);
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    activatePremium();
-                    showSuccessNotification('Premium activated! Enjoy unlimited features.');
-                } else {
-                    // Check existing subscription from Firebase
-                    await checkFirebasePremium(user.uid);
-                }
-            } else {
-                // User is signed out - reset to free
-                premiumState.isActive = false;
-                premiumState.userId = null;
-                updatePremiumUI();
-            }
-        });
+        // Auth listener in index.html will handle everything
+        console.log('Premium system initialized');
     } else {
         // Firebase not loaded yet, retry
         setTimeout(initializePremium, 500);
@@ -97,20 +79,52 @@ async function checkFirebasePremium(userId) {
 
             if (userDoc.exists()) {
                 const userData = userDoc.data();
+
+                // Check if user has an active trial
+                if (userData.trialStartDate && userData.trialEndDate) {
+                    const trialEnd = userData.trialEndDate.toDate ? userData.trialEndDate.toDate() : new Date(userData.trialEndDate);
+                    const now = new Date();
+
+                    // Check if trial is still active
+                    if (now <= trialEnd) {
+                        // Trial is still active
+                        premiumState.isActive = true;
+                        premiumState.isTrial = true;
+                        premiumState.trialEndDate = trialEnd;
+
+                        // Calculate days remaining
+                        const daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
+
+                        activatePremium();
+                        showTrialStatus(daysRemaining);
+                        return;
+                    } else {
+                        // Trial has expired
+                        if (!userData.premium) {
+                            premiumState.isActive = false;
+                            premiumState.isTrial = false;
+                            showLimitNotification('Your free trial has expired. Upgrade to continue using premium features!');
+                            setTimeout(() => showPremiumModal(), 2000);
+                        }
+                    }
+                }
+
+                // Check regular premium subscription
                 if (userData.premium === true) {
                     premiumState.isActive = true;
+                    premiumState.isTrial = false;
                     activatePremium();
+                } else if (!userData.trialStartDate) {
+                    // New user without trial - start free trial
+                    await startFreeTrial(userId);
                 } else {
+                    // No active subscription
                     premiumState.isActive = false;
                     updatePremiumUI();
                 }
             } else {
-                // No user doc, check localStorage as fallback
-                const localPremium = localStorage.getItem(`premium_${userId}`) === 'true';
-                if (localPremium) {
-                    premiumState.isActive = true;
-                    activatePremium();
-                }
+                // New user - start free trial
+                await startFreeTrial(userId);
             }
         }
     } catch (error) {
@@ -122,22 +136,254 @@ async function checkFirebasePremium(userId) {
     }
 }
 
+function showTrialStatus(daysRemaining) {
+    let message = '';
+    const notification = document.getElementById('limitNotification');
+
+    if (daysRemaining > 30) {
+        const monthsRemaining = Math.floor(daysRemaining / 30);
+        message = `Free trial: ${monthsRemaining} month${monthsRemaining > 1 ? 's' : ''} remaining`;
+    } else if (daysRemaining > 7) {
+        message = `Free trial: ${daysRemaining} days remaining`;
+    } else {
+        message = `⚠️ Free trial ending soon: ${daysRemaining} days remaining`;
+        if (notification) {
+            notification.style.background = 'linear-gradient(135deg, #F59E0B, #D97706)';
+        }
+    }
+
+    // Update button text to show trial status
+    const btn = document.getElementById('premiumUpgradeBtn');
+    if (btn) {
+        document.getElementById('premiumBtnText').textContent = 'Trial';
+        btn.title = message;
+        btn.classList.add('trial-active');
+        btn.classList.remove('premium-active');
+    }
+
+    // Show notification briefly on login
+    if (notification && message) {
+        document.getElementById('limitMessage').textContent = message;
+        notification.style.display = 'block';
+        notification.classList.add('show');
+
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 300);
+        }, 3000);
+    }
+}
+// Function to start a 6-month free trial for new users
+async function startFreeTrial(userId) {
+    try {
+        const db = window.db;
+        if (db) {
+            const now = new Date();
+            const trialEndDate = new Date();
+            trialEndDate.setMonth(trialEndDate.getMonth() + 6); // Add 6 months
+
+            await window.setDoc(window.doc(db, 'users', userId), {
+                premium: false,
+                trialStartDate: now,
+                trialEndDate: trialEndDate,
+                isTrialUser: true,
+                firstSignIn: window.serverTimestamp()
+            }, { merge: true });
+
+            // Activate trial
+            premiumState.isActive = true;
+            premiumState.isTrial = true;
+            premiumState.trialEndDate = trialEndDate;
+
+            activatePremium();
+            showLimitNotification('🎉 Welcome! Your 6-month free premium trial has been activated!');
+
+            console.log('Free trial started for user:', userId);
+        }
+    } catch (error) {
+        console.error('Error starting free trial:', error);
+    }
+}
+
+function showTrialNotification(daysRemaining) {
+    const notification = document.getElementById('limitNotification') || createNotificationElement();
+    notification.classList.add('trial-notification');
+
+    let message = '';
+    if (daysRemaining > 30) {
+        const monthsRemaining = Math.floor(daysRemaining / 30);
+        message = `Free trial: ${monthsRemaining} month${monthsRemaining > 1 ? 's' : ''} remaining`;
+    } else if (daysRemaining > 7) {
+        message = `Free trial: ${daysRemaining} days remaining`;
+    } else if (daysRemaining > 1) {
+        message = `⚠️ Free trial ending soon: ${daysRemaining} days remaining`;
+        notification.classList.add('warning');
+    } else if (daysRemaining === 1) {
+        message = `⚠️ Free trial ends tomorrow!`;
+        notification.classList.add('warning');
+    } else {
+        message = `⚠️ Free trial ends today!`;
+        notification.classList.add('warning');
+    }
+
+    document.getElementById('limitMessage').textContent = message;
+    notification.classList.add('show');
+    notification.style.display = 'block';
+
+    // Update the premium button to show trial status
+    const btn = document.getElementById('premiumUpgradeBtn');
+    if (btn) {
+        document.getElementById('premiumBtnText').textContent = 'Trial';
+        btn.title = `Free trial: ${daysRemaining} days remaining`;
+    }
+
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 5000);
+}
+
+function showWelcomeTrialNotification() {
+    const notification = document.getElementById('limitNotification') || createNotificationElement();
+    notification.classList.add('success', 'welcome-trial');
+    document.getElementById('limitMessage').textContent = '🎉 Welcome! Your 6-month free premium trial has been activated!';
+    notification.classList.add('show');
+    notification.style.display = 'block';
+
+    setTimeout(() => {
+        notification.classList.remove('show');
+        notification.classList.remove('success', 'welcome-trial');
+    }, 7000);
+}
+
+function showTrialExpiredNotification() {
+    const notification = document.getElementById('limitNotification') || createNotificationElement();
+    notification.classList.add('expired-trial');
+    document.getElementById('limitMessage').textContent = 'Your free trial has expired. Upgrade to continue using premium features!';
+    notification.classList.add('show');
+    notification.style.display = 'block';
+
+    // Show premium modal after 2 seconds
+    setTimeout(() => {
+        showPremiumModal();
+    }, 2000);
+
+    setTimeout(() => {
+        notification.classList.remove('show');
+        notification.classList.remove('expired-trial');
+    }, 5000);
+}
+
+function createNotificationElement() {
+    const notification = document.createElement('div');
+    notification.id = 'limitNotification';
+    notification.className = 'limit-notification';
+    notification.innerHTML = `
+        <i class="fas fa-info-circle"></i>
+        <span id="limitMessage"></span>
+    `;
+    document.body.appendChild(notification);
+    return notification;
+}
+
+function activatePremium() {
+    premiumState.isActive = true;
+    window.dispatchEvent(new CustomEvent('authStateChanged', {
+        detail: { user: window.currentUser, isSignedIn: true, premiumState: premiumState }
+    }));
+
+    // Update button
+    const btn = document.getElementById('premiumUpgradeBtn');
+    if (btn) {
+        // Show the button when premium/trial is active
+        btn.style.display = 'flex';
+
+        if (premiumState.isTrial) {
+            btn.classList.add('trial-active');
+            btn.classList.remove('premium-active');
+            document.getElementById('premiumBtnText').textContent = 'Trial';
+
+            // Show remaining days on hover
+            if (premiumState.trialEndDate) {
+                const now = new Date();
+                const daysRemaining = Math.ceil((premiumState.trialEndDate - now) / (1000 * 60 * 60 * 24));
+                btn.title = `Free trial: ${daysRemaining} days remaining. Click to upgrade.`;
+            }
+        } else {
+            btn.classList.add('premium-active');
+            btn.classList.remove('trial-active');
+            document.getElementById('premiumBtnText').textContent = 'Premium';
+        }
+
+        // Update onclick handler
+        btn.onclick = function () {
+            if (premiumState.isActive && !premiumState.isTrial) {
+                // Show management options for paid premium users
+                if (confirm('Manage your Premium subscription?')) {
+                    cancelPremium();
+                }
+            } else {
+                // Show upgrade modal for trial users
+                showPremiumModal();
+            }
+        };
+    }
+
+    // Enable all premium features
+    enablePremiumFeatures();
+}
+
+// ============================================
+// MODIFICATION 4: Show premium modal with trial info
+// ============================================
+
+function showPremiumModalWithTrialInfo() {
+    showPremiumModal();
+
+    // Add trial info to the modal if user is on trial
+    if (premiumState.isTrial && premiumState.trialEndDate) {
+        const now = new Date();
+        const daysRemaining = Math.ceil((premiumState.trialEndDate - now) / (1000 * 60 * 60 * 24));
+
+        const modalContent = document.querySelector('.premium-modal-content');
+        const trialInfo = document.createElement('div');
+        trialInfo.className = 'trial-info-banner';
+        trialInfo.innerHTML = `
+            <i class="fas fa-gift"></i>
+            <p>You have <strong>${daysRemaining} days</strong> remaining in your free trial</p>
+            <p class="small">Upgrade now to ensure uninterrupted access to premium features</p>
+        `;
+
+        // Insert after header
+        const header = modalContent.querySelector('.premium-header');
+        if (header && !modalContent.querySelector('.trial-info-banner')) {
+            header.after(trialInfo);
+        }
+    }
+}
+
 // Subscribe to premium - include user ID
 async function subscribeToPremium() {
+    // Check if user is signed in first
+    if (!window.currentUser) {
+        // User not signed in - prompt to sign in
+        showLimitNotification('Please sign in to upgrade to Premium');
+
+        // Close the premium modal if it's open
+        closePremiumModal();
+
+        // Trigger sign in after a short delay
+        setTimeout(() => {
+            document.getElementById('signInButton')?.click();
+        }, 500);
+
+        return;
+    }
+
     const btn = document.getElementById('subscribePremiumBtn');
     btn.classList.add('loading');
     btn.disabled = true;
-
-    // Check if user is signed in
-    if (!window.currentUser) {
-        showLimitNotification('Please sign in first to upgrade to Premium');
-        btn.classList.remove('loading');
-        btn.disabled = false;
-
-        // Trigger sign in
-        document.getElementById('signInButton')?.click();
-        return;
-    }
 
     try {
         const userEmail = window.currentUser.email;
@@ -153,7 +399,7 @@ async function subscribeToPremium() {
             successUrl: window.location.origin + window.location.pathname + '?session_id={CHECKOUT_SESSION_ID}&uid=' + userId,
             cancelUrl: window.location.origin + window.location.pathname,
             customerEmail: userEmail,
-            clientReferenceId: userId // Track Firebase user ID
+            clientReferenceId: userId
         });
 
         if (error) {
@@ -335,8 +581,75 @@ function canUsePremiumFeature(feature) {
 
 // Show/hide premium modal
 function showPremiumModal() {
+    // Check if user is signed in
+    if (!window.currentUser) {
+        // Create a sign-in prompt instead of showing premium modal
+        const signInPrompt = document.createElement('div');
+        signInPrompt.className = 'sign-in-prompt';
+        signInPrompt.innerHTML = `
+            <h3>Sign in Required</h3>
+            <p>Please sign in with Google to access premium features and start your free trial!</p>
+            <button onclick="document.getElementById('signInButton').click(); this.parentElement.remove();">
+                <i class="fas fa-sign-in-alt"></i> Sign In with Google
+            </button>
+        `;
+
+        // Add to page temporarily
+        document.body.appendChild(signInPrompt);
+
+        // Remove after 5 seconds
+        setTimeout(() => {
+            signInPrompt.remove();
+        }, 5000);
+
+        return;
+    }
+
+    // User is signed in, show the premium modal normally
     document.getElementById('premiumModal').classList.add('active');
+
+    // Add trial info if applicable
+    if (premiumState.isTrial && premiumState.trialEndDate) {
+        showPremiumModalWithTrialInfo();
+    }
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Set initial button state (hidden)
+    const premiumBtn = document.getElementById('premiumUpgradeBtn');
+    if (premiumBtn) {
+        premiumBtn.style.display = 'none';
+    }
+
+    // Initialize premium system (will show button if user is signed in)
+    setTimeout(initializePremium, 1000);
+});
+
+window.addEventListener('userSignedIn', function (event) {
+    const premiumBtn = document.getElementById('premiumUpgradeBtn');
+    if (premiumBtn && event.detail.user) {
+        // Show button with animation
+        premiumBtn.style.display = 'flex';
+        premiumBtn.style.animation = 'fadeInUp 0.5s ease';
+    }
+});
+
+// Add this to your sign-in success handler in index.html
+signInButton.addEventListener('click', () => {
+    signInWithPopup(auth, provider)
+        .then((result) => {
+            const user = result.user;
+            console.log('Signed in as', user.displayName);
+
+            // Dispatch custom event for sign-in success
+            window.dispatchEvent(new CustomEvent('userSignedIn', {
+                detail: { user: user }
+            }));
+        })
+        .catch((error) => {
+            console.error('Sign-in error:', error);
+        });
+});
 
 function closePremiumModal() {
     document.getElementById('premiumModal').classList.remove('active');

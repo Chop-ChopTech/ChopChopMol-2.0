@@ -1501,6 +1501,50 @@ input[type="range"]:focus {
     font-size: 12px;
 }
 
+#premiumUpgradeBtn {
+    display: none;
+    /* Hidden by default */
+}
+
+/* Trial active state */
+.premium-upgrade-btn.trial-active {
+    background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important;
+    color: white;
+}
+
+.premium-upgrade-btn.trial-active:hover {
+    background: linear-gradient(135deg, #9333EA, #8B5CF6) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+}
+
+/* User initials in dropdown */
+.user-initials {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+}
+
+#settings .dropdown-icon.signed-in {
+    font-size: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Trial notification styles */
+.limit-notification.trial-warning {
+    background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+}
+
 /* Animations */
 @keyframes fadeIn {
     from {

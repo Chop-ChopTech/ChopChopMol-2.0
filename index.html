@@ -244,11 +244,18 @@
         }
 
         // Listen for auth state changes and update UI
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
+            const premiumBtn = document.getElementById('premiumUpgradeBtn');
+
             if (user) {
                 // User is signed in
                 signInButton.style.display = 'none';
                 signOutButton.style.display = 'block';
+
+                // Show premium button for signed-in users
+                if (premiumBtn) {
+                    premiumBtn.style.display = 'flex';
+                }
 
                 // Hide the separate user status box
                 userStatus.style.display = 'none';
@@ -270,17 +277,21 @@
                     makeDefaultBtn.style.display = 'block';
                 }
 
-                // Notify main.js about auth state
+                // Store current user
+                window.currentUserEmail = user.email;
+                window.currentUser = user;
+
+                // First dispatch a basic auth state (for immediate UI updates)
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: {
-                        user: user, isSignedIn: true, premiumState: {
-                            isActive: false,
-                            customerId: null,
-                            subscriptionId: null,
-                            userId: null
-                        }
+                        user: user,
+                        isSignedIn: true,
+                        premiumState: premiumState
                     }
                 }));
+
+                // Then check premium/trial status (this will dispatch another event with updated premium state)
+                await checkFirebasePremium(user.uid);
 
                 // Load user's style preferences after a short delay
                 setTimeout(() => {
@@ -288,14 +299,18 @@
                         window.loadStylePreferences(user.uid, window.renderer);
                     }
                 }, 1000);
-                window.currentUserEmail = user.email
-                window.currentUser = user
+
                 console.log('Current user email:', window.currentUserEmail);
             } else {
                 // User is signed out
                 signInButton.style.display = 'block';
                 signOutButton.style.display = 'none';
                 userStatus.style.display = 'none';
+
+                // Hide premium button when signed out
+                if (premiumBtn) {
+                    premiumBtn.style.display = 'none';
+                }
 
                 // Reset the dropdown icon to the generic user icon
                 const dropdownIcon = document.querySelector('#settings .dropdown-icon');
@@ -309,24 +324,25 @@
                     makeDefaultBtn.style.display = 'none';
                 }
 
-                // Reset to default values when signed out
+                // Clear current user
+                window.currentUserEmail = null;
+                window.currentUser = null;
 
+                // Reset premium state
+                premiumState.isActive = false;
+                premiumState.isTrial = false;
+                premiumState.userId = null;
 
-                // Notify main.js about auth state
+                // Notify main.js about auth state with premium state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: {
-                        user: null, isSignedIn: false, premiumState: {
-                            isActive: false,
-                            customerId: null,
-                            subscriptionId: null,
-                            userId: null
-                        }
+                        user: null,
+                        isSignedIn: false,
+                        premiumState: premiumState
                     }
                 }));
-                window.currentUser = null
-                window.currentUserEmail = null
-                console.log('Current user email:', window.currentUserEmail);
 
+                console.log('User signed out');
             }
         });
     </script>
