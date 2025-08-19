@@ -239,7 +239,12 @@ export default class Main {
     }
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
-        this.molecule.toggleLabels(true);
+        if (override) {
+            this.molecule.toggleLabels(true);
+
+        } else {
+            this.molecule.clearLabels();
+        }
         render();
     }
     createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true, soft = false) {
@@ -481,8 +486,8 @@ closeStyleSelectorButton.addEventListener('click', () => {
     styleSelector.classList.add('on');
 });
 
-toggleLabelsButton.addEventListener('click', () => {
-    main.toggleLabels();
+toggleLabelsButton.addEventListener('change', () => {
+    main.toggleLabels(toggleLabelsButton.checked);
 });
 
 window.addEventListener('replyUpdated', (event) => {
