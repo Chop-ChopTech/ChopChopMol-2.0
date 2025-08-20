@@ -304,6 +304,8 @@ body {
     /* backdrop-filter: blur(10px); */
     /* opacity: 0.1 !important; */
     transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
 }
 
 .fancy-button:hover {
@@ -311,6 +313,22 @@ body {
     /* Subtle lift and slight scale */
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 0 8px rgba(255, 255, 255, 0.3);
     /* Glow effect */
+}
+
+.fancy-button.pulse {
+    animation: subtlePulse 2s infinite;
+}
+
+@keyframes subtlePulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
 }
 
 .fancy-button::before {
@@ -379,6 +397,22 @@ body {
     display: none;
 }
 
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
 .fancy-textbox {
     padding: 12px;
     border-radius: 10px;
@@ -399,6 +433,8 @@ body {
     outline: none;
     /* Remove default outline */
 }
+
+
 
 #loading {
     position: absolute;

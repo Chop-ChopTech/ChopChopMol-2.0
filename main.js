@@ -1239,15 +1239,9 @@ function attachButtonEventListeners() {
     }
 
     if (closeEditing) {
-        // const newCloseEditing = closeEditing.cloneNode(true);
-        // closeEditing.parentNode.replaceChild(newCloseEditing, closeEditing);
-
-        // newCloseEditing.addEventListener('click', () => {
-        //     editMoleculePanel.classList.add('on');
-        // });
-        closeEditing.addEventListener('click', () => {
-            editMoleculePanel.classList.toggle('on');
-        })
+        closeEditing.onclick = function () {
+            editMoleculePanel.classList.add('on');
+        };
     }
 
     // Attach axis event listeners
@@ -1385,7 +1379,7 @@ function updateEditingContent(element = null, color = null) {
         }
 
         editMoleculeContent.innerHTML = `
-            <button id="closeEditing" class="dismiss" title="Dismiss" style="position: absolute; top: 0%; left: 0%; margin: 10px">×</button>
+            <button id="closeEditing" class="dismiss" title="Dismiss" style="position: absolute; top: 0%; left: 0%; margin: 10px"><i class="fa-solid fa-angles-left"></i></button>
         `;
         editMoleculeContent.innerHTML += `
             <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
