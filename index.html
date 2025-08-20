@@ -246,6 +246,8 @@
         }
 
         // Listen for auth state changes and update UI
+        // In index.html, replace the onAuthStateChanged handler with this updated version:
+
         onAuthStateChanged(auth, async (user) => {
             const premiumBtn = document.getElementById('premiumUpgradeBtn');
 
@@ -253,13 +255,7 @@
                 // User is signed in
                 signInButton.style.display = 'none';
                 signOutButton.style.display = 'block';
-
-                // Show premium button for signed-in users
-                if (premiumBtn) {
-                    premiumBtn.style.display = 'flex';
-                }
-
-                // Hide the separate user status box
+                userStatus.innerHTML = `Signed in as ${user.displayName}`;
                 userStatus.style.display = 'none';
 
                 // Get the dropdown icon and update it with user initials
@@ -295,14 +291,19 @@
                 // Then check premium/trial status (this will dispatch another event with updated premium state)
                 await checkFirebasePremium(user.uid);
 
-                // Load user's style preferences after a short delay
-                setTimeout(() => {
-                    if (window.loadStylePreferences) {
+                // Load user's style preferences with appropriate delay
+                if (window.loadStylePreferences) {
+                    // Use shorter delay if molecule is already loaded
+                    const hasMolecule = window.main && window.main.molecule && window.main.data && window.main.data.numAtoms > 0;
+                    const delay = hasMolecule ? 100 : 1000;
+
+                    setTimeout(() => {
                         window.loadStylePreferences(user.uid, window.renderer);
-                    }
-                }, 1000);
+                    }, delay);
+                }
 
                 console.log('Current user email:', window.currentUserEmail);
+
             } else {
                 // User is signed out
                 signInButton.style.display = 'block';
@@ -343,6 +344,14 @@
                         premiumState: premiumState
                     }
                 }));
+
+                // IMPORTANT: Reset styles to defaults when signing out
+                if (window.resetToDefaults) {
+                    // Small delay to ensure everything is initialized
+                    setTimeout(() => {
+                        window.resetToDefaults();
+                    }, 100);
+                }
 
                 console.log('User signed out');
             }

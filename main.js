@@ -213,7 +213,7 @@ export default class Main {
         }
         this.molecule.reset();
 
-        editMoleculePanel.classList.add('on');
+        // editMoleculePanel.classList.add('on');
         fragmentsSelected = [];
         clearScene(this.scene);
         labels.forEach(label => {

@@ -324,6 +324,8 @@ body {
     transition: left 0.4s ease;
 }
 
+
+
 .fancy-button:hover::before {
     left: 100%;
     /* Smooth shine effect on hover */
@@ -374,6 +376,7 @@ body {
 
 #import-json {
     background-color: #17af2d;
+    display: none;
 }
 
 .fancy-textbox {
@@ -1055,6 +1058,7 @@ input[type="range"]:focus {
     /* background-color: #ffffff56;
      */
     background: linear-gradient(135deg, rgba(188, 94, 255, 0.13), rgba(100, 201, 255, 0.393));
+    /* display: none; */
 
     min-width: 160px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);

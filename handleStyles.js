@@ -42,7 +42,8 @@ export async function saveStylePreferences(userId) {
 }
 
 export async function loadStylePreferences(userId, renderer) {
-    console.log(renderer)
+    console.log('Loading style preferences for user:', userId);
+
     if (!window.firebaseDB || !userId) {
         console.error('Firebase DB not initialized or no user ID');
         return null;
@@ -57,7 +58,10 @@ export async function loadStylePreferences(userId, renderer) {
             const data = docSnap.data();
             if (data.stylePreferences) {
                 console.log('Loading preferences:', data.stylePreferences);
-                applyStylePreferences(data.stylePreferences, renderer);
+
+                // Apply styles with proper renderer reference
+                applyStylePreferences(data.stylePreferences, renderer || window.renderer);
+
                 showNotification('Default styles loaded!', 'info');
                 return data.stylePreferences;
             }
@@ -71,44 +75,42 @@ export async function loadStylePreferences(userId, renderer) {
 }
 
 export function applyStylePreferences(prefs, renderer) {
-    // Apply roughness
+    // Store if we have an existing molecule and its data
+    const hasMolecule = window.main && window.main.molecule && window.main.data && window.main.data.numAtoms > 0;
+    const currentSelection = hasMolecule ? [...(window.atomsSelected || [])] : [];
+
+    // Apply all style values
     if (prefs.roughness !== undefined) {
         document.getElementById('style1').value = prefs.roughness;
         main.roughness = prefs.roughness;
     }
 
-    // Apply metalness
     if (prefs.metalness !== undefined) {
         document.getElementById('style2').value = prefs.metalness;
         main.metalness = prefs.metalness;
     }
 
-    // Apply opacity
     if (prefs.opacity !== undefined) {
         document.getElementById('style3').value = prefs.opacity;
         main.opacity = prefs.opacity;
     }
 
-    // Apply bonds
     if (prefs.bonds !== undefined) {
         document.getElementById('style4').value = prefs.bonds;
-        // Note: You may need to add main.bonds or similar variable
     }
 
-    // Apply atom size
     if (prefs.atomSize !== undefined) {
         document.getElementById('style5').value = prefs.atomSize;
         main.atomSize = prefs.atomSize;
     }
 
-    // Apply resolution
     if (prefs.resolution !== undefined) {
         document.getElementById('style6').value = prefs.resolution;
         main.resolution = prefs.resolution;
     }
 
     if (prefs.labelsToggled !== undefined) {
-        document.getElementById('toggleLabels').value = prefs.labelsToggled;
+        document.getElementById('toggleLabels').checked = prefs.labelsToggled;
         main.labelsToggled = prefs.labelsToggled;
     }
 
@@ -118,43 +120,77 @@ export function applyStylePreferences(prefs, renderer) {
         antialiasToggled = prefs.antialias;
 
         // If antialias setting changed, recreate renderer
-        if (renderer.antialias !== prefs.antialias) {
+        if (renderer && renderer.antialias !== prefs.antialias) {
             window.recreateRenderer(prefs.antialias);
         }
     }
 
     // Apply background color
-    if (prefs.backgroundColor !== undefined && prefs.backgroundColor !== '#ff0000') {
+    if (prefs.backgroundColor !== undefined) {
         document.getElementById('style8').value = prefs.backgroundColor;
         const color = prefs.backgroundColor;
         window.setSceneColor(color);
         document.body.style.backgroundColor = color;
     }
 
-    // Apply toggle style changes
+    // Apply toggle style changes - this needs special handling
     if (prefs.toggleStyleChanges !== undefined) {
         document.getElementById('toggleStyleChanges').checked = prefs.toggleStyleChanges;
-        // Trigger the toggle event if needed
-        if (prefs.toggleStyleChanges && window.mode === 0) {
-            document.getElementById('toggleStyleChanges').dispatchEvent(new Event('change'));
+
+        // If we have a molecule loaded, update it with the new style settings
+        if (hasMolecule) {
+            const currentMode = window.mode || 0;
+            const targetMode = prefs.toggleStyleChanges ? 1 : 0;
+
+            // Check if we need to change rendering mode
+            if ((targetMode === 1 && currentMode === 0) || (targetMode === 0 && currentMode !== 0)) {
+                // Update the mode
+                if (prefs.toggleStyleChanges) {
+                    window.mode = main.setNewMode(true);
+                } else {
+                    window.mode = main.setNewMode();
+                }
+
+                // Recreate the molecule with new mode
+                main.newMolecule(main.data, window.mode, false,
+                    { x: 0, y: 0, z: 0 },
+                    { x: 0, y: 0, z: 0 },
+                    true, true);
+
+                // Restore selection after recreation
+                if (currentSelection.length > 0) {
+                    window.atomsSelected = currentSelection;
+                    currentSelection.forEach(idx => {
+                        if (window.selectAtom) {
+                            window.selectAtom(idx, false);
+                        }
+                    });
+
+                    // Update UI if atoms were selected
+                    if (window.updateEditingContent && window.attachButtonEventListeners) {
+                        const element = main.molecule.atoms[currentSelection[0]].type;
+                        window.updateEditingContent(element, main.molecule.atomSettings[element].color);
+                        window.attachButtonEventListeners();
+                    }
+                }
+            } else if (targetMode !== 0) {
+                // If we're already in the correct mode, just update material properties
+                if (window.updateStyles) {
+                    window.updateStyles();
+                }
+            }
         }
     }
 
-    // Apply toggle labels
-    if (prefs.toggleLabels !== undefined) {
-        document.getElementById('toggleLabels').checked = prefs.toggleLabels;
-        window.labelMode = prefs.toggleLabels;
-        if (main && main.molecule) {
-            main.molecule.toggleLabels(window.labelMode);
-        }
+    // Update labels if needed
+    if (prefs.labelsToggled && hasMolecule && main.molecule) {
+        main.molecule.toggleLabels(true);
     }
 
-    // Update the visualization if a molecule is loaded
-    if (main && main.molecule && window.mode !== 0) {
-        updateStyles();
+    // Ensure render is called to show changes
+    if (window.render) {
+        window.render();
     }
-
-    window.render();
 }
 
 
@@ -199,6 +235,10 @@ export function showNotification(message, type) {
 
 
 export function resetToDefaults() {
+    // Store if we have an existing molecule
+    const hasMolecule = window.main && window.main.molecule && window.main.data && window.main.data.numAtoms > 0;
+    const currentSelection = hasMolecule ? [...(window.atomsSelected || [])] : [];
+
     // Reset sliders to default values
     document.getElementById('style1').value = 0.17; // Roughness
     document.getElementById('style2').value = 0.3;  // Metalness
@@ -207,7 +247,7 @@ export function resetToDefaults() {
     document.getElementById('style5').value = 1;    // Atom Size
     document.getElementById('style6').value = 16;   // Resolution
     document.getElementById('style7').checked = false; // Antialias
-    document.getElementById('style8').value = '#01101f'; // Background (black, not red)
+    document.getElementById('style8').value = '#01101f'; // Background (dark blue)
     document.getElementById('toggleStyleChanges').checked = false;
     document.getElementById('toggleLabels').checked = false;
 
@@ -220,13 +260,49 @@ export function resetToDefaults() {
     main.labelsToggled = false;
 
     // Reset background
-    scene.background = new THREE.Color('#01101f');
+    window.scene.background = new THREE.Color('#01101f');
     document.body.style.backgroundColor = '#01101f';
 
     // Reset other states
     antialiasToggled = false;
     window.labelMode = false;
 
+    // If we have a molecule and need to switch back to basic mode
+    if (hasMolecule && window.mode !== 0) {
+        window.mode = main.setNewMode(); // Set to basic mode (0)
+
+        // Recreate the molecule with basic mode
+        main.newMolecule(main.data, window.mode, false,
+            { x: 0, y: 0, z: 0 },
+            { x: 0, y: 0, z: 0 },
+            true, true);
+
+        // Restore selection
+        if (currentSelection.length > 0) {
+            window.atomsSelected = currentSelection;
+            currentSelection.forEach(idx => {
+                if (window.selectAtom) {
+                    window.selectAtom(idx, false);
+                }
+            });
+
+            if (window.updateEditingContent && window.attachButtonEventListeners) {
+                const element = main.molecule.atoms[currentSelection[0]].type;
+                window.updateEditingContent(element, main.molecule.atomSettings[element].color);
+                window.attachButtonEventListeners();
+            }
+        }
+    }
+
+    // Clear any labels
+    if (hasMolecule && main.molecule && main.molecule.labels) {
+        main.molecule.clearLabels();
+    }
+
     window.render();
+    showNotification('Styles reset to defaults', 'info');
 }
+
+window.loadStylePreferences = loadStylePreferences;
+window.resetToDefaults = resetToDefaults;
 

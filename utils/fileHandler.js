@@ -34,7 +34,7 @@ export default class FileHandler {
                     console.log(rotation, translation);
 
                 }
-                if (parsedData.numAtoms <= 800) {
+                if (parsedData.numAtoms <= 2000) {
                     this.main.setNewMode(true);
                     document.getElementById("toggleStyleChanges").checked = true;
                 } else {
