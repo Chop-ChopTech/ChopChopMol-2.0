@@ -687,23 +687,6 @@ function combineMultipleFragments(fragments) {
     }, { atomData: [], numAtoms: 0 });
 }
 
-function showFragments(fragmentIndexes) {
-    console.log(fragmentIndexes)
-    let allFragmentData = []
-    let fragmentsToShow = fragmentIndexes.map(i => fragments[i - 1]);
-    console.log(fragmentsToShow)
-
-    fragmentsToShow.forEach(fragment => {
-        allFragmentData.push(generateDataFromAtoms(fragment))
-    })
-    const data = combineMultipleFragments(allFragmentData)
-    const currentData = main.data
-    main.data = data
-    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
-}
-function hideFragment() {
-
-}
 
 // Check if atom is in selection box
 function isAtomInSelection(atomIndex, camera) {
