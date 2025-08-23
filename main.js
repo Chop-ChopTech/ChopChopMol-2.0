@@ -209,12 +209,12 @@ export default class Main {
             fragments = [];
             labels = [];
             clearAllBondLengthLabels();
+            fragmentsSelected = [];
 
         }
         this.molecule.reset();
 
         // editMoleculePanel.classList.add('on');
-        fragmentsSelected = [];
         clearScene(this.scene);
         labels.forEach(label => {
             createInfoLabel(label[0], label[1], label[2] ?? null, label[3] ?? null);
@@ -665,6 +665,44 @@ function updateInstancedMeshBounds(instancedMesh, atoms) {
     }
 
     instancedMesh.boundingBox = box;
+}
+
+function generateDataFromAtoms(atomIndexes) {
+    const data = {}
+    const cooordinates = []
+    atomIndexes.forEach(idx => {
+        const pos = main.molecule.atoms[idx].position
+        cooordinates.push({ element: main.molecule.atoms[idx].type, x: pos.x / 4, y: pos.y / 4, z: pos.z / 4 })
+    })
+    data.atomData = cooordinates
+    data.numAtoms = atomIndexes.length
+    return data
+}
+function combineMultipleFragments(fragments) {
+    return fragments.reduce((combined, fragment) => {
+        return {
+            atomData: [...combined.atomData, ...fragment.atomData],
+            numAtoms: combined.numAtoms + fragment.numAtoms
+        };
+    }, { atomData: [], numAtoms: 0 });
+}
+
+function showFragments(fragmentIndexes) {
+    console.log(fragmentIndexes)
+    let allFragmentData = []
+    let fragmentsToShow = fragmentIndexes.map(i => fragments[i - 1]);
+    console.log(fragmentsToShow)
+
+    fragmentsToShow.forEach(fragment => {
+        allFragmentData.push(generateDataFromAtoms(fragment))
+    })
+    const data = combineMultipleFragments(allFragmentData)
+    const currentData = main.data
+    main.data = data
+    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+}
+function hideFragment() {
+
 }
 
 // Check if atom is in selection box
@@ -3368,6 +3406,7 @@ function createRenderer(antialiasOn) {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
+    console.log(fragmentsSelected)
 }
 function render() {
     renderer.render(scene, camera);
