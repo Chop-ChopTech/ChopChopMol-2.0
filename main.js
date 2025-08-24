@@ -112,7 +112,11 @@ let labels = [];
 let premiumActive = false
 const selectionBox = document.getElementById('selectionBox');
 const projectionVector = new THREE.Vector3();
-
+let isolationHistory = [];
+let currentIsolationIndex = -1;
+let originalMoleculeData = null;
+let originalFragments = [];
+let isInIsolationMode = false;
 
 export default class Main {
     constructor() {
@@ -1170,7 +1174,7 @@ function attachButtonEventListeners() {
     const removeBtn = document.getElementById('removeAtomBtn');
     const fragmentBtn = document.getElementById('createFragment');
     const closeEditing = document.getElementById('closeEditing');
-
+    const isolateBtn = document.getElementById('isolateFragmentBtn');
 
     // Clone and replace to remove all existing event listeners
     if (changeBtn) {
@@ -1259,6 +1263,115 @@ function attachButtonEventListeners() {
         });
     }
 
+    if (isolateBtn) {
+        const newIsolateBtn = isolateBtn.cloneNode(true);
+        isolateBtn.parentNode.replaceChild(newIsolateBtn, isolateBtn);
+
+        newIsolateBtn.addEventListener('click', () => {
+            if (fragmentsSelected.length > 0) {
+                if (fragmentsSelected.length > 1) {
+                    // Multiple fragments: create combined isolation
+                    const combinedAtomIndices = [];
+                    let combinedName = 'Combined: ';
+
+                    fragmentsSelected.forEach((fragIdx, i) => {
+                        if (fragIdx < fragments.length) {
+                            combinedAtomIndices.push(...fragments[fragIdx]);
+                            combinedName += `F${fragIdx + 1}${i < fragmentsSelected.length - 1 ? '+' : ''}`;
+                        }
+                    });
+
+                    // Store original molecule
+                    storeOriginalMolecule();
+
+                    if (!isInIsolationMode) {
+                        originalFragments = JSON.parse(JSON.stringify(fragments));
+                    }
+
+                    // Generate combined data
+                    const newData = generateDataFromAtoms(combinedAtomIndices);
+
+                    // Create isolation entry
+                    const isolationEntry = {
+                        name: combinedName,
+                        atomCount: combinedAtomIndices.length,
+                        data: newData,
+                        fragmentIndices: [...fragmentsSelected],
+                        originalIndices: combinedAtomIndices,
+                        timestamp: Date.now()
+                    };
+
+                    // Add to history
+                    isolationHistory.push(isolationEntry);
+                    currentIsolationIndex = isolationHistory.length - 1;
+
+                    // Clear selections
+                    atomsSelected = [];
+                    fragmentsSelected = [];
+                    fragments = [];
+
+                    isInIsolationMode = true;
+
+                    // Create new molecule
+                    main.newMolecule(newData, main.mode, false,
+                        { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+                    main.data = newData;
+
+                    updateIsolationModeUI();
+                } else {
+                    // Single fragment
+                    isolateFragment(fragmentsSelected[0]);
+                }
+            } else if (atomsSelected.length > 0) {
+                // Store original molecule
+                storeOriginalMolecule();
+
+                if (!isInIsolationMode) {
+                    originalFragments = JSON.parse(JSON.stringify(fragments));
+                }
+
+                // No fragments selected, but atoms are selected
+                const newData = generateDataFromAtoms(atomsSelected);
+
+                // Create isolation entry
+                const isolationEntry = {
+                    name: `${atomsSelected.length} Selected Atoms`,
+                    atomCount: atomsSelected.length,
+                    data: newData,
+                    originalIndices: [...atomsSelected],
+                    timestamp: Date.now()
+                };
+
+                isolationHistory.push(isolationEntry);
+                currentIsolationIndex = isolationHistory.length - 1;
+
+                // Clear selections
+                atomsSelected = [];
+                fragmentsSelected = [];
+                fragments = [];
+
+                isInIsolationMode = true;
+
+                // Create new molecule
+                main.newMolecule(newData, main.mode, false,
+                    { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+                main.data = newData;
+
+                updateIsolationModeUI();
+                console.log(`Isolated ${isolationEntry.atomCount} selected atoms`);
+            }
+
+            // Update UI
+            const editMoleculePanel = document.getElementById('editMoleculePanel');
+            if (editMoleculePanel) {
+                editMoleculePanel.classList.add('on');
+            }
+            updateEditingContent();
+            render();
+        });
+    }
+
+
     if (closeEditing) {
         closeEditing.onclick = function () {
             editMoleculePanel.classList.add('on');
@@ -1267,6 +1380,301 @@ function attachButtonEventListeners() {
 
     // Attach axis event listeners
     attachAxisEventListeners();
+}
+
+function isolateFragment(fragmentIndex) {
+    // Store original molecule if not already stored
+    storeOriginalMolecule();
+
+    // Validate fragment index
+    if (fragmentIndex < 0 || fragmentIndex >= fragments.length) {
+        console.error('Invalid fragment index:', fragmentIndex);
+        return;
+    }
+
+    // Store current fragments before isolation if not already stored
+    if (!isInIsolationMode) {
+        originalFragments = JSON.parse(JSON.stringify(fragments));
+    }
+
+    const fragmentAtomIndices = fragments[fragmentIndex];
+
+    if (!fragmentAtomIndices || fragmentAtomIndices.length === 0) {
+        console.error('Fragment has no atoms');
+        return;
+    }
+
+    console.log(`Isolating fragment ${fragmentIndex + 1} with ${fragmentAtomIndices.length} atoms`);
+
+    // Generate new data from only the fragment's atoms
+    const newData = generateDataFromAtoms(fragmentAtomIndices);
+
+    // Create isolation history entry
+    const isolationEntry = {
+        name: `Fragment ${fragmentIndex + 1}`,
+        atomCount: fragmentAtomIndices.length,
+        data: newData,
+        fragmentIndex: fragmentIndex,
+        originalIndices: fragmentAtomIndices,
+        timestamp: Date.now()
+    };
+
+    // Add to history
+    if (isInIsolationMode && currentIsolationIndex < isolationHistory.length - 1) {
+        // If we're in the middle of history, truncate forward history
+        isolationHistory = isolationHistory.slice(0, currentIsolationIndex + 1);
+    }
+    isolationHistory.push(isolationEntry);
+    currentIsolationIndex = isolationHistory.length - 1;
+
+    // Store current camera position
+    const currentCameraPosition = {
+        x: camera.position.x,
+        y: camera.position.y,
+        z: camera.position.z
+    };
+    const currentCameraRotation = {
+        x: camera.rotation.x,
+        y: camera.rotation.y,
+        z: camera.rotation.z
+    };
+
+    // Clear selections
+    atomsSelected = [];
+    fragmentsSelected = [];
+    fragments = [];
+
+    // Set isolation mode
+    isInIsolationMode = true;
+    // Create the new molecule
+    main.newMolecule(
+        newData,
+        main.mode,
+        false,
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 },
+        true,
+        true
+    );
+
+    main.data = newData;
+
+    // Update UI to show isolation mode
+    updateIsolationModeUI();
+
+    // Update fragment list
+    const fragmentList = document.getElementById('fragmentList');
+    if (fragmentList) {
+        updateFragmentList(fragmentList);
+    }
+
+    updateEditingContent();
+    render();
+
+    console.log(`Fragment isolated. History length: ${isolationHistory.length}`);
+}
+
+function restoreOriginalMolecule() {
+    if (!originalMoleculeData) {
+        console.error('No original molecule data to restore');
+        return;
+    }
+
+    console.log('Restoring original molecule with', originalMoleculeData.numAtoms, 'atoms');
+
+    // Clear isolation mode
+    isInIsolationMode = false;
+    isolationHistory = [];
+    currentIsolationIndex = -1;
+
+    // Restore the data
+    const restoredData = JSON.parse(JSON.stringify(originalMoleculeData));
+
+    // Store current camera position
+    const currentCameraPosition = {
+        x: camera.position.x,
+        y: camera.position.y,
+        z: camera.position.z
+    };
+    const currentCameraRotation = {
+        x: camera.rotation.x,
+        y: camera.rotation.y,
+        z: camera.rotation.z
+    };
+
+    // Clear selections
+    atomsSelected = [];
+    fragmentsSelected = [];
+
+    // Restore original fragments
+    fragments = JSON.parse(JSON.stringify(originalFragments));
+
+    // Recreate the molecule
+
+    // labelMode = true;
+    main.newMolecule(
+        restoredData,
+        main.mode,
+        false,
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 },
+        true,
+        true
+    );
+
+    main.data = restoredData;
+
+    // Update UI
+    updateIsolationModeUI();
+
+    const fragmentList = document.getElementById('fragmentList');
+    if (fragmentList) {
+        updateFragmentList(fragmentList);
+    }
+
+    updateEditingContent();
+    render();
+
+    console.log('Original molecule restored');
+}
+
+// 4. Navigate through isolation history
+function navigateIsolationHistory(direction) {
+    const newIndex = currentIsolationIndex + direction;
+
+    if (newIndex < 0 || newIndex >= isolationHistory.length) {
+        console.error('Invalid history index');
+        return;
+    }
+
+    currentIsolationIndex = newIndex;
+    const isolationEntry = isolationHistory[currentIsolationIndex];
+
+    // Store current camera position
+    const currentCameraPosition = {
+        x: camera.position.x,
+        y: camera.position.y,
+        z: camera.position.z
+    };
+    const currentCameraRotation = {
+        x: camera.rotation.x,
+        y: camera.rotation.y,
+        z: camera.rotation.z
+    };
+
+    // Clear selections
+    atomsSelected = [];
+    fragmentsSelected = [];
+    fragments = [];
+
+    // Load the data from history
+    const historicalData = JSON.parse(JSON.stringify(isolationEntry.data));
+
+    main.newMolecule(
+        historicalData,
+        main.mode,
+        false,
+        currentCameraPosition,
+        currentCameraRotation,
+        true,
+        true
+    );
+
+    main.data = historicalData;
+
+    // Update UI
+    const fragmentList = document.getElementById('fragmentList');
+    if (fragmentList) {
+        updateFragmentList(fragmentList);
+    }
+
+    updateEditingContent();
+    render();
+
+    console.log(`Navigated to: ${isolationEntry.name}`);
+}
+
+// 5. Show fragment in context of original molecule (highlight it)
+function showFragmentInContext(fragmentIndex) {
+    if (!originalMoleculeData) {
+        console.error('No original molecule data available');
+        return;
+    }
+
+    // Get the current isolation entry
+    const currentIsolation = isolationHistory[currentIsolationIndex];
+    if (!currentIsolation) return;
+
+    // Restore original molecule temporarily
+    const restoredData = JSON.parse(JSON.stringify(originalMoleculeData));
+
+    // Store current camera position
+    const currentCameraPosition = {
+        x: camera.position.x,
+        y: camera.position.y,
+        z: camera.position.z
+    };
+    const currentCameraRotation = {
+        x: camera.rotation.x,
+        y: camera.rotation.y,
+        z: camera.rotation.z
+    };
+
+    // Clear current selections
+    atomsSelected = [];
+    fragmentsSelected = [];
+    fragments = JSON.parse(JSON.stringify(originalFragments));
+
+    // Recreate the full molecule
+    main.newMolecule(
+        restoredData,
+        main.mode,
+        false,
+        currentCameraPosition,
+        currentCameraRotation,
+        true,
+        true
+    );
+
+    main.data = restoredData;
+
+    // Highlight the isolated fragment atoms
+    setTimeout(() => {
+        if (currentIsolation.originalIndices) {
+            atomsSelected = [...currentIsolation.originalIndices];
+            atomsSelected.forEach(idx => {
+                selectAtom(idx, false);
+            });
+        }
+
+        // Add a "Return to Isolation" button
+        const returnBtn = document.createElement('button');
+        returnBtn.textContent = 'Return to Isolated View';
+        returnBtn.className = 'fancy-button';
+        returnBtn.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgb(255, 140, 0);
+            padding: 10px 20px;
+            z-index: 10000;
+        `;
+
+        returnBtn.addEventListener('click', () => {
+            returnBtn.remove();
+            navigateIsolationHistory(0); // Reload current isolation
+        });
+
+        document.body.appendChild(returnBtn);
+
+        render();
+    }, 100);
+}
+
+// 6. Update UI to show isolation mode
+function updateIsolationModeUI() {
+
 }
 
 function validateFragments() {
@@ -1347,6 +1755,20 @@ function highlightFragment(fragmentIndex) {
 
     colorAttr.needsUpdate = true;
     render();
+}
+
+function resetIsolationState() {
+    isInIsolationMode = false;
+    isolationHistory = [];
+    currentIsolationIndex = -1;
+    originalMoleculeData = null;
+    originalFragments = [];
+
+    // Remove any UI indicators
+    const indicator = document.getElementById('isolationModeIndicator');
+    if (indicator) {
+        indicator.remove();
+    }
 }
 
 function resetFragments() {
@@ -1438,11 +1860,68 @@ function updateEditingContent(element = null, color = null) {
 function updateFragmentList(fragmentList) {
     fragmentList.innerHTML = '';
 
+    // Add "Show All Fragments" button if in isolation mode
+    if (isInIsolationMode) {
+        const showAllBtn = document.createElement('button');
+        showAllBtn.textContent = '← Back to Full Molecule';
+        showAllBtn.className = 'fancy-button';
+        showAllBtn.style.cssText = `
+            display: block;
+            margin-bottom: 10px;
+            background-color: rgb(100, 200, 100);
+            padding: 8px 12px;
+            font-size: 13px;
+            width: 100%;
+        `;
+        showAllBtn.addEventListener('click', restoreOriginalMolecule);
+        fragmentList.appendChild(showAllBtn);
+
+        // Add navigation buttons if there's history
+        if (isolationHistory.length > 1) {
+            const navContainer = document.createElement('div');
+            navContainer.style.cssText = 'display: flex; gap: 5px; margin-bottom: 10px;';
+
+            const prevBtn = document.createElement('button');
+            prevBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i>';
+            prevBtn.className = 'fancy-button';
+            prevBtn.style.cssText = 'flex: 1; background-color: rgb(150, 150, 255);';
+            prevBtn.disabled = currentIsolationIndex <= 0;
+            prevBtn.addEventListener('click', () => navigateIsolationHistory(-1));
+
+            const nextBtn = document.createElement('button');
+            nextBtn.innerHTML = '<i class="fa-solid fa-arrow-right"></i>';
+            nextBtn.className = 'fancy-button';
+            nextBtn.style.cssText = 'flex: 1; background-color: rgb(150, 150, 255);';
+            nextBtn.disabled = currentIsolationIndex >= isolationHistory.length - 1;
+            nextBtn.addEventListener('click', () => navigateIsolationHistory(1));
+
+            navContainer.appendChild(prevBtn);
+            navContainer.appendChild(nextBtn);
+            fragmentList.appendChild(navContainer);
+        }
+
+        // Show current isolation info
+        if (currentIsolationIndex >= 0 && currentIsolationIndex < isolationHistory.length) {
+            const currentInfo = document.createElement('div');
+            currentInfo.style.cssText = `
+                padding: 5px;
+                margin-bottom: 10px;
+                background-color: rgba(255, 140, 0, 0.2);
+                border-radius: 5px;
+                color: white;
+                font-size: 12px;
+                text-align: center;
+            `;
+            const isolationData = isolationHistory[currentIsolationIndex];
+            currentInfo.textContent = `Viewing: ${isolationData.name} (${isolationData.atomCount} atoms)`;
+            fragmentList.appendChild(currentInfo);
+        }
+    }
+
     fragments.forEach((fragment, index) => {
         const listItem = document.createElement('li');
         listItem.innerHTML = '';
-        listItem.textContent = `Fragment ${index + 1}`;
-        // listItem.innerHTML += `   <i class="fa-solid fa-eye"></i>`
+        listItem.textContent = `Fragment ${index + 1} (${fragment.length} atoms)`;
         listItem.style.cursor = 'pointer';
         listItem.style.padding = '5px';
         listItem.style.margin = '2px';
@@ -1454,6 +1933,50 @@ function updateFragmentList(fragmentList) {
         if (fragmentsSelected.includes(index)) {
             listItem.classList.add('selected');
             listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+
+            // Add action buttons container
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = 'display: flex; gap: 5px; margin-top: 10px;';
+
+            // Isolate Fragment button
+            const isolateBtn = document.createElement('button');
+            isolateBtn.textContent = 'Isolate';
+            isolateBtn.className = 'fancy-button';
+            isolateBtn.style.cssText = `
+                flex: 1;
+                background-color: rgb(255, 140, 0);
+                padding: 5px 10px;
+                font-size: 12px;
+            `;
+
+            isolateBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isolateFragment(index);
+            });
+
+            buttonContainer.appendChild(isolateBtn);
+
+            // Add "View in Context" button if in isolation mode
+            if (isInIsolationMode) {
+                const contextBtn = document.createElement('button');
+                contextBtn.textContent = 'Context';
+                contextBtn.className = 'fancy-button';
+                contextBtn.style.cssText = `
+                    flex: 1;
+                    background-color: rgb(100, 150, 255);
+                    padding: 5px 10px;
+                    font-size: 12px;
+                `;
+
+                contextBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showFragmentInContext(index);
+                });
+
+                buttonContainer.appendChild(contextBtn);
+            }
+
+            listItem.appendChild(buttonContainer);
         }
 
         // Add hover effect
@@ -1471,29 +1994,28 @@ function updateFragmentList(fragmentList) {
 
         // Add click handler with cmd/ctrl support
         listItem.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON') {
+                return;
+            }
+
             if (event.metaKey || event.ctrlKey) {
                 // Cmd/Ctrl + click: toggle fragment in selection
                 if (fragmentsSelected.includes(index)) {
-                    // Remove from selection
                     fragmentsSelected = fragmentsSelected.filter(idx => idx !== index);
                     listItem.classList.remove('selected');
                     listItem.style.backgroundColor = 'transparent';
                 } else {
-                    // Add to selection
                     fragmentsSelected.push(index);
                     listItem.classList.add('selected');
                     listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
                 }
             } else {
-                // Normal click: toggle this fragment only if it's already selected
+                // Normal click
                 if (fragmentsSelected.includes(index)) {
-                    // Fragment is selected, unselect it
                     fragmentsSelected = fragmentsSelected.filter(idx => idx !== index);
                     listItem.classList.remove('selected');
                     listItem.style.backgroundColor = 'transparent';
                 } else {
-                    // Fragment not selected, clear others and select this one
-                    // Clear all previous selections
                     fragmentList.querySelectorAll('li').forEach(item => {
                         item.classList.remove('selected');
                         item.style.backgroundColor = 'transparent';
@@ -1505,13 +2027,25 @@ function updateFragmentList(fragmentList) {
                 }
             }
 
-            // Update the fragment selection
             selectFragment(fragment, index);
+            updateFragmentList(fragmentList);
         });
 
         fragmentList.appendChild(listItem);
     });
+
     attachButtonEventListeners();
+}
+
+function storeOriginalMolecule() {
+    if (!originalMoleculeData) {
+        originalMoleculeData = {
+            atomData: JSON.parse(JSON.stringify(main.data.atomData)),
+            numAtoms: main.data.numAtoms,
+            // Store any other relevant data fields
+        };
+        console.log('Original molecule stored with', originalMoleculeData.numAtoms, 'atoms');
+    }
 }
 let rotationSliderOn = false
 let translationSliderOn = false
