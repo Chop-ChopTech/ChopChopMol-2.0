@@ -215,6 +215,7 @@ export default class Main {
             clearAllBondLengthLabels();
             fragmentsSelected = [];
 
+
         }
         this.molecule.reset();
 
@@ -1429,18 +1430,6 @@ function isolateFragment(fragmentIndex) {
     isolationHistory.push(isolationEntry);
     currentIsolationIndex = isolationHistory.length - 1;
 
-    // Store current camera position
-    const currentCameraPosition = {
-        x: camera.position.x,
-        y: camera.position.y,
-        z: camera.position.z
-    };
-    const currentCameraRotation = {
-        x: camera.rotation.x,
-        y: camera.rotation.y,
-        z: camera.rotation.z
-    };
-
     // Clear selections
     atomsSelected = [];
     fragmentsSelected = [];
@@ -1456,7 +1445,7 @@ function isolateFragment(fragmentIndex) {
         { x: 0, y: 0, z: 0 },
         { x: 0, y: 0, z: 0 },
         true,
-        true
+        false
     );
 
     main.data = newData;
@@ -1492,18 +1481,6 @@ function restoreOriginalMolecule() {
     // Restore the data
     const restoredData = JSON.parse(JSON.stringify(originalMoleculeData));
 
-    // Store current camera position
-    const currentCameraPosition = {
-        x: camera.position.x,
-        y: camera.position.y,
-        z: camera.position.z
-    };
-    const currentCameraRotation = {
-        x: camera.rotation.x,
-        y: camera.rotation.y,
-        z: camera.rotation.z
-    };
-
     // Clear selections
     atomsSelected = [];
     fragmentsSelected = [];
@@ -1521,13 +1498,10 @@ function restoreOriginalMolecule() {
         { x: 0, y: 0, z: 0 },
         { x: 0, y: 0, z: 0 },
         true,
-        true
+        false
     );
 
     main.data = restoredData;
-
-    // Update UI
-    updateIsolationModeUI();
 
     const fragmentList = document.getElementById('fragmentList');
     if (fragmentList) {
