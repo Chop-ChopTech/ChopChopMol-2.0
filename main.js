@@ -1385,6 +1385,29 @@ function attachButtonEventListeners() {
     attachAxisEventListeners();
 }
 
+function resetRotationState() {
+    // Reset the rotation state object
+    rotationState.basePositions = {};
+    rotationState.selectedAtoms = [];
+    rotationState.currentAngle = 0;
+    rotationState.isActive = false;
+
+    // Reset slider flags - this is the KEY fix
+    rotationSliderOn = true;
+    translationSliderOn = true;
+    lastPosition = 0;
+
+    // Reset UI sliders
+    const rotationSlider = document.getElementById('rotationSlider');
+    if (rotationSlider) {
+        rotationSlider.value = 0;
+    }
+    const translationSlider = document.getElementById('translationSlider');
+    if (translationSlider) {
+        translationSlider.value = 0;
+    }
+}
+
 function isolateFragment(fragmentIndex) {
     // Store original molecule if not already stored
     storeOriginalMolecule();
@@ -1434,6 +1457,8 @@ function isolateFragment(fragmentIndex) {
     atomsSelected = [];
     fragmentsSelected = [];
     fragments = [];
+
+    resetRotationState();
 
     // Set isolation mode
     isInIsolationMode = true;
@@ -1485,6 +1510,8 @@ function restoreOriginalMolecule() {
     atomsSelected = [];
     fragmentsSelected = [];
 
+    resetRotationState();
+
     // Restore original fragments
     fragments = JSON.parse(JSON.stringify(originalFragments));
 
@@ -1498,7 +1525,7 @@ function restoreOriginalMolecule() {
         { x: 0, y: 0, z: 0 },
         { x: 0, y: 0, z: 0 },
         true,
-        false
+        true
     );
 
     main.data = restoredData;
