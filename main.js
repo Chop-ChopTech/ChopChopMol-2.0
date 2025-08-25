@@ -238,8 +238,8 @@ export default class Main {
             this.toggleLabels(true);
             this.molecule.updateLabels();
         }
-        resetIsolationState();
-        storeOriginalMolecule();
+        // resetIsolationState();
+        // storeOriginalMolecule();
         render();
 
     }
