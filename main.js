@@ -1496,6 +1496,60 @@ function restoreOriginalMolecule() {
         return;
     }
 
+    // Before restoring, update the original data with current edits if in isolation mode
+    if (isInIsolationMode && isolationHistory.length > 0) {
+        const currentIsolation = isolationHistory[currentIsolationIndex];
+
+        if (currentIsolation && currentIsolation.originalIndices) {
+            // Get current edited positions from the isolated fragment
+            const editedAtoms = main.molecule.atoms;
+
+            // Update original molecule data with edited positions
+            currentIsolation.originalIndices.forEach((originalIdx, localIdx) => {
+                if (localIdx < editedAtoms.length && originalIdx < originalMoleculeData.atomData.length) {
+                    const editedAtom = editedAtoms[localIdx];
+                    // Update the position in original data
+                    originalMoleculeData.atomData[originalIdx] = {
+                        ...originalMoleculeData.atomData[originalIdx],
+                        x: editedAtom.position.x / 4,
+                        y: editedAtom.position.y / 4,
+                        z: editedAtom.position.z / 4
+                    };
+                }
+            });
+
+            console.log(`Merged ${currentIsolation.originalIndices.length} edited atoms back to original`);
+
+            // PRESERVE SUB-FRAGMENTS: Map local fragments back to original molecule indices
+            if (fragments && fragments.length > 0) {
+                // Convert local fragment indices to original molecule indices
+                const mappedFragments = fragments.map(localFragment => {
+                    return localFragment.map(localIdx => {
+                        // Map local index to original molecule index
+                        if (localIdx < currentIsolation.originalIndices.length) {
+                            return currentIsolation.originalIndices[localIdx];
+                        }
+                        return null;
+                    }).filter(idx => idx !== null);
+                }).filter(fragment => fragment.length > 0);
+
+                // Merge these new fragments with original fragments
+                if (!originalFragments) {
+                    originalFragments = [];
+                }
+
+                // Add new sub-fragments to the original fragments array
+                originalFragments = [...originalFragments, ...mappedFragments];
+
+                // Clean up: remove duplicates and validate
+                originalFragments = originalFragments.map(fragment => [...new Set(fragment)]);
+                originalFragments = originalFragments.filter(fragment => fragment.length > 0);
+
+                console.log(`Added ${mappedFragments.length} sub-fragments to original molecule`);
+            }
+        }
+    }
+
     console.log('Restoring original molecule with', originalMoleculeData.numAtoms, 'atoms');
 
     // Clear isolation mode
@@ -1503,7 +1557,7 @@ function restoreOriginalMolecule() {
     isolationHistory = [];
     currentIsolationIndex = -1;
 
-    // Restore the data
+    // Restore the data (now includes edits)
     const restoredData = JSON.parse(JSON.stringify(originalMoleculeData));
 
     // Clear selections
@@ -1512,12 +1566,10 @@ function restoreOriginalMolecule() {
 
     resetRotationState();
 
-    // Restore original fragments
+    // Restore original fragments (now includes sub-fragments)
     fragments = JSON.parse(JSON.stringify(originalFragments));
 
     // Recreate the molecule
-
-    // labelMode = true;
     main.newMolecule(
         restoredData,
         main.mode,
@@ -1538,11 +1590,37 @@ function restoreOriginalMolecule() {
     updateEditingContent();
     render();
 
-    console.log('Original molecule restored');
+    console.log('Original molecule restored with edits and sub-fragments preserved');
 }
 
 // 4. Navigate through isolation history
 function navigateIsolationHistory(direction) {
+    // Save current edits AND fragments before navigating
+    if (isInIsolationMode && currentIsolationIndex >= 0) {
+        const currentIsolation = isolationHistory[currentIsolationIndex];
+        if (currentIsolation && currentIsolation.originalIndices && main.molecule.atoms) {
+            // Update original molecule data with current positions
+            currentIsolation.originalIndices.forEach((originalIdx, localIdx) => {
+                if (localIdx < main.molecule.atoms.length && originalIdx < originalMoleculeData.atomData.length) {
+                    const atom = main.molecule.atoms[localIdx];
+                    originalMoleculeData.atomData[originalIdx] = {
+                        ...originalMoleculeData.atomData[originalIdx],
+                        x: atom.position.x / 4,
+                        y: atom.position.y / 4,
+                        z: atom.position.z / 4
+                    };
+                }
+            });
+
+            // SAVE SUB-FRAGMENTS created in current isolation
+            if (fragments && fragments.length > 0) {
+                // Store sub-fragments in the isolation history entry
+                currentIsolation.subFragments = fragments.map(fragment => [...fragment]);
+                console.log(`Saved ${fragments.length} sub-fragments in isolation history`);
+            }
+        }
+    }
+
     const newIndex = currentIsolationIndex + direction;
 
     if (newIndex < 0 || newIndex >= isolationHistory.length) {
@@ -1570,8 +1648,24 @@ function navigateIsolationHistory(direction) {
     fragmentsSelected = [];
     fragments = [];
 
-    // Load the data from history
-    const historicalData = JSON.parse(JSON.stringify(isolationEntry.data));
+    // Generate data using the existing generateDataFromAtoms but with updated positions
+    const updatedAtomData = [];
+    isolationEntry.originalIndices.forEach(idx => {
+        if (idx < originalMoleculeData.atomData.length) {
+            const atomData = originalMoleculeData.atomData[idx];
+            updatedAtomData.push({
+                element: atomData.element,
+                x: atomData.x,
+                y: atomData.y,
+                z: atomData.z
+            });
+        }
+    });
+
+    const historicalData = {
+        atomData: updatedAtomData,
+        numAtoms: updatedAtomData.length
+    };
 
     main.newMolecule(
         historicalData,
@@ -1584,6 +1678,14 @@ function navigateIsolationHistory(direction) {
     );
 
     main.data = historicalData;
+
+    // RESTORE SUB-FRAGMENTS if they exist for this isolation
+    if (isolationEntry.subFragments) {
+        fragments = isolationEntry.subFragments.map(fragment => [...fragment]);
+        console.log(`Restored ${fragments.length} sub-fragments from history`);
+    } else {
+        fragments = [];
+    }
 
     // Update UI
     const fragmentList = document.getElementById('fragmentList');
