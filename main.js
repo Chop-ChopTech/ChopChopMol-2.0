@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'jsm/controls/OrbitControls.js';
 import { TrackballControls } from 'jsm/controls/TrackballControls.js';
+import { ArcballControls } from 'jsm/controls/ArcballControls.js';
+
 import Molecule from './atom/molecule.js';
 import FileHandler from './utils/fileHandler.js';
 import {
@@ -43,12 +45,14 @@ renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
 // const controls = new OrbitControls(camera, renderer.domElement);
-let controls = new TrackballControls(camera, renderer.domElement);
+let controls = new ArcballControls(camera, renderer.domElement);
 
 controls.rotateSpeed = 5.0;
 controls.zoomSpeed = 2.0;
 controls.panSpeed = 1.0;
 controls.dynamicDampingFactor = 1.0; // No drag smoothing
+controls.cursorZoom = true;
+
 let shiftDown = false;
 let cmdDown = false;
 
@@ -2727,11 +2731,14 @@ function recreateRenderer(antialiasEnabled) {
 
 
     // Recreate controls
-    controls = new TrackballControls(camera, renderer.domElement);
-    controls.rotateSpeed = 5.0;
+    controls = new ArcballControls(camera, renderer.domElement);
+    controls.rotateSpeed = 1.0;
     controls.zoomSpeed = 2.0;
     controls.panSpeed = 1.0;
     controls.dynamicDampingFactor = 1.0;
+    controls.cursorZoom = true;
+    controls.enableAnimations = false;
+
 
     // IMPORTANT: Re-attach the controls change event listener
     controls.addEventListener('change', () => {
