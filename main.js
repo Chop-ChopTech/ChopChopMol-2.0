@@ -1391,20 +1391,24 @@ function resetRotationState() {
     rotationState.selectedAtoms = [];
     rotationState.currentAngle = 0;
     rotationState.isActive = false;
+    rotationState.axis = null;
 
-    // Reset slider flags - this is the KEY fix
-    rotationSliderOn = true;
-    translationSliderOn = true;
-    lastPosition = 0;
+    // Reset slider flags - CRITICAL FIX
+    window.rotationSliderOn = false;
+    window.translationSliderOn = false;
+    window.lastPosition = 0;
+    window.lastTranslationPosition = 0;
 
     // Reset UI sliders
     const rotationSlider = document.getElementById('rotationSlider');
     if (rotationSlider) {
         rotationSlider.value = 0;
+        rotationSlider.removeEventListener('input', rotationSlider._handler);
     }
     const translationSlider = document.getElementById('translationSlider');
     if (translationSlider) {
         translationSlider.value = 0;
+        translationSlider.removeEventListener('input', translationSlider._handler);
     }
 }
 
