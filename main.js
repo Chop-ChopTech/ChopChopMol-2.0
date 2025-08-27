@@ -228,6 +228,7 @@ export default class Main {
         labels.forEach(label => {
             createInfoLabel(label[0], label[1], label[2] ?? null, label[3] ?? null);
         })
+        updateFragmentList(document.getElementById('fragmentList'));
         render();
     }
     newMolecule(data, mode, overlay, rotation, translation, center = true, soft = false) {
@@ -1546,12 +1547,18 @@ function restoreOriginalMolecule() {
                     originalFragments = [];
                 }
 
-                // Add new sub-fragments to the original fragments array
-                originalFragments = [...originalFragments, ...mappedFragments];
+                // Process existing fragments to remove atoms that are now in the new mapped fragments
+                let updatedOriginalFragments = originalFragments;
 
-                // Clean up: remove duplicates and validate
-                originalFragments = originalFragments.map(fragment => [...new Set(fragment)]);
-                originalFragments = originalFragments.filter(fragment => fragment.length > 0);
+                mappedFragments.forEach(newFragment => {
+                    updatedOriginalFragments = updatedOriginalFragments.map(fragment => {
+                        // Remove atoms from existing fragments if they're in the new fragment
+                        return fragment.filter(atomIndex => !newFragment.includes(atomIndex));
+                    }).filter(fragment => fragment.length > 0); // Remove empty fragments
+                });
+
+                // Add the new mapped fragments
+                originalFragments = [...updatedOriginalFragments, ...mappedFragments];
 
                 console.log(`Added ${mappedFragments.length} sub-fragments to original molecule`);
             }
