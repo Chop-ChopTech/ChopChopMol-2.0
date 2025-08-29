@@ -15,5 +15,6 @@ export default class Atom {
         this.radius = this.molecule.atomSettings[this.type].radius;
         this.radius = this.realRadius * 9
         this.color = new THREE.Color(this.molecule.atomSettings[this.type].color);
+        this.displayColor = this.color;
     }
 }

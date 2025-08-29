@@ -359,6 +359,8 @@ function addToList(itemText, list) {
     list.appendChild(listItem);
 }
 
+
+
 // Example usage with debug output:
 /*
 const molecule1 = {

@@ -301,7 +301,11 @@ body {
     cursor: pointer;
     position: relative;
     overflow: hidden;
+    /* backdrop-filter: blur(10px); */
+    /* opacity: 0.1 !important; */
     transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
 }
 
 .fancy-button:hover {
@@ -309,6 +313,22 @@ body {
     /* Subtle lift and slight scale */
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 0 8px rgba(255, 255, 255, 0.3);
     /* Glow effect */
+}
+
+.fancy-button.pulse {
+    animation: subtlePulse 2s infinite;
+}
+
+@keyframes subtlePulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
 }
 
 .fancy-button::before {
@@ -321,6 +341,8 @@ body {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
     transition: left 0.4s ease;
 }
+
+
 
 .fancy-button:hover::before {
     left: 100%;
@@ -372,6 +394,23 @@ body {
 
 #import-json {
     background-color: #17af2d;
+    display: none;
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .fancy-textbox {
@@ -394,6 +433,8 @@ body {
     outline: none;
     /* Remove default outline */
 }
+
+
 
 #loading {
     position: absolute;
@@ -516,18 +557,23 @@ body {
     bottom: 10px;
     right: 10px;
     z-index: 9999;
-    background-color: #eaeaea;
+    background-color: #002c55;
     width: 300px;
-    height: 500px;
+    height: 660px;
+    /* max-height: 600px; */
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 30px;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    color: #0091ff !important;
+    border: 3px solid #002c55;
 }
 
 #styleSelector.on {
-    bottom: -600px;
+    bottom: -900px;
 }
 
 #editMoleculePanel {
@@ -536,7 +582,7 @@ body {
     left: 10px;
     z-index: 9999;
     background-color: #ffffff00;
-    width: 300px;
+    width: 240px;
     height: auto;
     padding: 5px;
     border-radius: 10px;
@@ -553,7 +599,7 @@ body {
 
 #editMoleculeContent {
     background-color: #ffc40046;
-    width: 100%;
+    width: 240px;
     height: 100%;
     text-align: center;
     justify-content: center;
@@ -597,7 +643,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
+    background-color: #cccccc;
     transition: .4s;
     border-radius: 34px;
 }
@@ -615,7 +661,7 @@ body {
 }
 
 input:checked+.slider {
-    background-color: #2196F3;
+    background-color: #166bb0;
 }
 
 input:checked+.slider:before {
@@ -624,7 +670,6 @@ input:checked+.slider:before {
 
 .switch-label {
     font-size: 16px;
-    color: #333;
 }
 
 @keyframes gradient {
@@ -643,7 +688,9 @@ input[type="range"] {
     -webkit-appearance: none;
     width: 100%;
     height: 8px;
-    background: #ddd;
+    /* background: #ddd; */
+    background: linear-gradient(90deg, #263d9c, #9f29ff);
+
     border-radius: 5px;
     outline: none;
     transition: background 0.3s;
@@ -680,7 +727,8 @@ input[type="range"]::-moz-range-track {
 }
 
 input[type="range"]:focus {
-    background: #ffd079;
+    background: linear-gradient(90deg, #536ac4, #ae4bff);
+
 }
 
 
@@ -779,9 +827,17 @@ input[type="range"]:focus {
     /* Smooth transition for background */
 }
 
-.dropdown:hover .dropdown-icon {
+/* Show dropdown when active class is present */
+.dropdown.active .dropdown-content {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Optional: Rainbow effect when dropdown is active instead of hover */
+.dropdown.active .dropdown-icon {
     background: linear-gradient(90deg,
-            /* Changed from 90deg to 45deg for diagonal gradient */
             #ff0000,
             #ff9900,
             #33cc33,
@@ -789,15 +845,14 @@ input[type="range"]:focus {
             #cc00ff,
             #ff0000);
     background-size: 200% 100%;
-    /* Double width for seamless looping */
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: rainbow 3s linear infinite;
-    /* Loop rainbow animation */
 }
 
 #fragmentList {
+
     list-style: none;
     padding: 0;
     margin: 0 auto;
@@ -806,9 +861,29 @@ input[type="range"]:focus {
     align-items: center;
     width: fit-content;
     color: white;
-    max-height: 300px;
+    max-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
+    padding-top: 35px;
+}
+
+#fragmentListContainer {
+    display: flex;
+    align-items: center;
+    justify-content: top;
+    flex-direction: column;
+    width: 130px;
+    height: 100vh;
+    padding: 10px 0;
+    position: absolute;
+    top: 0;
+    right: 0;
+    /* background-color: chartreuse; */
+}
+
+#fragmentListTitle {
+    color: white;
+    position: relative;
 }
 
 #fragmentList li {
@@ -833,7 +908,6 @@ input[type="range"]:focus {
     -webkit-appearance: none;
     width: 100%;
     height: 8px;
-    background: linear-gradient(to right, #ff0080 0%, #ff00ff 50%, #ff0080 100%);
     border-radius: 5px;
     outline: none;
     opacity: 0.8;
@@ -844,17 +918,7 @@ input[type="range"]:focus {
     opacity: 1;
 }
 
-#rotationSlider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 20px;
-    height: 20px;
-    background: #ff00ff;
-    border: 2px solid #fff;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(255, 0, 255, 0.5);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
+
 
 #rotationSlider::-webkit-slider-thumb:hover {
     transform: scale(1.2);
@@ -902,6 +966,97 @@ input[type="range"]:focus {
     text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
 }
 
+/* Enhanced user initials styling - add this to your style.css */
+
+/* User initials container */
+.user-initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    font-family: 'Rubik', sans-serif;
+}
+
+/* Signed-in state for dropdown icon - prevents rainbow effect */
+
+
+
+.dropdown-icon.signed-in {
+    background: transparent !important;
+    padding: 6px !important;
+}
+
+/* Override the rainbow hover effect for signed-in users */
+.dropdown:hover .dropdown-icon.signed-in {
+    background: transparent !important;
+    background-clip: initial !important;
+    -webkit-background-clip: initial !important;
+    -webkit-text-fill-color: initial !important;
+    animation: none !important;
+}
+
+/* Hover effect for user initials - replaces the rainbow effect */
+.dropdown-icon.signed-in:hover .user-initials {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Animation for when user signs in */
+.user-initials {
+    animation: fadeInScale 0.5s ease-out;
+}
+
+@keyframes fadeInScale {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Optional: Different color themes for variety */
+.user-initials.blue-theme {
+    background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
+}
+
+.user-initials.purple-theme {
+    background: linear-gradient(135deg, #9C27B0 0%, #E91E63 100%);
+}
+
+.user-initials.green-theme {
+    background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+}
+
+.user-initials.orange-theme {
+    background: linear-gradient(135deg, #FF9800 0%, #FF5722 100%);
+}
+
+/* Ensure the settings dropdown positioning remains correct */
+#settings .dropdown-icon {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 @keyframes rainbow {
     0% {
         background-position: 0% 50%;
@@ -936,7 +1091,11 @@ input[type="range"]:focus {
     top: 100%;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
-    background-color: #ffffff56;
+    /* background-color: #ffffff56;
+     */
+    background: linear-gradient(135deg, rgba(188, 94, 255, 0.13), rgba(100, 201, 255, 0.393));
+    /* display: none; */
+
     min-width: 160px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     z-index: 1;
@@ -954,13 +1113,7 @@ input[type="range"]:focus {
 }
 
 /* Show dropdown on hover with fade-in and slide */
-.dropdown:hover .dropdown-content,
-.dropdown-content:hover {
-    display: block;
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(-50%) translateY(0);
-}
+
 
 /* Fancy button styling */
 .dropdown-content button {
@@ -973,8 +1126,23 @@ input[type="range"]:focus {
 
 #settings {
     position: absolute;
-    bottom: 10px;
+    top: -9px;
     left: 10px;
+}
+
+
+
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 /* Accessibility: Focus state for keyboard navigation */
@@ -984,6 +1152,518 @@ input[type="range"]:focus {
     pointer-events: auto;
     transform: translateX(-50%) translateY(0);
 }
+
+.shake-button:hover {
+    animation: angry-shake 1s infinite;
+}
+
+#modalSignIn:hover {
+    box-shadow: 0 4px 12px rgba(25, 98, 255, 0.473);
+    transform: scale(1.1);
+    transition: 0.4s all ease;
+}
+
+.dismiss {
+    background: rgba(255, 255, 255, 0.232);
+    border: none;
+    color: white;
+    border-radius: 30%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+
+}
+
+.dismiss:hover {
+    background: rgba(255, 67, 67, 0.316);
+
+
+}
+
+/* Add these styles to your style.css file */
+
+/* User initials styling */
+.user-initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+/* Signed-in state for dropdown icon */
+.dropdown-icon.signed-in {
+    background: transparent !important;
+    padding: 6px !important;
+}
+
+/* Override the rainbow hover effect for signed-in users */
+.dropdown:hover .dropdown-icon.signed-in {
+    background: transparent !important;
+    background-clip: initial !important;
+    -webkit-background-clip: initial !important;
+    -webkit-text-fill-color: initial !important;
+    animation: none !important;
+}
+
+/* Hover effect for user initials */
+.dropdown-icon.signed-in:hover .user-initials {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+/* Animation for when user signs in */
+.user-initials {
+    animation: fadeInScale 0.5s ease-out;
+}
+
+#settings.dropdown-icon {
+    margin: 20px !important;
+}
+
+@keyframes fadeInScale {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Alternative color schemes you can use */
+.user-initials.blue-theme {
+    background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
+}
+
+.user-initials.purple-theme {
+    background: linear-gradient(135deg, #9C27B0 0%, #E91E63 100%);
+}
+
+.user-initials.green-theme {
+    background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+}
+
+/* For WebKit browsers */
+::-webkit-scrollbar {
+    width: 4px;
+    /* scrollbar width */
+}
+
+::-webkit-scrollbar-track {
+    background: #111;
+    /* background behind scrollbar */
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #009dff, #af4dff, #ffffff);
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ffffff, #0095ff, #8400ff);
+}
+
+/* ============ STRIPE PREMIUM STYLES ============ */
+
+/* Premium upgrade button */
+.premium-upgrade-btn {
+    position: fixed;
+    top: 20px;
+    left: 75px;
+    padding: 5px 15px;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #1a1a1a;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.premium-upgrade-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
+}
+
+.premium-upgrade-btn.premium-active {
+    background: linear-gradient(135deg, #10812b, #00fa21);
+    color: white;
+}
+
+.premium-upgrade-btn i {
+    font-size: 16px;
+}
+
+/* Premium modal */
+.premium-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.309);
+    z-index: 10000;
+    backdrop-filter: blur(10px);
+    animation: fadeIn 0.3s ease;
+}
+
+.premium-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.premium-modal-content {
+    background: linear-gradient(135deg, #1c2553, #21163e);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    animation: slideUp 0.3s ease;
+    position: relative;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+}
+
+.close-premium-modal {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 28px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.close-premium-modal:hover {
+    color: #fff;
+}
+
+.premium-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.premium-crown {
+    font-size: 48px;
+    color: #FFD700;
+    /* margin-bottom: 15px; */
+    animation: float 3s ease-in-out infinite;
+    perspective: 1000px;
+}
+
+.premium-header h2 {
+    font-size: 32px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.premium-header p {
+    color: #aaa;
+    font-size: 16px;
+}
+
+.premium-price-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 215, 0, 0.2);
+    border-radius: 15px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    text-align: center;
+    font-size: 15px;
+}
+
+.price-tag {
+    font-size: 38px;
+    font-weight: bold;
+    margin-bottom: 25px;
+    color: #fff;
+}
+
+.price-tag .currency {
+    font-size: 24px;
+    vertical-align: super;
+    color: #FFD700;
+}
+
+.price-tag .period {
+    font-size: 18px;
+    color: #aaa;
+}
+
+.premium-features {
+    list-style: none;
+    padding: 0;
+    margin: 25px 0;
+    text-align: left;
+}
+
+.premium-features li {
+    padding: 12px 0;
+    color: #ddd;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.premium-features li:last-child {
+    border-bottom: none;
+}
+
+.premium-features i {
+    color: #28a745;
+    font-size: 14px;
+}
+
+.subscribe-premium-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+    position: relative;
+}
+
+.subscribe-premium-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+.subscribe-premium-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.subscribe-premium-btn.loading .btn-text {
+    display: none;
+}
+
+.subscribe-premium-btn.loading .loading-spinner {
+    display: block;
+}
+
+.loading-spinner {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto;
+}
+
+.trial-text {
+    color: #888;
+    font-size: 12px;
+    margin-top: 15px;
+}
+
+/* Limit notification */
+.limit-notification {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(220, 53, 69, 0.4);
+    display: none;
+    animation: slideInRight 0.3s ease;
+    z-index: 2000;
+    max-width: 300px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.limit-notification.show {
+    display: flex;
+}
+
+.limit-notification.success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.limit-notification i {
+    font-size: 20px;
+}
+
+/* Tool locked state */
+.tool-locked {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    position: relative;
+}
+
+.tool-locked:after {
+    content: "🔒";
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 12px;
+}
+
+#premiumUpgradeBtn {
+    display: none;
+    /* Hidden by default */
+}
+
+/* Trial active state */
+.premium-upgrade-btn.trial-active {
+    background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important;
+    color: white;
+}
+
+.premium-upgrade-btn.trial-active:hover {
+    background: linear-gradient(135deg, #9333EA, #8B5CF6) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+}
+
+/* User initials in dropdown */
+.user-initials {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+}
+
+#settings .dropdown-icon.signed-in {
+    font-size: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Trial notification styles */
+.limit-notification.trial-warning {
+    background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1.1);
+    }
+
+    50% {
+        transform: translateY(-10px) scale(0.9) rotateX(15deg);
+
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes glowButton {
+    0% {
+        box-shadow: 0 0 20px #00a6ff;
+        transform: scale(1);
+        color: #fff;
+    }
+
+    50% {
+        box-shadow: 0 0 30px #00ffe1;
+        /* color: #00ffea; */
+        transform: scale(1.1);
+
+    }
+
+    100% {
+        box-shadow: 0 0 20px #009dff;
+        color: #fff;
+        transform: scale(1);
+
+    }
+}
+
 
 @keyframes fadeIn {
     from {
@@ -1016,6 +1696,93 @@ input[type="range"]:focus {
         color: #00ffea;
     }
 }
+
+@keyframes angry-shake {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    5% {
+        transform: translate(1.2px, 0.8px);
+    }
+
+    10% {
+        transform: translate(-1.7px, 1.1px);
+    }
+
+    15% {
+        transform: translate(0.3px, -1.9px);
+    }
+
+    20% {
+        transform: translate(-1.1px, -0.6px);
+    }
+
+    25% {
+        transform: translate(-1.9px, -1.4px);
+    }
+
+    30% {
+        transform: translate(-0.5px, 1.7px);
+    }
+
+    35% {
+        transform: translate(1.3px, -0.3px);
+    }
+
+    40% {
+        transform: translate(2px, 1px);
+    }
+
+    45% {
+        transform: translate(0.7px, -1.8px);
+    }
+
+    50% {
+        transform: translate(-1.6px, 1.4px);
+    }
+
+    55% {
+        transform: translate(1.5px, -0.9px);
+    }
+
+    60% {
+        transform: translate(-0.4px, 1.2px);
+    }
+
+    65% {
+        transform: translate(0.9px, -1.6px);
+    }
+
+    70% {
+        transform: translate(-1.3px, 0.2px);
+    }
+
+    75% {
+        transform: translate(1.8px, -1.1px);
+    }
+
+    80% {
+        transform: translate(-0.7px, 1.9px);
+    }
+
+    85% {
+        transform: translate(0.2px, -1.3px);
+    }
+
+    90% {
+        transform: translate(-1.9px, 0.5px);
+    }
+
+    95% {
+        transform: translate(1.1px, -0.6px);
+    }
+
+    100% {
+        transform: translate(0, 0.5);
+    }
+}
+
 
 @keyframes typing {
     from {

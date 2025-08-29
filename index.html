@@ -12,15 +12,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    <script src="https://js.stripe.com/v3/"></script>
 </head>
 
 <body>
+    <script src="https://unpkg.com/undo-manager@1.0.5/lib/undomanager.js"></script>
+    <script src="undo.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        import { collection, addDoc, getDocs, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+
+        // After initializing Firebase app
+
         // TODO: Add SDKs for Firebase products that you want to use
         // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -41,7 +49,18 @@
         const analytics = getAnalytics(app);
         const auth = getAuth(app);  // Initialize Auth
         const provider = new GoogleAuthProvider();  // For Google sign-in
+        const db = getFirestore(app);
 
+        // Make db available globally
+        window.firebaseDB = db;
+        // In your existing Firebase auth code, add this to make Firestore functions global
+        window.db = db;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+        window.serverTimestamp = serverTimestamp;
+        window.auth = auth;
+        window.onAuthStateChanged = onAuthStateChanged;
 
         // Get UI elements
         const signInButton = document.getElementById('signInButton');
@@ -71,20 +90,270 @@
                 });
         });
 
+        function updateFeatureAccess(user) {
+            isUserSignedIn = !!user;
+
+            if (isUserSignedIn) {
+                enableAllFeatures();
+            } else {
+                restrictFeatures();
+            }
+        }
+
+        // Add this function to extract initials from user's display name
+        function getUserInitials(displayName) {
+            if (!displayName) return '??';
+
+            const names = displayName.trim().split(' ');
+            if (names.length === 1) {
+                // Single name, take first two characters
+                return names[0].substring(0, 2).toUpperCase();
+            } else {
+                // Multiple names, take first letter of first and last name
+                return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+            }
+        }
+
+        async function saveMolecule(moleculeName) {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('Please sign in to save molecules');
+                return;
+            }
+            if (!window.main.data || !window.main.data.atomData || window.main.data.atomData.length === 0) {
+                alert('No molecule loaded to save!');
+                return;
+            }
+
+            if (!window.main || !window.main.data) {
+                alert('No molecule loaded to save');
+                return;
+            }
+
+            try {
+                const moleculesRef = collection(db, 'users', user.uid, 'molecules');
+                await addDoc(moleculesRef, {
+                    name: moleculeName,
+                    data: window.main.data,
+                    timestamp: serverTimestamp(),
+                    atomCount: window.main.data.numAtoms
+                });
+
+                showSaveNotification('Molecule saved successfully!');
+                return true;
+            } catch (error) {
+                console.error('Error saving molecule:', error);
+                alert('Error saving molecule');
+                return false;
+            }
+        }
+
+        async function loadMoleculesList() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('Please sign in to load molecules');
+                return [];
+            }
+
+            try {
+                const moleculesRef = collection(db, 'users', user.uid, 'molecules');
+                const q = query(moleculesRef, orderBy('timestamp', 'desc'));
+                const snapshot = await getDocs(q);
+
+                const molecules = [];
+                snapshot.forEach((doc) => {
+                    molecules.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                return molecules;
+            } catch (error) {
+                console.error('Error loading molecules:', error);
+                return [];
+            }
+        }
+
+        function loadMolecule(moleculeData) {
+            if (!moleculeData || !moleculeData.data) return;
+
+            window.main.data = moleculeData.data;
+            window.main.newMolecule(
+                moleculeData.data,
+                window.main.mode || 0,
+                false,
+                { x: 0, y: 0, z: 0 },
+                { x: 0, y: 0, z: 0 },
+                true,
+                true
+            );
+
+            showSaveNotification(`Loaded: ${moleculeData.name}`);
+        }
+
+        async function deleteMolecule(moleculeId) {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            if (!confirm('Delete this molecule?')) return;
+
+            try {
+                await deleteDoc(doc(db, 'users', user.uid, 'molecules', moleculeId));
+                showSaveNotification('Molecule deleted');
+                return true;
+            } catch (error) {
+                console.error('Error deleting:', error);
+                return false;
+            }
+        }
+
+        function showSaveNotification(message) {
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                font-family: 'Rubik', sans-serif;
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 2000);
+        }
+
+        window.saveMolecule = saveMolecule;
+        window.loadMoleculesList = loadMoleculesList;
+        window.loadMolecule = loadMolecule;
+        window.deleteMolecule = deleteMolecule;
+        window.currentUser = null;
+
+        const saveSection = document.getElementById('load-save-message');
+        if (saveSection) {
+            saveSection.style.display = 'none'
+            const prompt = document.createElement('div');
+            prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
+            saveSection.parentElement.insertBefore(prompt, saveSection);
+        }
+
         // Listen for auth state changes and update UI
-        onAuthStateChanged(auth, (user) => {
+        // In index.html, replace the onAuthStateChanged handler with this updated version:
+
+        onAuthStateChanged(auth, async (user) => {
+            const premiumBtn = document.getElementById('premiumUpgradeBtn');
+
             if (user) {
                 // User is signed in
                 signInButton.style.display = 'none';
                 signOutButton.style.display = 'block';
-                userStatus.style.display = 'block';
-                userStatus.textContent = `Signed in as ${user.displayName}`;
+                userStatus.innerHTML = `Signed in as ${user.displayName}`;
+                userStatus.style.display = 'none';
+
+                // Get the dropdown icon and update it with user initials
+                const dropdownIcon = document.querySelector('#settings .dropdown-icon');
+                const userInitials = getUserInitials(user.displayName);
+
+                // Replace the generic user icon with initials
+                dropdownIcon.innerHTML = `<div class="user-initials">${userInitials}</div>`;
+                dropdownIcon.classList.add('signed-in');
+
+                // Add tooltip with full name on hover
+                dropdownIcon.title = `Signed in as ${user.displayName}`;
+
+                // Show the Make Default button
+                const makeDefaultBtn = document.getElementById('makeDefaultButton');
+                if (makeDefaultBtn) {
+                    makeDefaultBtn.style.display = 'block';
+                }
+
+                // Store current user
+                window.currentUserEmail = user.email;
+                window.currentUser = user;
+
+                // First dispatch a basic auth state (for immediate UI updates)
+                window.dispatchEvent(new CustomEvent('authStateChanged', {
+                    detail: {
+                        user: user,
+                        isSignedIn: true,
+                        premiumState: premiumState
+                    }
+                }));
+
+                // Then check premium/trial status (this will dispatch another event with updated premium state)
+                await checkFirebasePremium(user.uid);
+
+                // Load user's style preferences with appropriate delay
+                if (window.loadStylePreferences) {
+                    // Use shorter delay if molecule is already loaded
+                    const hasMolecule = window.main && window.main.molecule && window.main.data && window.main.data.numAtoms > 0;
+                    const delay = hasMolecule ? 100 : 1000;
+
+                    setTimeout(() => {
+                        window.loadStylePreferences(user.uid, window.renderer);
+                    }, delay);
+                }
+
+                console.log('Current user email:', window.currentUserEmail);
+
             } else {
                 // User is signed out
                 signInButton.style.display = 'block';
                 signOutButton.style.display = 'none';
                 userStatus.style.display = 'none';
-                userStatus.textContent = '';
+
+                // Hide premium button when signed out
+                if (premiumBtn) {
+                    premiumBtn.style.display = 'none';
+                }
+
+                // Reset the dropdown icon to the generic user icon
+                const dropdownIcon = document.querySelector('#settings .dropdown-icon');
+                dropdownIcon.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
+                dropdownIcon.classList.remove('signed-in');
+                dropdownIcon.title = '';
+
+                // Hide the Make Default button
+                const makeDefaultBtn = document.getElementById('makeDefaultButton');
+                if (makeDefaultBtn) {
+                    makeDefaultBtn.style.display = 'none';
+                }
+
+                // Clear current user
+                window.currentUserEmail = null;
+                window.currentUser = null;
+
+                // Reset premium state
+                premiumState.isActive = false;
+                premiumState.isTrial = false;
+                premiumState.userId = null;
+
+                // Notify main.js about auth state with premium state
+                window.dispatchEvent(new CustomEvent('authStateChanged', {
+                    detail: {
+                        user: null,
+                        isSignedIn: false,
+                        premiumState: premiumState
+                    }
+                }));
+
+                // IMPORTANT: Reset styles to defaults when signing out
+                if (window.resetToDefaults) {
+                    // Small delay to ensure everything is initialized
+                    setTimeout(() => {
+                        window.resetToDefaults();
+                    }, 100);
+                }
+
+                console.log('User signed out');
             }
         });
     </script>
@@ -98,12 +367,12 @@
             <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
             </span>
             <div class="dropdown-content" style="left: 50%;">
-                <button class="fancy-button" id="aiGenerate"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
-                    Generate</button>
+                <!-- <button class="fancy-button" id="aiGenerate"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
+                    Generate</button> -->
                 <button class="fancy-button" id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
-                <button class="fancy-button" id="import-smiles"><i class="fas fa-vial"></i> Load SMILES string</button>
+                <!-- <button class="fancy-button" id="import-smiles"><i class="fas fa-vial"></i> Load SMILES string</button> -->
                 <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load JSON</button>
-                <button class="fancy-button" id="compareButton">Compare</button>
+                <!-- <button class="fancy-button" id="compareButton">Compare</button> -->
 
 
             </div>
@@ -112,13 +381,44 @@
             <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-wand-sparkles"></i></span>
             <div class="dropdown-content">
                 <button class="fancy-button" id="switchMode"><i class="fas fa-paint-brush"></i> Toggle Style</button>
-                <button class="fancy-button" id="analyze-molecule">Analyze molecule</button>
-                <!-- <button class="fancy-button" id="editMolecule"> <i class="fas fa-edit"></i> Edit Molecule</button> -->
+                <!-- <button class="fancy-button" id="analyze-molecule">Analyze molecule</button> -->
                 <button class="fancy-button" id="clear-canvas"><i class="fa-solid fa-trash"></i> Clear</button>
 
 
             </div>
         </div>
+        <div class="dropdown" id="saveMoleculeToCloud">
+            <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
+            <div class="dropdown-content" style="width: 200px;">
+                <div id="molecule-save-section">
+                    <div id="load-save-message"></div>
+                    <input type="text" id="molecule-name-input" placeholder="Molecule name..." class="fancy-textbox"
+                        style="margin: 10px; width: calc(100% - 40px);">
+                    <button class="fancy-button" id="save-molecule-btn"
+                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100%;">
+                        <i class="fas fa-cloud-upload-alt"></i> Save to Cloud
+                    </button>
+                    <hr style="margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">
+                    <button class="fancy-button" id="load-molecules-btn"
+                        style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); width: 100%;">
+                        <i class="fas fa-folder-open"></i> My Molecules
+                    </button>
+                    <select id="molecules-list" class="fancy-textbox"
+                        style="display: none; margin: 5px; width: calc(100% - 10px);">
+                        <option value="">Select a molecule...</option>
+                    </select>
+                    <div id="molecule-actions" style="display: none;">
+                        <button class="fancy-button" id="load-selected-btn" style="background: #4CAF50; margin: 5px;">
+                            Load
+                        </button>
+                        <button class="fancy-button" id="delete-selected-btn" style="background: #f44336; margin: 5px;">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--  -->
         <div class="dropdown">
             <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
             <div class="dropdown-content">
@@ -127,8 +427,10 @@
                         class="fas fa-file-download"></i> Save XYZ</button>
             </div>
         </div>
+
+
         <div class="dropdown" id="settings">
-            <span class="dropdown-icon"><i class="fa-solid fa-circle-user"></i></span>
+            <span class="dropdown-icon" style="font-size: 35px;"><i class="fa-solid fa-circle-user"></i></span>
             <div class="dropdown-content" style="left: 100px;">
 
                 <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
@@ -146,7 +448,9 @@
     <!-- Add this below #buttons to show user info -->
     <div id="userStatus" style="color: white;"></div>
     <div id="styleSelector" class="on">
-
+        <button id="closeStyleSelector" class="dismiss"
+            style="align-self: flex-end; position: absolute; font-weight: bold; "><i
+                class="fa-solid fa-xmark"></i></button>
         <div class="switch-container">
             <span class="switch-label">Toggle Style Changes</span>
             <label class="switch">
@@ -184,10 +488,25 @@
             <span>Toggle Antialising</span>
         </div>
         <div>
-            <input type="checkbox" id="toggleLabels"></button>
+            <input type="checkbox" id="toggleLabels">
             <span>Toggle Atom labels</span>
         </div>
-
+        <button class="fancy-button" id="makeDefaultButton" style="
+            margin-top: 20px;
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;">
+            <i class="fas fa-save"></i> Make Default
+        </button>
+        <button class="fancy-button" id="resetToDefaultButton" style="
+            margin-top: 20px;
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #ed5544 0%, #c9bc2a 100%);
+            ">
+            <i class="fa-solid fa-arrow-rotate-left"></i> Reset to Default
+        </button>
 
     </div>
     <div id="dragFile">
@@ -199,7 +518,12 @@
             <h2 id="select-an-atom">Select an atom<h2>
         </div>
     </div>
+    <div id="fragmentListContainer">
+        <!-- <span id="fragmentListTitle"><u>Fragments</u></span> -->
+        <!-- <hr style="border: none; height: 2px; width: 80%; background-color: rgb(255, 255, 255);"> -->
 
+        <ul id="fragmentList"></ul>
+    </div>
 
     <h1 id="loading">Loading Molecule</h1>
     <div id="analysisResponseContainer">
@@ -242,7 +566,53 @@
         <!-- <br>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
     </div>
+    <!-- Premium Upgrade Button - Add this after your settings dropdown -->
+    <button id="premiumUpgradeBtn" class="premium-upgrade-btn" onclick="showPremiumModal()">
+        <i class="fa-solid fa-gem"></i>
+        <span id="premiumBtnText">Upgrade</span>
+    </button>
 
+    <!-- Premium Modal - Add this before closing body tag -->
+    <div id="premiumModal" class="premium-modal">
+        <div class="premium-modal-content">
+            <button class="close-premium-modal" onclick="closePremiumModal()">&times;</button>
+
+            <div class="premium-header">
+                <i class="fa-solid fa-gem premium-crown"></i>
+                <h2>ChopChopMol Premium</h2>
+                <p>Unlock all features for molecular visualization</p>
+            </div>
+
+            <div class="premium-price-card">
+                <div class="price-tag">
+                    <span class="currency">$</span>
+                    <span class="amount">2</span>
+                    <span class="period">/month</span>
+                </div>
+
+                <ul class="premium-features">
+                    <li><i class="fas fa-check"></i> Advanced editing tools</li>
+                    <li><i class="fas fa-check"></i> All export formats (PDB, MOL2, XYZ)</li>
+                    <li><i class="fas fa-check"></i> Measurement & analysis tools</li>
+                    <li><i class="fas fa-check"></i> Cloud storage & sync</li>
+                    <li><i class="fas fa-check"></i> Priority support</li>
+                </ul>
+
+                <button id="subscribePremiumBtn" class="subscribe-premium-btn" onclick="subscribeToPremium()">
+                    <span class="btn-text">Start Premium - $2/month</span>
+                    <div class="loading-spinner"></div>
+                </button>
+
+                <p class="trial-text">Cancel anytime • Secure payment via Stripe</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Limit notification popup -->
+    <div id="limitNotification" style="display: none;" class="limit-notification">
+        <i class="fas fa-lock"></i>
+        <span id="limitMessage">Premium feature</span>
+    </div>
     <!-- Scripts -->
     <script src="utils/utils.js"></script>
     <script>
@@ -252,12 +622,12 @@
         customButton.addEventListener('click', () => {
             fileInput.click();
         });
-        const compareFileInput = document.getElementById('compare');
-        const compareButton = document.getElementById('compareButton');
+        //const compareFileInput = document.getElementById('compare');
+        //const compareButton = document.getElementById('compareButton');
 
-        compareButton.addEventListener('click', () => {
-            compareFileInput.click();
-        });
+        //compareButton.addEventListener('click', () => {
+        //    compareFileInput.click();
+        //}); 
     </script>
     <script>
         let _reply = null;
@@ -298,18 +668,18 @@
             smilesPanel.classList.remove('on');
             aiGeneratePanel.classList.remove('on');
         })
-        aiGenerateButton.addEventListener('click', () => {
-            aiGeneratePanel.classList.toggle('on');
-            smilesPanel.classList.remove('on');
-            jsonPanel.classList.remove('on');
-        });
+        //aiGenerateButton.addEventListener('click', () => {
+        //    aiGeneratePanel.classList.toggle('on');
+        //    smilesPanel.classList.remove('on');
+        //    jsonPanel.classList.remove('on');
+        //});
 
-        smilesButton.addEventListener('click', () => {
-            // aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'flex' : 'none'; 
-            smilesPanel.classList.toggle('on');
-            aiGeneratePanel.classList.remove('on');
-            jsonPanel.classList.remove('on');
-        });
+        //smilesButton.addEventListener('click', () => {
+        //    // aiGeneratePanel.style.display = aiGeneratePanel.style.display === 'none' ? 'flex' : 'none'; 
+        //    smilesPanel.classList.toggle('on');
+        //    aiGeneratePanel.classList.remove('on');
+        //    jsonPanel.classList.remove('on');
+        //});
 
 
         let enterPressed = false;
@@ -462,6 +832,51 @@
                 loadingText.classList.remove('on');
             }
         }
+
+        // Initialize dropdown click behavior
+        document.addEventListener('DOMContentLoaded', function () {
+            // Get all dropdown elements
+            const dropdowns = document.querySelectorAll('.dropdown');
+
+            // Add click event listener to each dropdown icon
+            dropdowns.forEach(dropdown => {
+                const dropdownIcon = dropdown.querySelector('.dropdown-icon');
+
+                if (dropdownIcon) {
+                    dropdownIcon.addEventListener('click', function (e) {
+                        e.stopPropagation();
+
+                        // Close all other dropdowns first
+                        dropdowns.forEach(otherDropdown => {
+                            if (otherDropdown !== dropdown) {
+                                otherDropdown.classList.remove('active');
+                            }
+                        });
+
+                        // Toggle current dropdown
+                        dropdown.classList.toggle('active');
+                    });
+                }
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function (e) {
+                // Check if click is outside any dropdown
+                if (!e.target.closest('.dropdown')) {
+                    dropdowns.forEach(dropdown => {
+                        dropdown.classList.remove('active');
+                    });
+                }
+            });
+
+            // Prevent dropdown from closing when clicking inside dropdown content
+            const dropdownContents = document.querySelectorAll('.dropdown-content');
+            dropdownContents.forEach(content => {
+                content.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            });
+        });
         function loadJson() {
             jsonPanel.classList.remove('on');
             window.reply = document.getElementById('jsonInput').value;
@@ -489,12 +904,14 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@v0.171.0/build/three.module.js",
+                "three": "https://cdn.jsdelivr.net/npm/three@v0.179.1/build/three.module.js",
                 "jsm/": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/"
             }
         }
     </script>
     <pre id="output"></pre>
+    <script src="stripe.js"></script>
+
     <script type="module" src="main.js"></script>
 </body>
 
