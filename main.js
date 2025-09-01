@@ -2757,25 +2757,18 @@ function onPointerUp(event) {
         main.molecule.updateMainCoordinates();
     }
 }
-
-// function selectFragment(fragmentAtoms, fragmentIndex) {
-//     // Clear current selection
-//     unselectAtom();
-//     // Set atomsSelected to the fragment atoms
-//     atomsSelected = [...fragmentAtoms];
-//     console.log(atomsSelected);
-//     // Highlight all atoms in the fragment
-//     highlightFragment(fragmentIndex);
-//     render();
-// }
-
 function selectFragment(fragmentAtoms, fragmentIndex) {
+    // Clear previous atom selection
     atomsSelected = [];
+
+    // Build atomsSelected from all selected fragments
     fragmentsSelected.forEach(fragIdx => {
         if (fragIdx < fragments.length) {
             atomsSelected.push(...fragments[fragIdx]);
         }
     });
+
+    // Reset color attributes for all atoms
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
     for (let i = 0; i < colorAttr.count; i++) {
         const atom = main.molecule.atoms[i];
@@ -2783,14 +2776,41 @@ function selectFragment(fragmentAtoms, fragmentIndex) {
         atom.displayColor = color;
         colorAttr.setXYZ(i, color.r, color.g, color.b);
     }
+
+    // Highlight selected fragments
     fragmentsSelected.forEach(fragIdx => {
         if (fragIdx < fragments.length) {
             highlightFragment(fragIdx);
         }
     });
+
     colorAttr.needsUpdate = true;
+
+    // CRITICAL FIX: Reset rotation slider state when fragments are selected
+    // This ensures proper rotation behavior for newly selected fragments
+    window.rotationSliderOn = true;  // Mark slider as needing reset
+    window.translationSliderOn = true;  // Mark translation slider as needing reset
+
+    // Reset the rotation state to ensure clean slate for fragment rotation
+    if (rotationState) {
+        rotationState.currentAngle = 0;
+        rotationState.isActive = false;
+    }
+
+    // Reset slider UI values
+    const rotationSlider = document.getElementById('rotationSlider');
+    if (rotationSlider) {
+        rotationSlider.value = 0;
+    }
+
+    const translationSlider = document.getElementById('translationSlider');
+    if (translationSlider) {
+        translationSlider.value = 0;
+    }
+
     render();
 }
+
 
 function updateFragmentListSelection(selectedIndex) {
     const fragmentList = document.getElementById('fragmentList');
