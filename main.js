@@ -3049,7 +3049,7 @@ function attachMouseWheelRotation() {
     window.addEventListener('wheel', (e) => {
         if (!shiftDown || !rotationAxis || !main?.molecule?.atoms) return;
 
-        e.preventDefault();
+        // e.preventDefault();
 
         // Calculate rotation angle from wheel delta
         const angle = e.deltaY * 0.5; // Scale factor for sensitivity
@@ -3058,6 +3058,7 @@ function attachMouseWheelRotation() {
         rotateSelectedAtoms(angle, { relative: true });
     });
 }
+window.attachMouseWheelRotation = attachMouseWheelRotation
 const buttonSound = new Audio()
 buttonSound.src = "Create.wav"
 
@@ -4005,7 +4006,6 @@ function createRenderer(antialiasOn) {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    console.log(fragmentsSelected)
 }
 function render() {
     renderer.render(scene, camera);
