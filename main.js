@@ -1979,6 +1979,7 @@ function updateEditingContent(element = null, color = null) {
 
 function updateFragmentList(fragmentList) {
     fragmentList.innerHTML = '';
+    fragmentList.style.alignItems = 'center';
 
     // Add "Show All Fragments" button if in isolation mode
     if (isInIsolationMode) {
@@ -1988,7 +1989,7 @@ function updateFragmentList(fragmentList) {
         showAllBtn.style.cssText = `
             display: block;
             margin-bottom: 10px;
-            background-color: rgb(100, 200, 100);
+            background-color: rgb(64, 215, 64);
             padding: 8px 12px;
             font-size: 13px;
             width: 100%;
@@ -1997,28 +1998,7 @@ function updateFragmentList(fragmentList) {
         fragmentList.appendChild(showAllBtn);
 
         // Add navigation buttons if there's history
-        if (isolationHistory.length > 1) {
-            const navContainer = document.createElement('div');
-            navContainer.style.cssText = 'display: flex; gap: 5px; margin-bottom: 10px;';
 
-            const prevBtn = document.createElement('button');
-            prevBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i>';
-            prevBtn.className = 'fancy-button';
-            prevBtn.style.cssText = 'flex: 1; background-color: rgb(150, 150, 255);';
-            prevBtn.disabled = currentIsolationIndex <= 0;
-            prevBtn.addEventListener('click', () => navigateIsolationHistory(-1));
-
-            const nextBtn = document.createElement('button');
-            nextBtn.innerHTML = '<i class="fa-solid fa-arrow-right"></i>';
-            nextBtn.className = 'fancy-button';
-            nextBtn.style.cssText = 'flex: 1; background-color: rgb(150, 150, 255);';
-            nextBtn.disabled = currentIsolationIndex >= isolationHistory.length - 1;
-            nextBtn.addEventListener('click', () => navigateIsolationHistory(1));
-
-            navContainer.appendChild(prevBtn);
-            navContainer.appendChild(nextBtn);
-            fragmentList.appendChild(navContainer);
-        }
 
         // Show current isolation info
         if (currentIsolationIndex >= 0 && currentIsolationIndex < isolationHistory.length) {
@@ -2075,27 +2055,6 @@ function updateFragmentList(fragmentList) {
             });
 
             buttonContainer.appendChild(isolateBtn);
-
-            // Add "View in Context" button if in isolation mode
-            if (isInIsolationMode) {
-                const contextBtn = document.createElement('button');
-                contextBtn.textContent = 'Context';
-                contextBtn.className = 'fancy-button';
-                contextBtn.style.cssText = `
-                    flex: 1;
-                    background-color: rgb(100, 150, 255);
-                    padding: 5px 10px;
-                    font-size: 12px;
-                `;
-
-                contextBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    showFragmentInContext(index);
-                });
-
-                buttonContainer.appendChild(contextBtn);
-            }
-
             listItem.appendChild(buttonContainer);
         }
 
