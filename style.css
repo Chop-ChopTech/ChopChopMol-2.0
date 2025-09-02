@@ -905,6 +905,23 @@ input[type="range"]:focus {
     border-radius: 3px;
 }
 
+#premiumUpgradeBtn {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 10000 !important;
+}
+
+/* Success notification style */
+.limit-notification.success {
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.9), rgba(40, 200, 69, 0.9));
+    border: 2px solid #28a745;
+}
+
+.limit-notification.success i {
+    color: #ffffff;
+}
+
 #rotationSlider {
     appearance: none;
     -webkit-appearance: none;

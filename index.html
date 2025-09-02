@@ -910,6 +910,46 @@
             }
         }
     </script>
+    <script>
+        // Ensure premium button is ALWAYS visible
+        (function () {
+            function forceButtonVisible() {
+                const btn = document.getElementById('premiumUpgradeBtn');
+                if (btn) {
+                    btn.style.display = 'flex';
+                    btn.style.opacity = '1';
+                    btn.style.visibility = 'visible';
+                    btn.style.zIndex = '10000';
+                }
+            }
+
+            // Initial check
+            forceButtonVisible();
+
+            // Check every 500ms for first 5 seconds
+            let checks = 0;
+            const interval = setInterval(() => {
+                forceButtonVisible();
+                checks++;
+                if (checks >= 10) clearInterval(interval);
+            }, 500);
+
+            // Override any function that might hide it
+            const originalDisplay = Object.getOwnPropertyDescriptor(CSSStyleDeclaration.prototype, 'display');
+            if (originalDisplay) {
+                Object.defineProperty(CSSStyleDeclaration.prototype, 'display', {
+                    set: function (value) {
+                        if (this.parentElement?.id === 'premiumUpgradeBtn' && value === 'none') {
+                            // Don't allow hiding the premium button
+                            return;
+                        }
+                        originalDisplay.set.call(this, value);
+                    },
+                    get: originalDisplay.get
+                });
+            }
+        })();
+    </script>
     <pre id="output"></pre>
     <script src="stripe.js"></script>
 
