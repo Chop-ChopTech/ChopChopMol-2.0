@@ -82,13 +82,56 @@
 
         // Handle sign-out
         signOutButton.addEventListener('click', () => {
-            signOut(auth)
-                .then(() => {
-                    console.log('Signed out');
-                })
-                .catch((error) => {
-                    console.error('Sign-out error:', error);
-                });
+            signOut(auth).then(() => {
+                console.log('User signed out');
+
+                // Reset premium state
+                premiumState = {
+                    isActive: false,
+                    isTrial: false,
+                    trialEndDate: null
+                };
+
+                // Dispatch auth state changed event immediately
+                window.dispatchEvent(new CustomEvent('authStateChanged', {
+                    detail: {
+                        user: null,
+                        isSignedIn: false,
+                        premiumState: premiumState
+                    }
+                }));
+
+                // Reset UI elements
+                signInButton.style.display = 'block';
+                signOutButton.style.display = 'none';
+                userStatus.innerHTML = 'Not signed in';
+
+                // Reset dropdown icon
+                const dropdownIcon = document.querySelector('#settings .dropdown-icon');
+                if (dropdownIcon) {
+                    dropdownIcon.innerHTML = '<i class="fa-solid fa-user"></i>';
+                    dropdownIcon.classList.remove('signed-in');
+                    dropdownIcon.title = '';
+                }
+
+                // Hide premium button
+                const premiumBtn = document.getElementById('premiumUpgradeBtn');
+                if (premiumBtn) {
+                    premiumBtn.style.display = 'none';
+                }
+
+                // Hide make default button
+                const makeDefaultBtn = document.getElementById('makeDefaultButton');
+                if (makeDefaultBtn) {
+                    makeDefaultBtn.style.display = 'none';
+                }
+
+                // Clear current user
+                window.currentUserEmail = null;
+                window.currentUser = null;
+            }).catch((error) => {
+                console.error('Error signing out:', error);
+            });
         });
 
         function updateFeatureAccess(user) {

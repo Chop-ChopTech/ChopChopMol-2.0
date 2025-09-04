@@ -2977,28 +2977,34 @@ window.addEventListener('authStateChanged', (event) => {
     premiumActive = premiumState.isActive
     updateFeatureAccess(user, isSignedIn, premiumActive);
     editingMolecule = isSignedIn
-    window.currentUserEmail = user.email
-    console.log(window.currentUserEmail)
+    window.currentUserEmail = user ? user.email : null
+
     const saveSection = document.getElementById('molecule-save-section');
     const message = document.getElementById('molecule-save-message');
     if (saveSection) {
         saveSection.style.display = 'none'
-        const prompt = document.createElement('div');
-        prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
 
+        // Check if prompt already exists to avoid duplicates
+        let prompt = saveSection.parentElement.querySelector('.save-molecules-prompt');
+        if (!prompt) {
+            prompt = document.createElement('div');
+            prompt.className = 'save-molecules-prompt';
+            saveSection.parentElement.insertBefore(prompt, saveSection);
+        }
 
         if (!user) {
             saveSection.style.display = 'none'
-            prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
+            prompt.innerHTML = '<p style="color: white; padding: 10px;">Sign in to save molecules</p>';
         } else {
-            if (premiumState.isActive) {
+            // Check if user has premium OR is on trial
+            if (premiumState.isActive || premiumState.isTrial) {
                 prompt.innerHTML = '';
-
                 saveSection.style.display = 'block'
+            } else {
+                prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
+                saveSection.style.display = 'none'
             }
         }
-        saveSection.parentElement.insertBefore(prompt, saveSection);
-
     }
 });
 
