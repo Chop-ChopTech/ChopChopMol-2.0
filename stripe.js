@@ -317,17 +317,17 @@ function activatePremium() {
         }
 
         // Update onclick handler
-        // btn.onclick = function () {
-        //     if (premiumState.isActive && !premiumState.isTrial) {
-        //         // Show management options for paid premium users
-        //         if (confirm('Manage your Premium subscription?')) {
-        //             cancelPremium();
-        //         }
-        //     } else {
-        //         // Show upgrade modal for trial users
-        //         showPremiumModal();
-        //     }
-        // };
+        btn.onclick = function () {
+            if (premiumState.isActive && !premiumState.isTrial) {
+                // Show management options for paid premium users
+                if (confirm('Manage your Premium subscription?')) {
+                    cancelPremium();
+                }
+            } else {
+                // Show upgrade modal for trial users
+                showPremiumModal();
+            }
+        };
     }
 
     // Enable all premium features
@@ -449,18 +449,18 @@ function activatePremium() {
         document.getElementById('premiumBtnText').textContent = 'Premium';
 
         // Add click handler to manage subscription
-        // btn.onclick = function () {
-        //     if (premiumState.isActive) {
-        //         // Show management options
-        //         if (confirm('Manage your Premium subscription?')) {
-        //             // You can add a management modal here
-        //             // For now, just option to cancel
-        //             cancelPremium();
-        //         }
-        //     } else {
-        //         showPremiumModal();
-        //     }
-        // };
+        btn.onclick = function () {
+            if (premiumState.isActive) {
+                // Show management options
+                if (confirm('Manage your Premium subscription?')) {
+                    // You can add a management modal here
+                    // For now, just option to cancel
+                    cancelPremium();
+                }
+            } else {
+                showPremiumModal();
+            }
+        };
     }
 
     // Enable all premium features
@@ -578,37 +578,7 @@ function canUsePremiumFeature(feature) {
 
 // Show/hide premium modal
 function showPremiumModal() {
-    // Check if user is signed in
-    if (!window.currentUser) {
-        // Create a sign-in prompt instead of showing premium modal
-        const signInPrompt = document.createElement('div');
-        signInPrompt.className = 'sign-in-prompt';
-        signInPrompt.innerHTML = `
-            <h3>Sign in Required</h3>
-            <p>Please sign in with Google to access premium features and start your free trial!</p>
-            <button onclick="document.getElementById('signInButton').click(); this.parentElement.remove();">
-                <i class="fas fa-sign-in-alt"></i> Sign In with Google
-            </button>
-        `;
-
-        // Add to page temporarily
-        document.body.appendChild(signInPrompt);
-
-        // Remove after 5 seconds
-        setTimeout(() => {
-            signInPrompt.remove();
-        }, 5000);
-
-        return;
-    }
-
-    // User is signed in, show the premium modal normally
-    document.getElementById('premiumModal').classList.add('active');
-
-    // Add trial info if applicable
-    if (premiumState.isTrial && premiumState.trialEndDate) {
-        showPremiumModalWithTrialInfo();
-    }
+    window.location.href = 'premium.html';
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -700,21 +670,20 @@ if (window.main && window.main.loader) {
         return originalHandleFile.apply(this, arguments);
     };
 }
-
-// Override export functions
 document.addEventListener('DOMContentLoaded', function () {
-    const premiumBtn = document.getElementById('premiumUpgradeBtn');
-
-    if (premiumBtn) {
-        premiumBtn.onclick = function () {
-            // Check if user has active premium subscription
-            if (premiumState.isActive && !premiumState.isTrial) {
-                // Already premium - go to management page
-                window.location.href = 'premium.html?manage=true';
-            } else {
-                // Not premium or on trial - go to upgrade page
-                window.location.href = 'premium.html';
-            }
-        };
-    }
+    setTimeout(() => {
+        const premiumBtn = document.getElementById('premiumUpgradeBtn');
+        if (premiumBtn) {
+            premiumBtn.onclick = function () {
+                // Check premium status
+                if (premiumState.isActive && !premiumState.isTrial) {
+                    // Already premium - go to management
+                    window.location.href = 'premium.html?manage=true';
+                } else {
+                    // Not premium - go to upgrade page
+                    window.location.href = 'premium.html';
+                }
+            };
+        }
+    }, 2000); // Wait 2 seconds for everything to load
 });
