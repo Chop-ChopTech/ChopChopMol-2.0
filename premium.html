@@ -650,7 +650,6 @@
     <!-- Scripts -->
     <script src="https://js.stripe.com/v3/"></script>
     <script>
-        // Initialize Stripe (use your publishable key)
         const stripe = Stripe('pk_live_51Rot4oJFioirLp8GF7O6F8kr0PLQwRRrRXCjoQCgj0LIqtGnm9mh0Km7zoRFtKHiIiiXS4dhVwTQQLmLhihDwoiR00W0pdTUAa');
         const PREMIUM_PRICE_ID = 'price_1RvRIeJFioirLp8GzChWVboO';
 
@@ -667,27 +666,80 @@
             btn.disabled = true;
 
             try {
-                // Check if user is signed in (you'll need to implement this check)
-                const userEmail = localStorage.getItem('userEmail') || '';
-                const userId = localStorage.getItem('userId') || '';
+                // Get user data from localStorage (set by main app)
+                const userEmail = localStorage.getItem('userEmail');
+                const userId = localStorage.getItem('userId');
 
-                if (!userId) {
-                    alert('Please sign in first to upgrade to Premium');
-                    window.location.href = 'index.html';
+                if (!userId || !userEmail) {
+                    // User not signed in - provide clear instructions
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+
+                    // Show a more helpful message
+                    const message = `
+                        <div style="
+                            position: fixed;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -50%);
+                            background: white;
+                            padding: 30px;
+                            border-radius: 15px;
+                            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                            z-index: 10000;
+                            max-width: 400px;
+                            text-align: center;
+                        ">
+                            <h3 style="color: #333; margin-bottom: 15px;">Sign In Required</h3>
+                            <p style="color: #666; margin-bottom: 20px;">
+                                Please sign in with Google from the main app first to upgrade to Premium.
+                            </p>
+                            <button onclick="window.location.href='index.html'" style="
+                                background: linear-gradient(135deg, #667eea, #764ba2);
+                                color: white;
+                                border: none;
+                                padding: 12px 30px;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-size: 16px;
+                                font-weight: 600;
+                            ">Go to ChopChopMol</button>
+                            <button onclick="this.parentElement.remove()" style="
+                                background: none;
+                                border: 1px solid #ddd;
+                                padding: 12px 30px;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                margin-left: 10px;
+                                font-size: 16px;
+                            ">Cancel</button>
+                        </div>
+                    `;
+
+                    const modalDiv = document.createElement('div');
+                    modalDiv.innerHTML = message;
+                    document.body.appendChild(modalDiv);
+
                     return;
                 }
 
-                // Redirect to Stripe Checkout
+                // User is signed in, proceed with Stripe checkout
                 const { error } = await stripe.redirectToCheckout({
                     lineItems: [{
                         price: PREMIUM_PRICE_ID,
                         quantity: 1
                     }],
                     mode: 'subscription',
-                    successUrl: window.location.origin + '/index.html?session_id={CHECKOUT_SESSION_ID}&premium=success',
+                    // Use proper success/cancel URLs
+                    successUrl: window.location.origin + '/index.html?session_id={CHECKOUT_SESSION_ID}&premium=success&uid=' + userId,
                     cancelUrl: window.location.origin + '/premium.html?cancelled=true',
                     customerEmail: userEmail,
-                    clientReferenceId: userId
+                    clientReferenceId: userId,
+                    // Add metadata
+                    metadata: {
+                        userId: userId,
+                        userEmail: userEmail
+                    }
                 });
 
                 if (error) {
@@ -703,6 +755,66 @@
                 btn.disabled = false;
             }
         }
+
+        // Check sign-in status on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            // Check if user is signed in
+            const userId = localStorage.getItem('userId');
+            const userEmail = localStorage.getItem('userEmail');
+            const userName = localStorage.getItem('userName');
+
+            // Add a visual indicator if user is signed in
+            if (userId && userEmail) {
+                // Add a small badge showing signed-in status
+                const signedInBadge = document.createElement('div');
+                signedInBadge.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #28a745, #20c997);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 25px;
+                    font-size: 14px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+                    z-index: 1000;
+                `;
+                signedInBadge.innerHTML = `
+                    <i class="fas fa-check-circle"></i>
+                    Signed in as ${userName || userEmail}
+                `;
+                document.body.appendChild(signedInBadge);
+            } else {
+                // Show sign-in prompt at top of page
+                const signInPrompt = document.createElement('div');
+                signInPrompt.style.cssText = `
+                    background: linear-gradient(135deg, #ffc107, #ff9800);
+                    color: #333;
+                    padding: 15px;
+                    text-align: center;
+                    font-weight: 600;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    z-index: 1000;
+                    box-shadow: 0 2px 10px rgba(255, 193, 7, 0.3);
+                `;
+                signInPrompt.innerHTML = `
+                    <i class="fas fa-info-circle"></i>
+                    Please sign in with Google in the main app first to purchase Premium
+                    <a href="index.html" style="
+                        margin-left: 15px;
+                        color: #333;
+                        text-decoration: underline;
+                    ">Go to ChopChopMol →</a>
+                `;
+                document.body.appendChild(signInPrompt);
+            }
+        });
 
         // Check URL parameters for cancellation
         const urlParams = new URLSearchParams(window.location.search);

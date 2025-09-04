@@ -317,26 +317,23 @@ function activatePremium() {
         }
 
         // Update onclick handler
-        btn.onclick = function () {
-            if (premiumState.isActive && !premiumState.isTrial) {
-                // Show management options for paid premium users
-                if (confirm('Manage your Premium subscription?')) {
-                    cancelPremium();
-                }
-            } else {
-                // Show upgrade modal for trial users
-                showPremiumModal();
-            }
-        };
+        // btn.onclick = function () {
+        //     if (premiumState.isActive && !premiumState.isTrial) {
+        //         // Show management options for paid premium users
+        //         if (confirm('Manage your Premium subscription?')) {
+        //             cancelPremium();
+        //         }
+        //     } else {
+        //         // Show upgrade modal for trial users
+        //         showPremiumModal();
+        //     }
+        // };
     }
 
     // Enable all premium features
     enablePremiumFeatures();
 }
 
-// ============================================
-// MODIFICATION 4: Show premium modal with trial info
-// ============================================
 
 function showPremiumModalWithTrialInfo() {
     showPremiumModal();
@@ -452,18 +449,18 @@ function activatePremium() {
         document.getElementById('premiumBtnText').textContent = 'Premium';
 
         // Add click handler to manage subscription
-        btn.onclick = function () {
-            if (premiumState.isActive) {
-                // Show management options
-                if (confirm('Manage your Premium subscription?')) {
-                    // You can add a management modal here
-                    // For now, just option to cancel
-                    cancelPremium();
-                }
-            } else {
-                showPremiumModal();
-            }
-        };
+        // btn.onclick = function () {
+        //     if (premiumState.isActive) {
+        //         // Show management options
+        //         if (confirm('Manage your Premium subscription?')) {
+        //             // You can add a management modal here
+        //             // For now, just option to cancel
+        //             cancelPremium();
+        //         }
+        //     } else {
+        //         showPremiumModal();
+        //     }
+        // };
     }
 
     // Enable all premium features
@@ -705,53 +702,19 @@ if (window.main && window.main.loader) {
 }
 
 // Override export functions
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize premium
-    initializePremium();
+document.addEventListener('DOMContentLoaded', function () {
+    const premiumBtn = document.getElementById('premiumUpgradeBtn');
 
-    // Override save buttons
-    const savePDBBtn = document.getElementById('savePDB');
-    if (savePDBBtn) {
-        const originalClick = savePDBBtn.onclick;
-        savePDBBtn.onclick = function () {
-            if (canUsePremiumFeature('export')) {
-                originalClick?.call(this);
+    if (premiumBtn) {
+        premiumBtn.onclick = function () {
+            // Check if user has active premium subscription
+            if (premiumState.isActive && !premiumState.isTrial) {
+                // Already premium - go to management page
+                window.location.href = 'premium.html?manage=true';
+            } else {
+                // Not premium or on trial - go to upgrade page
+                window.location.href = 'premium.html';
             }
         };
     }
-
-    const saveXYZBtn = document.getElementById('saveXYZ');
-    if (saveXYZBtn) {
-        const originalClick = saveXYZBtn.onclick;
-        saveXYZBtn.onclick = function () {
-            if (canUsePremiumFeature('export')) {
-                originalClick?.call(this);
-            }
-        };
-    }
-
-    // Override edit molecule button
-    const editBtn = document.getElementById('editMolecule');
-    if (editBtn) {
-        const originalClick = editBtn.onclick;
-        editBtn.onclick = function () {
-            if (canUsePremiumFeature('edit')) {
-                originalClick?.call(this);
-            }
-        };
-    }
-
-    // Close modal on escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closePremiumModal();
-        }
-    });
-
-    // Close modal on overlay click
-    document.getElementById('premiumModal')?.addEventListener('click', (e) => {
-        if (e.target.id === 'premiumModal') {
-            closePremiumModal();
-        }
-    });
 });
