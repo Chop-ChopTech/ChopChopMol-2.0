@@ -364,71 +364,76 @@
     <div id="buttons">
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
         <input id="compare" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
-        <div class="dropdown">
-            <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
-            </span>
-            <div class="dropdown-content" style="left: 50%;">
-                <!-- <button class="fancy-button" id="aiGenerate"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
+        <div id="toolbar-background">
+            <div class="dropdown">
+                <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
+                </span>
+                <div class="dropdown-content" style="left: 50%;">
+                    <!-- <button class="fancy-button" id="aiGenerate"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
                     Generate</button> -->
-                <button class="fancy-button" id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
-                <!-- <button class="fancy-button" id="import-smiles"><i class="fas fa-vial"></i> Load SMILES string</button> -->
-                <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load JSON</button>
-                <!-- <button class="fancy-button" id="compareButton">Compare</button> -->
+                    <button class="fancy-button" id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
+                    <!-- <button class="fancy-button" id="import-smiles"><i class="fas fa-vial"></i> Load SMILES string</button> -->
+                    <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
+                        JSON</button>
+                    <!-- <button class="fancy-button" id="compareButton">Compare</button> -->
 
 
+                </div>
             </div>
-        </div>
-        <div class="dropdown">
-            <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-wand-sparkles"></i></span>
-            <div class="dropdown-content">
-                <button class="fancy-button" id="switchMode"><i class="fas fa-paint-brush"></i> Toggle Style</button>
-                <!-- <button class="fancy-button" id="analyze-molecule">Analyze molecule</button> -->
-                <button class="fancy-button" id="clear-canvas"><i class="fa-solid fa-trash"></i> Clear</button>
+            <div class="dropdown">
+                <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-wand-sparkles"></i></span>
+                <div class="dropdown-content">
+                    <button class="fancy-button" id="switchMode"><i class="fas fa-paint-brush"></i> Toggle
+                        Style</button>
+                    <!-- <button class="fancy-button" id="analyze-molecule">Analyze molecule</button> -->
+                    <button class="fancy-button" id="clear-canvas"><i class="fa-solid fa-trash"></i> Clear</button>
 
 
+                </div>
             </div>
-        </div>
-        <div class="dropdown" id="saveMoleculeToCloud">
-            <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
-            <div class="dropdown-content" style="width: 200px;">
-                <div id="molecule-save-section">
-                    <div id="load-save-message"></div>
-                    <input type="text" id="molecule-name-input" placeholder="Molecule name..." class="fancy-textbox"
-                        style="margin: 10px; width: calc(100% - 40px);">
-                    <button class="fancy-button" id="save-molecule-btn"
-                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100%;">
-                        <i class="fas fa-cloud-upload-alt"></i> Save to Cloud
-                    </button>
-                    <hr style="margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">
-                    <button class="fancy-button" id="load-molecules-btn"
-                        style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); width: 100%;">
-                        <i class="fas fa-folder-open"></i> My Molecules
-                    </button>
-                    <select id="molecules-list" class="fancy-textbox"
-                        style="display: none; margin: 5px; width: calc(100% - 10px);">
-                        <option value="">Select a molecule...</option>
-                    </select>
-                    <div id="molecule-actions" style="display: none;">
-                        <button class="fancy-button" id="load-selected-btn" style="background: #4CAF50; margin: 5px;">
-                            Load
+            <div class="dropdown" id="saveMoleculeToCloud">
+                <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
+                <div class="dropdown-content" style="width: 200px;">
+                    <div id="molecule-save-section">
+                        <div id="load-save-message"></div>
+                        <input type="text" id="molecule-name-input" placeholder="Molecule name..." class="fancy-textbox"
+                            style="margin: 10px; width: calc(100% - 40px);">
+                        <button class="fancy-button" id="save-molecule-btn"
+                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  width: 182px;">
+                            <i class="fas fa-cloud-upload-alt"></i> Save to Cloud
                         </button>
-                        <button class="fancy-button" id="delete-selected-btn" style="background: #f44336; margin: 5px;">
-                            Delete
+                        <hr style="margin: 10px 0; border: 1px solid rgba(255,255,255,0.2); ">
+                        <button class="fancy-button" id="load-molecules-btn"
+                            style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); width: 182px;">
+                            <i class="fas fa-folder-open"></i> My Molecules
                         </button>
+                        <select id="molecules-list" class="fancy-textbox"
+                            style="display: none; margin: 5px; width: calc(100% - 10px);">
+                            <option value="">Select a molecule...</option>
+                        </select>
+                        <div id="molecule-actions" style="display: none;">
+                            <button class="fancy-button" id="load-selected-btn"
+                                style="background: #4CAF50; margin: 5px;">
+                                Load
+                            </button>
+                            <button class="fancy-button" id="delete-selected-btn"
+                                style="background: #f44336; margin: 5px;">
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <!--  -->
-        <div class="dropdown">
-            <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
-            <div class="dropdown-content">
-                <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
-                <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255);"><i
-                        class="fas fa-file-download"></i> Save XYZ</button>
+            <!--  -->
+            <div class="dropdown">
+                <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
+                <div class="dropdown-content">
+                    <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
+                    <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255);"><i
+                            class="fas fa-file-download"></i> Save XYZ</button>
+                </div>
             </div>
         </div>
-
 
         <div class="dropdown" id="settings">
             <span class="dropdown-icon" style="font-size: 35px;"><i class="fa-solid fa-circle-user"></i></span>

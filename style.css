@@ -286,33 +286,26 @@ body {
 
 .fancy-button {
     padding: 8px 16px;
-    /* Slightly more padding for better click area */
     font-size: 13px;
-    /* Slightly larger for readability */
     font-weight: 600;
-    /* Bolder text for emphasis */
     color: #fff;
     border: none;
     border-radius: 8px;
-    /* Softer, modern radius */
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-    /* Subtler shadow */
     text-transform: uppercase;
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    /* backdrop-filter: blur(10px); */
-    /* opacity: 0.1 !important; */
     transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 140px;
     will-change: transform;
+
 }
 
 .fancy-button:hover {
     transform: translateY(-2px) scale(1.02);
-    /* Subtle lift and slight scale */
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 0 8px rgba(255, 255, 255, 0.3);
-    /* Glow effect */
 }
 
 .fancy-button.pulse {
@@ -835,7 +828,6 @@ input[type="range"]:focus {
     transform: translateX(-50%) translateY(0);
 }
 
-/* Optional: Rainbow effect when dropdown is active instead of hover */
 .dropdown.active .dropdown-icon {
     background: linear-gradient(90deg,
             #ff0000,
@@ -849,7 +841,19 @@ input[type="range"]:focus {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: rainbow 3s linear infinite;
+    transform: scale(1.2);
+    transition: all 0.3s ease;
 }
+
+/* #toolbar-background {
+    background-color: #d7d7d720;
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+} */
 
 #fragmentList {
 
@@ -1016,14 +1020,7 @@ input[type="range"]:focus {
     padding: 6px !important;
 }
 
-/* Override the rainbow hover effect for signed-in users */
-.dropdown:hover .dropdown-icon.signed-in {
-    background: transparent !important;
-    background-clip: initial !important;
-    -webkit-background-clip: initial !important;
-    -webkit-text-fill-color: initial !important;
-    animation: none !important;
-}
+
 
 /* Hover effect for user initials - replaces the rainbow effect */
 .dropdown-icon.signed-in:hover .user-initials {
@@ -1110,9 +1107,9 @@ input[type="range"]:focus {
     top: 100%;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
-    /* background-color: #ffffff56;
-     */
-    background: linear-gradient(135deg, rgba(188, 94, 255, 0.13), rgba(100, 201, 255, 0.393));
+    background-color: #6464640c;
+
+    /* background: linear-gradient(135deg, rgba(188, 94, 255, 0.13), rgba(100, 201, 255, 0.393)); */
     /* display: none; */
 
     min-width: 160px;
