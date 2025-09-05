@@ -403,6 +403,74 @@
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <div class="donate-panel">
+        <button class="donate-btn" onclick="openDonateModal()">
+            <i class="fas fa-heart"></i>
+            Support
+        </button>
+    </div>
+
+    <!-- Donation Modal -->
+    <div class="donate-backdrop" onclick="closeDonateModal()"></div>
+    <div class="donate-modal">
+        <button class="donate-close" onclick="closeDonateModal()">&times;</button>
+        <h3>Support ChopChopMol</h3>
+        <p style="color: rgba(255,255,255,0.7); text-align: center; margin-bottom: 20px; font-size: 14px;">
+            Your support helps keep this project alive!
+        </p>
+        <div class="donate-amounts">
+            <button class="amount-btn" onclick="selectAmount(this, 1)">$1</button>
+            <button class="amount-btn selected" onclick="selectAmount(this, 5)">$5</button>
+            <button class="amount-btn" onclick="selectAmount(this, 10)">$10</button>
+            <button class="amount-btn" onclick="selectAmount(this, 25)">$25</button>
+            <button class="amount-btn" onclick="selectAmount(this, 50)">$50</button>
+            <button class="amount-btn" onclick="selectAmount(this, 'custom')">Custom</button>
+        </div>
+        <button class="donate-proceed" onclick="proceedToDonate()">
+            Donate with Stripe
+        </button>
+    </div>
+
+    <script>
+        // Minimal donation functionality
+        let selectedAmount = 10;
+
+        function openDonateModal() {
+            document.querySelector('.donate-modal').classList.add('show');
+            document.querySelector('.donate-backdrop').classList.add('show');
+        }
+
+        function closeDonateModal() {
+            document.querySelector('.donate-modal').classList.remove('show');
+            document.querySelector('.donate-backdrop').classList.remove('show');
+        }
+
+        function selectAmount(btn, amount) {
+            document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+
+
+            selectedAmount = amount;
+
+        }
+
+        function proceedToDonate() {
+            const links = {
+                1: 'https://buy.stripe.com/cNi7sM2n6a2U722drC7Re00',
+                5: 'https://buy.stripe.com/14AfZi5zi6QI9aaevG7Re02',
+                10: 'https://buy.stripe.com/5kQ6oI5zidf61HI4V67Re03',
+                25: 'https://buy.stripe.com/14A3cw6Dmb6Y3PQdrC7Re04',
+                50: 'https://buy.stripe.com/9B6aEY4ve6QI3PQ2MY7Re05',
+            };
+
+            if (links[selectedAmount]) {
+                window.open(links[selectedAmount], '_blank');
+            } else {
+                // For custom amounts, use the "customer chooses" link
+                window.open('https://buy.stripe.com/fZu00k2n6eja9aa4V67Re06', '_blank');
+            }
+        }
+    </script>
     <!-- Buttons with new toggle labels button -->
     <div id="buttons">
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
