@@ -549,12 +549,17 @@
 
         <div class="dropdown" id="settings">
             <span class="dropdown-icon" style="font-size: 35px;"><i class="fa-solid fa-circle-user"></i></span>
-            <div class="dropdown-content" style="left: 100px;">
+            <div class="dropdown-content"
+                style="left: 100px; align-items: center; justify-content: center; display: flex; flex-direction: column;">
 
                 <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
                     Google</button>
                 <button class="fancy-button" id="signOutButton" style="display: none;"><i
                         class="fas fa-sign-out-alt"></i> Sign Out</button>
+                <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
+                    onclick="showPremiumModal()">
+                    Subscription
+                </button>
             </div>
         </div>
     </div>
@@ -685,10 +690,7 @@
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
     </div>
     <!-- Premium Upgrade Button - Add this after your settings dropdown -->
-    <button id="premiumUpgradeBtn" class="premium-upgrade-btn" onclick="showPremiumModal()">
-        <i class="fa-solid fa-gem"></i>
-        <span id="premiumBtnText">Upgrade</span>
-    </button>
+
 
     <!-- Premium Modal - Add this before closing body tag -->
     <div id="premiumModal" class="premium-modal">

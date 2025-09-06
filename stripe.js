@@ -96,7 +96,7 @@ async function checkFirebasePremium(userId) {
                         const daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
 
                         activatePremium();
-                        showTrialStatus(daysRemaining);
+                        // showTrialStatus(daysRemaining);
                         return;
                     } else {
                         // Trial has expired
@@ -317,17 +317,17 @@ function activatePremium() {
         }
 
         // Update onclick handler
-        btn.onclick = function () {
-            if (premiumState.isActive && !premiumState.isTrial) {
-                // Show management options for paid premium users
-                if (confirm('Manage your Premium subscription?')) {
-                    cancelPremium();
-                }
-            } else {
-                // Show upgrade modal for trial users
-                showPremiumModal();
-            }
-        };
+        // btn.onclick = function () {
+        //     if (premiumState.isActive && !premiumState.isTrial) {
+        //         // Show management options for paid premium users
+        //         if (confirm('Manage your Premium subscription?')) {
+        //             cancelPremium();
+        //         }
+        //     } else {
+        //         // Show upgrade modal for trial users
+        //         showPremiumModal();
+        //     }
+        // };
     }
 
     // Enable all premium features
@@ -446,21 +446,21 @@ function activatePremium() {
     const btn = document.getElementById('premiumUpgradeBtn');
     if (btn) {
         btn.classList.add('premium-active');
-        document.getElementById('premiumBtnText').textContent = 'Premium';
+        // document.getElementById('premiumBtnText').textContent = 'Premium';
 
         // Add click handler to manage subscription
-        btn.onclick = function () {
-            if (premiumState.isActive) {
-                // Show management options
-                if (confirm('Manage your Premium subscription?')) {
-                    // You can add a management modal here
-                    // For now, just option to cancel
-                    cancelPremium();
-                }
-            } else {
-                showPremiumModal();
-            }
-        };
+        // btn.onclick = function () {
+        //     if (premiumState.isActive) {
+        //         // Show management options
+        //         if (confirm('Manage your Premium subscription?')) {
+        //             // You can add a management modal here
+        //             // For now, just option to cancel
+        //             cancelPremium();
+        //         }
+        //     } else {
+        //         showPremiumModal();
+        //     }
+        // };
     }
 
     // Enable all premium features

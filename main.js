@@ -2021,7 +2021,7 @@ function updateFragmentList(fragmentList) {
     fragments.forEach((fragment, index) => {
         const listItem = document.createElement('li');
         listItem.innerHTML = '';
-        listItem.textContent = `Fragment ${index + 1} (${fragment.length} atoms)`;
+        listItem.textContent = `Fragment ${index + 1}`;
         listItem.style.cursor = 'pointer';
         listItem.style.padding = '5px';
         listItem.style.margin = '2px';

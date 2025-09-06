@@ -337,11 +337,6 @@ body {
 
 
 
-.fancy-button:hover::before {
-    /* left: 100%; */
-    /* Smooth shine effect on hover */
-}
-
 .fancy-button:active {
     transform: translateY(0) scale(0.98);
     /* Subtle press-down effect */
@@ -830,7 +825,7 @@ input[type="range"]:focus {
 .dropdown-icon {
     font-size: 24px;
     cursor: pointer;
-    padding: 10px;
+    padding: 7px;
     background-color: #00000000;
     border-radius: 5px;
     display: inline-flex;
@@ -850,18 +845,9 @@ input[type="range"]:focus {
 }
 
 .dropdown.active .dropdown-icon {
-    background: linear-gradient(90deg,
-            #ff0000,
-            #ff9900,
-            #33cc33,
-            #00ccff,
-            #cc00ff,
-            #ff0000);
-    background-size: 200% 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: rainbow 3s linear infinite;
+    background-color: #a8e3fff0;
+    backdrop-filter: blur(10px);
+    color: #001442;
     transform: scale(1.2);
     transition: all 0.3s ease;
 }
@@ -933,8 +919,17 @@ input[type="range"]:focus {
 #premiumUpgradeBtn {
     display: flex !important;
     opacity: 1 !important;
-    visibility: visible !important;
     z-index: 10000 !important;
+    text-align: center !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 8px !important;
+    color: #fff !important;
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    margin-top: 10px;
 }
 
 /* Success notification style */
@@ -1264,7 +1259,7 @@ input[type="range"]:focus {
 /* Dropdown content */
 .dropdown-content {
     position: absolute;
-    top: 100%;
+    top: 140%;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
     background-color: #6464640c;
