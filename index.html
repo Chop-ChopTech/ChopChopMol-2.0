@@ -456,18 +456,18 @@
 
         function proceedToDonate() {
             const links = {
-                1: 'https://buy.stripe.com/cNi7sM2n6a2U722drC7Re00',
-                5: 'https://buy.stripe.com/14AfZi5zi6QI9aaevG7Re02',
-                10: 'https://buy.stripe.com/5kQ6oI5zidf61HI4V67Re03',
-                25: 'https://buy.stripe.com/14A3cw6Dmb6Y3PQdrC7Re04',
-                50: 'https://buy.stripe.com/9B6aEY4ve6QI3PQ2MY7Re05',
+                1: 'https://checkout.chopchopmol.com/b/cNi7sM2n6a2U722drC7Re00',
+                5: 'https://checkout.chopchopmol.com/b/14AfZi5zi6QI9aaevG7Re02',
+                10: 'https://checkout.chopchopmol.com/b/5kQ6oI5zidf61HI4V67Re03',
+                25: 'https://checkout.chopchopmol.com/b/14A3cw6Dmb6Y3PQdrC7Re04',
+                50: 'https://checkout.chopchopmol.com/b/9B6aEY4ve6QI3PQ2MY7Re05',
             };
 
             if (links[selectedAmount]) {
                 window.open(links[selectedAmount], '_blank');
             } else {
                 // For custom amounts, use the "customer chooses" link
-                window.open('https://buy.stripe.com/fZu00k2n6eja9aa4V67Re06', '_blank');
+                window.open('https://checkout.chopchopmol.com/b/fZu00k2n6eja9aa4V67Re06', '_blank');
             }
         }
     </script>
@@ -542,6 +542,7 @@
                     <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
                     <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255);"><i
                             class="fas fa-file-download"></i> Save XYZ</button>
+
                 </div>
             </div>
         </div>
@@ -556,9 +557,6 @@
                         class="fas fa-sign-out-alt"></i> Sign Out</button>
             </div>
         </div>
-
-
-        <!-- another checkpoint -->
     </div>
     <div id="selectionBox"></div>
 
@@ -629,6 +627,9 @@
     <div id="dragFile">
         <h3>Drag and drop a file here .xyz, .mol, or .pdb to be loaded</h3>
     </div>
+    <a href="https://info.chopchopmol.com" id="tutorialLinkButton"><i class="fas fa-info-circle"></i> Help</a>
+
+
 
     <div id="editMoleculePanel" class="on">
         <div id="editMoleculeContent">
