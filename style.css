@@ -866,7 +866,7 @@ input[type="range"]:focus {
 
     list-style: none;
     padding: 0;
-    margin: 0 auto;
+    margin-top: 7px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -876,6 +876,8 @@ input[type="range"]:focus {
     overflow-y: auto;
     overflow-x: hidden;
     padding-top: 35px;
+    justify-content: center;
+    /* background-color: #0056b3; */
 }
 
 #fragmentListContainer {
@@ -888,7 +890,7 @@ input[type="range"]:focus {
     padding: 10px 0;
     position: absolute;
     top: 0;
-    right: 0;
+    right: 8px;
     margin-right: 20px;
     margin-top: 10px;
     /* background-color: chartreuse; */
@@ -902,6 +904,8 @@ input[type="range"]:focus {
 #fragmentList li {
     margin: 5px 0;
     text-align: center;
+    width: fit-content;
+    padding: 16px 10px;
 }
 
 #selectionBox {

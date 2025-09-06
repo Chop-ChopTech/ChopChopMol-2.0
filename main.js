@@ -1954,12 +1954,14 @@ function updateEditingContent(element = null, color = null) {
         createFragmentButton.id = 'createFragment';
         createFragmentButton.textContent = 'Create Fragment';
         createFragmentButton.className = 'fancy-button';
-        createFragmentButton.style.backgroundColor = 'rgb(168, 146, 0)';
-        createFragmentButton.style.margin = '10px';
+        createFragmentButton.style.backgroundColor = 'rgb(114, 201, 0)';
+        createFragmentButton.style.margin = '15px';
         createFragmentButton.style.display = 'none';
         createFragmentButton.style.position = 'absolute';
         createFragmentButton.style.top = '0px';
         createFragmentButton.style.right = '0px';
+        createFragmentButton.style.width = "fit-content";
+
         document.body.appendChild(createFragmentButton);
 
         if (atomsSelected.length > 1) {
@@ -2027,6 +2029,8 @@ function updateFragmentList(fragmentList) {
         listItem.style.margin = '2px';
         listItem.style.borderRadius = '5px';
         listItem.style.transition = 'background-color 0.3s';
+        listItem.style.paddingLeft = '20px';
+        listItem.style.paddingRight = '20px';
         listItem.dataset.fragmentIndex = index;
 
         // Check if this fragment is currently selected
@@ -2047,6 +2051,8 @@ function updateFragmentList(fragmentList) {
                 background-color: rgb(255, 140, 0);
                 padding: 5px 10px;
                 font-size: 12px;
+                width: fit-content;
+
             `;
 
             isolateBtn.addEventListener('click', (e) => {
