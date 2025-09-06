@@ -847,7 +847,7 @@ input[type="range"]:focus {
 .dropdown.active .dropdown-icon {
     background-color: #a8e3fff0;
     backdrop-filter: blur(10px);
-    color: #001442;
+    color: #0038ba;
     transform: scale(1.2);
     transition: all 0.3s ease;
 }
