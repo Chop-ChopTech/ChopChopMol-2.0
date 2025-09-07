@@ -102,6 +102,8 @@ const editMoleculePanel = document.getElementById('editMoleculePanel');
 const editMoleculeButton = document.getElementById('editMolecule');
 const editMoleculeContent = document.getElementById('editMoleculeContent');
 const closeStyleSelectorButton = document.getElementById('closeStyleSelector');
+const initialCameraPosition = new THREE.Vector3(0, 0, 15);
+const initialCameraTarget = new THREE.Vector3(0, 0, 0);
 
 let dragging = false;
 let dragPlane = new THREE.Plane();
@@ -3560,6 +3562,31 @@ window.addEventListener('keyup', function (e) {
     }
 });
 
+
+
+// Reset camera function
+function resetCamera() {
+    // Reset camera position
+    camera.position.copy(initialCameraPosition);
+
+    // Reset camera rotation by looking at origin
+    camera.lookAt(initialCameraTarget);
+    camera.up.set(0, 1, 0);
+
+    // Reset controls target and update
+    if (controls) {
+        controls.target.copy(initialCameraTarget);
+        controls.reset();
+        controls.update();
+    }
+
+    // Trigger a render
+    if (typeof render !== 'undefined') {
+        render();
+    }
+    main.zoomCameraToFitMolecule();
+}
+window.resetCamera = resetCamera
 
 // Function to update bond length label position
 function updateBondLengthLabel(labelInfo) {
