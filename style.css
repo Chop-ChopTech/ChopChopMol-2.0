@@ -423,7 +423,7 @@ body {
 }
 
 .fancy-textbox {
-    padding: 12px;
+    padding: 12px 9px;
     border-radius: 10px;
     border: 2px solid #d1d5db;
     /* margin: 12px; */
@@ -439,6 +439,7 @@ body {
     /* Rounded corners */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 10px rgba(98, 0, 234, 0.5);
     /* Subtle shadow + glow */
+    height: 10px;
     outline: none;
     /* Remove default outline */
 }
@@ -591,9 +592,8 @@ body {
     left: 10px;
     z-index: 9999;
     background-color: #ffffff00;
-    width: 240px;
+    width: 250px;
     height: auto;
-    padding: 5px;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
@@ -607,15 +607,16 @@ body {
 }
 
 #editMoleculeContent {
-    background-color: #ffc40046;
-    width: 240px;
+    background-color: #ffbd8b1c;
+    width: fit-content;
     height: 100%;
     text-align: center;
     justify-content: center;
     align-items: center;
     display: flex;
     flex-direction: column;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(20px);
+    box-shadow: inset 0 0 10px rgba(125, 125, 125, 0.215), 10px 10px 20px rgba(0, 0, 0, 0.259);
     padding: 20px;
     border-radius: 10px;
 
@@ -1272,7 +1273,6 @@ input[type="range"]:focus {
     /* display: none; */
 
     min-width: 160px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     z-index: 1;
     border-radius: 10px;
     padding: 10px;
@@ -1286,6 +1286,20 @@ input[type="range"]:focus {
     justify-content: center;
     display: flex;
     flex-direction: column;
+    box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.134), 0 8px 16px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(180deg,
+            rgba(255, 255, 255, 0.183) 0%,
+            rgba(255, 255, 255, 0) 20%);
+    background-repeat: no-repeat;
+}
+
+.dropdown-content::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: url("https://grainy-gradients.vercel.app/noise.svg");
+    opacity: 0.1;
+    pointer-events: none;
 }
 
 /* Show dropdown on hover with fade-in and slide */
