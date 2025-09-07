@@ -1266,9 +1266,9 @@ input[type="range"]:focus {
     top: 140%;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
-    background-color: #6464640c;
+    /* background-color: #6464640c; */
 
-    /* background: linear-gradient(135deg, rgba(188, 94, 255, 0.13), rgba(100, 201, 255, 0.393)); */
+    background: linear-gradient(135deg, rgba(236, 210, 255, 0.025), rgba(178, 215, 255, 0.096));
     /* display: none; */
 
     min-width: 160px;
@@ -1279,7 +1279,7 @@ input[type="range"]:focus {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease, transform 0.3s ease;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     align-items: center;
     text-align: center;

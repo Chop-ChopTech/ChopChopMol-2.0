@@ -281,13 +281,7 @@
         window.deleteMolecule = deleteMolecule;
         window.currentUser = null;
 
-        const saveSection = document.getElementById('load-save-message');
-        if (saveSection) {
-            saveSection.style.display = 'none'
-            const prompt = document.createElement('div');
-            prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
-            saveSection.parentElement.insertBefore(prompt, saveSection);
-        }
+
 
         // Listen for auth state changes and update UI
         // In index.html, replace the onAuthStateChanged handler with this updated version:
@@ -507,7 +501,7 @@
                 <div class="dropdown-content" style="width: 200px;">
                     <div id="molecule-save-section">
                         <div id="load-save-message"></div>
-                        <input type="text" id="molecule-name-input" placeholder="Molecule name..." class="fancy-textbox"
+                        <input type="text" id="molecule-name-input" placeholder="Molecule name" class="fancy-textbox"
                             style="margin-top: 10px; margin-bottom: 10px; width: calc(100% - 40px);">
                         <button class="fancy-button" id="save-molecule-btn"
                             style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  width: 182px; margin-bottom: 10px;">

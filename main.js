@@ -2700,6 +2700,7 @@ function recreateRenderer(antialiasEnabled) {
     renderer.setPixelRatio(window.devicePixelRatio);
     document.body.appendChild(renderer.domElement);
     window.renderer = renderer;
+    console.log("Render Limits:", renderer.capabilities.maxInstances);
 
 
     // Recreate controls
