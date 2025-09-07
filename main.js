@@ -300,6 +300,7 @@ export default class Main {
             controls.target.copy(center);
             controls.update();
         }
+        render();
     }
 }
 
@@ -3585,6 +3586,7 @@ function resetCamera() {
         render();
     }
     main.zoomCameraToFitMolecule();
+    render();
 }
 window.resetCamera = resetCamera
 
