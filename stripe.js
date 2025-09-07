@@ -11,15 +11,21 @@ let premiumState = {
     userId: null
 };
 
+const STORAGE_LIMITS = {
+    free: 50,      // 50MB for free users  
+    premium: 5000  // 5GB for premium users
+};
+
 // Feature limits
 const FEATURE_LIMITS = {
     free: {
-        maxMolecules: 3,
-        maxAtoms: 500,
-        canExport: false,
-        canEdit: false,
-        canMeasure: false,
-        aiGenerations: 3
+        maxMolecules: Infinity,  // No limit for signed-in users
+        maxAtoms: Infinity,      // No limit for signed-in users
+        canExport: true,         // Allow for signed-in users
+        canEdit: true,           // Allow for signed-in users
+        canMeasure: true,        // Allow for signed-in users
+        aiGenerations: Infinity,  // No limit for signed-in users
+        maxStorage: STORAGE_LIMITS.free  // This is the ONLY limitation
     },
     premium: {
         maxMolecules: Infinity,
@@ -27,7 +33,8 @@ const FEATURE_LIMITS = {
         canExport: true,
         canEdit: true,
         canMeasure: true,
-        aiGenerations: Infinity
+        aiGenerations: Infinity,
+        maxStorage: STORAGE_LIMITS.premium
     }
 };
 
@@ -518,62 +525,26 @@ async function subscribeToPremium() {
 
 // Check if user can add molecule
 function canAddMolecule() {
-    const limits = premiumState.isActive ? FEATURE_LIMITS.premium : FEATURE_LIMITS.free;
+    // Always allow if signed in - no molecule count restrictions
+    if (window.auth?.currentUser) {
+        return true;
+    }
 
-    // Count current molecules in scene
-    const moleculeCount = window.main?.molecule?.getMoleculeCount() || 0;
+    // Only restrict if not signed in
+    showLimitNotification('Please sign in to add molecules');
+    return false;
+}
 
-    if (moleculeCount >= limits.maxMolecules) {
-        showLimitNotification(`Free tier limited to ${limits.maxMolecules} molecules`);
-        showPremiumModal();
+// Replace the canUsePremiumFeature function with this:
+function canUsePremiumFeature(feature) {
+    // If not signed in, restrict everything
+    if (!window.auth?.currentUser) {
+        showLimitNotification('Please sign in to use this feature');
         return false;
     }
 
+    // All features available for signed-in users
     return true;
-}
-
-// Check if user can use feature
-function canUsePremiumFeature(feature) {
-    const limits = premiumState.isActive ? FEATURE_LIMITS.premium : FEATURE_LIMITS.free;
-
-    switch (feature) {
-        case 'export':
-            if (!limits.canExport) {
-                showLimitNotification('Export requires Premium subscription');
-                showPremiumModal();
-                return false;
-            }
-            return true;
-
-        case 'edit':
-            if (!limits.canEdit) {
-                showLimitNotification('Editing tools require Premium');
-                showPremiumModal();
-                return false;
-            }
-            return true;
-
-        case 'measure':
-            if (!limits.canMeasure) {
-                showLimitNotification('Measurement tools require Premium');
-                showPremiumModal();
-                return false;
-            }
-            return true;
-
-        case 'ai':
-            // Check AI generation limit
-            const aiUsage = parseInt(localStorage.getItem('ai_usage_today') || '0');
-            if (!premiumState.isActive && aiUsage >= limits.aiGenerations) {
-                showLimitNotification(`Free tier limited to ${limits.aiGenerations} AI generations per day`);
-                showPremiumModal();
-                return false;
-            }
-            return true;
-
-        default:
-            return true;
-    }
 }
 
 // Show/hide premium modal

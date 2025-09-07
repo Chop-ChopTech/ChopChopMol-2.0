@@ -27,14 +27,6 @@
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
         import { collection, addDoc, getDocs, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-
-        // After initializing Firebase app
-
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
-
-        // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
         const firebaseConfig = {
             apiKey: "AIzaSyAAlbmJmNxVGJ3wv1KiyoFWJ86Ik31jY-w",
             authDomain: "chopchopmol-2.firebaseapp.com",
@@ -164,32 +156,147 @@
                 alert('Please sign in to save molecules');
                 return;
             }
-            if (!window.main.data || !window.main.data.atomData || window.main.data.atomData.length === 0) {
+
+            if (!window.main?.data?.atomData?.length) {
                 alert('No molecule loaded to save!');
                 return;
             }
 
-            if (!window.main || !window.main.data) {
-                alert('No molecule loaded to save');
+            // Calculate size in MB
+            const dataSize = new Blob([JSON.stringify(window.main.data)]).size / (1024 * 1024);
+
+            // Check storage limit
+            if (!await checkStorageLimit(dataSize)) {
                 return;
             }
 
             try {
+                // Save molecule
                 const moleculesRef = collection(db, 'users', user.uid, 'molecules');
                 await addDoc(moleculesRef, {
                     name: moleculeName,
                     data: window.main.data,
                     timestamp: serverTimestamp(),
-                    atomCount: window.main.data.numAtoms
+                    atomCount: window.main.data.numAtoms,
+                    size: dataSize
                 });
 
+                // Update storage usage
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                const currentUsage = userDoc.exists() ? (userDoc.data().storageUsed || 0) : 0;
+
+                await setDoc(doc(db, 'users', user.uid), {
+                    storageUsed: currentUsage + dataSize
+                }, { merge: true });
+
                 showSaveNotification('Molecule saved successfully!');
+                updateStorageIndicator();
                 return true;
             } catch (error) {
                 console.error('Error saving molecule:', error);
                 alert('Error saving molecule');
                 return false;
             }
+        }
+
+        async function updateStorageIndicator() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            try {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                const userData = userDoc.exists() ? userDoc.data() : {};
+
+                const used = userData.storageUsed || 0;
+                const isPremium = userData.premium || false;
+                const limit = isPremium ? 5000 : 50; // MB
+                const percentage = (used / limit) * 100;
+
+                // Update storage info in user status (even if hidden)
+                const storageInfo = document.getElementById('storageInfo');
+                if (storageInfo) {
+                    storageInfo.textContent = `${used.toFixed(2)}/${limit}MB used`;
+                    storageInfo.style.color = percentage > 90 ? '#ff9800' : '#4CAF50';
+                }
+
+                // Create or update floating storage indicator
+                let floatingIndicator = document.getElementById('floatingStorageIndicator');
+                if (!floatingIndicator) {
+                    floatingIndicator = document.createElement('div');
+                    floatingIndicator.id = 'floatingStorageIndicator';
+                    floatingIndicator.style.cssText = `
+                        position: fixed;
+                        top: 0px;
+                        right: 0px;
+                        background: rgba(0, 0, 0, 0.8);
+                        color: white;
+                        padding: 10px 15px;
+                        border-radius: 8px;
+                        font-size: 12px;
+                        z-index: 1000;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    `;
+                    document.body.appendChild(floatingIndicator);
+                }
+
+                // Update floating indicator content
+                floatingIndicator.innerHTML = `
+                    <div style="width: 100px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden;">
+                        <div style="width: ${percentage}%; height: 100%; background: ${percentage > 90 ? 'linear-gradient(90deg, #ff9800, #ff5722)' : 'linear-gradient(90deg, #4CAF50, #8BC34A)'}; transition: width 0.3s;"></div>
+                    </div>
+                    <span>${used.toFixed(2)} / ${limit < 1000 ? limit + 'MB' : (limit / 1000) + 'GB'}</span>
+                `;
+
+                // Add warning animation if near limit
+                if (percentage > 90 && !isPremium) {
+                    floatingIndicator.style.animation = 'pulse 2s infinite';
+
+                    // Add CSS for pulse animation if not exists
+                    if (!document.getElementById('storageAnimations')) {
+                        const style = document.createElement('style');
+                        style.id = 'storageAnimations';
+                        style.textContent = `
+                            @keyframes pulse {
+                                0%, 100% { opacity: 1; }
+                                50% { opacity: 0.7; }
+                            }
+                        `;
+                        document.head.appendChild(style);
+                    }
+                } else {
+                    floatingIndicator.style.animation = '';
+                }
+
+            } catch (error) {
+                console.error('Error updating storage indicator:', error);
+            }
+        }
+
+        async function checkStorageLimit(dataSize) {
+            const user = auth.currentUser;
+            if (!user) return false;
+
+            // Get user doc to check storage usage
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            const userData = userDoc.exists() ? userDoc.data() : {};
+
+            const currentUsage = userData.storageUsed || 0;
+            const isPremium = userData.premium || false;
+            const limit = isPremium ? 5000 : 50; // MB
+
+            if (currentUsage + dataSize > limit) {
+                if (!isPremium) {
+                    alert(`Storage limit reached (${limit}MB). Upgrade to Premium for 5GB storage.`);
+                    window.location.href = 'premium.html';
+                } else {
+                    alert('Premium storage limit reached (5GB)');
+                }
+                return false;
+            }
+
+            return true;
         }
 
         async function loadMoleculesList() {
@@ -293,7 +400,7 @@
                 // User is signed in
                 signInButton.style.display = 'none';
                 signOutButton.style.display = 'block';
-                userStatus.innerHTML = `Signed in as ${user.displayName}`;
+                userStatus.innerHTML = `<span id="storageInfo" style="font-size: 12px; margin-left: 10px;"></span>`;
                 userStatus.style.display = 'none';
 
                 // Get the dropdown icon and update it with user initials
@@ -317,6 +424,32 @@
                 window.currentUserEmail = user.email;
                 window.currentUser = user;
 
+                // ADDED: Check storage and premium status
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                const userData = userDoc.exists() ? userDoc.data() : {};
+                const isPremium = userData.premium || false;
+
+                // ADDED: Update premium state with storage info
+                premiumState.isActive = isPremium;
+                premiumState.storageLimit = isPremium ? 5000 : 50; // MB
+                premiumState.storageUsed = userData.storageUsed || 0;
+
+                // ADDED: Enable ALL features for signed-in users (not premium-dependent)
+                document.querySelectorAll('.tool-locked').forEach(tool => {
+                    tool.classList.remove('tool-locked');
+                    tool.removeAttribute('disabled');
+                });
+
+                // ADDED: Manage premium button based on subscription (for storage upgrade)
+                if (premiumBtn) {
+                    if (isPremium) {
+                        premiumBtn.style.display = 'none';
+                    } else {
+                        premiumBtn.style.display = 'block';
+                        premiumBtn.innerHTML = '<i class="fas fa-crown"></i> Upgrade Storage (50MB → 5GB)';
+                    }
+                }
+
                 // First dispatch a basic auth state (for immediate UI updates)
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: {
@@ -328,6 +461,9 @@
 
                 // Then check premium/trial status (this will dispatch another event with updated premium state)
                 await checkFirebasePremium(user.uid);
+
+                // ADDED: Update storage indicator after premium check
+                updateStorageIndicator();
 
                 // Load user's style preferences with appropriate delay
                 if (window.loadStylePreferences) {
@@ -365,6 +501,14 @@
                     makeDefaultBtn.style.display = 'none';
                 }
 
+                // ADDED: Lock features for non-signed-in users
+                document.querySelectorAll('[data-tool]').forEach(tool => {
+                    if (tool.dataset.tool !== 'view') { // Keep view tool unlocked
+                        tool.classList.add('tool-locked');
+                        tool.setAttribute('disabled', true);
+                    }
+                });
+
                 // Clear current user
                 window.currentUserEmail = null;
                 window.currentUser = null;
@@ -373,6 +517,9 @@
                 premiumState.isActive = false;
                 premiumState.isTrial = false;
                 premiumState.userId = null;
+                // ADDED: Reset storage info
+                premiumState.storageLimit = 0;
+                premiumState.storageUsed = 0;
 
                 // Notify main.js about auth state with premium state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {

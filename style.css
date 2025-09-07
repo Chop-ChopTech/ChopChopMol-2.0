@@ -807,12 +807,12 @@ input[type="range"]:focus {
 
 #userStatus {
     position: absolute;
-    top: 10px;
+    top: 7px;
     right: 10px;
-    padding: 5px 10px;
+    padding: 0px 0px;
     border-radius: 5px;
     color: #ffffff6a;
-    background-color: #1a5fcd39;
+    background-color: none;
 }
 
 /* Dropdown container */
