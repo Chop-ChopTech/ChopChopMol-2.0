@@ -3116,6 +3116,7 @@ function loopAround180(value) {
 
 document.addEventListener('DOMContentLoaded', () => {
     // Save molecule
+    // In main.js, update the save-molecule-btn event listener:
     document.getElementById('save-molecule-btn')?.addEventListener('click', async () => {
         const nameInput = document.getElementById('molecule-name-input');
         const name = nameInput.value.trim();
@@ -3128,6 +3129,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const saved = await saveMolecule(name);
         if (saved) {
             nameInput.value = '';
+
+            // FIX: Auto-refresh the list if it's visible
+            const select = document.getElementById('molecules-list');
+            if (select.style.display !== 'none') {
+                const molecules = await loadMoleculesList();
+                select.innerHTML = '<option value="">Select a molecule...</option>';
+                molecules.forEach(mol => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify(mol);
+                    option.textContent = `${mol.name} (${mol.atomCount} atoms)`;
+                    select.appendChild(option);
+                });
+            }
         }
     });
 

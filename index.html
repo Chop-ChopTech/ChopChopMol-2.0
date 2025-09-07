@@ -559,12 +559,7 @@
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <div class="donate-panel">
-        <button class="donate-btn" onclick="openDonateModal()">
-            <i class="fas fa-heart"></i>
-            Support
-        </button>
-    </div>
+
 
     <!-- Donation Modal -->
     <div class="donate-backdrop" onclick="closeDonateModal()"></div>
@@ -719,6 +714,14 @@
                     onclick="showPremiumModal()">
                     Subscription
                 </button>
+
+                <button class="donate-btn" onclick="openDonateModal()">
+                    <i class="fas fa-heart"></i>
+                    Donation
+                </button>
+                <a href="https://info.chopchopmol.com" id="tutorialLinkButton"><i class="fas fa-info-circle"></i>
+                    Help</a>
+
             </div>
         </div>
     </div>
@@ -791,7 +794,6 @@
     <div id="dragFile">
         <h3>Drag and drop a file here .xyz, .mol, or .pdb to be loaded</h3>
     </div>
-    <a href="https://info.chopchopmol.com" id="tutorialLinkButton"><i class="fas fa-info-circle"></i> Help</a>
 
 
 
