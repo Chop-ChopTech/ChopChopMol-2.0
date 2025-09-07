@@ -439,7 +439,7 @@ body {
     /* Rounded corners */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 10px rgba(98, 0, 234, 0.5);
     /* Subtle shadow + glow */
-    height: 10px;
+    height: 20px;
     outline: none;
     /* Remove default outline */
 }

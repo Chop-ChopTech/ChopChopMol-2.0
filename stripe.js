@@ -12,8 +12,8 @@ let premiumState = {
 };
 
 const STORAGE_LIMITS = {
-    free: 50,      // 50MB for free users  
-    premium: 5000  // 5GB for premium users
+    free: 0.5,      // 50MB for free users  
+    premium: 70  // 5GB for premium users
 };
 
 // Feature limits

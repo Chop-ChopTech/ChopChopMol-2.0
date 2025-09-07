@@ -209,7 +209,7 @@
 
                 const used = userData.storageUsed || 0;
                 const isPremium = userData.premium || false;
-                const limit = isPremium ? 5000 : 50; // MB
+                const limit = isPremium ? 70 : 0.5;
                 const percentage = (used / limit) * 100;
 
                 // Update storage info in user status (even if hidden)
@@ -284,14 +284,14 @@
 
             const currentUsage = userData.storageUsed || 0;
             const isPremium = userData.premium || false;
-            const limit = isPremium ? 5000 : 50; // MB
+            const limit = isPremium ? 70 : 0.5;
 
             if (currentUsage + dataSize > limit) {
                 if (!isPremium) {
-                    alert(`Storage limit reached (${limit}MB). Upgrade to Premium for 5GB storage.`);
+                    alert(`Storage limit reached (${limit}MB). Upgrade to Premium for 70MB storage.`);
                     window.location.href = 'premium.html';
                 } else {
-                    alert('Premium storage limit reached (5GB)');
+                    alert('Premium storage limit reached (75MB).');
                 }
                 return false;
             }
@@ -350,7 +350,21 @@
             if (!confirm('Delete this molecule?')) return;
 
             try {
+                // Get size before deleting
+                const moleculeDoc = await getDoc(doc(db, 'users', user.uid, 'molecules', moleculeId));
+                const size = moleculeDoc.data()?.size || 0;
+
+                // Delete
                 await deleteDoc(doc(db, 'users', user.uid, 'molecules', moleculeId));
+
+                // Update storage
+                const userRef = doc(db, 'users', user.uid);
+                const userDoc = await getDoc(userRef);
+                await setDoc(userRef, {
+                    storageUsed: Math.max(0, (userDoc.data()?.storageUsed || 0) - size)
+                }, { merge: true });
+
+                updateStorageIndicator();
                 showSaveNotification('Molecule deleted');
                 return true;
             } catch (error) {
@@ -431,7 +445,7 @@
 
                 // ADDED: Update premium state with storage info
                 premiumState.isActive = isPremium;
-                premiumState.storageLimit = isPremium ? 5000 : 50; // MB
+                premiumState.storageLimit = isPremium ? 70 : 0.5;
                 premiumState.storageUsed = userData.storageUsed || 0;
 
                 // ADDED: Enable ALL features for signed-in users (not premium-dependent)
@@ -446,7 +460,8 @@
                         premiumBtn.style.display = 'none';
                     } else {
                         premiumBtn.style.display = 'block';
-                        premiumBtn.innerHTML = '<i class="fas fa-crown"></i> Upgrade Storage (50MB → 5GB)';
+                        premiumBtn.innerHTML = '<i class="fas fa-crown"></i> Upgrade Storage (0.5MB → 70MB)';
+
                     }
                 }
 
