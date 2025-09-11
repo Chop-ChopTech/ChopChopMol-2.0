@@ -13,7 +13,8 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- <link rel="icon" href="favicon.ico" type="image/x-icon"> -->
+    <link rel="icon" href="molicon.png">
 </head>
 
 <body>
@@ -654,6 +655,8 @@
 
                 </div>
             </div>
+            <button class="dropdown-icon" id="reset-camera" style="border: none; margin-right: 10px;"
+                onclick="window.resetCamera()"><i class="fa-solid fa-arrows-to-eye"></i></button>
             <div class="dropdown" id="saveMoleculeToCloud">
                 <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
                 <div class="dropdown-content" style="width: 200px;">
@@ -696,10 +699,7 @@
 
                 </div>
             </div>
-            <button class="fancy-button" id="reset-camera"
-                style="background-color: #88ca1e; width: fit-content; bottom: 3px;" onclick="window.resetCamera()"><i
-                    class="fa-solid fa-camera-rotate"></i> Reset
-                Camera</button>
+
         </div>
 
         <div class="dropdown" id="settings">
