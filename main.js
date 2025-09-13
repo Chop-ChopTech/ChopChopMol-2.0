@@ -1529,7 +1529,6 @@ function isolateFragment(fragmentIndex) {
 
     console.log(`Fragment isolated. History length: ${isolationHistory.length}`);
 }
-// Fix in restoreOriginalMolecule function - replace the fragment mapping section:
 function restoreOriginalMolecule() {
     if (!originalMoleculeData) {
         console.error('No original molecule data to restore');
