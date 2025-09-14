@@ -497,9 +497,9 @@ switchModeButton.addEventListener('click', () => {
     styleSelector.classList.remove('on');
 });
 
-closeStyleSelectorButton.addEventListener('click', () => {
-    styleSelector.classList.add('on');
-});
+// closeStyleSelectorButton.addEventListener('click', () => {
+//     styleSelector.classList.add('on');
+// });
 document.addEventListener('click', function (event) {
     if (!styleSelector.contains(event.target)) {
         styleSelector.classList.add('on');
