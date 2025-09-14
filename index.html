@@ -330,15 +330,17 @@
             if (!moleculeData || !moleculeData.data) return;
 
             window.main.data = moleculeData.data;
+            console.log(moleculeData.data);
             window.main.newMolecule(
                 moleculeData.data,
-                window.main.mode || 0,
+                moleculeData.numAtoms <= 2000 ? 0 : 1,
                 false,
                 { x: 0, y: 0, z: 0 },
                 { x: 0, y: 0, z: 0 },
                 true,
                 true
             );
+            window.resetCamera()
 
             showSaveNotification(`Loaded: ${moleculeData.name}`);
         }
