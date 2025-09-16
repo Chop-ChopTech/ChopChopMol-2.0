@@ -503,19 +503,6 @@ saveImageButton.addEventListener('click', () => {
     saveImage();
 });
 
-
-// analyzeMoleculeButton.addEventListener('click', () => {
-//     const images = []
-//     const numImages = 3;
-//     for (let i = 0; i < numImages; i++) {
-//         const imgData = getScreenUrl();
-//         images.push(imgData)
-//         rotateCamera(Math.PI / (numImages / 2), camera, controls);
-//     }
-
-//     window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
-// })
-
 renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
 renderer.domElement.addEventListener('contextmenu', (event) => {
     event.preventDefault();
@@ -2570,8 +2557,6 @@ function finalizeRotation() {
         main.molecule.updateMainCoordinates();
     }
 
-    // Keep the current angle and state
-    // This allows for continued rotation from the new position
     console.log(`Rotation finalized at ${rotationState.currentAngle}°`);
 }
 
@@ -2867,8 +2852,6 @@ function selectFragment(fragmentAtoms, fragmentIndex) {
 
     colorAttr.needsUpdate = true;
 
-    // CRITICAL FIX: Reset rotation slider state when fragments are selected
-    // This ensures proper rotation behavior for newly selected fragments
     window.rotationSliderOn = true;  // Mark slider as needing reset
     window.translationSliderOn = true;  // Mark translation slider as needing reset
 
@@ -3040,19 +3023,6 @@ function rotateCamera(angleToRotate, camera, controls = null) {
     }
 }
 
-// Add this to your index.html after the Firebase auth initialization
-
-// Global variable to track authentication state
-
-
-// Function to save style preferences to Firestore
-
-
-// Function to recreate renderer with new antialias setting
-
-
-// Function to show notification
-
 window.addEventListener('authStateChanged', (event) => {
     const { user, isSignedIn, premiumState } = event.detail;
     premiumActive = premiumState.isActive
@@ -3201,7 +3171,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saved) {
             nameInput.value = '';
 
-            // FIX: Auto-refresh the list if it's visible
             const select = document.getElementById('molecules-list');
             if (select.style.display !== 'none') {
                 const molecules = await loadMoleculesList();
@@ -3815,14 +3784,12 @@ function updateBondLengthLabel(labelInfo) {
     }
 }
 
-// Function to update all bond length labels
 function updateAllBondLengthLabels() {
     bondLengthLabels.forEach(labelInfo => {
         updateBondLengthLabel(labelInfo);
     });
 }
 
-// Function to remove a specific bond length label
 function removeBondLengthLabel(index) {
     if (bondLengthLabels[index]) {
         // Remove the label from DOM
@@ -3840,7 +3807,6 @@ function removeBondLengthLabel(index) {
     }
 }
 
-// Function to clear all bond length labels
 function clearAllBondLengthLabels() {
     bondLengthLabels.forEach(labelInfo => {
         // Remove label from DOM
@@ -3975,8 +3941,6 @@ function removeContextMenu() {
     contextMenuOpen = false;
 }
 
-// Modify your existing onPointerDown function to add right-click handling
-// Add this to your onPointerDown function after the existing left-click logic:
 function enhancedOnPointerDown(event) {
     // Call your existing onPointerDown logic first for left clicks
     if (event.button === 0) {
@@ -4016,36 +3980,20 @@ document.addEventListener('click', (event) => {
     }
 });
 
-// Add to your render/animation loop to update label positions
-// Add this to your existing render() function:
-function enhancedRender() {
-    // Call your existing render function
-    render();
-
-    // Update bond length labels
-    updateAllBondLengthLabels();
-}
-
-// Hook into camera controls to update labels when view changes
 if (controls) {
     controls.addEventListener('change', () => {
         updateAllBondLengthLabels();
     });
 }
 
-// Update labels when atoms are moved
-// Add this to your atom movement functions (like in onPointerMove when dragging atoms)
 function onAtomsMoved() {
     updateAllBondLengthLabels();
 }
 
-// Clear labels when molecule is reset or changed
-// Add this to your molecule reset/clear functions
 function onMoleculeReset() {
     clearAllBondLengthLabels();
 }
 
-// Optional: Add keyboard shortcut to toggle bond length display
 document.addEventListener('keydown', (event) => {
     // Press 'B' to show/hide measurements
     if (event.key === 'b' || event.key === 'B') {
