@@ -46,7 +46,6 @@ export function restrictFeatures() {
         'compareButton',
         'analyze-molecule',
         'clear-canvas',
-        'switchMode',
     ];
 
     restrictedButtons.forEach(buttonId => {

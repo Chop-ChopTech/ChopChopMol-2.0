@@ -207,11 +207,11 @@ body {
 
 #switchMode {
     color: #ffffff;
-    background-color: rgb(47, 113, 212);
     padding: 8px 11px;
     border: none;
     cursor: pointer;
     border-radius: 5px;
+    z-index: 999;
 }
 
 .snake-container {
