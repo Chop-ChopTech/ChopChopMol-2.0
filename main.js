@@ -29,13 +29,7 @@ import {
     resetToDefaults,
 
 } from './handleStyles.js';
-// WE WILL NOW TRY TO MAKE THIS AMAZING WEBSITE AN APP. IT MAY GO AMAZINGLY OR IT MAY GO HORRIBLY.
-// It went well!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// Please refer the the README.md file for more information
-// CLEANUP TIME!!!!
 
-
-// Setup scene
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -44,7 +38,6 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-// const controls = new OrbitControls(camera, renderer.domElement);
 let controls = new ArcballControls(camera, renderer.domElement);
 
 controls.rotateSpeed = 5.0;
@@ -87,7 +80,6 @@ const mouse = new THREE.Vector2();
 
 scene.add(light);
 scene.add(ambientLight);
-// testing 123
 camera.position.z = 15;
 let mode = 0;
 let antialiasToggled = false
@@ -96,7 +88,6 @@ let labelMode = false; // Track label mode
 const switchModeButton = document.getElementById('switchMode');
 const toggleLabelsButton = document.getElementById('toggleLabels');
 const saveImageButton = document.getElementById('captureScreen');
-const clearSceneButton = document.getElementById('clear-canvas');
 const analyzeMoleculeButton = document.getElementById('analyze-molecule');
 const editMoleculePanel = document.getElementById('editMoleculePanel');
 const editMoleculeButton = document.getElementById('editMolecule');
@@ -158,17 +149,13 @@ export default class Main {
         this.atoms = [];
         this.bonds = [];
 
-        // Properly dispose of the instanced mesh
         if (this.instancedMesh) {
-            // Remove from scene
             this.main.scene.remove(this.instancedMesh);
 
-            // Dispose geometry
             if (this.instancedMesh.geometry) {
                 this.instancedMesh.geometry.dispose();
             }
 
-            // Dispose material
             if (this.instancedMesh.material) {
                 if (Array.isArray(this.instancedMesh.material)) {
                     this.instancedMesh.material.forEach(mat => mat.dispose());
@@ -182,7 +169,6 @@ export default class Main {
 
         // Clear bond group
         if (this.bondGroup) {
-            // Remove all children and dispose
             while (this.bondGroup.children.length > 0) {
                 const child = this.bondGroup.children[0];
                 this.bondGroup.remove(child);
@@ -206,7 +192,6 @@ export default class Main {
         atomsSelected = [];
         hoveredAtom = null;
 
-        // Clear any axis definitions
         if (!soft) {
             rotationAxis = null;
             axisAtoms = [];
@@ -225,7 +210,6 @@ export default class Main {
         }
         this.molecule.reset();
 
-        // editMoleculePanel.classList.add('on');
         clearScene(this.scene);
         labels.forEach(label => {
             createInfoLabel(label[0], label[1], label[2] ?? null, label[3] ?? null);
@@ -246,8 +230,6 @@ export default class Main {
             this.toggleLabels(true);
             this.molecule.updateLabels();
         }
-        // resetIsolationState();
-        // storeOriginalMolecule();
         render();
 
     }
@@ -493,7 +475,8 @@ window.addEventListener('resize', () => {
     render()
 });
 
-switchModeButton.addEventListener('click', () => {
+switchModeButton.addEventListener('click', (e) => {
+    e.stopPropagation();
     styleSelector.classList.remove('on');
 });
 
@@ -501,7 +484,7 @@ switchModeButton.addEventListener('click', () => {
 //     styleSelector.classList.add('on');
 // });
 document.addEventListener('click', function (event) {
-    if (!styleSelector.contains(event.target)) {
+    if (!styleSelector.contains(event.target) && event.target.id !== 'switchMode' && !event.target.closest('#switchMode')) {
         styleSelector.classList.add('on');
     }
 });
@@ -520,9 +503,7 @@ saveImageButton.addEventListener('click', () => {
     saveImage();
 });
 
-clearSceneButton.addEventListener('click', () => {
-    main.reset();
-});
+
 // analyzeMoleculeButton.addEventListener('click', () => {
 //     const images = []
 //     const numImages = 3;

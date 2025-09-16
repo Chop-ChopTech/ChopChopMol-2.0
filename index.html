@@ -406,8 +406,6 @@
 
 
 
-        // Listen for auth state changes and update UI
-        // In index.html, replace the onAuthStateChanged handler with this updated version:
 
         onAuthStateChanged(auth, async (user) => {
             const premiumBtn = document.getElementById('premiumUpgradeBtn');
@@ -419,33 +417,26 @@
                 userStatus.innerHTML = `<span id="storageInfo" style="font-size: 12px; margin-left: 10px;"></span>`;
                 userStatus.style.display = 'none';
 
-                // Get the dropdown icon and update it with user initials
                 const dropdownIcon = document.querySelector('#settings .dropdown-icon');
                 const userInitials = getUserInitials(user.displayName);
 
-                // Replace the generic user icon with initials
                 dropdownIcon.innerHTML = `<div class="user-initials">${userInitials}</div>`;
                 dropdownIcon.classList.add('signed-in');
 
-                // Add tooltip with full name on hover
                 dropdownIcon.title = `Signed in as ${user.displayName}`;
 
-                // Show the Make Default button
                 const makeDefaultBtn = document.getElementById('makeDefaultButton');
                 if (makeDefaultBtn) {
                     makeDefaultBtn.style.display = 'block';
                 }
 
-                // Store current user
                 window.currentUserEmail = user.email;
                 window.currentUser = user;
 
-                // ADDED: Check storage and premium status
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 const userData = userDoc.exists() ? userDoc.data() : {};
                 const isPremium = userData.premium || false;
 
-                // ADDED: Update premium state with storage info
                 premiumState.isActive = isPremium;
                 premiumState.storageLimit = isPremium ? 70 : 0.5;
                 premiumState.storageUsed = userData.storageUsed || 0;
@@ -456,7 +447,6 @@
                     tool.removeAttribute('disabled');
                 });
 
-                // ADDED: Manage premium button based on subscription (for storage upgrade)
                 if (premiumBtn) {
                     if (isPremium) {
                         premiumBtn.style.display = 'none';
@@ -466,8 +456,6 @@
 
                     }
                 }
-
-                // First dispatch a basic auth state (for immediate UI updates)
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: {
                         user: user,
@@ -475,11 +463,7 @@
                         premiumState: premiumState
                     }
                 }));
-
-                // Then check premium/trial status (this will dispatch another event with updated premium state)
                 await checkFirebasePremium(user.uid);
-
-                // ADDED: Update storage indicator after premium check
                 updateStorageIndicator();
 
                 // Load user's style preferences with appropriate delay
@@ -496,29 +480,23 @@
                 console.log('Current user email:', window.currentUserEmail);
 
             } else {
-                // User is signed out
                 signInButton.style.display = 'block';
                 signOutButton.style.display = 'none';
                 userStatus.style.display = 'none';
-
-                // Hide premium button when signed out
                 if (premiumBtn) {
                     premiumBtn.style.display = 'none';
                 }
 
-                // Reset the dropdown icon to the generic user icon
                 const dropdownIcon = document.querySelector('#settings .dropdown-icon');
                 dropdownIcon.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
                 dropdownIcon.classList.remove('signed-in');
                 dropdownIcon.title = '';
 
-                // Hide the Make Default button
                 const makeDefaultBtn = document.getElementById('makeDefaultButton');
                 if (makeDefaultBtn) {
                     makeDefaultBtn.style.display = 'none';
                 }
 
-                // ADDED: Lock features for non-signed-in users
                 document.querySelectorAll('[data-tool]').forEach(tool => {
                     if (tool.dataset.tool !== 'view') { // Keep view tool unlocked
                         tool.classList.add('tool-locked');
@@ -526,19 +504,14 @@
                     }
                 });
 
-                // Clear current user
                 window.currentUserEmail = null;
                 window.currentUser = null;
-
-                // Reset premium state
                 premiumState.isActive = false;
                 premiumState.isTrial = false;
                 premiumState.userId = null;
-                // ADDED: Reset storage info
                 premiumState.storageLimit = 0;
                 premiumState.storageUsed = 0;
 
-                // Notify main.js about auth state with premium state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: {
                         user: null,
@@ -547,9 +520,7 @@
                     }
                 }));
 
-                // IMPORTANT: Reset styles to defaults when signing out
                 if (window.resetToDefaults) {
-                    // Small delay to ensure everything is initialized
                     setTimeout(() => {
                         window.resetToDefaults();
                     }, 100);
@@ -561,9 +532,6 @@
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-
-    <!-- Donation Modal -->
     <div class="donate-backdrop" onclick="closeDonateModal()"></div>
     <div class="donate-modal">
         <button class="donate-close" onclick="closeDonateModal()">&times;</button>
@@ -619,12 +587,10 @@
             if (links[selectedAmount]) {
                 window.open(links[selectedAmount], '_blank');
             } else {
-                // For custom amounts, use the "customer chooses" link
                 window.open('https://checkout.chopchopmol.com/b/fZu00k2n6eja9aa4V67Re06', '_blank');
             }
         }
     </script>
-    <!-- Buttons with new toggle labels button -->
     <div id="buttons">
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
         <input id="compare" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
@@ -633,20 +599,13 @@
                 <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
                 </span>
                 <div class="dropdown-content" style="left: 50%;">
-                    <!-- <button class="fancy-button" id="aiGenerate"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
-                    Generate</button> -->
                     <button class="fancy-button" id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
-                    <!-- <button class="fancy-button" id="import-smiles"><i class="fas fa-vial"></i> Load SMILES string</button> -->
                     <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
                         JSON</button>
-                    <!-- <button class="fancy-button" id="compareButton">Compare</button> -->
-
-
                 </div>
             </div>
 
             <button class="dropdown-icon" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
-            <button class="fancy-button" id="clear-canvas"><i class="fa-solid fa-trash"></i> Clear</button>
 
             <button class="dropdown-icon" id="reset-camera" style="border: none; margin-right: 10px;"
                 onclick="window.resetCamera()"><i class="fa-solid fa-arrows-to-eye"></i></button>
