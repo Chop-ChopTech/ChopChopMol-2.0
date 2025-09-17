@@ -1502,6 +1502,8 @@ function isolateFragment(fragmentIndex) {
     );
 
     main.data = newData;
+    resetCamera();
+
 
     updateIsolationModeUI();
 
@@ -1658,6 +1660,7 @@ function restoreOriginalMolecule() {
     );
 
     main.data = restoredData;
+    resetCamera();
 
     const fragmentList = document.getElementById('fragmentList');
     if (fragmentList) {
