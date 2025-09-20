@@ -1048,7 +1048,8 @@ function onPointerMove(event) {
             updateAtomMatrix(idx);
         });
         main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-        main.molecule.updateBonds(mode);
+        mode = main.mode
+        main.molecule.updateBonds(main.mode);
 
         updateAllBondLengthLabels(); // ADD THIS LINE
         render();
@@ -1080,7 +1081,8 @@ function onPointerMove(event) {
     updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
 
     // Update bonds
-    main.molecule.updateBonds(mode);
+    mode = main.mode
+    main.molecule.updateBonds(main.mode);
     if (main.molecule.labels && main.molecule.labels.length > 0) {
         main.molecule.updateLabels();
         render()
@@ -1490,7 +1492,7 @@ function isolateFragment(fragmentIndex) {
     resetRotationState();
 
     isInIsolationMode = true;
-
+    main.mode = newData.numAtoms <= 2000 ? 1 : 0
     main.newMolecule(
         newData,
         main.mode,
@@ -2050,7 +2052,7 @@ function updateFragmentList(fragmentList) {
     // Add "Show All Fragments" button if in isolation mode
     if (isInIsolationMode) {
         const showAllBtn = document.createElement('button');
-        showAllBtn.textContent = '← Back to Full Molecule';
+        showAllBtn.textContent = 'Back to Full Molecule';
         showAllBtn.className = 'fancy-button';
         showAllBtn.style.cssText = `
             display: block;
@@ -2582,6 +2584,7 @@ function updateRotationUI(angle) {
 }
 
 function updateMoleculeVisualization() {
+    mode = main.mode
     if (main?.molecule) {
         // Update instanced mesh
         if (main.molecule.instancedMesh) {
@@ -2590,7 +2593,7 @@ function updateMoleculeVisualization() {
 
         // Update bonds
         if (main.molecule.updateBonds) {
-            main.molecule.updateBonds(mode);
+            main.molecule.updateBonds(main.mode);
         }
 
         // Update labels
@@ -3599,7 +3602,8 @@ function performRotationFromBase(targetAngle, atomIndices) {
 
     // Update the molecule
     main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-    main.molecule.updateBonds(mode);
+    mode = main.mode
+    main.molecule.updateBonds(main.mode);
     if (main.molecule.labels && main.molecule.labels.length > 0) {
         main.molecule.updateLabels();
     }
