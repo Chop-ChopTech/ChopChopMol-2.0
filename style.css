@@ -875,7 +875,7 @@ input[type="range"]:focus {
     background: linear-gradient(135deg, rgba(236, 210, 255, 0.025), rgba(178, 215, 255, 0.096)) !important;
     z-index: -999999999999999;
     border-radius: 10px;
-    padding: 10px;
+    padding: 2px 10px;
     transition: opacity 0.3s ease, transform 0.3s ease;
     border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
