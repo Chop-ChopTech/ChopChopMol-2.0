@@ -581,7 +581,11 @@ body {
     gap: 10px;
     color: #ffffff;
     backdrop-filter: blur(15px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 5px 5px 5px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
+    box-shadow:
+        0 4px 10px rgba(0, 0, 0, 0.513),
+        inset 5px 5px 5px rgba(255, 255, 255, 0.326),
+        inset -8px -8px 16px rgba(255, 255, 255, 0.285),
+        inset 8px -8px 16px rgba(0, 0, 0, 0.459);
     transform: translate(0%, 50%);
 
 }
@@ -852,7 +856,7 @@ input[type="range"]:focus {
 
 /* Show dropdown when active class is present */
 .dropdown.active .dropdown-content {
-    display: block;
+    display: flex;
     opacity: 1;
     pointer-events: auto;
     transform: translateX(-50%) translateY(0);
@@ -1292,7 +1296,6 @@ input[type="range"]:focus {
     top: 140%;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
-    background: linear-gradient(135deg, rgba(236, 210, 255, 0.025), rgba(178, 215, 255, 0.096)) !important;
     min-width: 160px;
     z-index: 1;
     border-radius: 20px;
@@ -1300,7 +1303,7 @@ input[type="range"]:focus {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease, transform 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    /* border: 1px solid rgba(255, 255, 255, 0.1); */
     backdrop-filter: blur(10px) !important;
     align-items: center;
     text-align: center;
@@ -1311,6 +1314,8 @@ input[type="range"]:focus {
     background: linear-gradient(180deg,
             rgba(255, 255, 255, 0.183) 0%,
             rgba(255, 255, 255, 0) 20%) !important;
+    background: none;
+
     background-repeat: no-repeat !important;
 }
 
@@ -1318,7 +1323,6 @@ input[type="range"]:focus {
     content: "";
     position: fixed;
     inset: 0;
-    background: url("https://grainy-gradients.vercel.app/noise.svg");
     opacity: 0.1;
     pointer-events: none;
 }
