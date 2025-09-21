@@ -727,22 +727,25 @@
             <input type="checkbox" id="toggleLabels">
             <span>Toggle Atom labels</span>
         </div>
-        <button class="fancy-button" id="makeDefaultButton" style="
+        <button class="fancy-button glass" id="makeDefaultButton" style="
             margin-top: 20px;
             width: 100%;
+            height: 35px;
+            border-radius: 30px;
             padding: 10px;
-            background: linear-gradient(135deg, #2e4ac7 0%, #702eb1 100%);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 1px 1px 3px rgba(255, 255, 255, 0.795), inset -3px -3px 6px rgba(255, 255, 255, 0.285);
+            background: linear-gradient(135deg, #667eea57 0%, #764ba26b 100%);
             display: none;">
             <i class="fas fa-save"></i> Make Default
         </button>
-        <button class="fancy-button" id="resetToDefaultButton" style="
+        <button class="fancy-button glass" id="resetToDefaultButton" style="
             margin-top: 20px;
             width: 100%;
+            height: 35px;
+            border-radius: 30px;
             padding: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513);
-
-            background: linear-gradient(135deg, #ed5544 0%, #c9bc2a 100%);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 1px 1px 3px rgba(255, 255, 255, 0.795), inset -3px -3px 6px rgba(255, 255, 255, 0.285);
+            background: linear-gradient(135deg, #eaac6657 0%, #d950506b 100%);
             ">
             <i class="fa-solid fa-arrow-rotate-left"></i> Reset to Default
         </button>
@@ -908,7 +911,6 @@
                     this.offset = 10;
 
                     this.createElements();
-                    this.setupDrag();
                     this.updateShader();
                     this.appendTo(document.body);
                 }
@@ -917,9 +919,6 @@
                     // Container
                     this.container = this.el;
                     Object.assign(this.container.style, {
-                        position: 'fixed',
-                        overflow: 'hidden',
-                        cursor: 'grab',
                         backdropFilter: `url(#${this.id}_filter) blur(5.25px) contrast(1.02) brightness(1.05) saturate(0.8)`,
                         zIndex: 9999,
                         pointerEvents: 'auto'
