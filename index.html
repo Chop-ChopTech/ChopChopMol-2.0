@@ -646,7 +646,7 @@
                 <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
                 <div class="dropdown-content">
                     <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
-                    <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255);"><i
+                    <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255); "><i
                             class="fas fa-file-download"></i> Save XYZ</button>
 
                 </div>
@@ -656,8 +656,8 @@
 
         <div class="dropdown" id="settings">
             <span class="dropdown-icon" style="font-size: 35px;"><i class="fa-solid fa-circle-user"></i></span>
-            <div class="dropdown-content"
-                style="left: 100px; align-items: center; justify-content: center; display: flex; flex-direction: column;">
+            <div class="dropdown-content "
+                style="left: 100px; align-items: center; justify-content: center; display: flex; flex-direction: column; ">
 
                 <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
                     Google</button>
@@ -683,7 +683,7 @@
 
     <!-- Add this below #buttons to show user info -->
     <div id="userStatus" style="color: white;"></div>
-    <div id="styleSelector" class="on ">
+    <div id="styleSelector" class="on glass" style="border-radius: 30px; width: 300px; height: 100vh;">
         <!-- <button id="closeStyleSelector" class="dismiss"
             style="align-self: flex-end; position: absolute; font-weight: bold; "><i
                 class="fa-solid fa-xmark"></i></button> -->
@@ -866,6 +866,203 @@
         //compareButton.addEventListener('click', () => {
         //    compareFileInput.click();
         //}); 
+    </script>
+    <script>
+        (function () {
+            'use strict';
+
+            // --- Utilities ---
+            const Utils = {
+                smoothStep(a, b, t) {
+                    t = Math.max(0, Math.min(1, (t - a) / (b - a)));
+                    return t * t * (3 - 2 * t);
+                },
+                length(x, y) {
+                    return Math.sqrt(x * x + y * y);
+                },
+                roundedRectSDF(x, y, width, height, radius) {
+                    const qx = Math.abs(x) - width + radius;
+                    const qy = Math.abs(y) - height + radius;
+                    return Math.min(Math.max(qx, qy), 0) + Utils.length(Math.max(qx, 0), Math.max(qy, 0)) - radius;
+                },
+                texture(x, y) {
+                    return { type: 't', x, y };
+                },
+                generateId() {
+                    return 'liquid-glass-' + Math.random().toString(36).substr(2, 9);
+                }
+            };
+
+            // --- Shader / Liquid Glass Class ---
+            class LiquidGlass {
+                constructor(element, { width, height, fragment }) {
+                    this.el = element;
+                    const rect = element.getBoundingClientRect();
+                    this.width = width || rect.width || 300;
+                    this.height = height || rect.height || 200;
+                    this.fragment = fragment || ((uv) => Utils.texture(uv.x, uv.y));
+                    this.canvasDPI = 1;
+                    this.id = Utils.generateId();
+                    this.mouse = { x: 0, y: 0 };
+                    this.mouseUsed = false;
+                    this.offset = 10;
+
+                    this.createElements();
+                    this.setupDrag();
+                    this.updateShader();
+                    this.appendTo(document.body);
+                }
+
+                createElements() {
+                    // Container
+                    this.container = this.el;
+                    Object.assign(this.container.style, {
+                        position: 'fixed',
+                        overflow: 'hidden',
+                        cursor: 'grab',
+                        backdropFilter: `url(#${this.id}_filter) blur(5.25px) contrast(1.02) brightness(1.05) saturate(0.8)`,
+                        zIndex: 9999,
+                        pointerEvents: 'auto'
+                    });
+
+                    // SVG Filter
+                    this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    Object.assign(this.svg.style, { position: 'fixed', top: 0, left: 0, pointerEvents: 'none', zIndex: 9998 });
+                    this.svg.setAttribute('width', '0'); this.svg.setAttribute('height', '0');
+
+                    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                    const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+                    filter.setAttribute('id', this.id + '_filter');
+                    filter.setAttribute('filterUnits', 'userSpaceOnUse');
+                    filter.setAttribute('colorInterpolationFilters', 'sRGB');
+                    filter.setAttribute('x', '0'); filter.setAttribute('y', '0');
+                    filter.setAttribute('width', this.width); filter.setAttribute('height', this.height);
+
+                    this.feImage = document.createElementNS('http://www.w3.org/2000/svg', 'feImage');
+                    this.feImage.setAttribute('id', this.id + '_map');
+                    this.feImage.setAttribute('width', this.width); this.feImage.setAttribute('height', this.height);
+
+                    this.feDisplacementMap = document.createElementNS('http://www.w3.org/2000/svg', 'feDisplacementMap');
+                    this.feDisplacementMap.setAttribute('in', 'SourceGraphic');
+                    this.feDisplacementMap.setAttribute('in2', this.id + '_map');
+                    this.feDisplacementMap.setAttribute('xChannelSelector', 'R');
+                    this.feDisplacementMap.setAttribute('yChannelSelector', 'G');
+
+                    filter.appendChild(this.feImage);
+                    filter.appendChild(this.feDisplacementMap);
+                    defs.appendChild(filter);
+                    this.svg.appendChild(defs);
+
+                    // Hidden Canvas
+                    this.canvas = document.createElement('canvas');
+                    this.canvas.width = this.width * this.canvasDPI;
+                    this.canvas.height = this.height * this.canvasDPI;
+                    this.canvas.style.display = 'none';
+                    this.ctx = this.canvas.getContext('2d');
+                }
+
+                constrainPosition(x, y) {
+                    const minX = this.offset, minY = this.offset;
+                    const maxX = window.innerWidth - this.width - this.offset;
+                    const maxY = window.innerHeight - this.height - this.offset;
+                    return { x: Math.max(minX, Math.min(maxX, x)), y: Math.max(minY, Math.min(maxY, y)) };
+                }
+
+                setupDrag() {
+                    let isDragging = false, startX, startY, initX, initY;
+                    this.container.addEventListener('mousedown', (e) => {
+                        isDragging = true; this.container.style.cursor = 'grabbing';
+                        startX = e.clientX; startY = e.clientY;
+                        const rect = this.container.getBoundingClientRect();
+                        initX = rect.left; initY = rect.top;
+                        e.preventDefault();
+                    });
+                    document.addEventListener('mousemove', (e) => {
+                        if (isDragging) {
+                            const newPos = this.constrainPosition(initX + e.clientX - startX, initY + e.clientY - startY);
+                            this.container.style.left = newPos.x + 'px';
+                            this.container.style.top = newPos.y + 'px';
+                            this.container.style.transform = 'none';
+                        }
+                        const rect = this.container.getBoundingClientRect();
+                        this.mouse.x = (e.clientX - rect.left) / rect.width;
+                        this.mouse.y = (e.clientY - rect.top) / rect.height;
+                        if (this.mouseUsed) this.updateShader();
+                    });
+                    document.addEventListener('mouseup', () => { isDragging = false; this.container.style.cursor = 'grab'; });
+                    window.addEventListener('resize', () => {
+                        const rect = this.container.getBoundingClientRect();
+                        const newPos = this.constrainPosition(rect.left, rect.top);
+                        this.container.style.left = newPos.x + 'px';
+                        this.container.style.top = newPos.y + 'px';
+                        this.container.style.transform = 'none';
+                    });
+                }
+
+                updateShader() {
+                    const mouseProxy = new Proxy(this.mouse, { get: (t, p) => { this.mouseUsed = true; return t[p]; } });
+                    this.mouseUsed = false;
+
+                    const w = this.width * this.canvasDPI, h = this.height * this.canvasDPI;
+                    const data = new Uint8ClampedArray(w * h * 4);
+                    let maxScale = 0, rawValues = [];
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        const x = (i / 4) % w, y = Math.floor(i / 4 / w);
+                        const pos = this.fragment({ x: x / w, y: y / h }, mouseProxy);
+                        const dx = pos.x * w - x, dy = pos.y * h - y;
+                        maxScale = Math.max(maxScale, Math.abs(dx), Math.abs(dy));
+                        rawValues.push(dx, dy);
+                    }
+
+                    maxScale *= 0.5;
+                    let idx = 0;
+                    for (let i = 0; i < data.length; i += 4) {
+                        data[i] = (rawValues[idx++] / maxScale + 0.5) * 255;
+                        data[i + 1] = (rawValues[idx++] / maxScale + 0.5) * 255;
+                        data[i + 2] = 0; data[i + 3] = 255;
+                    }
+
+                    this.ctx.putImageData(new ImageData(data, w, h), 0, 0);
+                    this.feImage.setAttributeNS('http://www.w3.org/1999/xlink', 'href', this.canvas.toDataURL());
+                    this.feDisplacementMap.setAttribute('scale', (maxScale * 2 / this.canvasDPI).toString());
+                }
+
+                appendTo(parent) {
+                    parent.appendChild(this.svg);
+                }
+
+                destroy() {
+                    this.svg.remove();
+                    // don't remove this.el, it's user content
+                    this.canvas.remove();
+                }
+            }
+
+            // --- Initialize all .glass divs ---
+            function initGlassDivs() {
+                const glassDivs = document.querySelectorAll('.glass');
+                window.liquidGlassInstances = [];
+                glassDivs.forEach(div => {
+                    const borderRadius = div.style.borderRadius
+                    console.log(borderRadius)
+                    const instance = new LiquidGlass(div, {
+                        fragment: (uv, mouse) => {
+                            const ix = uv.x - 0.5, iy = uv.y - 0.5;
+                            const distance = Utils.roundedRectSDF(ix, iy, 0.3, 0.2, parseInt(borderRadius, 10) / 90);
+                            const displacement = Utils.smoothStep(0.8, 0, distance - 0.15);
+                            const scaled = Utils.smoothStep(0, 1, displacement);
+                            return Utils.texture(ix * scaled + 0.5, iy * scaled + 0.5);
+                        }
+                    });
+                    window.liquidGlassInstances.push(instance);
+                });
+                console.log(`${glassDivs.length} Liquid Glass instances created!`);
+            }
+
+            initGlassDivs();
+
+        })();
     </script>
     <script>
         let _reply = null;
