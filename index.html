@@ -13,6 +13,8 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
+    <!-- <link rel="icon" href="favicon.ico" type="image/x-icon"> -->
+    <link rel="icon" href="molicon.png">
 </head>
 
 <body>
@@ -26,14 +28,6 @@
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
         import { collection, addDoc, getDocs, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-
-        // After initializing Firebase app
-
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
-
-        // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
         const firebaseConfig = {
             apiKey: "AIzaSyAAlbmJmNxVGJ3wv1KiyoFWJ86Ik31jY-w",
             authDomain: "chopchopmol-2.firebaseapp.com",
@@ -81,13 +75,56 @@
 
         // Handle sign-out
         signOutButton.addEventListener('click', () => {
-            signOut(auth)
-                .then(() => {
-                    console.log('Signed out');
-                })
-                .catch((error) => {
-                    console.error('Sign-out error:', error);
-                });
+            signOut(auth).then(() => {
+                console.log('User signed out');
+
+                // Reset premium state
+                premiumState = {
+                    isActive: false,
+                    isTrial: false,
+                    trialEndDate: null
+                };
+
+                // Dispatch auth state changed event immediately
+                window.dispatchEvent(new CustomEvent('authStateChanged', {
+                    detail: {
+                        user: null,
+                        isSignedIn: false,
+                        premiumState: premiumState
+                    }
+                }));
+
+                // Reset UI elements
+                signInButton.style.display = 'block';
+                signOutButton.style.display = 'none';
+                userStatus.innerHTML = 'Not signed in';
+
+                // Reset dropdown icon
+                const dropdownIcon = document.querySelector('#settings .dropdown-icon');
+                if (dropdownIcon) {
+                    dropdownIcon.innerHTML = '<i class="fa-solid fa-user"></i>';
+                    dropdownIcon.classList.remove('signed-in');
+                    dropdownIcon.title = '';
+                }
+
+                // Hide premium button
+                const premiumBtn = document.getElementById('premiumUpgradeBtn');
+                if (premiumBtn) {
+                    premiumBtn.style.display = 'none';
+                }
+
+                // Hide make default button
+                const makeDefaultBtn = document.getElementById('makeDefaultButton');
+                if (makeDefaultBtn) {
+                    makeDefaultBtn.style.display = 'none';
+                }
+
+                // Clear current user
+                window.currentUserEmail = null;
+                window.currentUser = null;
+            }).catch((error) => {
+                console.error('Error signing out:', error);
+            });
         });
 
         function updateFeatureAccess(user) {
@@ -120,32 +157,146 @@
                 alert('Please sign in to save molecules');
                 return;
             }
-            if (!window.main.data || !window.main.data.atomData || window.main.data.atomData.length === 0) {
+
+            if (!window.main?.data?.atomData?.length) {
                 alert('No molecule loaded to save!');
                 return;
             }
 
-            if (!window.main || !window.main.data) {
-                alert('No molecule loaded to save');
+            // Calculate size in MB
+            const dataSize = new Blob([JSON.stringify(window.main.data)]).size / (1024 * 1024);
+
+            // Check storage limit
+            if (!await checkStorageLimit(dataSize)) {
                 return;
             }
 
             try {
+                // Save molecule
                 const moleculesRef = collection(db, 'users', user.uid, 'molecules');
                 await addDoc(moleculesRef, {
                     name: moleculeName,
                     data: window.main.data,
                     timestamp: serverTimestamp(),
-                    atomCount: window.main.data.numAtoms
+                    atomCount: window.main.data.numAtoms,
+                    size: dataSize
                 });
 
+                // Update storage usage
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                const currentUsage = userDoc.exists() ? (userDoc.data().storageUsed || 0) : 0;
+
+                await setDoc(doc(db, 'users', user.uid), {
+                    storageUsed: currentUsage + dataSize
+                }, { merge: true });
+
                 showSaveNotification('Molecule saved successfully!');
+                updateStorageIndicator();
                 return true;
             } catch (error) {
                 console.error('Error saving molecule:', error);
                 alert('Error saving molecule');
                 return false;
             }
+        }
+
+        async function updateStorageIndicator() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            try {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                const userData = userDoc.exists() ? userDoc.data() : {};
+
+                const used = userData.storageUsed || 0;
+                const isPremium = userData.premium || false;
+                const limit = isPremium ? 70 : 0.5;
+                const percentage = (used / limit) * 100;
+
+                // Update storage info in user status (even if hidden)
+                const storageInfo = document.getElementById('storageInfo');
+                if (storageInfo) {
+                    storageInfo.textContent = `${used.toFixed(2)}/${limit}MB used`;
+                    storageInfo.style.color = percentage > 90 ? '#ff9800' : '#4CAF50';
+                }
+
+                // Create or update floating storage indicator
+                let floatingIndicator = document.getElementById('floatingStorageIndicator');
+                if (!floatingIndicator) {
+                    floatingIndicator = document.createElement('div');
+                    floatingIndicator.id = 'floatingStorageIndicator';
+                    floatingIndicator.style.cssText = `
+                        position: fixed;
+                        top: 15px;
+                        left: 60px;
+                        color: white;
+                        padding: 10px 15px;
+                        border-radius: 8px;
+                        font-size: 12px;
+                        z-index: 1000;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    `;
+                    document.body.appendChild(floatingIndicator);
+                }
+
+                // Update floating indicator content
+                floatingIndicator.innerHTML = `
+                    <div style="width: 100px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden;">
+                        <div style="width: ${percentage}%; height: 100%; background: ${percentage > 90 ? 'linear-gradient(90deg, #ff9800, #ff5722)' : 'linear-gradient(90deg, #4CAF50, #8BC34A)'}; transition: width 0.3s;"></div>
+                    </div>
+                    <span>${used.toFixed(2)} / ${limit < 1000 ? limit + 'MB' : (limit / 1000) + 'GB'}</span>
+                `;
+
+                // Add warning animation if near limit
+                if (percentage > 90 && !isPremium) {
+                    floatingIndicator.style.animation = 'pulse 2s infinite';
+
+                    // Add CSS for pulse animation if not exists
+                    if (!document.getElementById('storageAnimations')) {
+                        const style = document.createElement('style');
+                        style.id = 'storageAnimations';
+                        style.textContent = `
+                            @keyframes pulse {
+                                0%, 100% { opacity: 1; }
+                                50% { opacity: 0.7; }
+                            }
+                        `;
+                        document.head.appendChild(style);
+                    }
+                } else {
+                    floatingIndicator.style.animation = '';
+                }
+
+            } catch (error) {
+                console.error('Error updating storage indicator:', error);
+            }
+        }
+
+        async function checkStorageLimit(dataSize) {
+            const user = auth.currentUser;
+            if (!user) return false;
+
+            // Get user doc to check storage usage
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            const userData = userDoc.exists() ? userDoc.data() : {};
+
+            const currentUsage = userData.storageUsed || 0;
+            const isPremium = userData.premium || false;
+            const limit = isPremium ? 70 : 0.5;
+
+            if (currentUsage + dataSize > limit) {
+                if (!isPremium) {
+                    alert(`Storage limit reached (${limit}MB). Upgrade to Premium for 70MB storage.`);
+                    window.location.href = 'premium.html';
+                } else {
+                    alert('Premium storage limit reached (75MB).');
+                }
+                return false;
+            }
+
+            return true;
         }
 
         async function loadMoleculesList() {
@@ -179,15 +330,17 @@
             if (!moleculeData || !moleculeData.data) return;
 
             window.main.data = moleculeData.data;
+            console.log(moleculeData.data);
             window.main.newMolecule(
                 moleculeData.data,
-                window.main.mode || 0,
+                moleculeData.numAtoms <= 2000 ? 0 : 1,
                 false,
                 { x: 0, y: 0, z: 0 },
                 { x: 0, y: 0, z: 0 },
                 true,
                 true
             );
+            window.resetCamera()
 
             showSaveNotification(`Loaded: ${moleculeData.name}`);
         }
@@ -199,7 +352,21 @@
             if (!confirm('Delete this molecule?')) return;
 
             try {
+                // Get size before deleting
+                const moleculeDoc = await getDoc(doc(db, 'users', user.uid, 'molecules', moleculeId));
+                const size = moleculeDoc.data()?.size || 0;
+
+                // Delete
                 await deleteDoc(doc(db, 'users', user.uid, 'molecules', moleculeId));
+
+                // Update storage
+                const userRef = doc(db, 'users', user.uid);
+                const userDoc = await getDoc(userRef);
+                await setDoc(userRef, {
+                    storageUsed: Math.max(0, (userDoc.data()?.storageUsed || 0) - size)
+                }, { merge: true });
+
+                updateStorageIndicator();
                 showSaveNotification('Molecule deleted');
                 return true;
             } catch (error) {
@@ -237,16 +404,8 @@
         window.deleteMolecule = deleteMolecule;
         window.currentUser = null;
 
-        const saveSection = document.getElementById('load-save-message');
-        if (saveSection) {
-            saveSection.style.display = 'none'
-            const prompt = document.createElement('div');
-            prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
-            saveSection.parentElement.insertBefore(prompt, saveSection);
-        }
 
-        // Listen for auth state changes and update UI
-        // In index.html, replace the onAuthStateChanged handler with this updated version:
+
 
         onAuthStateChanged(auth, async (user) => {
             const premiumBtn = document.getElementById('premiumUpgradeBtn');
@@ -255,31 +414,48 @@
                 // User is signed in
                 signInButton.style.display = 'none';
                 signOutButton.style.display = 'block';
-                userStatus.innerHTML = `Signed in as ${user.displayName}`;
+                userStatus.innerHTML = `<span id="storageInfo" style="font-size: 12px; margin-left: 10px;"></span>`;
                 userStatus.style.display = 'none';
 
-                // Get the dropdown icon and update it with user initials
                 const dropdownIcon = document.querySelector('#settings .dropdown-icon');
                 const userInitials = getUserInitials(user.displayName);
 
-                // Replace the generic user icon with initials
                 dropdownIcon.innerHTML = `<div class="user-initials">${userInitials}</div>`;
                 dropdownIcon.classList.add('signed-in');
 
-                // Add tooltip with full name on hover
                 dropdownIcon.title = `Signed in as ${user.displayName}`;
 
-                // Show the Make Default button
                 const makeDefaultBtn = document.getElementById('makeDefaultButton');
                 if (makeDefaultBtn) {
                     makeDefaultBtn.style.display = 'block';
                 }
 
-                // Store current user
                 window.currentUserEmail = user.email;
                 window.currentUser = user;
 
-                // First dispatch a basic auth state (for immediate UI updates)
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                const userData = userDoc.exists() ? userDoc.data() : {};
+                const isPremium = userData.premium || false;
+
+                premiumState.isActive = isPremium;
+                premiumState.storageLimit = isPremium ? 70 : 0.5;
+                premiumState.storageUsed = userData.storageUsed || 0;
+
+                // ADDED: Enable ALL features for signed-in users (not premium-dependent)
+                document.querySelectorAll('.tool-locked').forEach(tool => {
+                    tool.classList.remove('tool-locked');
+                    tool.removeAttribute('disabled');
+                });
+
+                if (premiumBtn) {
+                    if (isPremium) {
+                        premiumBtn.style.display = 'none';
+                    } else {
+                        premiumBtn.style.display = 'block';
+                        premiumBtn.innerHTML = '<i class="fas fa-crown"></i> Upgrade Storage (0.5MB → 70MB)';
+
+                    }
+                }
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: {
                         user: user,
@@ -287,9 +463,8 @@
                         premiumState: premiumState
                     }
                 }));
-
-                // Then check premium/trial status (this will dispatch another event with updated premium state)
                 await checkFirebasePremium(user.uid);
+                updateStorageIndicator();
 
                 // Load user's style preferences with appropriate delay
                 if (window.loadStylePreferences) {
@@ -305,38 +480,38 @@
                 console.log('Current user email:', window.currentUserEmail);
 
             } else {
-                // User is signed out
                 signInButton.style.display = 'block';
                 signOutButton.style.display = 'none';
                 userStatus.style.display = 'none';
-
-                // Hide premium button when signed out
                 if (premiumBtn) {
                     premiumBtn.style.display = 'none';
                 }
 
-                // Reset the dropdown icon to the generic user icon
                 const dropdownIcon = document.querySelector('#settings .dropdown-icon');
                 dropdownIcon.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
                 dropdownIcon.classList.remove('signed-in');
                 dropdownIcon.title = '';
 
-                // Hide the Make Default button
                 const makeDefaultBtn = document.getElementById('makeDefaultButton');
                 if (makeDefaultBtn) {
                     makeDefaultBtn.style.display = 'none';
                 }
 
-                // Clear current user
+                document.querySelectorAll('[data-tool]').forEach(tool => {
+                    if (tool.dataset.tool !== 'view') { // Keep view tool unlocked
+                        tool.classList.add('tool-locked');
+                        tool.setAttribute('disabled', true);
+                    }
+                });
+
                 window.currentUserEmail = null;
                 window.currentUser = null;
-
-                // Reset premium state
                 premiumState.isActive = false;
                 premiumState.isTrial = false;
                 premiumState.userId = null;
+                premiumState.storageLimit = 0;
+                premiumState.storageUsed = 0;
 
-                // Notify main.js about auth state with premium state
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: {
                         user: null,
@@ -345,9 +520,7 @@
                     }
                 }));
 
-                // IMPORTANT: Reset styles to defaults when signing out
                 if (window.resetToDefaults) {
-                    // Small delay to ensure everything is initialized
                     setTimeout(() => {
                         window.resetToDefaults();
                     }, 100);
@@ -359,98 +532,163 @@
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Buttons with new toggle labels button -->
+    <div class="donate-backdrop" onclick="closeDonateModal()"></div>
+    <div class="donate-modal">
+        <button class="donate-close" onclick="closeDonateModal()">&times;</button>
+        <h3>Support ChopChopMol</h3>
+        <p style="color: rgba(255,255,255,0.7); text-align: center; margin-bottom: 20px; font-size: 14px;">
+            Your support helps keep this project alive!
+        </p>
+        <div class="donate-amounts">
+            <button class="amount-btn" onclick="selectAmount(this, 1)">$1</button>
+            <button class="amount-btn selected" onclick="selectAmount(this, 5)">$5</button>
+            <button class="amount-btn" onclick="selectAmount(this, 10)">$10</button>
+            <button class="amount-btn" onclick="selectAmount(this, 25)">$25</button>
+            <button class="amount-btn" onclick="selectAmount(this, 50)">$50</button>
+            <button class="amount-btn" onclick="selectAmount(this, 'custom')">Custom</button>
+        </div>
+        <button class="donate-proceed" onclick="proceedToDonate()">
+            Donate with Stripe
+        </button>
+    </div>
+
+    <script>
+        // Minimal donation functionality
+        let selectedAmount = 10;
+
+        function openDonateModal() {
+            document.querySelector('.donate-modal').classList.add('show');
+            document.querySelector('.donate-backdrop').classList.add('show');
+        }
+
+        function closeDonateModal() {
+            document.querySelector('.donate-modal').classList.remove('show');
+            document.querySelector('.donate-backdrop').classList.remove('show');
+        }
+
+        function selectAmount(btn, amount) {
+            document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+
+
+            selectedAmount = amount;
+
+        }
+
+        function proceedToDonate() {
+            const links = {
+                1: 'https://checkout.chopchopmol.com/b/cNi7sM2n6a2U722drC7Re00',
+                5: 'https://checkout.chopchopmol.com/b/14AfZi5zi6QI9aaevG7Re02',
+                10: 'https://checkout.chopchopmol.com/b/5kQ6oI5zidf61HI4V67Re03',
+                25: 'https://checkout.chopchopmol.com/b/14A3cw6Dmb6Y3PQdrC7Re04',
+                50: 'https://checkout.chopchopmol.com/b/9B6aEY4ve6QI3PQ2MY7Re05',
+            };
+
+            if (links[selectedAmount]) {
+                window.open(links[selectedAmount], '_blank');
+            } else {
+                window.open('https://checkout.chopchopmol.com/b/fZu00k2n6eja9aa4V67Re06', '_blank');
+            }
+        }
+    </script>
     <div id="buttons">
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
         <input id="compare" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
-        <div class="dropdown">
-            <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
-            </span>
-            <div class="dropdown-content" style="left: 50%;">
-                <!-- <button class="fancy-button" id="aiGenerate"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
-                    Generate</button> -->
-                <button class="fancy-button" id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
-                <!-- <button class="fancy-button" id="import-smiles"><i class="fas fa-vial"></i> Load SMILES string</button> -->
-                <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load JSON</button>
-                <!-- <button class="fancy-button" id="compareButton">Compare</button> -->
-
-
+        <div id="toolbar-background">
+            <div class="dropdown">
+                <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
+                </span>
+                <div class="dropdown-content" style="left: 50%;">
+                    <button class="fancy-button" style="width: 140px; height: 31px; border-radius: 30px;"
+                        id="customButton"><i class="fa-solid fa-bolt"></i> Open
+                        File</button>
+                    <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
+                        JSON</button>
+                </div>
             </div>
-        </div>
-        <div class="dropdown">
-            <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-wand-sparkles"></i></span>
-            <div class="dropdown-content">
-                <button class="fancy-button" id="switchMode"><i class="fas fa-paint-brush"></i> Toggle Style</button>
-                <!-- <button class="fancy-button" id="analyze-molecule">Analyze molecule</button> -->
-                <button class="fancy-button" id="clear-canvas"><i class="fa-solid fa-trash"></i> Clear</button>
 
+            <button class="dropdown-icon" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
 
-            </div>
-        </div>
-        <div class="dropdown" id="saveMoleculeToCloud">
-            <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
-            <div class="dropdown-content" style="width: 200px;">
-                <div id="molecule-save-section">
-                    <div id="load-save-message"></div>
-                    <input type="text" id="molecule-name-input" placeholder="Molecule name..." class="fancy-textbox"
-                        style="margin: 10px; width: calc(100% - 40px);">
-                    <button class="fancy-button" id="save-molecule-btn"
-                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100%;">
-                        <i class="fas fa-cloud-upload-alt"></i> Save to Cloud
-                    </button>
-                    <hr style="margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">
-                    <button class="fancy-button" id="load-molecules-btn"
-                        style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); width: 100%;">
-                        <i class="fas fa-folder-open"></i> My Molecules
-                    </button>
-                    <select id="molecules-list" class="fancy-textbox"
-                        style="display: none; margin: 5px; width: calc(100% - 10px);">
-                        <option value="">Select a molecule...</option>
-                    </select>
-                    <div id="molecule-actions" style="display: none;">
-                        <button class="fancy-button" id="load-selected-btn" style="background: #4CAF50; margin: 5px;">
-                            Load
+            <button class="dropdown-icon" id="reset-camera" style="border: none; margin-right: 10px;"
+                onclick="window.resetCamera()"><i class="fa-solid fa-arrows-to-eye"></i></button>
+            <div class="dropdown" id="saveMoleculeToCloud">
+                <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
+                <div class="dropdown-content" style="width: 200px;">
+                    <div id="molecule-save-section">
+                        <div id="load-save-message"></div>
+                        <input type="text" id="molecule-name-input" placeholder="Molecule name" class="fancy-textbox"
+                            style="margin-top: 10px; margin-bottom: 10px; width: calc(100% - 40px);">
+                        <button class="fancy-button" id="save-molecule-btn"
+                            style="background: linear-gradient(135deg, #7a92ff 0%, #7f31cd 100%);  width: 182px; height: 31px; border-radius: 30px; margin-bottom: 10px;">
+                            <i class="fas fa-cloud-upload-alt"></i> Save to Cloud
                         </button>
-                        <button class="fancy-button" id="delete-selected-btn" style="background: #f44336; margin: 5px;">
-                            Delete
+                        <button class="fancy-button" id="load-molecules-btn"
+                            style="background: linear-gradient(135deg, #f490ff 0%, #ff3e58 100%); width: 182px; height: 31px; border-radius: 30px;">
+                            <i class="fas fa-folder-open"></i> My Molecules
                         </button>
+                        <select id="molecules-list" class="fancy-textbox"
+                            style="display: none; margin: 5px; width: calc(100% - 10px);">
+                            <option value="">Select a molecule...</option>
+                        </select>
+                        <div id="molecule-actions" style="display: none;">
+                            <button class="fancy-button" id="load-selected-btn"
+                                style="background: #4CAF50; margin: 5px;">
+                                Load
+                            </button>
+                            <button class="fancy-button" id="delete-selected-btn"
+                                style="background: #f44336; margin: 5px;">
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <!--  -->
-        <div class="dropdown">
-            <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
-            <div class="dropdown-content">
-                <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
-                <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255);"><i
-                        class="fas fa-file-download"></i> Save XYZ</button>
-            </div>
-        </div>
+            <!--  -->
+            <div class="dropdown">
+                <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
+                <div class="dropdown-content">
+                    <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
+                    <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255); "><i
+                            class="fas fa-file-download"></i> Save XYZ</button>
 
+                </div>
+            </div>
+
+        </div>
 
         <div class="dropdown" id="settings">
             <span class="dropdown-icon" style="font-size: 35px;"><i class="fa-solid fa-circle-user"></i></span>
-            <div class="dropdown-content" style="left: 100px;">
+            <div class="dropdown-content "
+                style="left: 100px; align-items: center; justify-content: center; display: flex; flex-direction: column; ">
 
                 <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
                     Google</button>
                 <button class="fancy-button" id="signOutButton" style="display: none;"><i
                         class="fas fa-sign-out-alt"></i> Sign Out</button>
+                <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
+                    onclick="showPremiumModal()">
+                    Subscription
+                </button>
+
+                <button class="donate-btn" onclick="openDonateModal()">
+                    <i class="fas fa-heart"></i>
+                    Donation
+                </button>
+                <a href="https://info.chopchopmol.com" id="tutorialLinkButton" target="_blank"
+                    rel="noopener noreferrer"><i class="fas fa-info-circle"></i>
+                    Help</a>
+
             </div>
         </div>
-
-
-        <!-- another checkpoint -->
     </div>
     <div id="selectionBox"></div>
 
     <!-- Add this below #buttons to show user info -->
     <div id="userStatus" style="color: white;"></div>
-    <div id="styleSelector" class="on">
-        <button id="closeStyleSelector" class="dismiss"
+    <div id="styleSelector" class="on glass" style="border-radius: 30px; width: 300px; height: 100vh;">
+        <!-- <button id="closeStyleSelector" class="dismiss"
             style="align-self: flex-end; position: absolute; font-weight: bold; "><i
-                class="fa-solid fa-xmark"></i></button>
+                class="fa-solid fa-xmark"></i></button> -->
         <div class="switch-container">
             <span class="switch-label">Toggle Style Changes</span>
             <label class="switch">
@@ -491,19 +729,25 @@
             <input type="checkbox" id="toggleLabels">
             <span>Toggle Atom labels</span>
         </div>
-        <button class="fancy-button" id="makeDefaultButton" style="
+        <button class="fancy-button glass" id="makeDefaultButton" style="
             margin-top: 20px;
             width: 100%;
+            height: 35px;
+            border-radius: 30px;
             padding: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 1px 1px 3px rgba(255, 255, 255, 0.795), inset -3px -3px 6px rgba(255, 255, 255, 0.285);
+            background: linear-gradient(135deg, #667eea57 0%, #764ba26b 100%);
             display: none;">
             <i class="fas fa-save"></i> Make Default
         </button>
-        <button class="fancy-button" id="resetToDefaultButton" style="
+        <button class="fancy-button glass" id="resetToDefaultButton" style="
             margin-top: 20px;
             width: 100%;
+            height: 35px;
+            border-radius: 30px;
             padding: 10px;
-            background: linear-gradient(135deg, #ed5544 0%, #c9bc2a 100%);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 1px 1px 3px rgba(255, 255, 255, 0.795), inset -3px -3px 6px rgba(255, 255, 255, 0.285);
+            background: linear-gradient(135deg, #eaac6657 0%, #d950506b 100%);
             ">
             <i class="fa-solid fa-arrow-rotate-left"></i> Reset to Default
         </button>
@@ -512,6 +756,8 @@
     <div id="dragFile">
         <h3>Drag and drop a file here .xyz, .mol, or .pdb to be loaded</h3>
     </div>
+
+
 
     <div id="editMoleculePanel" class="on">
         <div id="editMoleculeContent">
@@ -567,10 +813,7 @@
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
     </div>
     <!-- Premium Upgrade Button - Add this after your settings dropdown -->
-    <button id="premiumUpgradeBtn" class="premium-upgrade-btn" onclick="showPremiumModal()">
-        <i class="fa-solid fa-gem"></i>
-        <span id="premiumBtnText">Upgrade</span>
-    </button>
+
 
     <!-- Premium Modal - Add this before closing body tag -->
     <div id="premiumModal" class="premium-modal">
@@ -628,6 +871,229 @@
         //compareButton.addEventListener('click', () => {
         //    compareFileInput.click();
         //}); 
+    </script>
+    <script>
+        (function () {
+            'use strict';
+
+            // --- Utilities ---
+            const Utils = {
+                smoothStep(a, b, t) {
+                    t = Math.max(0, Math.min(1, (t - a) / (b - a)));
+                    return t * t * (3 - 2 * t);
+                },
+                length(x, y) {
+                    return Math.sqrt(x * x + y * y);
+                },
+                roundedRectSDF(x, y, width, height, radius) {
+                    const qx = Math.abs(x) - width + radius;
+                    const qy = Math.abs(y) - height + radius;
+                    return Math.min(Math.max(qx, qy), 0) + Utils.length(Math.max(qx, 0), Math.max(qy, 0)) - radius;
+                },
+                texture(x, y) {
+                    return { type: 't', x, y };
+                },
+                generateId() {
+                    return 'liquid-glass-' + Math.random().toString(36).substr(2, 9);
+                }
+            };
+
+            // --- Shader / Liquid Glass Class ---
+            class LiquidGlass {
+                constructor(element, { width, height, fragment }) {
+                    this.el = element;
+                    const rect = element.getBoundingClientRect();
+                    this.width = width || rect.width || 300;
+                    this.height = height || rect.height || 200;
+                    this.fragment = fragment || ((uv) => Utils.texture(uv.x, uv.y));
+                    this.canvasDPI = 1;
+                    this.id = Utils.generateId();
+                    this.mouse = { x: 0, y: 0 };
+                    this.mouseUsed = false;
+                    this.offset = 10;
+
+                    this.createElements();
+                    this.updateShader();
+                    this.appendTo(document.body);
+                }
+
+                createElements() {
+                    // Container
+                    this.container = this.el;
+                    Object.assign(this.container.style, {
+                        backdropFilter: `url(#${this.id}_filter) blur(5.25px) contrast(1.02) brightness(1.05) saturate(0.8)`,
+                        zIndex: 9999,
+                        pointerEvents: 'auto'
+                    });
+
+                    // SVG Filter
+                    this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    Object.assign(this.svg.style, { position: 'fixed', top: 0, left: 0, pointerEvents: 'none', zIndex: 9998 });
+                    this.svg.setAttribute('width', '0'); this.svg.setAttribute('height', '0');
+
+                    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                    const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+                    filter.setAttribute('id', this.id + '_filter');
+                    filter.setAttribute('filterUnits', 'userSpaceOnUse');
+                    filter.setAttribute('colorInterpolationFilters', 'sRGB');
+                    filter.setAttribute('x', '0'); filter.setAttribute('y', '0');
+                    filter.setAttribute('width', this.width); filter.setAttribute('height', this.height);
+
+                    this.feImage = document.createElementNS('http://www.w3.org/2000/svg', 'feImage');
+                    this.feImage.setAttribute('id', this.id + '_map');
+                    this.feImage.setAttribute('width', this.width); this.feImage.setAttribute('height', this.height);
+
+                    this.feDisplacementMap = document.createElementNS('http://www.w3.org/2000/svg', 'feDisplacementMap');
+                    this.feDisplacementMap.setAttribute('in', 'SourceGraphic');
+                    this.feDisplacementMap.setAttribute('in2', this.id + '_map');
+                    this.feDisplacementMap.setAttribute('xChannelSelector', 'R');
+                    this.feDisplacementMap.setAttribute('yChannelSelector', 'G');
+
+                    filter.appendChild(this.feImage);
+                    filter.appendChild(this.feDisplacementMap);
+                    defs.appendChild(filter);
+                    this.svg.appendChild(defs);
+
+                    // Hidden Canvas
+                    this.canvas = document.createElement('canvas');
+                    this.canvas.width = this.width * this.canvasDPI;
+                    this.canvas.height = this.height * this.canvasDPI;
+                    this.canvas.style.display = 'none';
+                    this.ctx = this.canvas.getContext('2d');
+                }
+
+                constrainPosition(x, y) {
+                    const minX = this.offset, minY = this.offset;
+                    const maxX = window.innerWidth - this.width - this.offset;
+                    const maxY = window.innerHeight - this.height - this.offset;
+                    return { x: Math.max(minX, Math.min(maxX, x)), y: Math.max(minY, Math.min(maxY, y)) };
+                }
+
+                setupDrag() {
+                    let isDragging = false, startX, startY, initX, initY;
+                    this.container.addEventListener('mousedown', (e) => {
+                        isDragging = true; this.container.style.cursor = 'grabbing';
+                        startX = e.clientX; startY = e.clientY;
+                        const rect = this.container.getBoundingClientRect();
+                        initX = rect.left; initY = rect.top;
+                        e.preventDefault();
+                    });
+                    document.addEventListener('mousemove', (e) => {
+                        if (isDragging) {
+                            const newPos = this.constrainPosition(initX + e.clientX - startX, initY + e.clientY - startY);
+                            this.container.style.left = newPos.x + 'px';
+                            this.container.style.top = newPos.y + 'px';
+                            this.container.style.transform = 'none';
+                        }
+                        const rect = this.container.getBoundingClientRect();
+                        this.mouse.x = (e.clientX - rect.left) / rect.width;
+                        this.mouse.y = (e.clientY - rect.top) / rect.height;
+                        if (this.mouseUsed) this.updateShader();
+                    });
+                    document.addEventListener('mouseup', () => { isDragging = false; this.container.style.cursor = 'grab'; });
+                    window.addEventListener('resize', () => {
+                        const rect = this.container.getBoundingClientRect();
+                        const newPos = this.constrainPosition(rect.left, rect.top);
+                        this.container.style.left = newPos.x + 'px';
+                        this.container.style.top = newPos.y + 'px';
+                        this.container.style.transform = 'none';
+                    });
+                }
+
+                updateShader() {
+                    const mouseProxy = new Proxy(this.mouse, { get: (t, p) => { this.mouseUsed = true; return t[p]; } });
+                    this.mouseUsed = false;
+
+                    const w = this.width * this.canvasDPI, h = this.height * this.canvasDPI;
+                    const data = new Uint8ClampedArray(w * h * 4);
+                    let maxScale = 0, rawValues = [];
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        const x = (i / 4) % w, y = Math.floor(i / 4 / w);
+                        const pos = this.fragment({ x: x / w, y: y / h }, mouseProxy);
+                        const dx = pos.x * w - x, dy = pos.y * h - y;
+                        maxScale = Math.max(maxScale, Math.abs(dx), Math.abs(dy));
+                        rawValues.push(dx, dy);
+                    }
+
+                    maxScale *= 0.5;
+                    let idx = 0;
+                    for (let i = 0; i < data.length; i += 4) {
+                        data[i] = (rawValues[idx++] / maxScale + 0.5) * 255;
+                        data[i + 1] = (rawValues[idx++] / maxScale + 0.5) * 255;
+                        data[i + 2] = 0; data[i + 3] = 255;
+                    }
+
+                    this.ctx.putImageData(new ImageData(data, w, h), 0, 0);
+                    this.feImage.setAttributeNS('http://www.w3.org/1999/xlink', 'href', this.canvas.toDataURL());
+                    this.feDisplacementMap.setAttribute('scale', (maxScale * 2 / this.canvasDPI).toString());
+                }
+
+                appendTo(parent) {
+                    parent.appendChild(this.svg);
+                }
+
+                destroy() {
+                    this.svg.remove();
+                    // don't remove this.el, it's user content
+                    this.canvas.remove();
+                }
+            }
+
+            // --- Add this utility ---
+            function hash(n) {
+                return Math.sin(n) * 43758.5453 % 1;
+            }
+            function noise(x, y) {
+                const i = Math.floor(x), j = Math.floor(y);
+                const fX = x - i, fY = y - j;
+
+                const a = hash(i + j * 57);
+                const b = hash(i + 1 + j * 57);
+                const c = hash(i + (j + 1) * 57);
+                const d = hash(i + 1 + (j + 1) * 57);
+
+                const u = fX * fX * (3 - 2 * fX);
+                const v = fY * fY * (3 - 2 * fY);
+
+                return a * (1 - u) * (1 - v) +
+                    b * u * (1 - v) +
+                    c * (1 - u) * v +
+                    d * u * v;
+            }
+
+            function initGlassDivs() {
+                const glassDivs = document.querySelectorAll('.glass');
+                window.liquidGlassInstances = [];
+                glassDivs.forEach(div => {
+                    const borderRadius = div.style.borderRadius
+                    console.log(borderRadius)
+                    const instance = new LiquidGlass(div, {
+                        fragment: (uv, mouse) => {
+                            const ix = uv.x - 0.5, iy = uv.y - 0.5;
+
+                            // Original rounded rect mask
+                            const distance = Utils.roundedRectSDF(ix, iy, 0.3, 0.2, parseInt(borderRadius, 10) / 90);
+                            const displacement = Utils.smoothStep(0.8, 0, distance - 0.15);
+                            const scaled = Utils.smoothStep(0, 1, displacement);
+
+                            // --- Add noise distortion ---
+                            const n = noise(uv.x * 5, uv.y * 5) * 0.02; // scale & intensity of noise
+                            const nx = ix * scaled + 0.5 + n;
+                            const ny = iy * scaled + 0.5 + n;
+
+                            return Utils.texture(nx, ny);
+                        }
+                    });
+
+                    window.liquidGlassInstances.push(instance);
+                });
+                console.log(`${glassDivs.length} Liquid Glass instances created!`);
+            }
+
+            initGlassDivs();
+
+        })();
     </script>
     <script>
         let _reply = null;
@@ -908,6 +1374,46 @@
                 "jsm/": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/"
             }
         }
+    </script>
+    <script>
+        // Ensure premium button is ALWAYS visible
+        (function () {
+            function forceButtonVisible() {
+                const btn = document.getElementById('premiumUpgradeBtn');
+                if (btn) {
+                    btn.style.display = 'flex';
+                    btn.style.opacity = '1';
+                    btn.style.visibility = 'visible';
+                    btn.style.zIndex = '10000';
+                }
+            }
+
+            // Initial check
+            forceButtonVisible();
+
+            // Check every 500ms for first 5 seconds
+            let checks = 0;
+            const interval = setInterval(() => {
+                forceButtonVisible();
+                checks++;
+                if (checks >= 10) clearInterval(interval);
+            }, 500);
+
+            // Override any function that might hide it
+            const originalDisplay = Object.getOwnPropertyDescriptor(CSSStyleDeclaration.prototype, 'display');
+            if (originalDisplay) {
+                Object.defineProperty(CSSStyleDeclaration.prototype, 'display', {
+                    set: function (value) {
+                        if (this.parentElement?.id === 'premiumUpgradeBtn' && value === 'none') {
+                            // Don't allow hiding the premium button
+                            return;
+                        }
+                        originalDisplay.set.call(this, value);
+                    },
+                    get: originalDisplay.get
+                });
+            }
+        })();
     </script>
     <pre id="output"></pre>
     <script src="stripe.js"></script>

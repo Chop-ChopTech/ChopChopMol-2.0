@@ -11,15 +11,21 @@ let premiumState = {
     userId: null
 };
 
+const STORAGE_LIMITS = {
+    free: 0.5,      // 50MB for free users  
+    premium: 70  // 5GB for premium users
+};
+
 // Feature limits
 const FEATURE_LIMITS = {
     free: {
-        maxMolecules: 3,
-        maxAtoms: 500,
-        canExport: false,
-        canEdit: false,
-        canMeasure: false,
-        aiGenerations: 3
+        maxMolecules: Infinity,  // No limit for signed-in users
+        maxAtoms: Infinity,      // No limit for signed-in users
+        canExport: true,         // Allow for signed-in users
+        canEdit: true,           // Allow for signed-in users
+        canMeasure: true,        // Allow for signed-in users
+        aiGenerations: Infinity,  // No limit for signed-in users
+        maxStorage: STORAGE_LIMITS.free  // This is the ONLY limitation
     },
     premium: {
         maxMolecules: Infinity,
@@ -27,7 +33,8 @@ const FEATURE_LIMITS = {
         canExport: true,
         canEdit: true,
         canMeasure: true,
-        aiGenerations: Infinity
+        aiGenerations: Infinity,
+        maxStorage: STORAGE_LIMITS.premium
     }
 };
 
@@ -96,7 +103,7 @@ async function checkFirebasePremium(userId) {
                         const daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
 
                         activatePremium();
-                        showTrialStatus(daysRemaining);
+                        // showTrialStatus(daysRemaining);
                         return;
                     } else {
                         // Trial has expired
@@ -317,26 +324,23 @@ function activatePremium() {
         }
 
         // Update onclick handler
-        btn.onclick = function () {
-            if (premiumState.isActive && !premiumState.isTrial) {
-                // Show management options for paid premium users
-                if (confirm('Manage your Premium subscription?')) {
-                    cancelPremium();
-                }
-            } else {
-                // Show upgrade modal for trial users
-                showPremiumModal();
-            }
-        };
+        // btn.onclick = function () {
+        //     if (premiumState.isActive && !premiumState.isTrial) {
+        //         // Show management options for paid premium users
+        //         if (confirm('Manage your Premium subscription?')) {
+        //             cancelPremium();
+        //         }
+        //     } else {
+        //         // Show upgrade modal for trial users
+        //         showPremiumModal();
+        //     }
+        // };
     }
 
     // Enable all premium features
     enablePremiumFeatures();
 }
 
-// ============================================
-// MODIFICATION 4: Show premium modal with trial info
-// ============================================
 
 function showPremiumModalWithTrialInfo() {
     showPremiumModal();
@@ -449,21 +453,21 @@ function activatePremium() {
     const btn = document.getElementById('premiumUpgradeBtn');
     if (btn) {
         btn.classList.add('premium-active');
-        document.getElementById('premiumBtnText').textContent = 'Premium';
+        // document.getElementById('premiumBtnText').textContent = 'Premium';
 
         // Add click handler to manage subscription
-        btn.onclick = function () {
-            if (premiumState.isActive) {
-                // Show management options
-                if (confirm('Manage your Premium subscription?')) {
-                    // You can add a management modal here
-                    // For now, just option to cancel
-                    cancelPremium();
-                }
-            } else {
-                showPremiumModal();
-            }
-        };
+        // btn.onclick = function () {
+        //     if (premiumState.isActive) {
+        //         // Show management options
+        //         if (confirm('Manage your Premium subscription?')) {
+        //             // You can add a management modal here
+        //             // For now, just option to cancel
+        //             cancelPremium();
+        //         }
+        //     } else {
+        //         showPremiumModal();
+        //     }
+        // };
     }
 
     // Enable all premium features
@@ -521,97 +525,31 @@ async function subscribeToPremium() {
 
 // Check if user can add molecule
 function canAddMolecule() {
-    const limits = premiumState.isActive ? FEATURE_LIMITS.premium : FEATURE_LIMITS.free;
+    // Always allow if signed in - no molecule count restrictions
+    if (window.auth?.currentUser) {
+        return true;
+    }
 
-    // Count current molecules in scene
-    const moleculeCount = window.main?.molecule?.getMoleculeCount() || 0;
+    // Only restrict if not signed in
+    showLimitNotification('Please sign in to add molecules');
+    return false;
+}
 
-    if (moleculeCount >= limits.maxMolecules) {
-        showLimitNotification(`Free tier limited to ${limits.maxMolecules} molecules`);
-        showPremiumModal();
+// Replace the canUsePremiumFeature function with this:
+function canUsePremiumFeature(feature) {
+    // If not signed in, restrict everything
+    if (!window.auth?.currentUser) {
+        showLimitNotification('Please sign in to use this feature');
         return false;
     }
 
+    // All features available for signed-in users
     return true;
-}
-
-// Check if user can use feature
-function canUsePremiumFeature(feature) {
-    const limits = premiumState.isActive ? FEATURE_LIMITS.premium : FEATURE_LIMITS.free;
-
-    switch (feature) {
-        case 'export':
-            if (!limits.canExport) {
-                showLimitNotification('Export requires Premium subscription');
-                showPremiumModal();
-                return false;
-            }
-            return true;
-
-        case 'edit':
-            if (!limits.canEdit) {
-                showLimitNotification('Editing tools require Premium');
-                showPremiumModal();
-                return false;
-            }
-            return true;
-
-        case 'measure':
-            if (!limits.canMeasure) {
-                showLimitNotification('Measurement tools require Premium');
-                showPremiumModal();
-                return false;
-            }
-            return true;
-
-        case 'ai':
-            // Check AI generation limit
-            const aiUsage = parseInt(localStorage.getItem('ai_usage_today') || '0');
-            if (!premiumState.isActive && aiUsage >= limits.aiGenerations) {
-                showLimitNotification(`Free tier limited to ${limits.aiGenerations} AI generations per day`);
-                showPremiumModal();
-                return false;
-            }
-            return true;
-
-        default:
-            return true;
-    }
 }
 
 // Show/hide premium modal
 function showPremiumModal() {
-    // Check if user is signed in
-    if (!window.currentUser) {
-        // Create a sign-in prompt instead of showing premium modal
-        const signInPrompt = document.createElement('div');
-        signInPrompt.className = 'sign-in-prompt';
-        signInPrompt.innerHTML = `
-            <h3>Sign in Required</h3>
-            <p>Please sign in with Google to access premium features and start your free trial!</p>
-            <button onclick="document.getElementById('signInButton').click(); this.parentElement.remove();">
-                <i class="fas fa-sign-in-alt"></i> Sign In with Google
-            </button>
-        `;
-
-        // Add to page temporarily
-        document.body.appendChild(signInPrompt);
-
-        // Remove after 5 seconds
-        setTimeout(() => {
-            signInPrompt.remove();
-        }, 5000);
-
-        return;
-    }
-
-    // User is signed in, show the premium modal normally
-    document.getElementById('premiumModal').classList.add('active');
-
-    // Add trial info if applicable
-    if (premiumState.isTrial && premiumState.trialEndDate) {
-        showPremiumModalWithTrialInfo();
-    }
+    window.location.href = 'premium.html';
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -703,55 +641,20 @@ if (window.main && window.main.loader) {
         return originalHandleFile.apply(this, arguments);
     };
 }
-
-// Override export functions
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize premium
-    initializePremium();
-
-    // Override save buttons
-    const savePDBBtn = document.getElementById('savePDB');
-    if (savePDBBtn) {
-        const originalClick = savePDBBtn.onclick;
-        savePDBBtn.onclick = function () {
-            if (canUsePremiumFeature('export')) {
-                originalClick?.call(this);
-            }
-        };
-    }
-
-    const saveXYZBtn = document.getElementById('saveXYZ');
-    if (saveXYZBtn) {
-        const originalClick = saveXYZBtn.onclick;
-        saveXYZBtn.onclick = function () {
-            if (canUsePremiumFeature('export')) {
-                originalClick?.call(this);
-            }
-        };
-    }
-
-    // Override edit molecule button
-    const editBtn = document.getElementById('editMolecule');
-    if (editBtn) {
-        const originalClick = editBtn.onclick;
-        editBtn.onclick = function () {
-            if (canUsePremiumFeature('edit')) {
-                originalClick?.call(this);
-            }
-        };
-    }
-
-    // Close modal on escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closePremiumModal();
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(() => {
+        const premiumBtn = document.getElementById('premiumUpgradeBtn');
+        if (premiumBtn) {
+            premiumBtn.onclick = function () {
+                // Check premium status
+                if (premiumState.isActive && !premiumState.isTrial) {
+                    // Already premium - go to management
+                    window.location.href = 'premium.html?manage=true';
+                } else {
+                    // Not premium - go to upgrade page
+                    window.location.href = 'premium.html';
+                }
+            };
         }
-    });
-
-    // Close modal on overlay click
-    document.getElementById('premiumModal')?.addEventListener('click', (e) => {
-        if (e.target.id === 'premiumModal') {
-            closePremiumModal();
-        }
-    });
+    }, 2000); // Wait 2 seconds for everything to load
 });

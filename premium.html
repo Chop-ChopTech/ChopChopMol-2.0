@@ -649,33 +649,67 @@
 
     <!-- Scripts -->
     <script src="https://js.stripe.com/v3/"></script>
-    <script>
-        // Initialize Stripe (use your publishable key)
-        const stripe = Stripe('pk_live_51Rot4oJFioirLp8GF7O6F8kr0PLQwRRrRXCjoQCgj0LIqtGnm9mh0Km7zoRFtKHiIiiXS4dhVwTQQLmLhihDwoiR00W0pdTUAa');
+    <script type="module">
+        // Import Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAAlbmJmNxVGJ3wv1KiyoFWJ86Ik31jY-w",
+            authDomain: "chopchopmol-2.firebaseapp.com",
+            projectId: "chopchopmol-2",
+            storageBucket: "chopchopmol-2.firebasestorage.app",
+            messagingSenderId: "911400525967",
+            appId: "1:911400525967:web:1e3e6bfefdcb8edc8ad0fa",
+            measurementId: "G-9T7NPR755W"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Store current user globally
+        let currentUser = null;
+
+        // Check authentication status
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                console.log('User signed in:', user.email);
+            } else {
+                currentUser = null;
+                console.log('User not signed in');
+            }
+        });
+
+        // Initialize Stripe
+        const stripe = Stripe('pk_live_51Rot4oJFioirLp8GB5q1BH1TfBjj6UsrJO8XhL9eDsBPBHqg68liBjvXMTiCXGbKtRvVC7NUqPjx9wPEeXsAc2cM00T92kj69M');
         const PREMIUM_PRICE_ID = 'price_1RvRIeJFioirLp8GzChWVboO';
 
         // FAQ Toggle
-        function toggleFAQ(element) {
+        window.toggleFAQ = function (element) {
             const faqItem = element.parentElement;
             faqItem.classList.toggle('active');
         }
 
         // Subscribe to Premium
-        async function subscribeToPremium() {
+        window.subscribeToPremium = async function () {
             const btn = event.target.closest('button');
             btn.classList.add('loading');
             btn.disabled = true;
 
             try {
-                // Check if user is signed in (you'll need to implement this check)
-                const userEmail = localStorage.getItem('userEmail') || '';
-                const userId = localStorage.getItem('userId') || '';
-
-                if (!userId) {
+                // Check if user is signed in using Firebase Auth
+                if (!currentUser) {
                     alert('Please sign in first to upgrade to Premium');
                     window.location.href = 'index.html';
                     return;
                 }
+
+                // Use Firebase user data for Stripe
+                const userEmail = currentUser.email;
+                const userId = currentUser.uid;
 
                 // Redirect to Stripe Checkout
                 const { error } = await stripe.redirectToCheckout({

@@ -74,7 +74,7 @@ export default class Molecule {
     //     colorAttribute.needsUpdate = true;
     // }
     createAtoms(data, rotation, translation, mode) {
-        const resolution = mode.resolution ? mode.resolution : 16;
+        const resolution = mode.resolution ? mode.resolution : 8;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
         let material;
         if (mode == 0) {

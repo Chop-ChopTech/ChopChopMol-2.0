@@ -29,13 +29,7 @@ import {
     resetToDefaults,
 
 } from './handleStyles.js';
-// WE WILL NOW TRY TO MAKE THIS AMAZING WEBSITE AN APP. IT MAY GO AMAZINGLY OR IT MAY GO HORRIBLY.
-// It went well!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// Please refer the the README.md file for more information
-// CLEANUP TIME!!!!
 
-
-// Setup scene
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -44,7 +38,6 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-// const controls = new OrbitControls(camera, renderer.domElement);
 let controls = new ArcballControls(camera, renderer.domElement);
 
 controls.rotateSpeed = 5.0;
@@ -87,7 +80,6 @@ const mouse = new THREE.Vector2();
 
 scene.add(light);
 scene.add(ambientLight);
-// testing 123
 camera.position.z = 15;
 let mode = 0;
 let antialiasToggled = false
@@ -96,12 +88,13 @@ let labelMode = false; // Track label mode
 const switchModeButton = document.getElementById('switchMode');
 const toggleLabelsButton = document.getElementById('toggleLabels');
 const saveImageButton = document.getElementById('captureScreen');
-const clearSceneButton = document.getElementById('clear-canvas');
 const analyzeMoleculeButton = document.getElementById('analyze-molecule');
 const editMoleculePanel = document.getElementById('editMoleculePanel');
 const editMoleculeButton = document.getElementById('editMolecule');
 const editMoleculeContent = document.getElementById('editMoleculeContent');
 const closeStyleSelectorButton = document.getElementById('closeStyleSelector');
+const initialCameraPosition = new THREE.Vector3(0, 0, 15);
+const initialCameraTarget = new THREE.Vector3(0, 0, 0);
 
 let dragging = false;
 let dragPlane = new THREE.Plane();
@@ -156,17 +149,13 @@ export default class Main {
         this.atoms = [];
         this.bonds = [];
 
-        // Properly dispose of the instanced mesh
         if (this.instancedMesh) {
-            // Remove from scene
             this.main.scene.remove(this.instancedMesh);
 
-            // Dispose geometry
             if (this.instancedMesh.geometry) {
                 this.instancedMesh.geometry.dispose();
             }
 
-            // Dispose material
             if (this.instancedMesh.material) {
                 if (Array.isArray(this.instancedMesh.material)) {
                     this.instancedMesh.material.forEach(mat => mat.dispose());
@@ -180,7 +169,6 @@ export default class Main {
 
         // Clear bond group
         if (this.bondGroup) {
-            // Remove all children and dispose
             while (this.bondGroup.children.length > 0) {
                 const child = this.bondGroup.children[0];
                 this.bondGroup.remove(child);
@@ -204,7 +192,6 @@ export default class Main {
         atomsSelected = [];
         hoveredAtom = null;
 
-        // Clear any axis definitions
         if (!soft) {
             rotationAxis = null;
             axisAtoms = [];
@@ -223,7 +210,6 @@ export default class Main {
         }
         this.molecule.reset();
 
-        // editMoleculePanel.classList.add('on');
         clearScene(this.scene);
         labels.forEach(label => {
             createInfoLabel(label[0], label[1], label[2] ?? null, label[3] ?? null);
@@ -244,8 +230,6 @@ export default class Main {
             this.toggleLabels(true);
             this.molecule.updateLabels();
         }
-        // resetIsolationState();
-        // storeOriginalMolecule();
         render();
 
     }
@@ -298,6 +282,7 @@ export default class Main {
             controls.target.copy(center);
             controls.update();
         }
+        render();
     }
 }
 
@@ -490,14 +475,19 @@ window.addEventListener('resize', () => {
     render()
 });
 
-switchModeButton.addEventListener('click', () => {
+switchModeButton.addEventListener('click', (e) => {
+    e.stopPropagation();
     styleSelector.classList.remove('on');
 });
 
-closeStyleSelectorButton.addEventListener('click', () => {
-    styleSelector.classList.add('on');
+// closeStyleSelectorButton.addEventListener('click', () => {
+//     styleSelector.classList.add('on');
+// });
+document.addEventListener('click', function (event) {
+    if (!styleSelector.contains(event.target) && event.target.id !== 'switchMode' && !event.target.closest('#switchMode')) {
+        styleSelector.classList.add('on');
+    }
 });
-
 toggleLabelsButton.addEventListener('change', () => {
     main.toggleLabels(toggleLabelsButton.checked);
 });
@@ -512,21 +502,6 @@ window.addEventListener('replyUpdated', (event) => {
 saveImageButton.addEventListener('click', () => {
     saveImage();
 });
-
-clearSceneButton.addEventListener('click', () => {
-    main.reset();
-});
-// analyzeMoleculeButton.addEventListener('click', () => {
-//     const images = []
-//     const numImages = 3;
-//     for (let i = 0; i < numImages; i++) {
-//         const imgData = getScreenUrl();
-//         images.push(imgData)
-//         rotateCamera(Math.PI / (numImages / 2), camera, controls);
-//     }
-
-//     window.imgToAnalyze = { images: JSON.stringify(images), coordinates: main.data };
-// })
 
 renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
 renderer.domElement.addEventListener('contextmenu', (event) => {
@@ -1073,7 +1048,8 @@ function onPointerMove(event) {
             updateAtomMatrix(idx);
         });
         main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-        main.molecule.updateBonds(mode);
+        mode = main.mode
+        main.molecule.updateBonds(main.mode);
 
         updateAllBondLengthLabels(); // ADD THIS LINE
         render();
@@ -1105,7 +1081,8 @@ function onPointerMove(event) {
     updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
 
     // Update bonds
-    main.molecule.updateBonds(mode);
+    mode = main.mode
+    main.molecule.updateBonds(main.mode);
     if (main.molecule.labels && main.molecule.labels.length > 0) {
         main.molecule.updateLabels();
         render()
@@ -1289,38 +1266,47 @@ function attachButtonEventListeners() {
                         }
                     });
 
-                    // Store original molecule
                     storeOriginalMolecule();
 
                     if (!isInIsolationMode) {
                         originalFragments = JSON.parse(JSON.stringify(fragments));
                     }
 
-                    // Generate combined data
+                    // FIX: Map indices for nested isolations
+                    let mappedCombinedIndices;
+                    if (isInIsolationMode && currentIsolationIndex >= 0) {
+                        const currentIsolation = isolationHistory[currentIsolationIndex];
+                        mappedCombinedIndices = combinedAtomIndices.map(localIdx => {
+                            if (localIdx < currentIsolation.originalIndices.length) {
+                                return currentIsolation.originalIndices[localIdx];
+                            }
+                            return null;
+                        }).filter(idx => idx !== null);
+                    } else {
+                        mappedCombinedIndices = combinedAtomIndices;
+                    }
+
                     const newData = generateDataFromAtoms(combinedAtomIndices);
 
-                    // Create isolation entry
                     const isolationEntry = {
                         name: combinedName,
                         atomCount: combinedAtomIndices.length,
                         data: newData,
                         fragmentIndices: [...fragmentsSelected],
-                        originalIndices: combinedAtomIndices,
+                        originalIndices: mappedCombinedIndices, // Use mapped indices
+                        localIndices: combinedAtomIndices, // Keep local indices
                         timestamp: Date.now()
                     };
 
-                    // Add to history
                     isolationHistory.push(isolationEntry);
                     currentIsolationIndex = isolationHistory.length - 1;
 
-                    // Clear selections
                     atomsSelected = [];
                     fragmentsSelected = [];
                     fragments = [];
 
                     isInIsolationMode = true;
 
-                    // Create new molecule
                     main.newMolecule(newData, main.mode, false,
                         { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
                     main.data = newData;
@@ -1331,36 +1317,46 @@ function attachButtonEventListeners() {
                     isolateFragment(fragmentsSelected[0]);
                 }
             } else if (atomsSelected.length > 0) {
-                // Store original molecule
                 storeOriginalMolecule();
 
                 if (!isInIsolationMode) {
                     originalFragments = JSON.parse(JSON.stringify(fragments));
                 }
 
-                // No fragments selected, but atoms are selected
+                // FIX: Map atom selection indices for nested isolations
+                let mappedAtomIndices;
+                if (isInIsolationMode && currentIsolationIndex >= 0) {
+                    const currentIsolation = isolationHistory[currentIsolationIndex];
+                    mappedAtomIndices = atomsSelected.map(localIdx => {
+                        if (localIdx < currentIsolation.originalIndices.length) {
+                            return currentIsolation.originalIndices[localIdx];
+                        }
+                        return null;
+                    }).filter(idx => idx !== null);
+                } else {
+                    mappedAtomIndices = [...atomsSelected];
+                }
+
                 const newData = generateDataFromAtoms(atomsSelected);
 
-                // Create isolation entry
                 const isolationEntry = {
                     name: `${atomsSelected.length} Selected Atoms`,
                     atomCount: atomsSelected.length,
                     data: newData,
-                    originalIndices: [...atomsSelected],
+                    originalIndices: mappedAtomIndices, // Use mapped indices
+                    localIndices: [...atomsSelected], // Keep local indices
                     timestamp: Date.now()
                 };
 
                 isolationHistory.push(isolationEntry);
                 currentIsolationIndex = isolationHistory.length - 1;
 
-                // Clear selections
                 atomsSelected = [];
                 fragmentsSelected = [];
                 fragments = [];
 
                 isInIsolationMode = true;
 
-                // Create new molecule
                 main.newMolecule(newData, main.mode, false,
                     { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
                 main.data = newData;
@@ -1417,23 +1413,33 @@ function resetRotationState() {
     }
 }
 
+
+
 function isolateFragment(fragmentIndex) {
-    // Store original molecule if not already stored
     storeOriginalMolecule();
 
-    // Validate fragment index
     if (fragmentIndex < 0 || fragmentIndex >= fragments.length) {
         console.error('Invalid fragment index:', fragmentIndex);
         return;
     }
 
-    // Store current fragments before isolation if not already stored
+    // Store original fragments at the first isolation level
     if (!isInIsolationMode) {
         originalFragments = JSON.parse(JSON.stringify(fragments));
+        console.log('Stored original fragments:', originalFragments);
+    } else {
+        // CRITICAL FIX: If we're already in isolation and going deeper,
+        // save the current fragments in the current isolation history entry
+        if (currentIsolationIndex >= 0 && currentIsolationIndex < isolationHistory.length) {
+            const currentIsolation = isolationHistory[currentIsolationIndex];
+            if (fragments && fragments.length > 0) {
+                currentIsolation.subFragments = fragments.map(fragment => [...fragment]);
+                console.log(`Saved ${fragments.length} fragments at isolation level ${currentIsolationIndex} before going deeper`);
+            }
+        }
     }
 
     const fragmentAtomIndices = fragments[fragmentIndex];
-
     if (!fragmentAtomIndices || fragmentAtomIndices.length === 0) {
         console.error('Fragment has no atoms');
         return;
@@ -1441,37 +1447,52 @@ function isolateFragment(fragmentIndex) {
 
     console.log(`Isolating fragment ${fragmentIndex + 1} with ${fragmentAtomIndices.length} atoms`);
 
-    // Generate new data from only the fragment's atoms
+    // For nested isolations, map the indices through parent isolation
+    let mappedIndices;
+    if (isInIsolationMode && currentIsolationIndex >= 0) {
+        const currentIsolation = isolationHistory[currentIsolationIndex];
+        // Map local fragment indices through current isolation's mapping
+        mappedIndices = fragmentAtomIndices.map(localIdx => {
+            if (localIdx < currentIsolation.originalIndices.length) {
+                return currentIsolation.originalIndices[localIdx];
+            }
+            return null;
+        }).filter(idx => idx !== null);
+        console.log('Nested isolation - mapped indices:', mappedIndices);
+    } else {
+        // First level isolation - indices are already correct
+        mappedIndices = fragmentAtomIndices;
+    }
+
     const newData = generateDataFromAtoms(fragmentAtomIndices);
 
-    // Create isolation history entry
+    // Create isolation history entry with proper mapped indices
     const isolationEntry = {
         name: `Fragment ${fragmentIndex + 1}`,
         atomCount: fragmentAtomIndices.length,
         data: newData,
         fragmentIndex: fragmentIndex,
-        originalIndices: fragmentAtomIndices,
+        originalIndices: mappedIndices, // Use mapped indices for nested isolations
+        localIndices: fragmentAtomIndices, // Keep local indices for reference
         timestamp: Date.now()
     };
 
     // Add to history
     if (isInIsolationMode && currentIsolationIndex < isolationHistory.length - 1) {
-        // If we're in the middle of history, truncate forward history
         isolationHistory = isolationHistory.slice(0, currentIsolationIndex + 1);
     }
     isolationHistory.push(isolationEntry);
     currentIsolationIndex = isolationHistory.length - 1;
 
-    // Clear selections
+    // Clear selections and fragments for the new isolation
     atomsSelected = [];
     fragmentsSelected = [];
     fragments = [];
 
     resetRotationState();
 
-    // Set isolation mode
     isInIsolationMode = true;
-    // Create the new molecule
+    main.mode = newData.numAtoms <= 2000 ? 1 : 0
     main.newMolecule(
         newData,
         main.mode,
@@ -1483,11 +1504,11 @@ function isolateFragment(fragmentIndex) {
     );
 
     main.data = newData;
+    resetCamera();
 
-    // Update UI to show isolation mode
+
     updateIsolationModeUI();
 
-    // Update fragment list
     const fragmentList = document.getElementById('fragmentList');
     if (fragmentList) {
         updateFragmentList(fragmentList);
@@ -1496,28 +1517,70 @@ function isolateFragment(fragmentIndex) {
     updateEditingContent();
     render();
 
-    console.log(`Fragment isolated. History length: ${isolationHistory.length}`);
+    console.log(`Fragment isolated. Isolation depth: ${isolationHistory.length}`);
 }
-
 function restoreOriginalMolecule() {
     if (!originalMoleculeData) {
         console.error('No original molecule data to restore');
         return;
     }
 
-    // Before restoring, update the original data with current edits if in isolation mode
+    // Function to recursively collect and map fragments from all isolation levels
+    function collectAllFragments() {
+        const allCollectedFragments = [];
+
+        // First, save current fragments if any exist
+        if (isInIsolationMode && currentIsolationIndex >= 0 && fragments && fragments.length > 0) {
+            const currentIsolation = isolationHistory[currentIsolationIndex];
+            currentIsolation.subFragments = fragments.map(fragment => [...fragment]);
+            console.log(`Saved ${fragments.length} fragments at current isolation level ${currentIsolationIndex}`);
+        }
+
+        // Now collect fragments from all isolation levels
+        for (let i = 0; i < isolationHistory.length; i++) {
+            const isolation = isolationHistory[i];
+
+            if (isolation && isolation.subFragments && isolation.subFragments.length > 0) {
+                console.log(`Processing ${isolation.subFragments.length} fragments from isolation level ${i}`);
+
+                // Map each fragment through all parent levels to get original indices
+                const mappedFragments = isolation.subFragments.map(fragment => {
+                    let currentIndices = [...fragment];
+
+                    // Map through each isolation level from this level back to root
+                    for (let level = i; level >= 0; level--) {
+                        const parentIsolation = isolationHistory[level];
+                        if (parentIsolation && parentIsolation.originalIndices) {
+                            const newIndices = [];
+                            for (const idx of currentIndices) {
+                                if (idx >= 0 && idx < parentIsolation.originalIndices.length) {
+                                    newIndices.push(parentIsolation.originalIndices[idx]);
+                                }
+                            }
+                            currentIndices = newIndices;
+                        }
+                    }
+
+                    return currentIndices;
+                }).filter(fragment => fragment.length > 0);
+
+                allCollectedFragments.push(...mappedFragments);
+            }
+        }
+
+        return allCollectedFragments;
+    }
+
+    // Before restoring, update atom positions and collect fragments
     if (isInIsolationMode && isolationHistory.length > 0) {
         const currentIsolation = isolationHistory[currentIsolationIndex];
 
         if (currentIsolation && currentIsolation.originalIndices) {
-            // Get current edited positions from the isolated fragment
+            // Update atom positions
             const editedAtoms = main.molecule.atoms;
-
-            // Update original molecule data with edited positions
             currentIsolation.originalIndices.forEach((originalIdx, localIdx) => {
                 if (localIdx < editedAtoms.length && originalIdx < originalMoleculeData.atomData.length) {
                     const editedAtom = editedAtoms[localIdx];
-                    // Update the position in original data
                     originalMoleculeData.atomData[originalIdx] = {
                         ...originalMoleculeData.atomData[originalIdx],
                         x: editedAtom.position.x / 4,
@@ -1526,42 +1589,45 @@ function restoreOriginalMolecule() {
                     };
                 }
             });
-
             console.log(`Merged ${currentIsolation.originalIndices.length} edited atoms back to original`);
+        }
 
-            // PRESERVE SUB-FRAGMENTS: Map local fragments back to original molecule indices
-            if (fragments && fragments.length > 0) {
-                // Convert local fragment indices to original molecule indices
-                const mappedFragments = fragments.map(localFragment => {
-                    return localFragment.map(localIdx => {
-                        // Map local index to original molecule index
-                        if (localIdx < currentIsolation.originalIndices.length) {
-                            return currentIsolation.originalIndices[localIdx];
-                        }
-                        return null;
-                    }).filter(idx => idx !== null);
-                }).filter(fragment => fragment.length > 0);
+        // Collect all fragments from all isolation levels
+        const collectedFragments = collectAllFragments();
 
-                // Merge these new fragments with original fragments
-                if (!originalFragments) {
-                    originalFragments = [];
-                }
-
-                // Process existing fragments to remove atoms that are now in the new mapped fragments
-                let updatedOriginalFragments = originalFragments;
-
-                mappedFragments.forEach(newFragment => {
-                    updatedOriginalFragments = updatedOriginalFragments.map(fragment => {
-                        // Remove atoms from existing fragments if they're in the new fragment
-                        return fragment.filter(atomIndex => !newFragment.includes(atomIndex));
-                    }).filter(fragment => fragment.length > 0); // Remove empty fragments
-                });
-
-                // Add the new mapped fragments
-                originalFragments = [...updatedOriginalFragments, ...mappedFragments];
-
-                console.log(`Added ${mappedFragments.length} sub-fragments to original molecule`);
+        if (collectedFragments.length > 0) {
+            // Initialize originalFragments if needed
+            if (!originalFragments) {
+                originalFragments = [];
             }
+
+            // Get all atoms in collected fragments
+            const atomsInCollectedFragments = new Set(collectedFragments.flat());
+
+            // Update existing fragments to remove overlapping atoms
+            let updatedOriginalFragments = originalFragments.map(fragment => {
+                return fragment.filter(atomIndex => !atomsInCollectedFragments.has(atomIndex));
+            }).filter(fragment => fragment.length > 0);
+
+            // Add the collected fragments
+            originalFragments = [...updatedOriginalFragments, ...collectedFragments];
+
+            // Remove duplicates
+            const uniqueFragments = [];
+            const fragmentSignatures = new Set();
+
+            for (const fragment of originalFragments) {
+                const signature = fragment.sort((a, b) => a - b).join(',');
+                if (!fragmentSignatures.has(signature)) {
+                    fragmentSignatures.add(signature);
+                    uniqueFragments.push(fragment);
+                }
+            }
+
+            originalFragments = uniqueFragments;
+
+            console.log(`Collected ${collectedFragments.length} fragments from all isolation levels`);
+            console.log('Final fragment count:', originalFragments.length);
         }
     }
 
@@ -1572,7 +1638,7 @@ function restoreOriginalMolecule() {
     isolationHistory = [];
     currentIsolationIndex = -1;
 
-    // Restore the data (now includes edits)
+    // Restore the data
     const restoredData = JSON.parse(JSON.stringify(originalMoleculeData));
 
     // Clear selections
@@ -1581,8 +1647,8 @@ function restoreOriginalMolecule() {
 
     resetRotationState();
 
-    // Restore original fragments (now includes sub-fragments)
-    fragments = JSON.parse(JSON.stringify(originalFragments));
+    // Restore fragments
+    fragments = originalFragments ? JSON.parse(JSON.stringify(originalFragments)) : [];
 
     // Recreate the molecule
     main.newMolecule(
@@ -1596,6 +1662,7 @@ function restoreOriginalMolecule() {
     );
 
     main.data = restoredData;
+    resetCamera();
 
     const fragmentList = document.getElementById('fragmentList');
     if (fragmentList) {
@@ -1605,10 +1672,9 @@ function restoreOriginalMolecule() {
     updateEditingContent();
     render();
 
-    console.log('Original molecule restored with edits and sub-fragments preserved');
+    console.log('Original molecule restored with all fragments preserved');
+    console.log('Total fragments:', fragments.length);
 }
-
-// 4. Navigate through isolation history
 function navigateIsolationHistory(direction) {
     // Save current edits AND fragments before navigating
     if (isInIsolationMode && currentIsolationIndex >= 0) {
@@ -1927,14 +1993,14 @@ function updateEditingContent(element = null, color = null) {
         // Show axis controls if an axis is defined
         if (rotationAxis) {
             axisControlsHtml = `
-                <div style="margin-top: 20px; padding: 20px; background-color: rgba(255, 0, 255, 0.2); border-radius: 15px;">
+                <div style="margin-top: 20px; padding: 20px; background-color: rgba(0, 115, 255, 0.2); border-radius: 15px;">
                     <button id="removeAxisBtn" style="background-color:rgb(255, 100, 100); margin:5px;" class="fancy-button">Remove Axis</button>
                     <div style="margin-top: 10px;">
-                        <label style="color: white; display: block; margin-bottom: 5px;">Rotate ${atomsSelected.length > 0 ? 'Selected Atoms' : 'Entire Molecule'}:</label>
+                        <label style="color: white; display: block; margin-bottom: 5px; font-size: 14px;">Rotate ${atomsSelected.length > 0 ? 'Selected Atoms' : 'Entire Molecule'}:</label>
                         <input type="range" id="rotationSlider" min="-180" max="180" value="0" step="1" style="width: 100%;">
                     </div>
                     <div style="margin-top: 10px;">
-                        <label style="color: white; display: block; margin-bottom: 5px;">Translate ${atomsSelected.length > 0 ? 'Selected Atoms' : 'Entire Molecule'}:</label>
+                        <label style="color: white; display: block; margin-bottom: 5px; font-size: 14px;">Translate ${atomsSelected.length > 0 ? 'Selected Atoms' : 'Entire Molecule'}:</label>
                         <input type="range" id="translationSlider" min="-180" max="180" value="0" step="0.1" style="width: 100%;">
                     </div>
                 </div>
@@ -1954,12 +2020,14 @@ function updateEditingContent(element = null, color = null) {
         createFragmentButton.id = 'createFragment';
         createFragmentButton.textContent = 'Create Fragment';
         createFragmentButton.className = 'fancy-button';
-        createFragmentButton.style.backgroundColor = 'rgb(168, 146, 0)';
-        createFragmentButton.style.margin = '10px';
+        createFragmentButton.style.backgroundColor = 'rgb(114, 201, 0)';
+        createFragmentButton.style.margin = '15px';
         createFragmentButton.style.display = 'none';
         createFragmentButton.style.position = 'absolute';
         createFragmentButton.style.top = '0px';
         createFragmentButton.style.right = '0px';
+        createFragmentButton.style.width = "fit-content";
+
         document.body.appendChild(createFragmentButton);
 
         if (atomsSelected.length > 1) {
@@ -1979,16 +2047,17 @@ function updateEditingContent(element = null, color = null) {
 
 function updateFragmentList(fragmentList) {
     fragmentList.innerHTML = '';
+    fragmentList.style.alignItems = 'center';
 
     // Add "Show All Fragments" button if in isolation mode
     if (isInIsolationMode) {
         const showAllBtn = document.createElement('button');
-        showAllBtn.textContent = '← Back to Full Molecule';
+        showAllBtn.textContent = 'Back to Full Molecule';
         showAllBtn.className = 'fancy-button';
         showAllBtn.style.cssText = `
             display: block;
             margin-bottom: 10px;
-            background-color: rgb(100, 200, 100);
+            background-color: rgb(64, 215, 64);
             padding: 8px 12px;
             font-size: 13px;
             width: 100%;
@@ -1997,28 +2066,7 @@ function updateFragmentList(fragmentList) {
         fragmentList.appendChild(showAllBtn);
 
         // Add navigation buttons if there's history
-        if (isolationHistory.length > 1) {
-            const navContainer = document.createElement('div');
-            navContainer.style.cssText = 'display: flex; gap: 5px; margin-bottom: 10px;';
 
-            const prevBtn = document.createElement('button');
-            prevBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i>';
-            prevBtn.className = 'fancy-button';
-            prevBtn.style.cssText = 'flex: 1; background-color: rgb(150, 150, 255);';
-            prevBtn.disabled = currentIsolationIndex <= 0;
-            prevBtn.addEventListener('click', () => navigateIsolationHistory(-1));
-
-            const nextBtn = document.createElement('button');
-            nextBtn.innerHTML = '<i class="fa-solid fa-arrow-right"></i>';
-            nextBtn.className = 'fancy-button';
-            nextBtn.style.cssText = 'flex: 1; background-color: rgb(150, 150, 255);';
-            nextBtn.disabled = currentIsolationIndex >= isolationHistory.length - 1;
-            nextBtn.addEventListener('click', () => navigateIsolationHistory(1));
-
-            navContainer.appendChild(prevBtn);
-            navContainer.appendChild(nextBtn);
-            fragmentList.appendChild(navContainer);
-        }
 
         // Show current isolation info
         if (currentIsolationIndex >= 0 && currentIsolationIndex < isolationHistory.length) {
@@ -2041,12 +2089,14 @@ function updateFragmentList(fragmentList) {
     fragments.forEach((fragment, index) => {
         const listItem = document.createElement('li');
         listItem.innerHTML = '';
-        listItem.textContent = `Fragment ${index + 1} (${fragment.length} atoms)`;
+        listItem.textContent = `Fragment ${index + 1}`;
         listItem.style.cursor = 'pointer';
         listItem.style.padding = '5px';
         listItem.style.margin = '2px';
         listItem.style.borderRadius = '5px';
         listItem.style.transition = 'background-color 0.3s';
+        listItem.style.paddingLeft = '20px';
+        listItem.style.paddingRight = '20px';
         listItem.dataset.fragmentIndex = index;
 
         // Check if this fragment is currently selected
@@ -2067,6 +2117,8 @@ function updateFragmentList(fragmentList) {
                 background-color: rgb(255, 140, 0);
                 padding: 5px 10px;
                 font-size: 12px;
+                width: fit-content;
+
             `;
 
             isolateBtn.addEventListener('click', (e) => {
@@ -2075,27 +2127,6 @@ function updateFragmentList(fragmentList) {
             });
 
             buttonContainer.appendChild(isolateBtn);
-
-            // Add "View in Context" button if in isolation mode
-            if (isInIsolationMode) {
-                const contextBtn = document.createElement('button');
-                contextBtn.textContent = 'Context';
-                contextBtn.className = 'fancy-button';
-                contextBtn.style.cssText = `
-                    flex: 1;
-                    background-color: rgb(100, 150, 255);
-                    padding: 5px 10px;
-                    font-size: 12px;
-                `;
-
-                contextBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    showFragmentInContext(index);
-                });
-
-                buttonContainer.appendChild(contextBtn);
-            }
-
             listItem.appendChild(buttonContainer);
         }
 
@@ -2531,8 +2562,6 @@ function finalizeRotation() {
         main.molecule.updateMainCoordinates();
     }
 
-    // Keep the current angle and state
-    // This allows for continued rotation from the new position
     console.log(`Rotation finalized at ${rotationState.currentAngle}°`);
 }
 
@@ -2555,6 +2584,7 @@ function updateRotationUI(angle) {
 }
 
 function updateMoleculeVisualization() {
+    mode = main.mode
     if (main?.molecule) {
         // Update instanced mesh
         if (main.molecule.instancedMesh) {
@@ -2563,7 +2593,7 @@ function updateMoleculeVisualization() {
 
         // Update bonds
         if (main.molecule.updateBonds) {
-            main.molecule.updateBonds(mode);
+            main.molecule.updateBonds(main.mode);
         }
 
         // Update labels
@@ -2735,6 +2765,7 @@ function recreateRenderer(antialiasEnabled) {
     renderer.setPixelRatio(window.devicePixelRatio);
     document.body.appendChild(renderer.domElement);
     window.renderer = renderer;
+    console.log("Render Limits:", renderer.capabilities.maxInstances);
 
 
     // Recreate controls
@@ -2798,25 +2829,18 @@ function onPointerUp(event) {
         main.molecule.updateMainCoordinates();
     }
 }
-
-// function selectFragment(fragmentAtoms, fragmentIndex) {
-//     // Clear current selection
-//     unselectAtom();
-//     // Set atomsSelected to the fragment atoms
-//     atomsSelected = [...fragmentAtoms];
-//     console.log(atomsSelected);
-//     // Highlight all atoms in the fragment
-//     highlightFragment(fragmentIndex);
-//     render();
-// }
-
 function selectFragment(fragmentAtoms, fragmentIndex) {
+    // Clear previous atom selection
     atomsSelected = [];
+
+    // Build atomsSelected from all selected fragments
     fragmentsSelected.forEach(fragIdx => {
         if (fragIdx < fragments.length) {
             atomsSelected.push(...fragments[fragIdx]);
         }
     });
+
+    // Reset color attributes for all atoms
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
     for (let i = 0; i < colorAttr.count; i++) {
         const atom = main.molecule.atoms[i];
@@ -2824,14 +2848,39 @@ function selectFragment(fragmentAtoms, fragmentIndex) {
         atom.displayColor = color;
         colorAttr.setXYZ(i, color.r, color.g, color.b);
     }
+
+    // Highlight selected fragments
     fragmentsSelected.forEach(fragIdx => {
         if (fragIdx < fragments.length) {
             highlightFragment(fragIdx);
         }
     });
+
     colorAttr.needsUpdate = true;
+
+    window.rotationSliderOn = true;  // Mark slider as needing reset
+    window.translationSliderOn = true;  // Mark translation slider as needing reset
+
+    // Reset the rotation state to ensure clean slate for fragment rotation
+    if (rotationState) {
+        rotationState.currentAngle = 0;
+        rotationState.isActive = false;
+    }
+
+    // Reset slider UI values
+    const rotationSlider = document.getElementById('rotationSlider');
+    if (rotationSlider) {
+        rotationSlider.value = 0;
+    }
+
+    const translationSlider = document.getElementById('translationSlider');
+    if (translationSlider) {
+        translationSlider.value = 0;
+    }
+
     render();
 }
+
 
 function updateFragmentListSelection(selectedIndex) {
     const fragmentList = document.getElementById('fragmentList');
@@ -2980,46 +3029,39 @@ function rotateCamera(angleToRotate, camera, controls = null) {
     }
 }
 
-// Add this to your index.html after the Firebase auth initialization
-
-// Global variable to track authentication state
-
-
-// Function to save style preferences to Firestore
-
-
-// Function to recreate renderer with new antialias setting
-
-
-// Function to show notification
-
 window.addEventListener('authStateChanged', (event) => {
     const { user, isSignedIn, premiumState } = event.detail;
     premiumActive = premiumState.isActive
     updateFeatureAccess(user, isSignedIn, premiumActive);
     editingMolecule = isSignedIn
-    window.currentUserEmail = user.email
-    console.log(window.currentUserEmail)
+    window.currentUserEmail = user ? user.email : null
+
     const saveSection = document.getElementById('molecule-save-section');
     const message = document.getElementById('molecule-save-message');
     if (saveSection) {
         saveSection.style.display = 'none'
-        const prompt = document.createElement('div');
-        prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
 
+        // Check if prompt already exists to avoid duplicates
+        let prompt = saveSection.parentElement.querySelector('.save-molecules-prompt');
+        if (!prompt) {
+            prompt = document.createElement('div');
+            prompt.className = 'save-molecules-prompt';
+            saveSection.parentElement.insertBefore(prompt, saveSection);
+        }
 
         if (!user) {
             saveSection.style.display = 'none'
-            prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
+            prompt.innerHTML = '<p style="color: white; padding: 10px;">Sign in to save molecules</p>';
         } else {
-            if (premiumState.isActive) {
+            // Check if user has premium OR is on trial
+            if (premiumState.isActive || premiumState.isTrial) {
                 prompt.innerHTML = '';
-
                 saveSection.style.display = 'block'
+            } else {
+                prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
+                saveSection.style.display = 'none'
             }
         }
-        saveSection.parentElement.insertBefore(prompt, saveSection);
-
     }
 });
 
@@ -3090,7 +3132,7 @@ function attachMouseWheelRotation() {
     window.addEventListener('wheel', (e) => {
         if (!shiftDown || !rotationAxis || !main?.molecule?.atoms) return;
 
-        e.preventDefault();
+        // e.preventDefault();
 
         // Calculate rotation angle from wheel delta
         const angle = e.deltaY * 0.5; // Scale factor for sensitivity
@@ -3099,6 +3141,7 @@ function attachMouseWheelRotation() {
         rotateSelectedAtoms(angle, { relative: true });
     });
 }
+window.attachMouseWheelRotation = attachMouseWheelRotation
 const buttonSound = new Audio()
 buttonSound.src = "Create.wav"
 
@@ -3120,6 +3163,7 @@ function loopAround180(value) {
 
 document.addEventListener('DOMContentLoaded', () => {
     // Save molecule
+    // In main.js, update the save-molecule-btn event listener:
     document.getElementById('save-molecule-btn')?.addEventListener('click', async () => {
         const nameInput = document.getElementById('molecule-name-input');
         const name = nameInput.value.trim();
@@ -3132,6 +3176,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const saved = await saveMolecule(name);
         if (saved) {
             nameInput.value = '';
+
+            const select = document.getElementById('molecules-list');
+            if (select.style.display !== 'none') {
+                const molecules = await loadMoleculesList();
+                select.innerHTML = '<option value="">Select a molecule...</option>';
+                molecules.forEach(mol => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify(mol);
+                    option.textContent = `${mol.name} (${mol.atomCount} atoms)`;
+                    select.appendChild(option);
+                });
+            }
         }
     });
 
@@ -3546,7 +3602,8 @@ function performRotationFromBase(targetAngle, atomIndices) {
 
     // Update the molecule
     main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-    main.molecule.updateBonds(mode);
+    mode = main.mode
+    main.molecule.updateBonds(main.mode);
     if (main.molecule.labels && main.molecule.labels.length > 0) {
         main.molecule.updateLabels();
     }
@@ -3567,6 +3624,32 @@ window.addEventListener('keyup', function (e) {
     }
 });
 
+
+
+// Reset camera function
+function resetCamera() {
+    // Reset camera position
+    camera.position.copy(initialCameraPosition);
+
+    // Reset camera rotation by looking at origin
+    camera.lookAt(initialCameraTarget);
+    camera.up.set(0, 1, 0);
+
+    // Reset controls target and update
+    if (controls) {
+        controls.target.copy(initialCameraTarget);
+        controls.reset();
+        controls.update();
+    }
+
+    // Trigger a render
+    if (typeof render !== 'undefined') {
+        render();
+    }
+    main.zoomCameraToFitMolecule();
+    render();
+}
+window.resetCamera = resetCamera
 
 // Function to update bond length label position
 function updateBondLengthLabel(labelInfo) {
@@ -3708,14 +3791,12 @@ function updateBondLengthLabel(labelInfo) {
     }
 }
 
-// Function to update all bond length labels
 function updateAllBondLengthLabels() {
     bondLengthLabels.forEach(labelInfo => {
         updateBondLengthLabel(labelInfo);
     });
 }
 
-// Function to remove a specific bond length label
 function removeBondLengthLabel(index) {
     if (bondLengthLabels[index]) {
         // Remove the label from DOM
@@ -3733,7 +3814,6 @@ function removeBondLengthLabel(index) {
     }
 }
 
-// Function to clear all bond length labels
 function clearAllBondLengthLabels() {
     bondLengthLabels.forEach(labelInfo => {
         // Remove label from DOM
@@ -3868,8 +3948,6 @@ function removeContextMenu() {
     contextMenuOpen = false;
 }
 
-// Modify your existing onPointerDown function to add right-click handling
-// Add this to your onPointerDown function after the existing left-click logic:
 function enhancedOnPointerDown(event) {
     // Call your existing onPointerDown logic first for left clicks
     if (event.button === 0) {
@@ -3909,36 +3987,20 @@ document.addEventListener('click', (event) => {
     }
 });
 
-// Add to your render/animation loop to update label positions
-// Add this to your existing render() function:
-function enhancedRender() {
-    // Call your existing render function
-    render();
-
-    // Update bond length labels
-    updateAllBondLengthLabels();
-}
-
-// Hook into camera controls to update labels when view changes
 if (controls) {
     controls.addEventListener('change', () => {
         updateAllBondLengthLabels();
     });
 }
 
-// Update labels when atoms are moved
-// Add this to your atom movement functions (like in onPointerMove when dragging atoms)
 function onAtomsMoved() {
     updateAllBondLengthLabels();
 }
 
-// Clear labels when molecule is reset or changed
-// Add this to your molecule reset/clear functions
 function onMoleculeReset() {
     clearAllBondLengthLabels();
 }
 
-// Optional: Add keyboard shortcut to toggle bond length display
 document.addEventListener('keydown', (event) => {
     // Press 'B' to show/hide measurements
     if (event.key === 'b' || event.key === 'B') {
@@ -4046,7 +4108,6 @@ function createRenderer(antialiasOn) {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    console.log(fragmentsSelected)
 }
 function render() {
     renderer.render(scene, camera);

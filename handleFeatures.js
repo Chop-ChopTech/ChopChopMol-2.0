@@ -46,9 +46,6 @@ export function restrictFeatures() {
         'compareButton',
         'analyze-molecule',
         'clear-canvas',
-        'switchMode',
-        'saveXYZ',
-        'captureScreen',
     ];
 
     restrictedButtons.forEach(buttonId => {
@@ -219,8 +216,7 @@ export function enableFreeFeatures() {
 
     // Disable specific buttons with visual feedback
     const enabledButtons = [
-        'import-json',
-        'clear-canvas',
+
     ];
 
     enabledButtons.forEach(buttonId => {
