@@ -567,7 +567,7 @@ body {
     bottom: 50%;
     right: 10px;
     z-index: 9999;
-    background: linear-gradient(145deg, rgba(0, 217, 255, 0.25) 0%, rgba(9, 9, 121, 0.25) 57%, rgba(0, 0, 0, 0.24) 100%);
+    background: linear-gradient(145deg, rgba(0, 174, 205, 0.787) 0%, rgba(10, 46, 118, 0.584) 57%, rgba(0, 0, 0, 0.555) 100%);
     width: 300px;
     height: 100vh;
     max-height: calc(100vh - 83px);

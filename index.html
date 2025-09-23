@@ -1040,7 +1040,28 @@
                 }
             }
 
-            // --- Initialize all .glass divs ---
+            // --- Add this utility ---
+            function hash(n) {
+                return Math.sin(n) * 43758.5453 % 1;
+            }
+            function noise(x, y) {
+                const i = Math.floor(x), j = Math.floor(y);
+                const fX = x - i, fY = y - j;
+
+                const a = hash(i + j * 57);
+                const b = hash(i + 1 + j * 57);
+                const c = hash(i + (j + 1) * 57);
+                const d = hash(i + 1 + (j + 1) * 57);
+
+                const u = fX * fX * (3 - 2 * fX);
+                const v = fY * fY * (3 - 2 * fY);
+
+                return a * (1 - u) * (1 - v) +
+                    b * u * (1 - v) +
+                    c * (1 - u) * v +
+                    d * u * v;
+            }
+
             function initGlassDivs() {
                 const glassDivs = document.querySelectorAll('.glass');
                 window.liquidGlassInstances = [];
@@ -1050,12 +1071,21 @@
                     const instance = new LiquidGlass(div, {
                         fragment: (uv, mouse) => {
                             const ix = uv.x - 0.5, iy = uv.y - 0.5;
+
+                            // Original rounded rect mask
                             const distance = Utils.roundedRectSDF(ix, iy, 0.3, 0.2, parseInt(borderRadius, 10) / 90);
                             const displacement = Utils.smoothStep(0.8, 0, distance - 0.15);
                             const scaled = Utils.smoothStep(0, 1, displacement);
-                            return Utils.texture(ix * scaled + 0.5, iy * scaled + 0.5);
+
+                            // --- Add noise distortion ---
+                            const n = noise(uv.x * 5, uv.y * 5) * 0.02; // scale & intensity of noise
+                            const nx = ix * scaled + 0.5 + n;
+                            const ny = iy * scaled + 0.5 + n;
+
+                            return Utils.texture(nx, ny);
                         }
                     });
+
                     window.liquidGlassInstances.push(instance);
                 });
                 console.log(`${glassDivs.length} Liquid Glass instances created!`);
