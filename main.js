@@ -68,6 +68,7 @@ let rotationState = {
     selectedAtoms: []             // Indices of atoms to rotate
 };
 
+window.fragments = fragments;
 let editingMolecule = true;
 
 
@@ -4106,6 +4107,7 @@ function createRenderer(antialiasOn) {
 }
 
 function animate() {
+    window.fragments = fragments;
     requestAnimationFrame(animate);
     controls.update();
 }
