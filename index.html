@@ -173,10 +173,17 @@
 
             try {
                 // Save molecule
+                console.log(window.fragments)
                 const moleculesRef = collection(db, 'users', user.uid, 'molecules');
                 await addDoc(moleculesRef, {
                     name: moleculeName,
-                    data: window.main.data,
+                    data: {
+                        molecule: window.main.data,
+                        fragments: window.fragments.map((frag, i) => ({
+                            id: i,
+                            atoms: frag
+                        }))
+                    },
                     timestamp: serverTimestamp(),
                     atomCount: window.main.data.numAtoms,
                     size: dataSize
@@ -329,10 +336,10 @@
         function loadMolecule(moleculeData) {
             if (!moleculeData || !moleculeData.data) return;
 
-            window.main.data = moleculeData.data;
+            window.main.data = moleculeData.data.molecule;
             console.log(moleculeData.data);
             window.main.newMolecule(
-                moleculeData.data,
+                moleculeData.data.molecule,
                 moleculeData.numAtoms <= 2000 ? 0 : 1,
                 false,
                 { x: 0, y: 0, z: 0 },
