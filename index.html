@@ -337,7 +337,6 @@
             if (!moleculeData || !moleculeData.data) return;
 
             window.main.data = moleculeData.data.molecule;
-            console.log(moleculeData.data);
             window.main.newMolecule(
                 moleculeData.data.molecule,
                 moleculeData.numAtoms <= 2000 ? 0 : 1,

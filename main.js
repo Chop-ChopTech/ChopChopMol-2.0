@@ -3230,6 +3230,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Hide the selection UI
         select.style.display = 'none';
         document.getElementById('molecule-actions').style.display = 'none';
+        console.log(moleculeData.data.fragments);
+        fragments = moleculeData.data.fragments.map(f => f.atoms);
+        if (fragments.length > 0) {
+            isInIsolationMode = true;
+        }
+        updateFragmentList(document.getElementById('fragmentList'));
+
     });
 
     // Delete selected
