@@ -2017,22 +2017,11 @@ function updateEditingContent(element = null, color = null) {
             ${axisButtonHtml}
             ${axisControlsHtml}
         `;
-        const createFragmentButton = document.createElement('button');
-        createFragmentButton.id = 'createFragment';
-        createFragmentButton.textContent = 'Create Fragment';
-        createFragmentButton.className = 'fancy-button';
-        createFragmentButton.style.backgroundColor = 'rgb(114, 201, 0)';
-        createFragmentButton.style.margin = '15px';
-        createFragmentButton.style.display = 'none';
-        createFragmentButton.style.position = 'absolute';
-        createFragmentButton.style.top = '0px';
-        createFragmentButton.style.right = '0px';
-        createFragmentButton.style.width = "fit-content";
-
-        document.body.appendChild(createFragmentButton);
 
         if (atomsSelected.length > 1) {
             document.getElementById('createFragment').style.display = 'block';
+        } else {
+            document.getElementById('createFragment').style.display = 'none';
         }
 
         // Recreate fragment list with click handlers
@@ -2062,6 +2051,7 @@ function updateFragmentList(fragmentList) {
             padding: 8px 12px;
             font-size: 13px;
             width: 100%;
+            z-index: 10000000000000000000!important;
         `;
         showAllBtn.addEventListener('click', restoreOriginalMolecule);
         fragmentList.appendChild(showAllBtn);

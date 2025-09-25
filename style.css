@@ -590,6 +590,17 @@ body {
 
 }
 
+#createFragment {
+    background-color: rgb(114, 201, 0);
+    margin: 15px;
+    display: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: fit-content;
+
+}
+
 #styleSelector.on {
     right: -500px;
 }
@@ -912,13 +923,13 @@ input[type="range"]:focus {
     align-items: center;
     justify-content: top;
     flex-direction: column;
-    width: 130px;
+    width: 190px;
     height: 100vh;
     padding: 10px 0;
     position: absolute;
     top: 0;
     right: 8px;
-    margin-right: 20px;
+    margin-right: 0px;
     margin-top: 10px;
     /* background-color: chartreuse; */
 }
