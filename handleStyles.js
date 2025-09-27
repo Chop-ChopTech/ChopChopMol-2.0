@@ -207,24 +207,26 @@ export function showNotification(message, type) {
     notification.textContent = message;
     notification.style.cssText = `
         position: fixed;
-        bottom: 20px;
+        bottom: 50px;
         right: 20px;
         padding: 15px 25px;
-        border-radius: 8px;
+        border-radius: 16px;
         color: white;
         font-weight: 600;
         z-index: 10000;
         animation: slideIn 0.3s ease-out;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
         ${type === 'success' ? 'background: linear-gradient(135deg, #00c851 0%, #00ff00 100%);' : ''}
         ${type === 'error' ? 'background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);' : ''}
-        ${type === 'info' ? 'background: linear-gradient(135deg, #33b5e5 0%, #0099cc 100%);' : ''}
+        ${type === 'info' ? 'background: linear-gradient(135deg,rgb(81, 208, 255) 0%,rgb(0, 105, 204) 50%, rgb(85, 0, 204) 100%);' : ''}
     `;
 
     document.body.appendChild(notification);
 
     // Auto remove after 3 seconds
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-out';
+        notification.style.opacity = '0';
+        notification.style.transform = 'scale(1.2)';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
