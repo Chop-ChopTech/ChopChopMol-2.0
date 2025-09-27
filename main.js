@@ -2164,17 +2164,17 @@ function updateFragmentList(fragmentList) {
         listItem.style.cursor = 'pointer';
         listItem.style.padding = '5px';
         listItem.style.margin = '2px';
-        listItem.style.borderRadius = '5px';
+        listItem.style.borderRadius = '10px';
         listItem.style.transition = 'background-color 0.3s';
         listItem.style.paddingLeft = '20px';
         listItem.style.paddingRight = '20px';
         listItem.dataset.fragmentIndex = index;
 
+
         // Check if this fragment is currently selected
         if (fragmentsSelected.includes(index)) {
             listItem.classList.add('selected');
             listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-
             // Add action buttons container
             const buttonContainer = document.createElement('div');
             buttonContainer.style.cssText = 'display: flex; gap: 5px; margin-top: 10px;';
