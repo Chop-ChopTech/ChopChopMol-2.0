@@ -10,6 +10,7 @@ body {
     padding: 15px;
     background-color: black;
     display: flex;
+    perspective: 1000px;
 }
 
 #canvas {

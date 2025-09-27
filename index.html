@@ -388,10 +388,13 @@
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #444aff81 0%, #a143ff7e 100%);
+                backdrop-filter: blur(5px);
                 color: white;
+                font-weight: 600;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
                 padding: 15px 20px;
-                border-radius: 8px;
+                border-radius: 16px;
                 font-family: 'Rubik', sans-serif;
                 z-index: 10000;
                 animation: slideIn 0.3s ease;
@@ -400,6 +403,9 @@
 
             setTimeout(() => {
                 notification.style.opacity = '0';
+                notification.style.transform = 'scale(1.2)';
+                notification.style.backdropFilter = 'blur(0px)';
+
                 setTimeout(() => notification.remove(), 300);
             }, 2000);
         }

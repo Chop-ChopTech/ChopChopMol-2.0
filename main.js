@@ -3229,11 +3229,12 @@ document.addEventListener('DOMContentLoaded', () => {
         currentIsolationIndex = -1;
         originalMoleculeData = null;
         originalFragments = [];
-
+        if (fragments.length > 0) {
+            document.getElementById('createFragment').style.display = 'block';
+        }
         // Update the fragment list UI
         updateFragmentList(document.getElementById('fragmentList'));
         updateEditingContent();
-        document.getElementById('createFragment').style.display = 'block';
     });
 
     // Delete selected
