@@ -3222,11 +3222,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('molecule-actions').style.display = 'none';
         console.log(moleculeData.data.fragments);
         fragments = moleculeData.data.fragments.map(f => f.atoms);
-        if (fragments.length > 0) {
-            isInIsolationMode = true;
-        }
-        updateFragmentList(document.getElementById('fragmentList'));
 
+        // Reset isolation state - we're viewing the full molecule
+        isInIsolationMode = false;
+        isolationHistory = [];
+        currentIsolationIndex = -1;
+        originalMoleculeData = null;
+        originalFragments = [];
+
+        // Update the fragment list UI
+        updateFragmentList(document.getElementById('fragmentList'));
+        updateEditingContent();
+        document.getElementById('createFragment').style.display = 'block';
     });
 
     // Delete selected
