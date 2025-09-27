@@ -115,6 +115,11 @@ let currentIsolationIndex = -1;
 let originalMoleculeData = null;
 let originalFragments = [];
 let isInIsolationMode = false;
+let globalFragmentStore = {
+    originalAtomCount: 0,
+    fragments: [],  // Array of fragments, each is an array of original atom indices
+    fragmentIdMap: new Map() // Maps fragment signatures to avoid duplicates
+};
 
 export default class Main {
     constructor() {
@@ -1152,7 +1157,76 @@ function onPointerMove2(event) {
         renderer.domElement.style.cursor = 'default';
     }
 }
+function initializeFragmentStore(atomCount) {
+    globalFragmentStore = {
+        originalAtomCount: atomCount,
+        fragments: [],
+        fragmentIdMap: new Map()
+    };
+    console.log('Initialized fragment store for', atomCount, 'atoms');
+}
 
+// Add a fragment to the global store (always with original indices)
+function addFragmentToGlobalStore(atomIndices, currentIsolationIndices = null) {
+    let originalIndices;
+
+    if (currentIsolationIndices) {
+        originalIndices = atomIndices.map(localIdx => {
+            if (localIdx < currentIsolationIndices.length) {
+                return currentIsolationIndices[localIdx];
+            }
+            return null;
+        }).filter(idx => idx !== null);
+    } else {
+        originalIndices = [...atomIndices];
+    }
+
+    const signature = originalIndices.slice().sort((a, b) => a - b).join(',');
+
+    if (!globalFragmentStore.fragmentIdMap.has(signature)) {
+        // NEW: Check and remove overlapping fragments before adding
+        removeOverlappingFragments(originalIndices);  // <-- THIS IS NEW!
+
+        globalFragmentStore.fragments.push(originalIndices);
+        globalFragmentStore.fragmentIdMap.set(signature, globalFragmentStore.fragments.length - 1);
+        console.log('Added fragment with original indices:', originalIndices);
+        return true;
+    }
+    return false;
+}
+
+// Get fragments visible in current isolation (converts to local indices)
+function getFragmentsForIsolation(isolationIndices = null) {
+    if (!isolationIndices) {
+        // At root level - return all fragments as-is
+        return globalFragmentStore.fragments.map(f => [...f]);
+    }
+
+    // Create mapping from original to local indices
+    const originalToLocal = new Map();
+    isolationIndices.forEach((origIdx, localIdx) => {
+        originalToLocal.set(origIdx, localIdx);
+    });
+
+    // Convert global fragments to local indices for current isolation
+    const localFragments = [];
+    const isolationSet = new Set(isolationIndices);
+
+    globalFragmentStore.fragments.forEach(fragment => {
+        // Check if all atoms of this fragment are in current isolation
+        const allInIsolation = fragment.every(origIdx => isolationSet.has(origIdx));
+
+        if (allInIsolation) {
+            // Convert to local indices
+            const localIndices = fragment.map(origIdx => originalToLocal.get(origIdx));
+            if (localIndices.every(idx => idx !== undefined)) {
+                localFragments.push(localIndices);
+            }
+        }
+    });
+
+    return localFragments;
+}
 // Solution 1: Create a separate function to attach button event listeners
 function attachButtonEventListeners() {
     // Remove any existing listeners first to avoid duplicates
@@ -1414,6 +1488,45 @@ function resetRotationState() {
     }
 }
 
+function saveCurrentFragments() {
+    if (!fragments || fragments.length === 0) return;
+
+    let isolationIndices = null;
+    if (isInIsolationMode && currentIsolationIndex >= 0) {
+        const currentIsolation = isolationHistory[currentIsolationIndex];
+        isolationIndices = currentIsolation.originalIndices;
+    }
+
+    // NEW: Map all fragments to original indices first
+    const newFragmentOriginalIndices = [];
+
+    fragments.forEach(fragment => {
+        let originalIndices;
+        if (isolationIndices) {
+            originalIndices = fragment.map(localIdx => {
+                if (localIdx < isolationIndices.length) {
+                    return isolationIndices[localIdx];
+                }
+                return null;
+            }).filter(idx => idx !== null);
+        } else {
+            originalIndices = [...fragment];
+        }
+        newFragmentOriginalIndices.push(originalIndices);
+    });
+
+    // NEW: Remove parent fragment if we're subdividing it
+    if (isolationIndices && newFragmentOriginalIndices.length > 1) {
+        removeParentFragment(isolationIndices);  // <-- THIS IS NEW!
+    }
+
+    // Now add the new fragments
+    newFragmentOriginalIndices.forEach(indices => {
+        addFragmentToGlobalStore(indices);
+    });
+
+    console.log('Saved', fragments.length, 'fragments. Total stored:', globalFragmentStore.fragments.length);
+}
 
 
 function isolateFragment(fragmentIndex) {
@@ -1424,76 +1537,60 @@ function isolateFragment(fragmentIndex) {
         return;
     }
 
-    // Store original fragments at the first isolation level
-    if (!isInIsolationMode) {
-        originalFragments = JSON.parse(JSON.stringify(fragments));
-        console.log('Stored original fragments:', originalFragments);
-    } else {
-        // CRITICAL FIX: If we're already in isolation and going deeper,
-        // save the current fragments in the current isolation history entry
-        if (currentIsolationIndex >= 0 && currentIsolationIndex < isolationHistory.length) {
-            const currentIsolation = isolationHistory[currentIsolationIndex];
-            if (fragments && fragments.length > 0) {
-                currentIsolation.subFragments = fragments.map(fragment => [...fragment]);
-                console.log(`Saved ${fragments.length} fragments at isolation level ${currentIsolationIndex} before going deeper`);
-            }
-        }
+    // Initialize global store on first isolation
+    if (!isInIsolationMode && globalFragmentStore.fragments.length === 0) {
+        initializeFragmentStore(originalMoleculeData.numAtoms);
     }
+
+    // Save current fragments before isolating
+    saveCurrentFragments();
 
     const fragmentAtomIndices = fragments[fragmentIndex];
-    if (!fragmentAtomIndices || fragmentAtomIndices.length === 0) {
-        console.error('Fragment has no atoms');
-        return;
-    }
 
-    console.log(`Isolating fragment ${fragmentIndex + 1} with ${fragmentAtomIndices.length} atoms`);
-
-    // For nested isolations, map the indices through parent isolation
-    let mappedIndices;
+    // Map to original indices
+    let originalIndices;
     if (isInIsolationMode && currentIsolationIndex >= 0) {
         const currentIsolation = isolationHistory[currentIsolationIndex];
-        // Map local fragment indices through current isolation's mapping
-        mappedIndices = fragmentAtomIndices.map(localIdx => {
+        originalIndices = fragmentAtomIndices.map(localIdx => {
             if (localIdx < currentIsolation.originalIndices.length) {
                 return currentIsolation.originalIndices[localIdx];
             }
             return null;
         }).filter(idx => idx !== null);
-        console.log('Nested isolation - mapped indices:', mappedIndices);
     } else {
-        // First level isolation - indices are already correct
-        mappedIndices = fragmentAtomIndices;
+        originalIndices = [...fragmentAtomIndices];
     }
+
+    console.log('Isolating fragment with original indices:', originalIndices);
 
     const newData = generateDataFromAtoms(fragmentAtomIndices);
 
-    // Create isolation history entry with proper mapped indices
     const isolationEntry = {
         name: `Fragment ${fragmentIndex + 1}`,
         atomCount: fragmentAtomIndices.length,
         data: newData,
         fragmentIndex: fragmentIndex,
-        originalIndices: mappedIndices, // Use mapped indices for nested isolations
-        localIndices: fragmentAtomIndices, // Keep local indices for reference
+        originalIndices: originalIndices,  // Always store original indices
         timestamp: Date.now()
     };
 
-    // Add to history
     if (isInIsolationMode && currentIsolationIndex < isolationHistory.length - 1) {
         isolationHistory = isolationHistory.slice(0, currentIsolationIndex + 1);
     }
     isolationHistory.push(isolationEntry);
     currentIsolationIndex = isolationHistory.length - 1;
 
-    // Clear selections and fragments for the new isolation
+    // Clear selections
     atomsSelected = [];
     fragmentsSelected = [];
-    fragments = [];
+
+    // Get fragments for new isolation level
+    fragments = getFragmentsForIsolation(originalIndices);
 
     resetRotationState();
-
     isInIsolationMode = true;
-    main.mode = newData.numAtoms <= 2000 ? 1 : 0
+
+    main.mode = newData.numAtoms <= 2000 ? 1 : 0;
     main.newMolecule(
         newData,
         main.mode,
@@ -1506,8 +1603,6 @@ function isolateFragment(fragmentIndex) {
 
     main.data = newData;
     resetCamera();
-
-
     updateIsolationModeUI();
 
     const fragmentList = document.getElementById('fragmentList');
@@ -1518,7 +1613,56 @@ function isolateFragment(fragmentIndex) {
     updateEditingContent();
     render();
 
-    console.log(`Fragment isolated. Isolation depth: ${isolationHistory.length}`);
+    console.log('Fragment isolated. Fragments at this level:', fragments.length);
+}
+
+function removeOverlappingFragments(newFragmentIndices) {
+    const newSet = new Set(newFragmentIndices);
+    const fragmentsToRemove = [];
+
+    // Find fragments that are supersets of the new fragment
+    globalFragmentStore.fragments.forEach((fragment, index) => {
+        const fragmentSet = new Set(fragment);
+
+        // Check if existing fragment is a superset of new fragment
+        if (fragment.length > newFragmentIndices.length) {
+            let isSuperset = true;
+            for (const idx of newFragmentIndices) {
+                if (!fragmentSet.has(idx)) {
+                    isSuperset = false;
+                    break;
+                }
+            }
+            if (isSuperset) {
+                fragmentsToRemove.push(index);
+            }
+        }
+    });
+
+    // Remove superset fragments in reverse order to maintain indices
+    fragmentsToRemove.sort((a, b) => b - a);
+    fragmentsToRemove.forEach(index => {
+        const removed = globalFragmentStore.fragments.splice(index, 1)[0];
+        const signature = removed.slice().sort((a, b) => a - b).join(',');
+        globalFragmentStore.fragmentIdMap.delete(signature);
+        console.log('Removed superset fragment:', removed);
+    });
+}
+
+function removeParentFragment(parentIndices) {
+    const parentSignature = parentIndices.slice().sort((a, b) => a - b).join(',');
+
+    // Find and remove the parent fragment
+    const fragmentIndex = globalFragmentStore.fragments.findIndex(fragment => {
+        const signature = fragment.slice().sort((a, b) => a - b).join(',');
+        return signature === parentSignature;
+    });
+
+    if (fragmentIndex !== -1) {
+        globalFragmentStore.fragments.splice(fragmentIndex, 1);
+        globalFragmentStore.fragmentIdMap.delete(parentSignature);
+        console.log('Removed parent fragment that was subdivided:', parentIndices);
+    }
 }
 function restoreOriginalMolecule() {
     if (!originalMoleculeData) {
@@ -1526,58 +1670,14 @@ function restoreOriginalMolecule() {
         return;
     }
 
-    // Function to recursively collect and map fragments from all isolation levels
-    function collectAllFragments() {
-        const allCollectedFragments = [];
+    // Save current fragments before restoring
+    saveCurrentFragments();
 
-        // First, save current fragments if any exist
-        if (isInIsolationMode && currentIsolationIndex >= 0 && fragments && fragments.length > 0) {
-            const currentIsolation = isolationHistory[currentIsolationIndex];
-            currentIsolation.subFragments = fragments.map(fragment => [...fragment]);
-            console.log(`Saved ${fragments.length} fragments at current isolation level ${currentIsolationIndex}`);
-        }
-
-        // Now collect fragments from all isolation levels
-        for (let i = 0; i < isolationHistory.length; i++) {
-            const isolation = isolationHistory[i];
-
-            if (isolation && isolation.subFragments && isolation.subFragments.length > 0) {
-                console.log(`Processing ${isolation.subFragments.length} fragments from isolation level ${i}`);
-
-                // Map each fragment through all parent levels to get original indices
-                const mappedFragments = isolation.subFragments.map(fragment => {
-                    let currentIndices = [...fragment];
-
-                    // Map through each isolation level from this level back to root
-                    for (let level = i; level >= 0; level--) {
-                        const parentIsolation = isolationHistory[level];
-                        if (parentIsolation && parentIsolation.originalIndices) {
-                            const newIndices = [];
-                            for (const idx of currentIndices) {
-                                if (idx >= 0 && idx < parentIsolation.originalIndices.length) {
-                                    newIndices.push(parentIsolation.originalIndices[idx]);
-                                }
-                            }
-                            currentIndices = newIndices;
-                        }
-                    }
-
-                    return currentIndices;
-                }).filter(fragment => fragment.length > 0);
-
-                allCollectedFragments.push(...mappedFragments);
-            }
-        }
-
-        return allCollectedFragments;
-    }
-
-    // Before restoring, update atom positions and collect fragments
-    if (isInIsolationMode && isolationHistory.length > 0) {
+    // Update atom positions in original molecule
+    if (isInIsolationMode && currentIsolationIndex >= 0) {
         const currentIsolation = isolationHistory[currentIsolationIndex];
 
-        if (currentIsolation && currentIsolation.originalIndices) {
-            // Update atom positions
+        if (currentIsolation && currentIsolation.originalIndices && main.molecule.atoms) {
             const editedAtoms = main.molecule.atoms;
             currentIsolation.originalIndices.forEach((originalIdx, localIdx) => {
                 if (localIdx < editedAtoms.length && originalIdx < originalMoleculeData.atomData.length) {
@@ -1590,56 +1690,17 @@ function restoreOriginalMolecule() {
                     };
                 }
             });
-            console.log(`Merged ${currentIsolation.originalIndices.length} edited atoms back to original`);
-        }
-
-        // Collect all fragments from all isolation levels
-        const collectedFragments = collectAllFragments();
-
-        if (collectedFragments.length > 0) {
-            // Initialize originalFragments if needed
-            if (!originalFragments) {
-                originalFragments = [];
-            }
-
-            // Get all atoms in collected fragments
-            const atomsInCollectedFragments = new Set(collectedFragments.flat());
-
-            // Update existing fragments to remove overlapping atoms
-            let updatedOriginalFragments = originalFragments.map(fragment => {
-                return fragment.filter(atomIndex => !atomsInCollectedFragments.has(atomIndex));
-            }).filter(fragment => fragment.length > 0);
-
-            // Add the collected fragments
-            originalFragments = [...updatedOriginalFragments, ...collectedFragments];
-
-            // Remove duplicates
-            const uniqueFragments = [];
-            const fragmentSignatures = new Set();
-
-            for (const fragment of originalFragments) {
-                const signature = fragment.sort((a, b) => a - b).join(',');
-                if (!fragmentSignatures.has(signature)) {
-                    fragmentSignatures.add(signature);
-                    uniqueFragments.push(fragment);
-                }
-            }
-
-            originalFragments = uniqueFragments;
-
-            console.log(`Collected ${collectedFragments.length} fragments from all isolation levels`);
-            console.log('Final fragment count:', originalFragments.length);
         }
     }
 
     console.log('Restoring original molecule with', originalMoleculeData.numAtoms, 'atoms');
+    console.log('Total fragments in global store:', globalFragmentStore.fragments.length);
 
     // Clear isolation mode
     isInIsolationMode = false;
     isolationHistory = [];
     currentIsolationIndex = -1;
 
-    // Restore the data
     const restoredData = JSON.parse(JSON.stringify(originalMoleculeData));
 
     // Clear selections
@@ -1648,10 +1709,9 @@ function restoreOriginalMolecule() {
 
     resetRotationState();
 
-    // Restore fragments
-    fragments = originalFragments ? JSON.parse(JSON.stringify(originalFragments)) : [];
+    // Restore all fragments at root level
+    fragments = getFragmentsForIsolation(null);
 
-    // Recreate the molecule
     main.newMolecule(
         restoredData,
         main.mode,
@@ -1673,8 +1733,7 @@ function restoreOriginalMolecule() {
     updateEditingContent();
     render();
 
-    console.log('Original molecule restored with all fragments preserved');
-    console.log('Total fragments:', fragments.length);
+    console.log('Restored with', fragments.length, 'fragments');
 }
 function navigateIsolationHistory(direction) {
     // Save current edits AND fragments before navigating
@@ -1779,6 +1838,27 @@ function navigateIsolationHistory(direction) {
     render();
 
     console.log(`Navigated to: ${isolationEntry.name}`);
+}
+
+function debugGlobalFragments() {
+    console.log('=== Global Fragment Store Debug ===');
+    console.log('Original atom count:', globalFragmentStore.originalAtomCount);
+    console.log('Total fragments:', globalFragmentStore.fragments.length);
+    globalFragmentStore.fragments.forEach((fragment, index) => {
+        console.log(`Fragment ${index + 1}: [${fragment.join(', ')}]`);
+    });
+    console.log('=================================');
+}
+
+// Clear all fragments (useful for reset)
+function clearGlobalFragments() {
+    globalFragmentStore = {
+        originalAtomCount: 0,
+        fragments: [],
+        fragmentIdMap: new Map()
+    };
+    fragments = [];
+    console.log('Cleared all fragments');
 }
 
 // 5. Show fragment in context of original molecule (highlight it)
