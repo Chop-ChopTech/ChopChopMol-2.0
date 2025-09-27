@@ -7,7 +7,7 @@
 body {
     overflow: hidden;
     margin: 0;
-    padding: 15px;
+    padding: 0;
     background-color: black;
     display: flex;
     perspective: 1000px;
@@ -565,12 +565,11 @@ body {
 
 #styleSelector {
     position: absolute;
-    bottom: 50%;
+    top: 50%;
     right: 10px;
     z-index: 9999;
-    background: linear-gradient(145deg, rgba(0, 174, 205, 0.787) 0%, rgba(10, 46, 118, 0.584) 57%, rgba(0, 0, 0, 0.555) 100%);
+    background: linear-gradient(145deg, rgba(0, 133, 205, 0.787) 0%, rgba(10, 46, 118, 0.584) 67%, rgba(89, 0, 184, 0.555) 100%);
     width: 300px;
-    height: 100vh;
     max-height: calc(100vh - 83px);
     overflow-y: auto;
     overflow-x: hidden;
@@ -585,10 +584,8 @@ body {
     box-shadow:
         0 4px 10px rgba(0, 0, 0, 0.513),
         inset 5px 5px 5px rgba(255, 255, 255, 0.326),
-        inset -8px -8px 16px rgba(255, 255, 255, 0.285),
-        inset 8px -8px 16px rgba(0, 0, 0, 0.459);
-    transform: translate(0%, 50%);
-
+        inset -8px -8px 16px rgba(255, 255, 255, 0.285);
+    transform: translateY(-50%);
 }
 
 #createFragment {
@@ -883,10 +880,11 @@ input[type="range"]:focus {
 
 #toolbar-background {
     position: absolute;
-    top: -15px;
+    top: 0px;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
     /* background: linear-gradient(135deg, rgba(236, 210, 255, 0.025), rgba(178, 215, 255, 0.096)) !important; */
+
     z-index: -999999999999999;
     border-radius: 20px;
     padding: 3px 10px;
@@ -1353,7 +1351,7 @@ input[type="range"]:focus {
 
 #settings {
     position: absolute;
-    top: -9px;
+    top: 5px;
     left: 10px;
 }
 

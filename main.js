@@ -2111,7 +2111,7 @@ function updateEditingContent(element = null, color = null) {
         // Attach axis-related event listeners
         attachAxisEventListeners();
     } else {
-        editMoleculeContent.innerHTML = '<h2 id="select-an-atom">Select an atom</h2>';
+        editMoleculePanel.classList.add('on');
     }
 }
 
