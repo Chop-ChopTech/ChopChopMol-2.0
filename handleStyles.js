@@ -112,6 +112,7 @@ export function applyStylePreferences(prefs, renderer) {
     if (prefs.labelsToggled !== undefined) {
         document.getElementById('toggleLabels').checked = prefs.labelsToggled;
         main.labelsToggled = prefs.labelsToggled;
+        main.toggleLabels(main.labelsToggled);
     }
 
     // Apply antialias
