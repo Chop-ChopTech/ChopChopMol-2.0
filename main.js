@@ -251,6 +251,7 @@ export default class Main {
     }
     createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true, soft = false) {
         const data = JSON.parse(json);
+        console.log(this.mode);
         this.newMolecule(data, this.mode, overlay, rotation, translation, center, false, soft);
         this.data = data;
     }
@@ -1593,7 +1594,7 @@ function isolateFragment(fragmentIndex) {
     main.mode = newData.numAtoms <= 2000 ? 1 : 0;
     main.newMolecule(
         newData,
-        main.mode,
+        main.setNewMode(newData.numAtoms <= 2000),
         false,
         { x: 0, y: 0, z: 0 },
         { x: 0, y: 0, z: 0 },
@@ -1714,7 +1715,7 @@ function restoreOriginalMolecule() {
 
     main.newMolecule(
         restoredData,
-        main.mode,
+        main.setNewMode(restoredData.numAtoms <= 2000),
         false,
         { x: 0, y: 0, z: 0 },
         { x: 0, y: 0, z: 0 },
