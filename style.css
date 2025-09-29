@@ -7,9 +7,10 @@
 body {
     overflow: hidden;
     margin: 0;
-    padding: 15px;
+    padding: 0;
     background-color: black;
     display: flex;
+    perspective: 1000px;
 }
 
 #canvas {
@@ -424,7 +425,6 @@ body {
 
 .fancy-textbox {
     padding: 12px 9px;
-    border-radius: 10px;
     border: 2px solid #d1d5db;
     /* margin: 12px; */
     font-size: 15px;
@@ -432,12 +432,13 @@ body {
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease-in-out;
     caret-color: #6366f1;
-    border: 2px solid #6200ea;
+    /* border: 2px solid #0065ea; */
+    border: none;
     width: 880px;
     /* Vibrant border color */
-    border-radius: 10px;
+    border-radius: 15px;
     /* Rounded corners */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 10px rgba(98, 0, 234, 0.5);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
     /* Subtle shadow + glow */
     height: 20px;
     outline: none;
@@ -564,12 +565,11 @@ body {
 
 #styleSelector {
     position: absolute;
-    bottom: 50%;
+    top: 50%;
     right: 10px;
     z-index: 9999;
-    background: linear-gradient(145deg, rgba(0, 174, 205, 0.787) 0%, rgba(10, 46, 118, 0.584) 57%, rgba(0, 0, 0, 0.555) 100%);
+    background: linear-gradient(145deg, rgba(0, 133, 205, 0.787) 0%, rgba(10, 46, 118, 0.584) 67%, rgba(89, 0, 184, 0.555) 100%);
     width: 300px;
-    height: 100vh;
     max-height: calc(100vh - 83px);
     overflow-y: auto;
     overflow-x: hidden;
@@ -584,9 +584,18 @@ body {
     box-shadow:
         0 4px 10px rgba(0, 0, 0, 0.513),
         inset 5px 5px 5px rgba(255, 255, 255, 0.326),
-        inset -8px -8px 16px rgba(255, 255, 255, 0.285),
-        inset 8px -8px 16px rgba(0, 0, 0, 0.459);
-    transform: translate(0%, 50%);
+        inset -8px -8px 16px rgba(255, 255, 255, 0.285);
+    transform: translateY(-50%);
+}
+
+#createFragment {
+    background-color: rgb(114, 201, 0);
+    margin: 15px;
+    display: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: fit-content;
 
 }
 
@@ -871,12 +880,13 @@ input[type="range"]:focus {
 
 #toolbar-background {
     position: absolute;
-    top: -15px;
+    top: 0px;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
-    background: linear-gradient(135deg, rgba(236, 210, 255, 0.025), rgba(178, 215, 255, 0.096)) !important;
+    /* background: linear-gradient(135deg, rgba(236, 210, 255, 0.025), rgba(178, 215, 255, 0.096)) !important; */
+
     z-index: -999999999999999;
-    border-radius: 10px;
+    border-radius: 20px;
     padding: 3px 10px;
     transition: opacity 0.3s ease, transform 0.3s ease;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -912,13 +922,13 @@ input[type="range"]:focus {
     align-items: center;
     justify-content: top;
     flex-direction: column;
-    width: 130px;
+    width: 190px;
     height: 100vh;
     padding: 10px 0;
     position: absolute;
     top: 0;
     right: 8px;
-    margin-right: 20px;
+    margin-right: 0px;
     margin-top: 10px;
     /* background-color: chartreuse; */
 }
@@ -1341,7 +1351,7 @@ input[type="range"]:focus {
 
 #settings {
     position: absolute;
-    top: -9px;
+    top: 5px;
     left: 10px;
 }
 

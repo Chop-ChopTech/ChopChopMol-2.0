@@ -337,7 +337,6 @@
             if (!moleculeData || !moleculeData.data) return;
 
             window.main.data = moleculeData.data.molecule;
-            console.log(moleculeData.data);
             window.main.newMolecule(
                 moleculeData.data.molecule,
                 moleculeData.numAtoms <= 2000 ? 0 : 1,
@@ -389,10 +388,13 @@
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #444aff81 0%, #a143ff7e 100%);
+                backdrop-filter: blur(5px);
                 color: white;
+                font-weight: 600;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
                 padding: 15px 20px;
-                border-radius: 8px;
+                border-radius: 16px;
                 font-family: 'Rubik', sans-serif;
                 z-index: 10000;
                 animation: slideIn 0.3s ease;
@@ -401,6 +403,9 @@
 
             setTimeout(() => {
                 notification.style.opacity = '0';
+                notification.style.transform = 'scale(1.2)';
+                notification.style.backdropFilter = 'blur(0px)';
+
                 setTimeout(() => notification.remove(), 300);
             }, 2000);
         }
@@ -626,11 +631,11 @@
                         <input type="text" id="molecule-name-input" placeholder="Molecule name" class="fancy-textbox"
                             style="margin-top: 10px; margin-bottom: 10px; width: calc(100% - 40px);">
                         <button class="fancy-button" id="save-molecule-btn"
-                            style="background: linear-gradient(135deg, #7a92ff 0%, #7f31cd 100%);  width: 182px; height: 31px; border-radius: 30px; margin-bottom: 10px;">
+                            style="background: linear-gradient(135deg, #46a9ff 0%, #343eff 100%);  width: 182px; height: 31px; border-radius: 30px; margin-bottom: 10px;">
                             <i class="fas fa-cloud-upload-alt"></i> Save to Cloud
                         </button>
                         <button class="fancy-button" id="load-molecules-btn"
-                            style="background: linear-gradient(135deg, #f490ff 0%, #ff3e58 100%); width: 182px; height: 31px; border-radius: 30px;">
+                            style="background: linear-gradient(135deg, #ba6aff 0%, #a710ff 100%); width: 182px; height: 31px; border-radius: 30px;">
                             <i class="fas fa-folder-open"></i> My Molecules
                         </button>
                         <select id="molecules-list" class="fancy-textbox"
@@ -772,8 +777,7 @@
         </div>
     </div>
     <div id="fragmentListContainer">
-        <!-- <span id="fragmentListTitle"><u>Fragments</u></span> -->
-        <!-- <hr style="border: none; height: 2px; width: 80%; background-color: rgb(255, 255, 255);"> -->
+        <button id="createFragment" class="fancy-button">Create Fragment</button>
 
         <ul id="fragmentList"></ul>
     </div>
