@@ -1450,8 +1450,6 @@ input[type="range"]:focus {
 /* Hover effect for user initials */
 .dropdown-icon.signed-in:hover .user-initials {
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
 }
 
 /* Animation for when user signs in */
@@ -1790,10 +1788,10 @@ input[type="range"]:focus {
 
 /* User initials in dropdown */
 .user-initials {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3051e7 0%, #6a32a1 100%);
     border-radius: 50%;
-    width: 35px;
-    height: 35px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1801,6 +1799,9 @@ input[type="range"]:focus {
     font-weight: bold;
     color: white;
     cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
+
 }
 
 #settings .dropdown-icon.signed-in {
