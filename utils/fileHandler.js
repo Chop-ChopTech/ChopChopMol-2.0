@@ -43,6 +43,7 @@ export default class FileHandler {
 
                 }
                 this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)), overlay, rotation, translation, true, false);
+                console.log(parsedData.numAtoms);
                 this.main.zoomCameraToFitMolecule();
 
 
