@@ -14,6 +14,7 @@ export default class FileHandler {
         if (!file) return;
 
         const reader = new FileReader();
+        window.startMeasurement = performance.now();
         reader.onload = (e) => {
             try {
                 const text = e.target.result;

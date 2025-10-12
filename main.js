@@ -237,7 +237,13 @@ export default class Main {
             this.molecule.updateLabels();
         }
         render();
+        window.endMeasurement = performance.now();
+        const loadTimeMs = window.endMeasurement - window.startMeasurement
+        const loadTimeSec = loadTimeMs / 1000
+        console.log(`Load time: ${loadTimeSec} s`);
 
+        window.startMeasurement = null;
+        window.endMeasurement = null;
     }
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
@@ -3193,6 +3199,8 @@ window.resetRotation = resetRotation;
 window.finalizeRotation = finalizeRotation;
 window.initializeRotationSystem = initializeRotationSystem;
 window.rotationState = rotationState;
+window.startMeasurement = null;
+window.endMeasurement = null;
 
 // Auto-initialize if the script is loaded after DOM is ready
 if (document.readyState === 'loading') {

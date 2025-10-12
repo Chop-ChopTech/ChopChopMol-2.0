@@ -568,7 +568,7 @@ body {
     top: 50%;
     right: 10px;
     z-index: 9999;
-    background: linear-gradient(145deg, rgba(0, 133, 205, 0.787) 0%, rgba(10, 46, 118, 0.584) 67%, rgba(89, 0, 184, 0.555) 100%);
+    background: linear-gradient(145deg, rgba(0, 133, 205, 0.501) 0%, rgba(10, 46, 118, 0.462) 67%, rgba(89, 0, 184, 0.555) 100%);
     width: 300px;
     max-height: calc(100vh - 83px);
     overflow-y: auto;
@@ -580,7 +580,7 @@ body {
     flex-direction: column;
     gap: 10px;
     color: #ffffff;
-    backdrop-filter: blur(15px);
+    backdrop-filter: blur(10px);
     box-shadow:
         0 4px 10px rgba(0, 0, 0, 0.513),
         inset 5px 5px 5px rgba(255, 255, 255, 0.326),
