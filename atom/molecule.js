@@ -174,71 +174,83 @@ export default class Molecule {
 
     createBonds(atoms, threshold) {
         this.bonds = [];
+        const n = atoms.length;
+        if (n === 0) return this.bonds;
 
-        if (atoms.length === 0) return this.bonds;
-
-        // Find bounds
+        // Preallocate and cache everything
+        const positions = new Float32Array(n * 3);
+        const radii = new Float32Array(n);
         let minX = Infinity, minY = Infinity, minZ = Infinity;
-        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
         let maxBondDist = 0;
 
-        for (let atom of atoms) {
-            const pos = atom.position;
+        for (let i = 0; i < n; i++) {
+            const pos = atoms[i].position;
+            const idx = i * 3;
+            positions[idx] = pos.x;
+            positions[idx + 1] = pos.y;
+            positions[idx + 2] = pos.z;
             minX = Math.min(minX, pos.x);
             minY = Math.min(minY, pos.y);
             minZ = Math.min(minZ, pos.z);
-            maxX = Math.max(maxX, pos.x);
-            maxY = Math.max(maxY, pos.y);
-            maxZ = Math.max(maxZ, pos.z);
-            maxBondDist = Math.max(maxBondDist, this.stretch * atom.realRadius * 2 + threshold);
+
+            const r = atoms[i].realRadius;
+            radii[i] = r;
+            maxBondDist = Math.max(maxBondDist, this.stretch * r * 2 + threshold);
         }
 
-        // Create grid
-        const cellSize = maxBondDist;
+        const invCellSize = 1 / maxBondDist;
         const grid = new Map();
-
-        const getKey = (x, y, z) => `${x},${y},${z}`;
+        const stretchSq = this.stretch * this.stretch;
+        const thresholdSq = threshold * threshold;
 
         // Populate grid
-        for (let atom of atoms) {
-            const x = Math.floor((atom.position.x - minX) / cellSize);
-            const y = Math.floor((atom.position.y - minY) / cellSize);
-            const z = Math.floor((atom.position.z - minZ) / cellSize);
-            const key = getKey(x, y, z);
+        for (let i = 0; i < n; i++) {
+            const idx = i * 3;
+            const x = Math.floor((positions[idx] - minX) * invCellSize);
+            const y = Math.floor((positions[idx + 1] - minY) * invCellSize);
+            const z = Math.floor((positions[idx + 2] - minZ) * invCellSize);
+            const key = (x * 73856093) ^ (y * 19349663) ^ (z * 83492791);
 
             if (!grid.has(key)) grid.set(key, []);
-            grid.get(key).push(atom);
+            grid.get(key).push({ i, x, y, z });
         }
 
-        // Check neighboring cells only
-        const checked = new Set();
-
+        // Check pairs - fully optimized inner loop
         for (let [key, cellAtoms] of grid) {
-            const [cx, cy, cz] = key.split(',').map(Number);
+            const len1 = cellAtoms.length;
+            for (let a = 0; a < len1; a++) {
+                const { i: i1, x: cx, y: cy, z: cz } = cellAtoms[a];
+                const idx1 = i1 * 3;
+                const x1 = positions[idx1];
+                const y1 = positions[idx1 + 1];
+                const z1 = positions[idx1 + 2];
+                const r1 = radii[i1];
 
-            for (let atom1 of cellAtoms) {
-                // Check same and neighboring cells
                 for (let dx = -1; dx <= 1; dx++) {
+                    const nx = (cx + dx) * 73856093;
                     for (let dy = -1; dy <= 1; dy++) {
+                        const nxy = nx ^ ((cy + dy) * 19349663);
                         for (let dz = -1; dz <= 1; dz++) {
-                            const neighborKey = getKey(cx + dx, cy + dy, cz + dz);
+                            const neighborKey = nxy ^ ((cz + dz) * 83492791);
                             const neighbors = grid.get(neighborKey);
                             if (!neighbors) continue;
 
-                            for (let atom2 of neighbors) {
-                                if (atom1 === atom2) continue;
+                            const len2 = neighbors.length;
+                            for (let b = 0; b < len2; b++) {
+                                const i2 = neighbors[b].i;
+                                if (i1 >= i2) continue;
 
-                                const pairKey = atom1.id < atom2.id ?
-                                    `${atom1.id}-${atom2.id}` : `${atom2.id}-${atom1.id}`;
+                                const idx2 = i2 * 3;
+                                const dx = x1 - positions[idx2];
+                                const dy = y1 - positions[idx2 + 1];
+                                const dz = z1 - positions[idx2 + 2];
+                                const distSq = dx * dx + dy * dy + dz * dz;
 
-                                if (checked.has(pairKey)) continue;
-                                checked.add(pairKey);
+                                const sumR = r1 + radii[i2];
+                                const maxDistSq = sumR * sumR * stretchSq + 2 * this.stretch * sumR * threshold + thresholdSq;
 
-                                const dist = atom1.position.distanceTo(atom2.position);
-                                const maxBondDistance = this.stretch * (atom1.realRadius + atom2.realRadius) + threshold;
-
-                                if (dist <= maxBondDistance) {
-                                    this.bonds.push(new Bond(this, atom1, atom2, dist));
+                                if (distSq <= maxDistSq) {
+                                    this.bonds.push(new Bond(this, atoms[i1], atoms[i2], Math.sqrt(distSq)));
                                 }
                             }
                         }
