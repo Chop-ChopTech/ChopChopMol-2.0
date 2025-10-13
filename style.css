@@ -588,6 +588,34 @@ body {
     transform: translateY(-50%);
 }
 
+#loadingBar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background-color: limegreen;
+    transition: width 0.3s ease;
+    z-index: 10000;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+#loadingBar.active {
+    animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    }
+}
+
 #createFragment {
     background-color: rgb(114, 201, 0);
     margin: 15px;

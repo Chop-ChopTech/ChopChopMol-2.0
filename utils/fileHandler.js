@@ -8,14 +8,19 @@ export default class FileHandler {
 
     handleFile(event, overlayOn) {
         const file = event.target.files[0];
-        const overlay = overlayOn
-        let rotation = { x: 0, y: 0, z: 0 }
-        let translation = { x: 0, y: 0, z: 0 }
+        const overlay = overlayOn;
+        let rotation = { x: 0, y: 0, z: 0 };
+        let translation = { x: 0, y: 0, z: 0 };
         if (!file) return;
 
+        // Show loading bar
+        const loadingBar = document.getElementById('loadingBar');
+        loadingBar.style.width = '30%';
+        loadingBar.classList.add('active');
+
         const reader = new FileReader();
-        window.startMeasurement = performance.now();
         reader.onload = (e) => {
+            loadingBar.style.width = '60%';
             try {
                 const text = e.target.result;
                 const fileType = findFileType(file);
@@ -28,28 +33,38 @@ export default class FileHandler {
                 } else if (fileType === 'xyz') {
                     parsedData = this.parseXyzToJson(text);
                 }
+
+                loadingBar.style.width = '80%';
+
                 if (overlay) {
                     const transformation = alignMolecules(parsedData, this.main.data);
                     rotation = transformation.rotation;
                     translation = transformation.translation;
-                    console.log(rotation, translation);
-
                 }
+
                 if (parsedData.numAtoms <= 2000) {
                     this.main.setNewMode(true);
                     document.getElementById("toggleStyleChanges").checked = true;
                 } else {
                     this.main.setNewMode();
                     document.getElementById("toggleStyleChanges").checked = false;
-
                 }
-                this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)), overlay, rotation, translation, true, false);
-                console.log(parsedData.numAtoms);
+
+                loadingBar.style.width = '90%';
+                this.main.createNewMoleculeFromJSON(JSON.stringify(parsedData), overlay, rotation, translation, true, false);
                 this.main.zoomCameraToFitMolecule();
 
+                // Complete loading
+                loadingBar.style.width = '100%';
+                setTimeout(() => {
+                    loadingBar.style.width = '0%';
+                    loadingBar.classList.remove('active');
+                }, 300);
 
             } catch (error) {
-                console.error("Error parsing XYZ file:", error);
+                console.error("Error parsing file:", error);
+                loadingBar.style.width = '0%';
+                loadingBar.classList.remove('active');
             }
         };
         reader.readAsText(file);
