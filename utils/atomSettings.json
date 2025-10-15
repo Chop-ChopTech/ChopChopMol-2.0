@@ -99,10 +99,45 @@
         "radius": 1.76,
         "realRadius": 1.76
     },
+    "Sc": {
+        "color": "silver",
+        "radius": 1.70,
+        "realRadius": 1.70
+    },
+    "Ti": {
+        "color": "gray",
+        "radius": 1.60,
+        "realRadius": 1.60
+    },
+    "V": {
+        "color": "steelblue",
+        "radius": 1.53,
+        "realRadius": 1.53
+    },
+    "Cr": {
+        "color": "darkgray",
+        "radius": 1.39,
+        "realRadius": 1.39
+    },
+    "Mn": {
+        "color": "pink",
+        "radius": 1.39,
+        "realRadius": 1.39
+    },
     "Fe": {
         "color": "orange",
         "radius": 1.32,
         "realRadius": 1.32
+    },
+    "Co": {
+        "color": "blue",
+        "radius": 1.26,
+        "realRadius": 1.26
+    },
+    "Ni": {
+        "color": "silver",
+        "radius": 1.24,
+        "realRadius": 1.24
     },
     "Cu": {
         "color": "brown",
@@ -114,15 +149,245 @@
         "radius": 1.22,
         "realRadius": 1.22
     },
+    "Ga": {
+        "color": "gray",
+        "radius": 1.22,
+        "realRadius": 1.22
+    },
+    "Ge": {
+        "color": "darkgray",
+        "radius": 1.20,
+        "realRadius": 1.20
+    },
+    "As": {
+        "color": "purple",
+        "radius": 1.19,
+        "realRadius": 1.19
+    },
+    "Se": {
+        "color": "gold",
+        "radius": 1.20,
+        "realRadius": 1.20
+    },
+    "Br": {
+        "color": "darkred",
+        "radius": 1.20,
+        "realRadius": 1.20
+    },
+    "Kr": {
+        "color": "cyan",
+        "radius": 1.16,
+        "realRadius": 1.16
+    },
+    "Rb": {
+        "color": "violet",
+        "radius": 2.20,
+        "realRadius": 2.20
+    },
+    "Sr": {
+        "color": "lightgreen",
+        "radius": 1.95,
+        "realRadius": 1.95
+    },
+    "Y": {
+        "color": "silver",
+        "radius": 1.90,
+        "realRadius": 1.90
+    },
+    "Zr": {
+        "color": "gray",
+        "radius": 1.75,
+        "realRadius": 1.75
+    },
+    "Nb": {
+        "color": "steelblue",
+        "radius": 1.64,
+        "realRadius": 1.64
+    },
+    "Mo": {
+        "color": "darkgray",
+        "radius": 1.54,
+        "realRadius": 1.54
+    },
+    "Tc": {
+        "color": "pink",
+        "radius": 1.47,
+        "realRadius": 1.47
+    },
+    "Ru": {
+        "color": "blue",
+        "radius": 1.46,
+        "realRadius": 1.46
+    },
+    "Rh": {
+        "color": "silver",
+        "radius": 1.42,
+        "realRadius": 1.42
+    },
+    "Pd": {
+        "color": "gray",
+        "radius": 1.39,
+        "realRadius": 1.39
+    },
     "Ag": {
         "color": "silver",
         "radius": 1.45,
         "realRadius": 1.45
     },
+    "Cd": {
+        "color": "lightblue",
+        "radius": 1.44,
+        "realRadius": 1.44
+    },
+    "In": {
+        "color": "gray",
+        "radius": 1.42,
+        "realRadius": 1.42
+    },
+    "Sn": {
+        "color": "darkgray",
+        "radius": 1.39,
+        "realRadius": 1.39
+    },
+    "Sb": {
+        "color": "purple",
+        "radius": 1.39,
+        "realRadius": 1.39
+    },
+    "Te": {
+        "color": "gold",
+        "radius": 1.38,
+        "realRadius": 1.38
+    },
     "I": {
         "color": "purple",
         "radius": 1.39,
         "realRadius": 1.39
+    },
+    "Xe": {
+        "color": "cyan",
+        "radius": 1.40,
+        "realRadius": 1.40
+    },
+    "Cs": {
+        "color": "violet",
+        "radius": 2.44,
+        "realRadius": 2.44
+    },
+    "Ba": {
+        "color": "lightgreen",
+        "radius": 2.15,
+        "realRadius": 2.15
+    },
+    "La": {
+        "color": "silver",
+        "radius": 2.07,
+        "realRadius": 2.07
+    },
+    "Ce": {
+        "color": "lightgray",
+        "radius": 2.04,
+        "realRadius": 2.04
+    },
+    "Pr": {
+        "color": "lightgreen",
+        "radius": 2.03,
+        "realRadius": 2.03
+    },
+    "Nd": {
+        "color": "lightblue",
+        "radius": 2.01,
+        "realRadius": 2.01
+    },
+    "Pm": {
+        "color": "pink",
+        "radius": 1.99,
+        "realRadius": 1.99
+    },
+    "Sm": {
+        "color": "silver",
+        "radius": 1.98,
+        "realRadius": 1.98
+    },
+    "Eu": {
+        "color": "gray",
+        "radius": 1.98,
+        "realRadius": 1.98
+    },
+    "Gd": {
+        "color": "lightgreen",
+        "radius": 1.96,
+        "realRadius": 1.96
+    },
+    "Tb": {
+        "color": "blue",
+        "radius": 1.94,
+        "realRadius": 1.94
+    },
+    "Dy": {
+        "color": "silver",
+        "radius": 1.92,
+        "realRadius": 1.92
+    },
+    "Ho": {
+        "color": "lightblue",
+        "radius": 1.92,
+        "realRadius": 1.92
+    },
+    "Er": {
+        "color": "pink",
+        "radius": 1.89,
+        "realRadius": 1.89
+    },
+    "Tm": {
+        "color": "gray",
+        "radius": 1.90,
+        "realRadius": 1.90
+    },
+    "Yb": {
+        "color": "silver",
+        "radius": 1.87,
+        "realRadius": 1.87
+    },
+    "Lu": {
+        "color": "lightgreen",
+        "radius": 1.87,
+        "realRadius": 1.87
+    },
+    "Hf": {
+        "color": "gray",
+        "radius": 1.75,
+        "realRadius": 1.75
+    },
+    "Ta": {
+        "color": "steelblue",
+        "radius": 1.70,
+        "realRadius": 1.70
+    },
+    "W": {
+        "color": "darkgray",
+        "radius": 1.62,
+        "realRadius": 1.62
+    },
+    "Re": {
+        "color": "pink",
+        "radius": 1.51,
+        "realRadius": 1.51
+    },
+    "Os": {
+        "color": "blue",
+        "radius": 1.44,
+        "realRadius": 1.44
+    },
+    "Ir": {
+        "color": "silver",
+        "radius": 1.41,
+        "realRadius": 1.41
+    },
+    "Pt": {
+        "color": "gray",
+        "radius": 1.36,
+        "realRadius": 1.36
     },
     "Au": {
         "color": "gold",
@@ -134,14 +399,194 @@
         "radius": 1.32,
         "realRadius": 1.32
     },
+    "Tl": {
+        "color": "gray",
+        "radius": 1.45,
+        "realRadius": 1.45
+    },
     "Pb": {
         "color": "gray",
         "radius": 1.46,
         "realRadius": 1.46
     },
+    "Bi": {
+        "color": "purple",
+        "radius": 1.48,
+        "realRadius": 1.48
+    },
+    "Po": {
+        "color": "gold",
+        "radius": 1.40,
+        "realRadius": 1.40
+    },
+    "At": {
+        "color": "darkred",
+        "radius": 1.50,
+        "realRadius": 1.50
+    },
+    "Rn": {
+        "color": "cyan",
+        "radius": 1.50,
+        "realRadius": 1.50
+    },
+    "Fr": {
+        "color": "violet",
+        "radius": 2.60,
+        "realRadius": 2.60
+    },
+    "Ra": {
+        "color": "lightgreen",
+        "radius": 2.21,
+        "realRadius": 2.21
+    },
+    "Ac": {
+        "color": "silver",
+        "radius": 2.15,
+        "realRadius": 2.15
+    },
+    "Th": {
+        "color": "gray",
+        "radius": 2.06,
+        "realRadius": 2.06
+    },
+    "Pa": {
+        "color": "steelblue",
+        "radius": 2.00,
+        "realRadius": 2.00
+    },
     "U": {
         "color": "gray",
         "radius": 1.56,
         "realRadius": 1.56
+    },
+    "Np": {
+        "color": "pink",
+        "radius": 1.55,
+        "realRadius": 1.55
+    },
+    "Pu": {
+        "color": "blue",
+        "radius": 1.59,
+        "realRadius": 1.59
+    },
+    "Am": {
+        "color": "silver",
+        "radius": 1.80,
+        "realRadius": 1.80
+    },
+    "Cm": {
+        "color": "lightgreen",
+        "radius": 1.74,
+        "realRadius": 1.74
+    },
+    "Bk": {
+        "color": "gray",
+        "radius": 1.70,
+        "realRadius": 1.70
+    },
+    "Cf": {
+        "color": "pink",
+        "radius": 1.68,
+        "realRadius": 1.68
+    },
+    "Es": {
+        "color": "silver",
+        "radius": 1.65,
+        "realRadius": 1.65
+    },
+    "Fm": {
+        "color": "blue",
+        "radius": 1.67,
+        "realRadius": 1.67
+    },
+    "Md": {
+        "color": "lightgreen",
+        "radius": 1.73,
+        "realRadius": 1.73
+    },
+    "No": {
+        "color": "gray",
+        "radius": 1.76,
+        "realRadius": 1.76
+    },
+    "Lr": {
+        "color": "silver",
+        "radius": 1.61,
+        "realRadius": 1.61
+    },
+    "Rf": {
+        "color": "gray",
+        "radius": 1.57,
+        "realRadius": 1.57
+    },
+    "Db": {
+        "color": "steelblue",
+        "radius": 1.49,
+        "realRadius": 1.49
+    },
+    "Sg": {
+        "color": "darkgray",
+        "radius": 1.43,
+        "realRadius": 1.43
+    },
+    "Bh": {
+        "color": "pink",
+        "radius": 1.41,
+        "realRadius": 1.41
+    },
+    "Hs": {
+        "color": "blue",
+        "radius": 1.34,
+        "realRadius": 1.34
+    },
+    "Mt": {
+        "color": "silver",
+        "radius": 1.29,
+        "realRadius": 1.29
+    },
+    "Ds": {
+        "color": "gray",
+        "radius": 1.28,
+        "realRadius": 1.28
+    },
+    "Rg": {
+        "color": "gold",
+        "radius": 1.21,
+        "realRadius": 1.21
+    },
+    "Cn": {
+        "color": "silver",
+        "radius": 1.22,
+        "realRadius": 1.22
+    },
+    "Nh": {
+        "color": "gray",
+        "radius": 1.36,
+        "realRadius": 1.36
+    },
+    "Fl": {
+        "color": "darkgray",
+        "radius": 1.43,
+        "realRadius": 1.43
+    },
+    "Mc": {
+        "color": "purple",
+        "radius": 1.62,
+        "realRadius": 1.62
+    },
+    "Lv": {
+        "color": "gold",
+        "radius": 1.75,
+        "realRadius": 1.75
+    },
+    "Ts": {
+        "color": "darkred",
+        "radius": 1.65,
+        "realRadius": 1.65
+    },
+    "Og": {
+        "color": "cyan",
+        "radius": 1.57,
+        "realRadius": 1.57
     }
 }
