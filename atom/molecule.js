@@ -74,8 +74,9 @@ export default class Molecule {
     //     colorAttribute.needsUpdate = true;
     // }
     createAtoms(data, rotation, translation, mode) {
-        const resolution = mode.resolution ? mode.resolution : 8;
+        const resolution = mode.resolution || 8;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
+
         let material;
         if (mode == 0) {
             material = new THREE.MeshBasicMaterial({
@@ -86,11 +87,10 @@ export default class Molecule {
         } else {
             material = new THREE.MeshStandardMaterial({
                 vertexColors: true,
-                opacity: this.overlay ? 0.5 : 1,
+                opacity: mode.opacity,
                 transparent: mode.opacity < 1,
                 roughness: mode.roughness,
                 metalness: mode.metalness,
-                opacity: mode.opacity,
                 side: THREE.DoubleSide,
             });
         }
@@ -99,74 +99,40 @@ export default class Molecule {
         const colorAttribute = new THREE.InstancedBufferAttribute(new Float32Array(data.numAtoms * 3), 3);
         this.instancedMesh.geometry.setAttribute('color', colorAttribute);
 
-        for (let i = 0; i < data.numAtoms; i++) {
-            const x = data.atomData[i].x * this.stretch;
-            const y = data.atomData[i].y * this.stretch;
-            const z = data.atomData[i].z * this.stretch;
-            const element = data.atomData[i].element;
-            const coordinates = new THREE.Vector3(x, y, z);
-            const id = getRandomArbitrary(0, 1000);
+        const matrix = new THREE.Matrix4();
+        const atomSize = mode.atomSize || 1;
+        const stretch = this.stretch;
 
-            const atom = new Atom(this.main, element, coordinates, id);
+        for (let i = 0; i < data.numAtoms; i++) {
+            const atomData = data.atomData[i];
+            const element = atomData.element;
+            const x = atomData.x * stretch;
+            const y = atomData.y * stretch;
+            const z = atomData.z * stretch;
+
+            const atom = new Atom(this.main, element, new THREE.Vector3(x, y, z), i);
             this.atoms.push(atom);
 
-            let radius = this.atomSettings[element]?.realRadius * 1.5 || 1;
-            radius *= mode.atomSize ? mode.atomSize : 1;
+            let radius = (this.atomSettings[element]?.realRadius || 0.67) * 1.5 * atomSize;
 
-            const matrix = new THREE.Matrix4();
             matrix.makeScale(radius, radius, radius);
-            matrix.setPosition(coordinates);
-
+            matrix.setPosition(x, y, z);
             this.instancedMesh.setMatrixAt(i, matrix);
 
-            const color = new THREE.Color(this.atomSettings[element].color);
-            colorAttribute.setXYZ(i, color.r, color.g, color.b);
+            const color = this.atomSettings[element]?.color || 0xffffff;
+            const c = new THREE.Color(color);
+            colorAttribute.setXYZ(i, c.r, c.g, c.b);
         }
 
         this.instancedMesh.instanceMatrix.needsUpdate = true;
         colorAttribute.needsUpdate = true;
 
-        // Apply rotation and translation to the entire molecule
-        if (rotation) {
-            // If rotation is a Vector3 with Euler angles
-            if (rotation.isVector3) {
-                this.instancedMesh.rotation.set(rotation.x, rotation.y, rotation.z);
-            }
-            // If rotation is a Quaternion
-            else if (rotation.isQuaternion) {
-                this.instancedMesh.quaternion.copy(rotation);
-            }
-            // If rotation is a Matrix4
-            else if (rotation.isMatrix4) {
-                this.instancedMesh.applyMatrix4(rotation);
-            }
-            // If rotation is an object with x, y, z properties (Euler angles)
-            else if (rotation.x !== undefined || rotation.y !== undefined || rotation.z !== undefined) {
-                this.instancedMesh.rotation.set(
-                    rotation.x || 0,
-                    rotation.y || 0,
-                    rotation.z || 0
-                );
-            }
+        // Apply transformations if provided
+        if (rotation && (rotation.x || rotation.y || rotation.z)) {
+            this.instancedMesh.rotation.set(rotation.x || 0, rotation.y || 0, rotation.z || 0);
         }
-
-        if (translation) {
-            // If translation is a Vector3
-            if (translation.isVector3) {
-                this.instancedMesh.position.copy(translation);
-            }
-            // If translation is an object with x, y, z properties
-            else if (translation.x !== undefined || translation.y !== undefined || translation.z !== undefined) {
-                this.instancedMesh.position.set(
-                    translation.x || 0,
-                    translation.y || 0,
-                    translation.z || 0
-                );
-            }
-            // If translation is an array [x, y, z]
-            else if (Array.isArray(translation) && translation.length >= 3) {
-                this.instancedMesh.position.set(translation[0], translation[1], translation[2]);
-            }
+        if (translation && (translation.x || translation.y || translation.z)) {
+            this.instancedMesh.position.set(translation.x || 0, translation.y || 0, translation.z || 0);
         }
 
         this.main.scene.add(this.instancedMesh);
@@ -174,19 +140,87 @@ export default class Molecule {
 
     createBonds(atoms, threshold) {
         this.bonds = [];
+        const n = atoms.length;
+        if (n === 0) return this.bonds;
 
-        // Check all unique pairs of atoms
-        for (let i = 0; i < atoms.length; i++) {
-            for (let j = i + 1; j < atoms.length; j++) {
-                const atom1 = atoms[i];
-                const atom2 = atoms[j];
+        // Preallocate and cache everything
+        const positions = new Float32Array(n * 3);
+        const radii = new Float32Array(n);
+        let minX = Infinity, minY = Infinity, minZ = Infinity;
+        let maxBondDist = 0;
 
-                const dist = atom1.position.distanceTo(atom2.position);
-                const maxBondDistance = this.stretch * (atom1.realRadius + atom2.realRadius) + threshold;
+        for (let i = 0; i < n; i++) {
+            const pos = atoms[i].position;
+            const idx = i * 3;
+            positions[idx] = pos.x;
+            positions[idx + 1] = pos.y;
+            positions[idx + 2] = pos.z;
+            minX = Math.min(minX, pos.x);
+            minY = Math.min(minY, pos.y);
+            minZ = Math.min(minZ, pos.z);
 
-                if (dist <= maxBondDistance) {
-                    const bond = new Bond(this, atom1, atom2, dist);
-                    this.bonds.push(bond);
+            const r = atoms[i].realRadius;
+            radii[i] = r;
+            maxBondDist = Math.max(maxBondDist, this.stretch * r * 2 + threshold);
+        }
+
+        const invCellSize = 1 / maxBondDist;
+        const grid = new Map();
+        const stretchSq = this.stretch * this.stretch;
+        const thresholdSq = threshold * threshold;
+
+        // Populate grid
+        for (let i = 0; i < n; i++) {
+            const idx = i * 3;
+            const x = Math.floor((positions[idx] - minX) * invCellSize);
+            const y = Math.floor((positions[idx + 1] - minY) * invCellSize);
+            const z = Math.floor((positions[idx + 2] - minZ) * invCellSize);
+            const key = (x * 73856093) ^ (y * 19349663) ^ (z * 83492791);
+
+            if (!grid.has(key)) grid.set(key, []);
+            grid.get(key).push({ i, x, y, z });
+        }
+
+        // Check pairs - fully optimized inner loop
+        for (let [key, cellAtoms] of grid) {
+            const len1 = cellAtoms.length;
+            for (let a = 0; a < len1; a++) {
+                const { i: i1, x: cx, y: cy, z: cz } = cellAtoms[a];
+                const idx1 = i1 * 3;
+                const x1 = positions[idx1];
+                const y1 = positions[idx1 + 1];
+                const z1 = positions[idx1 + 2];
+                const r1 = radii[i1];
+
+                for (let dx = -1; dx <= 1; dx++) {
+                    const nx = (cx + dx) * 73856093;
+                    for (let dy = -1; dy <= 1; dy++) {
+                        const nxy = nx ^ ((cy + dy) * 19349663);
+                        for (let dz = -1; dz <= 1; dz++) {
+                            const neighborKey = nxy ^ ((cz + dz) * 83492791);
+                            const neighbors = grid.get(neighborKey);
+                            if (!neighbors) continue;
+
+                            const len2 = neighbors.length;
+                            for (let b = 0; b < len2; b++) {
+                                const i2 = neighbors[b].i;
+                                if (i1 >= i2) continue;
+
+                                const idx2 = i2 * 3;
+                                const dx = x1 - positions[idx2];
+                                const dy = y1 - positions[idx2 + 1];
+                                const dz = z1 - positions[idx2 + 2];
+                                const distSq = dx * dx + dy * dy + dz * dz;
+
+                                const sumR = r1 + radii[i2];
+                                const maxDistSq = sumR * sumR * stretchSq + 2 * this.stretch * sumR * threshold + thresholdSq;
+
+                                if (distSq <= maxDistSq) {
+                                    this.bonds.push(new Bond(this, atoms[i1], atoms[i2], Math.sqrt(distSq)));
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -198,54 +232,17 @@ export default class Molecule {
         const coordinates = [];
         const matrix = new THREE.Matrix4();
         const position = new THREE.Vector3();
+        const worldMatrix = this.instancedMesh.matrixWorld;
 
-        // Loop through each instance (atom)
         for (let i = 0; i < this.instancedMesh.count; i++) {
-            // Get the instance's local transformation matrix
             this.instancedMesh.getMatrixAt(i, matrix);
-
-            // Extract the position from the matrix (local to the instancedMesh)
             position.setFromMatrixPosition(matrix);
-
-            // Apply the instancedMesh's world transformation
-            position.applyMatrix4(this.instancedMesh.matrixWorld);
-
-            // Store the world position
-            coordinates.push(position.clone());
+            position.applyMatrix4(worldMatrix);
+            coordinates.push(position.clone()); // Only clone for storage
         }
 
         return coordinates;
     }
-    // createBonds(atoms, threshold) {
-    //     this.bonds = [];
-
-    //     for (let i = 0; i < atoms.length; i++) {
-    //         const atom1 = atoms[i];
-    //         const pos1 = atom1.position;
-    //         const radius1 = atom1.realRadius;
-
-    //         for (let j = i + 1; j < atoms.length; j++) {
-    //             const atom2 = atoms[j];
-    //             const pos2 = atom2.position;
-
-    //             // Quick AABB check before expensive distance calculation
-    //             const dx = Math.abs(pos1.x - pos2.x);
-    //             const dy = Math.abs(pos1.y - pos2.y);
-    //             const dz = Math.abs(pos1.z - pos2.z);
-    //             const maxDist = radius1 + atom2.realRadius + threshold;
-
-    //             if (dx > maxDist || dy > maxDist || dz > maxDist) continue;
-
-    //             const dist = pos1.distanceTo(pos2);
-    //             if (dist <= maxDist) {
-    //                 this.bonds.push(new Bond(this, atom1, atom2, dist));
-    //             }
-    //         }
-    //     }
-
-    //     return this.bonds;
-    // }
-
 
     getCellKey(position, gridSize) {
         const x = Math.floor(position.x / gridSize);
@@ -298,28 +295,36 @@ export default class Molecule {
     }
 
     visualizeBondsFast(bonds, rotation, translation) {
-        const positions = new Float32Array(bonds.length * 2 * 3);
+        const positions = new Float32Array(bonds.length * 6);
+        const ox = this.offset.x, oy = this.offset.y, oz = this.offset.z;
 
-        const material = new THREE.LineBasicMaterial({ color: 0x00ff00, opacity: this.overlay ? 0.5 : 1, transparent: this.overlay });
-        let index = 0;
+        let i = 0;
+        for (const bond of bonds) {
+            const a1 = bond.atom1.position;
+            const a2 = bond.atom2.position;
 
-        bonds.forEach(bond => {
-            const atom1Pos = bond.atom1.position.clone().sub(this.offset);
-            const atom2Pos = bond.atom2.position.clone().sub(this.offset);
-
-            positions.set(atom1Pos.toArray(), index);
-            positions.set(atom2Pos.toArray(), index + 3);
-            index += 6;
-        });
+            positions[i++] = a1.x - ox;
+            positions[i++] = a1.y - oy;
+            positions[i++] = a1.z - oz;
+            positions[i++] = a2.x - ox;
+            positions[i++] = a2.y - oy;
+            positions[i++] = a2.z - oz;
+        }
 
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-        const lines = new THREE.LineSegments(geometry, material);
-        lines.rotation.set(rotation.x, rotation.y, rotation.z)
-        lines.position.set(translation.x, translation.y, translation.z)
-        this.bondGroup.add(lines);
+        const material = new THREE.LineBasicMaterial({
+            color: 0x00ff00,
+            opacity: this.overlay ? 0.5 : 1,
+            transparent: this.overlay
+        });
 
+        const lines = new THREE.LineSegments(geometry, material);
+        lines.rotation.set(rotation.x, rotation.y, rotation.z);
+        lines.position.set(translation.x, translation.y, translation.z);
+
+        this.bondGroup.add(lines);
         this.main.scene.add(this.bondGroup);
     }
 

@@ -568,7 +568,7 @@ body {
     top: 50%;
     right: 10px;
     z-index: 9999;
-    background: linear-gradient(145deg, rgba(0, 133, 205, 0.787) 0%, rgba(10, 46, 118, 0.584) 67%, rgba(89, 0, 184, 0.555) 100%);
+    background: linear-gradient(145deg, rgba(0, 133, 205, 0.501) 0%, rgba(10, 46, 118, 0.462) 67%, rgba(89, 0, 184, 0.555) 100%);
     width: 300px;
     max-height: calc(100vh - 83px);
     overflow-y: auto;
@@ -580,12 +580,58 @@ body {
     flex-direction: column;
     gap: 10px;
     color: #ffffff;
-    backdrop-filter: blur(15px);
+    backdrop-filter: blur(10px);
     box-shadow:
         0 4px 10px rgba(0, 0, 0, 0.513),
         inset 5px 5px 5px rgba(255, 255, 255, 0.326),
         inset -8px -8px 16px rgba(255, 255, 255, 0.285);
     transform: translateY(-50%);
+}
+
+#loadingBar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background-color: limegreen;
+    transition: width 0.2s ease, opacity 0.2s ease;
+    z-index: 10000;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    opacity: 0;
+
+}
+
+#loadingBar.active {
+    animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+#loadingBar.complete {
+    opacity: 0;
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    }
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    }
 }
 
 #createFragment {
@@ -1450,8 +1496,6 @@ input[type="range"]:focus {
 /* Hover effect for user initials */
 .dropdown-icon.signed-in:hover .user-initials {
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
 }
 
 /* Animation for when user signs in */
@@ -1790,10 +1834,10 @@ input[type="range"]:focus {
 
 /* User initials in dropdown */
 .user-initials {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3051e7 0%, #6a32a1 100%);
     border-radius: 50%;
-    width: 35px;
-    height: 35px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1801,6 +1845,9 @@ input[type="range"]:focus {
     font-weight: bold;
     color: white;
     cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
+
 }
 
 #settings .dropdown-icon.signed-in {

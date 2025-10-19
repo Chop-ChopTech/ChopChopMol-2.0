@@ -8,9 +8,9 @@ export default class FileHandler {
 
     handleFile(event, overlayOn) {
         const file = event.target.files[0];
-        const overlay = overlayOn
-        let rotation = { x: 0, y: 0, z: 0 }
-        let translation = { x: 0, y: 0, z: 0 }
+        const overlay = overlayOn;
+        let rotation = { x: 0, y: 0, z: 0 };
+        let translation = { x: 0, y: 0, z: 0 };
         if (!file) return;
 
         const reader = new FileReader();
@@ -27,27 +27,28 @@ export default class FileHandler {
                 } else if (fileType === 'xyz') {
                     parsedData = this.parseXyzToJson(text);
                 }
+
+
                 if (overlay) {
                     const transformation = alignMolecules(parsedData, this.main.data);
                     rotation = transformation.rotation;
                     translation = transformation.translation;
-                    console.log(rotation, translation);
-
                 }
+
                 if (parsedData.numAtoms <= 2000) {
                     this.main.setNewMode(true);
                     document.getElementById("toggleStyleChanges").checked = true;
                 } else {
                     this.main.setNewMode();
                     document.getElementById("toggleStyleChanges").checked = false;
-
                 }
-                this.main.createNewMoleculeFromJSON((JSON.stringify(parsedData)), overlay, rotation, translation, true, false);
+
+                this.main.createNewMoleculeFromJSON(JSON.stringify(parsedData), overlay, rotation, translation, true, false);
                 this.main.zoomCameraToFitMolecule();
 
 
             } catch (error) {
-                console.error("Error parsing XYZ file:", error);
+                console.error("Error parsing file:", error);
             }
         };
         reader.readAsText(file);
@@ -117,23 +118,162 @@ export default class FileHandler {
         };
     }
     parsePdbToJson(pdbText) {
-        const lines = pdbText.split('\n');
+        const lines = pdbText.split(/\r?\n|\r/);
         const atomData = [];
 
-        for (const line of lines) {
-            if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
-                const x = parseFloat(line.slice(30, 38).trim());
-                const y = parseFloat(line.slice(38, 46).trim());
-                const z = parseFloat(line.slice(46, 54).trim());
+        // All elements now available in your atomSettings.json
+        const AVAILABLE_ELEMENTS = new Set([
+            'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
+            'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca',
+            'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',
+            'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr',
+            'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn',
+            'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd',
+            'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb',
+            'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg',
+            'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th',
+            'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm',
+            'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds',
+            'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og'
+        ]);
 
-                let element = line.slice(76, 78).trim();
-                if (!element) {
-                    // Fallback: try getting element from atom name
-                    element = line.slice(12, 14).trim().replace(/[0-9]/g, '');
+        // Map common PDB variants to proper capitalization
+        const CAPITALIZATION_MAP = {
+            'D': 'H',   // Deuterium
+            'CA': 'Ca', 'MG': 'Mg', 'FE': 'Fe', 'CU': 'Cu', 'ZN': 'Zn',
+            'MN': 'Mn', 'CO': 'Co', 'NI': 'Ni', 'BR': 'Br', 'CL': 'Cl',
+            'SE': 'Se', 'AG': 'Ag', 'AU': 'Au', 'HG': 'Hg', 'PB': 'Pb'
+        };
+
+        const AMINO_ACIDS = new Set([
+            'ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE', 'LYS', 'LEU',
+            'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR'
+        ]);
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            if (!line || line.length < 54) continue;
+
+            const recordType = line.substring(0, 6).trim();
+            if (recordType !== 'ATOM' && recordType !== 'HETATM') continue;
+
+            // Parse coordinates (fixed column positions)
+            const x = parseFloat(line.substring(30, 38));
+            const y = parseFloat(line.substring(38, 46));
+            const z = parseFloat(line.substring(46, 54));
+
+            if (isNaN(x) || isNaN(y) || isNaN(z)) continue;
+
+            let element = null;
+
+            // Strategy 1: Try element column (77-78)
+            if (line.length >= 78) {
+                let elementField = line.substring(76, 78).trim();
+
+                if (elementField) {
+                    // Try as-is
+                    if (AVAILABLE_ELEMENTS.has(elementField)) {
+                        element = elementField;
+                    }
+                    // Try uppercase
+                    else {
+                        elementField = elementField.toUpperCase();
+                        if (CAPITALIZATION_MAP[elementField]) {
+                            element = CAPITALIZATION_MAP[elementField];
+                        }
+                        else if (AVAILABLE_ELEMENTS.has(elementField)) {
+                            element = elementField;
+                        }
+                        // Try proper capitalization (e.g., FE -> Fe)
+                        else if (elementField.length === 2) {
+                            const properCap = elementField.charAt(0) + elementField.charAt(1).toLowerCase();
+                            if (AVAILABLE_ELEMENTS.has(properCap)) {
+                                element = properCap;
+                            }
+                        }
+                    }
+
+                    if (element) {
+                        atomData.push({ element, x, y, z });
+                        continue;
+                    }
+                }
+            }
+
+            // Strategy 2: Parse from atom name (columns 13-16)
+            const fullAtomName = line.substring(12, 16);
+            const atomName = fullAtomName.trim().toUpperCase();
+            const residueName = line.length >= 20 ? line.substring(17, 20).trim().toUpperCase() : '';
+
+            if (!atomName) continue;
+
+            // Handle hydrogen with leading digit (1HG, 2HB, etc)
+            if (/^\d/.test(atomName)) {
+                element = atomName.charAt(1).toUpperCase();
+                if (element === 'H') {
+                    atomData.push({ element, x, y, z });
+                    continue;
+                }
+            }
+
+            // Handle CA ambiguity (CRITICAL!)
+            // " CA " (with leading space) = carbon alpha in protein backbone
+            // "CA  " (no leading space) = calcium ion
+            if (atomName === 'CA') {
+                if (fullAtomName.charAt(0) === ' ' && AMINO_ACIDS.has(residueName)) {
+                    element = 'C';  // Carbon alpha in amino acid
+                } else if (recordType === 'HETATM') {
+                    element = 'Ca'; // Calcium ion
+                } else if (AMINO_ACIDS.has(residueName)) {
+                    element = 'C';  // Default to carbon in proteins
+                } else {
+                    element = 'Ca'; // Calcium otherwise
+                }
+                atomData.push({ element, x, y, z });
+                continue;
+            }
+
+            // Try two-character element (FE, MG, ZN, CU, etc)
+            if (atomName.length >= 2 && fullAtomName.charAt(0) !== ' ') {
+                let twoChar = atomName.substring(0, 2);
+
+                // Try with capitalization map
+                if (CAPITALIZATION_MAP[twoChar]) {
+                    element = CAPITALIZATION_MAP[twoChar];
+                }
+                // Try proper capitalization (Fe, Mg, etc)
+                else {
+                    const properCap = twoChar.charAt(0) + twoChar.charAt(1).toLowerCase();
+                    if (AVAILABLE_ELEMENTS.has(properCap)) {
+                        element = properCap;
+                    }
                 }
 
-                atomData.push({ element, x, y, z });
+                if (element) {
+                    atomData.push({ element, x, y, z });
+                    continue;
+                }
             }
+
+            // Try first character as element
+            const firstChar = atomName.charAt(0);
+            if (AVAILABLE_ELEMENTS.has(firstChar)) {
+                element = firstChar;
+                atomData.push({ element, x, y, z });
+                continue;
+            }
+
+            // Final fallback based on common patterns
+            if (atomName.startsWith('C')) element = 'C';
+            else if (atomName.startsWith('N')) element = 'N';
+            else if (atomName.startsWith('O')) element = 'O';
+            else if (atomName.startsWith('S')) element = 'S';
+            else if (atomName.startsWith('P')) element = 'P';
+            else if (atomName.startsWith('H')) element = 'H';
+            else element = 'C'; // Ultimate fallback
+
+            atomData.push({ element, x, y, z });
         }
 
         return {
