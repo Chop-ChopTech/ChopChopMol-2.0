@@ -317,9 +317,17 @@ document.addEventListener('keydown', (event) => {
 fileInput.addEventListener("change", (e) => {
     console.log(e)
     main.loader.handleFile(e, false);
+}, false);
+
+window.addEventListener('blur', () => {
     cmdDown = false;
     shiftDown = false;
-}, false);
+    controls.enabled = true;
+});
+window.addEventListener('focus', () => {
+    cmdDown = false;
+    shiftDown = false;
+});
 
 document.getElementById("compare").addEventListener("change", (e) => {
     const file = e.target.files[0]
@@ -4231,8 +4239,14 @@ function render() {
     let activeIdx = -1;
     let items = [];
 
-
-
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target)) {
+            dropdown.classList.remove('show');
+        }
+    })
+    input.addEventListener('focus', () => {
+        dropdown.classList.add('show');
+    });
 
     // Search on input
     input.oninput = (e) => {

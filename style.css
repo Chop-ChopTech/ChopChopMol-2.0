@@ -900,6 +900,7 @@ input[type="range"]:focus {
     overflow: hidden;
     transition: max-height 0.25s ease;
     margin-top: 6px;
+    padding: 0 10px;
 }
 
 .db-search-dropdown.show {
@@ -912,8 +913,7 @@ input[type="range"]:focus {
 }
 
 .db-search-dropdown::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 3px;
+    background: none;
 }
 
 .db-search-dropdown::-webkit-scrollbar-thumb {
@@ -924,16 +924,21 @@ input[type="range"]:focus {
 .db-search-item {
     padding: 10px 12px;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 20px;
     margin: 2px 0;
     color: #fff;
     font-size: 13px;
     transition: background 0.15s;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.137), inset -8px -8px 16px rgba(255, 255, 255, 0.159);
+
 }
 
 .db-search-item:hover,
 .db-search-item.active {
-    background: rgba(0, 217, 255, 0.25);
+    background: rgb(0, 157, 255);
+    box-shadow: 0 0px 10px rgb(0, 225, 255);
+
 }
 
 .db-search-empty {
@@ -946,11 +951,11 @@ input[type="range"]:focus {
 .db-search-loader {
     position: absolute;
     right: 20px;
-    top: 18px;
+    top: 22px;
     width: 14px;
     height: 14px;
     border: 2px solid rgba(255, 255, 255, 0.2);
-    border-top-color: #00d9ff;
+    border-top-color: #00bbff;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
     opacity: 0;
