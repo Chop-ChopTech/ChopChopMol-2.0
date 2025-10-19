@@ -4209,6 +4209,196 @@ function render() {
     renderer.render(scene, camera);
     updateAllBondLengthLabels(); // ADD THIS LINE
 }
+// Compact Molecule Database Search
+(function () {
+    const panel = document.getElementById('dbSearchPanel');
+    const input = document.getElementById('dbSearchInput');
+    const dropdown = document.getElementById('dbSearchDropdown');
+    panel.classList.add('active');
+
+    if (!panel || !input || !dropdown) return;
+
+    // Add loader
+    const loader = document.createElement('div');
+    loader.className = 'db-search-loader';
+    panel.appendChild(loader);
+
+    let debounce;
+    let activeIdx = -1;
+    let items = [];
+
+
+
+
+    // Search on input
+    input.oninput = (e) => {
+        const q = e.target.value.trim();
+        clearTimeout(debounce);
+
+        if (q.length < 2) {
+            dropdown.classList.remove('show');
+            return;
+        }
+
+        loader.classList.add('show');
+
+        debounce = setTimeout(() => search(q), 300);
+    };
+
+    async function search(q) {
+        try {
+            const res = await fetch(
+                `https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/${encodeURIComponent(q)}/json`
+            );
+            const data = await res.json();
+            items = data.dictionary_terms?.compound || [];
+            show(items);
+        } catch (err) {
+            console.error(err);
+            dropdown.innerHTML = '<div class="db-search-empty">Search failed</div>';
+            dropdown.classList.add('show');
+        } finally {
+            loader.classList.remove('show');
+        }
+    }
+
+    function show(list) {
+        if (!list.length) {
+            dropdown.innerHTML = '<div class="db-search-empty">No results</div>';
+            dropdown.classList.add('show');
+            return;
+        }
+
+        dropdown.innerHTML = list.map((name, i) =>
+            `<div class="db-search-item" data-i="${i}">${name}</div>`
+        ).join('');
+        dropdown.classList.add('show');
+        activeIdx = -1;
+
+        dropdown.querySelectorAll('.db-search-item').forEach(el => {
+            el.onclick = () => load(el.textContent);
+        });
+    }
+
+    // Keyboard nav
+    input.onkeydown = (e) => {
+        const els = dropdown.querySelectorAll('.db-search-item');
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIdx = Math.min(activeIdx + 1, els.length - 1);
+            update(els);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIdx = Math.max(activeIdx - 1, 0);
+            update(els);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIdx >= 0 && els[activeIdx]) {
+                load(els[activeIdx].textContent);
+            }
+        } else if (e.key === 'Escape') {
+            panel.classList.remove('active');
+        }
+    };
+
+    function update(els) {
+        els.forEach((el, i) => {
+            el.classList.toggle('active', i === activeIdx);
+            if (i === activeIdx) {
+                el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        });
+    }
+
+    async function load(name) {
+        dropdown.classList.remove('show');
+        input.value = name;
+        loader.classList.add('show');
+
+        try {
+            // Get CID
+            const cidRes = await fetch(
+                `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`
+            );
+            const cidData = await cidRes.json();
+            const cid = cidData.IdentifierList.CID[0];
+
+            // Get SDF format with 3D coordinates
+            const sdfRes = await fetch(
+                `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF?record_type=3d`
+            );
+
+            if (!sdfRes.ok) throw new Error('3D structure unavailable');
+
+            const sdfText = await sdfRes.text();
+
+            // Parse SDF to get atom data
+            const molData = parseSDF(sdfText);
+
+            window.main.newMolecule(molData, window.main.setNewMode(molData.numAtoms <= 2000), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, false, false);
+            window.main.zoomCameraToFitMolecule();
+
+
+            loader.classList.remove('show');
+        } catch (err) {
+            console.error('Load error:', err);
+            alert('Failed to load: ' + err.message);
+            loader.classList.remove('show');
+        }
+    }
+
+    function parseSDF(sdfText) {
+        const lines = sdfText.split('\n');
+        const atomData = [];
+
+        // SDF format: line 4 (index 3) contains atom and bond counts
+        const countsLine = lines[3];
+        if (!countsLine) {
+            throw new Error('Invalid SDF format');
+        }
+
+        // First 3 characters are atom count, next 3 are bond count
+        const numAtoms = parseInt(countsLine.substring(0, 3).trim());
+
+        if (isNaN(numAtoms) || numAtoms <= 0) {
+            throw new Error('Invalid atom count in SDF');
+        }
+
+        // Atom block starts at line 5 (index 4)
+        // Each line: x(10 chars) y(10 chars) z(10 chars) symbol(3 chars)
+        for (let i = 0; i < numAtoms; i++) {
+            const lineIndex = 4 + i;
+
+            if (lineIndex >= lines.length) {
+                throw new Error(`Missing atom data at line ${lineIndex + 1}`);
+            }
+
+            const line = lines[lineIndex];
+
+            // Parse coordinates (columns 1-10, 11-20, 21-30)
+            const x = parseFloat(line.substring(0, 10).trim());
+            const y = parseFloat(line.substring(10, 20).trim());
+            const z = parseFloat(line.substring(20, 30).trim());
+
+            // Element symbol at column 32-34 (index 31-33)
+            const element = line.substring(31, 34).trim();
+
+            // Validate parsed data
+            if (isNaN(x) || isNaN(y) || isNaN(z) || !element) {
+                throw new Error(`Invalid atom data at line ${lineIndex + 1}`);
+            }
+
+            atomData.push({ element, x, y, z });
+        }
+
+        // Return data in the format ChopChopMol expects
+        return {
+            atomData: atomData,
+            numAtoms: numAtoms
+        };
+    }
+})();
 render();
 controls.addEventListener('change', () => {
     render();

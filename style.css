@@ -839,6 +839,121 @@ input[type="range"]:focus {
 
 }
 
+/* Compact Database Search */
+.db-search-panel {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    width: 280px;
+    background: none;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition: all 0.25s ease;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.db-search-panel.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+}
+
+.db-search-input {
+    width: 250px;
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: border 0.2s;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
+
+}
+
+.db-search-input:focus {
+    border-color: rgba(0, 217, 255, 0.5);
+}
+
+.db-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.db-search-dropdown {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+    margin-top: 6px;
+}
+
+.db-search-dropdown.show {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.db-search-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.db-search-dropdown::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.db-search-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.db-search-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    margin: 2px 0;
+    color: #fff;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+
+.db-search-item:hover,
+.db-search-item.active {
+    background: rgba(0, 217, 255, 0.25);
+}
+
+.db-search-empty {
+    padding: 12px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+}
+
+.db-search-loader {
+    position: absolute;
+    right: 20px;
+    top: 18px;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #00d9ff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.db-search-loader.show {
+    opacity: 1;
+}
+
 #dragFile.dragover {
     opacity: 0.4;
     z-index: 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999;
