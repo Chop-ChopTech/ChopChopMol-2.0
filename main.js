@@ -312,9 +312,13 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+// In main.js, replace the fileInput event listener:
+
 fileInput.addEventListener("change", (e) => {
     console.log(e)
     main.loader.handleFile(e, false);
+    cmdDown = false;
+    shiftDown = false;
 }, false);
 
 document.getElementById("compare").addEventListener("change", (e) => {

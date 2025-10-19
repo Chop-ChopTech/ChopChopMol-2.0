@@ -843,7 +843,7 @@ input[type="range"]:focus {
 .db-search-panel {
     position: absolute;
     top: 0px;
-    left: 380px;
+    left: 280px;
     width: 280px;
     background: none;
     border: none;
