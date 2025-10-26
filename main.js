@@ -2093,7 +2093,7 @@ function updateEditingContent(element = null, color = null) {
         // Show axis controls if an axis is defined
         if (rotationAxis) {
             axisControlsHtml = `
-                <div style="margin-top: 20px; padding: 20px; background-color: rgba(0, 115, 255, 0.2); border-radius: 15px;">
+                <div style="margin-top: 20px; padding: 20px; background-color: rgba(0, 115, 255, 0.2); border-radius: 15px;" class="shine">
                     <button id="removeAxisBtn" style="background-color:rgb(255, 100, 100); margin:5px;" class="fancy-button">Remove Axis</button>
                     <div style="margin-top: 10px;">
                         <label style="color: white; display: block; margin-bottom: 5px; font-size: 14px;">Rotate ${atomsSelected.length > 0 ? 'Selected Atoms' : 'Entire Molecule'}:</label>
@@ -2108,7 +2108,7 @@ function updateEditingContent(element = null, color = null) {
         }
 
         editMoleculeContent.innerHTML = `
-            <button id="closeEditing" class="dismiss" title="Dismiss" style="position: absolute; top: 0%; left: 0%; margin: 10px"><i class="fa-solid fa-angles-left"></i></button>
+            <button id="closeEditing" class="dismiss" title="Dismiss" style="position: absolute; top: 0%; left: 0%; margin: 10px;"><i class="fa-solid fa-angles-left"></i></button>
         `;
         editMoleculeContent.innerHTML += `
             <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>

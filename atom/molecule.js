@@ -11,8 +11,11 @@ export default class Molecule {
         this.instancedMesh = null;
         this.atomSettings = atomSettings;
         this.labels = [];
+        this.labelInstancedMesh = null;
+        this.labelAtlas = null;
+        this.atomTypeMap = {};
         this.stretch = 4;
-        this.overlay = overlay
+        this.overlay = overlay;
         this.bondGroup = new THREE.Group();
     }
 
@@ -399,6 +402,41 @@ export default class Molecule {
         }
     }
 
+    createLabelAtlas() {
+        const types = Object.keys(this.atomSettings);
+        const size = 64;
+        const cols = Math.ceil(Math.sqrt(types.length));
+        const rows = Math.ceil(types.length / cols);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = size * cols;
+        canvas.height = size * rows;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 40px arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        types.forEach((type, i) => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const x = col * size + size / 2;
+            const y = row * size + size / 2;
+
+            ctx.fillText(type, x, y);
+
+            this.atomTypeMap[type] = {
+                uMin: col / cols,
+                uMax: (col + 1) / cols,
+                vMin: row / rows,
+                vMax: (row + 1) / rows
+            };
+        });
+
+        this.labelAtlas = new THREE.CanvasTexture(canvas);
+    }
+
     createLabelTexture(text, color) {
         const canvas = document.createElement('canvas');
         canvas.width = 64;
@@ -420,92 +458,110 @@ export default class Molecule {
     }
 
     toggleLabels(show) {
-        this.labels.forEach(label => this.main.scene.remove(label));
-        this.labels = [];
-        if (show) {
-            // Keep atoms visible - remove this line if you want to hide atoms
-            // this.instancedMesh.visible = true;
+        if (!show) {
+            if (this.labelInstancedMesh) this.labelInstancedMesh.visible = false;
+            return;
+        }
 
-            // Create a helper matrix and position vector for extracting world positions
+        if (!this.labelAtlas) this.createLabelAtlas();
+
+        if (!this.labelInstancedMesh) {
+            const geometry = new THREE.PlaneGeometry(1, 1);
+            const material = new THREE.MeshBasicMaterial({
+                map: this.labelAtlas,
+                transparent: true,
+                depthTest: false,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+
+            this.labelInstancedMesh = new THREE.InstancedMesh(geometry, material, this.atoms.length);
+            this.labelInstancedMesh.renderOrder = 999;
+
+            // Set UV bounds per instance
+            const uvs = geometry.attributes.uv.array;
+            const uvBounds = new Float32Array(this.atoms.length * 8);
+
             const matrix = new THREE.Matrix4();
+            const tempMatrix = new THREE.Matrix4();
             const position = new THREE.Vector3();
             const scale = new THREE.Vector3();
             const rotation = new THREE.Quaternion();
 
-            this.atoms.forEach((atom, index) => {
-                // Get the instance's transformation matrix
-                this.instancedMesh.getMatrixAt(index, matrix);
+            this.atoms.forEach((atom, i) => {
+                this.instancedMesh.getMatrixAt(i, tempMatrix);
+                tempMatrix.decompose(position, rotation, scale);
 
-                // Decompose the matrix to get position and scale
-                matrix.decompose(position, rotation, scale);
+                const labelScale = scale.x * 2.0;
+                matrix.makeScale(labelScale, labelScale, 1);
+                matrix.setPosition(position);
+                this.labelInstancedMesh.setMatrixAt(i, matrix);
 
-                // Apply the instancedMesh's world transformation to get final world position
-                const worldPosition = position.clone();
-                worldPosition.applyMatrix4(this.instancedMesh.matrixWorld);
-
-                // Create the label sprite
-                const spriteMaterial = new THREE.SpriteMaterial({
-                    map: this.createLabelTexture(atom.type, "white"),
-                    transparent: true,
-                    depthTest: false,  // Ensure label renders on top
-                    depthWrite: false  // Ensure label renders on top
-                });
-                const sprite = new THREE.Sprite(spriteMaterial);
-
-                // Position the sprite at the exact world position of the atom
-                sprite.position.copy(worldPosition);
-
-                // Scale the sprite to match or slightly exceed the atom size
-                // The scale.x represents the radius of the atom sphere
-                const labelScale = scale.x * 2.0; // Adjust multiplier as needed (2.0 covers the full atom)
-                sprite.scale.set(labelScale, labelScale, labelScale);
-
-                // Optionally set render order to ensure labels appear on top
-                sprite.renderOrder = 999;
-
-                this.main.scene.add(sprite);
-                this.labels.push(sprite);
+                // Set custom UVs for this instance
+                const bounds = this.atomTypeMap[atom.type];
+                const idx = i * 8;
+                // Bottom-left
+                uvBounds[idx] = bounds.uMin;
+                uvBounds[idx + 1] = bounds.vMax;
+                // Bottom-right
+                uvBounds[idx + 2] = bounds.uMax;
+                uvBounds[idx + 3] = bounds.vMax;
+                // Top-right
+                uvBounds[idx + 4] = bounds.uMax;
+                uvBounds[idx + 5] = bounds.vMin;
+                // Top-left
+                uvBounds[idx + 6] = bounds.uMin;
+                uvBounds[idx + 7] = bounds.vMin;
             });
+
+            geometry.setAttribute('uv', new THREE.InstancedBufferAttribute(uvBounds, 2));
+            this.labelInstancedMesh.instanceMatrix.needsUpdate = true;
+            this.main.scene.add(this.labelInstancedMesh);
         } else {
-            this.instancedMesh.visible = true; // Ensure atoms are visible
-            this.clearLabels();
+            this.labelInstancedMesh.visible = true;
         }
+
+        this.updateLabels();
     }
 
     updateLabels() {
-        this.toggleLabels(true);
-        if (this.labels.length === 0) return;
+        if (!this.labelInstancedMesh || !this.labelInstancedMesh.visible) return;
+
+        // Make labels face camera
+        this.labelInstancedMesh.quaternion.copy(this.main.camera.quaternion);
 
         const matrix = new THREE.Matrix4();
+        const tempMatrix = new THREE.Matrix4();
         const position = new THREE.Vector3();
         const scale = new THREE.Vector3();
         const rotation = new THREE.Quaternion();
 
-        this.labels.forEach((label, index) => {
-            // Get the updated position of the atom
-            this.instancedMesh.getMatrixAt(index, matrix);
-            matrix.decompose(position, rotation, scale);
+        this.atoms.forEach((atom, i) => {
+            this.instancedMesh.getMatrixAt(i, tempMatrix);
+            tempMatrix.decompose(position, rotation, scale);
 
-            // Apply world transformation
-            const worldPosition = position.clone();
-            worldPosition.applyMatrix4(this.instancedMesh.matrixWorld);
-
-            // Update label position
-            label.position.copy(worldPosition);
-
-            // Update label scale if needed
+            const worldPos = position.clone().applyMatrix4(this.instancedMesh.matrixWorld);
             const labelScale = scale.x * 2.0;
-            label.scale.set(labelScale, labelScale, labelScale);
+
+            matrix.makeScale(labelScale, labelScale, 1);
+            matrix.setPosition(worldPos);
+            this.labelInstancedMesh.setMatrixAt(i, matrix);
         });
+
+        this.labelInstancedMesh.instanceMatrix.needsUpdate = true;
     }
 
     clearLabels() {
-        this.labels.forEach(label => {
-            this.main.scene.remove(label);
-            if (label.material.map) label.material.map.dispose();
-            label.material.dispose();
-        });
-        this.labels = [];
+        if (this.labelInstancedMesh) {
+            this.main.scene.remove(this.labelInstancedMesh);
+            this.labelInstancedMesh.geometry.dispose();
+            this.labelInstancedMesh.material.dispose();
+            this.labelInstancedMesh = null;
+        }
+        if (this.labelAtlas) {
+            this.labelAtlas.dispose();
+            this.labelAtlas = null;
+        }
     }
 
     drawMolecule() {

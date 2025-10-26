@@ -606,11 +606,11 @@
     <div id="buttons">
         <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
         <input id="compare" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
-        <div id="toolbar-background">
+        <div id="toolbar-background" class="shine">
             <div class="dropdown">
                 <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
                 </span>
-                <div class="dropdown-content" style="left: 50%;">
+                <div class="dropdown-content shine" style="left: 50%;">
                     <button class="fancy-button" style="width: 140px; height: 31px; border-radius: 30px;"
                         id="customButton"><i class="fa-solid fa-bolt"></i> Open
                         File</button>
@@ -625,7 +625,7 @@
                 onclick="window.resetCamera()"><i class="fa-solid fa-arrows-to-eye"></i></button>
             <div class="dropdown" id="saveMoleculeToCloud">
                 <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
-                <div class="dropdown-content" style="width: 200px;">
+                <div class="dropdown-content shine" style="width: 200px;">
                     <div id="molecule-save-section">
                         <div id="load-save-message"></div>
                         <input type="text" id="molecule-name-input" placeholder="Molecule name" class="fancy-textbox"
@@ -658,7 +658,7 @@
             <!--  -->
             <div class="dropdown">
                 <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
-                <div class="dropdown-content">
+                <div class="dropdown-content shine">
                     <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
                     <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255); "><i
                             class="fas fa-file-download"></i> Save XYZ</button>
@@ -670,7 +670,7 @@
 
         <div class="dropdown" id="settings">
             <span class="dropdown-icon" style="font-size: 35px;"><i class="fa-solid fa-circle-user"></i></span>
-            <div class="dropdown-content "
+            <div class="dropdown-content shine "
                 style="left: 100px; align-items: center; justify-content: center; display: flex; flex-direction: column; ">
 
                 <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
@@ -825,7 +825,8 @@
 
     <!-- Compact search panel -->
     <div id="dbSearchPanel" class="db-search-panel">
-        <input id="dbSearchInput" class="db-search-input" type="text" placeholder="Search Molecules" autocomplete="off">
+        <input id="dbSearchInput" class="db-search-input shine" type="text" placeholder="Search Molecules"
+            autocomplete="off">
         <div id="dbSearchDropdown" class="db-search-dropdown"></div>
     </div>
 
