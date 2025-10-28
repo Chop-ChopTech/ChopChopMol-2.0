@@ -33,8 +33,12 @@ import {
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000000);
 
-let renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
-renderer.setSize(window.innerWidth, window.innerHeight);
+let renderer = new THREE.WebGLRenderer({
+    antialias: false,
+    powerPreference: "high-performance",
+    alpha: true,
+    preserveDrawingBuffer: true
+}); renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
@@ -2848,8 +2852,10 @@ function recreateRenderer(antialiasEnabled) {
 
     // Create new renderer with updated antialias
     renderer = new THREE.WebGLRenderer({
-        antialias: antialiasEnabled,
-        powerPreference: "high-performance"
+        antialias: false,
+        powerPreference: "high-performance",
+        alpha: true,
+        preserveDrawingBuffer: true
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -3054,17 +3060,32 @@ function unselectAtom(index = null) {
 }
 
 function saveImage() {
-    if (!main.data || !main.data.atomData || main.data.atomData.length === 0) {
-        alert('No molecule loaded to save!');
+    if (!main.data || main.data.numAtoms === 0) {
+        alert('No molecule loaded to capture');
         return;
     }
+
+    const originalBackground = scene.background;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const scale = 2; // 2x resolution, increase for higher quality
+
+    // Temporarily increase resolution
+    renderer.setSize(width * scale, height * scale, false);
+    scene.background = null;
     renderer.render(scene, camera);
+
     let imgData = renderer.domElement.toDataURL("image/png", 1.0);
     const link = document.createElement('a');
     link.setAttribute('href', imgData);
     link.setAttribute('target', '_blank');
     link.setAttribute('download', 'molecule.png');
     link.click();
+
+    // Restore original
+    renderer.setSize(width, height, false);
+    scene.background = originalBackground;
+    renderer.render(scene, camera);
 }
 function getScreenUrl() {
 
