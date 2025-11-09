@@ -124,6 +124,16 @@ let globalFragmentStore = {
     fragments: [],  // Array of fragments, each is an array of original atom indices
     fragmentIdMap: new Map() // Maps fragment signatures to avoid duplicates
 };
+const fragmentColors = [
+    0x0352ff,
+    0xf5b638,
+    0x7af538,
+    0xd75eff,
+    0x5eb9ff,
+    0x00ffff,
+    0x715eff,
+    0xf7baff
+];
 
 export default class Main {
     constructor() {
@@ -2024,18 +2034,9 @@ function highlightFragment(fragmentIndex) {
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
 
     // Define distinct colors for fragments
-    const fragmentColors = [
-        new THREE.Color(0x0352ff),
-        new THREE.Color(0xf5b638),
-        new THREE.Color(0x7af538),
-        new THREE.Color(0xd75eff),
-        new THREE.Color(0x5eb9ff),
-        new THREE.Color(0x00ffff),
-        new THREE.Color(0x715eff),
-        new THREE.Color(0xf7baff),
-    ];
 
-    const color = fragmentColors[fragmentIndex % fragmentColors.length];
+
+    const color = new THREE.Color(fragmentColors[fragmentIndex % fragmentColors.length]);
 
     // Apply the fragment color
     fragment.forEach(atomIndex => {
@@ -2179,25 +2180,35 @@ function updateFragmentList(fragmentList) {
             fragmentList.appendChild(currentInfo);
         }
     }
-
+    function hexToRGBA(hex, alpha = 1) {
+        const r = (hex >> 16) & 0xff;
+        const g = (hex >> 8) & 0xff;
+        const b = hex & 0xff;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
     fragments.forEach((fragment, index) => {
         const listItem = document.createElement('li');
+        const color = hexToRGBA(fragmentColors[index % fragmentColors.length], 0.3);
         listItem.innerHTML = '';
         listItem.textContent = `Fragment ${index + 1}`;
         listItem.style.cursor = 'pointer';
-        listItem.style.padding = '5px';
+        listItem.style.padding = '7px';
         listItem.style.margin = '2px';
-        listItem.style.borderRadius = '10px';
-        listItem.style.transition = 'background-color 0.3s';
+        listItem.style.borderRadius = '20px';
+        listItem.style.transition = 'all ease-in-out 0.3s';
         listItem.style.paddingLeft = '20px';
         listItem.style.paddingRight = '20px';
+        listItem.style.boxShadow = `0 4px 10px rgba(0, 0, 0, 0.513), inset 1px 1px 5px rgba(145, 145, 145, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.07)`;
+        listItem.style.backgroundColor = color;
         listItem.dataset.fragmentIndex = index;
 
 
         // Check if this fragment is currently selected
         if (fragmentsSelected.includes(index)) {
             listItem.classList.add('selected');
-            listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+            listItem.style.backgroundColor = hexToRGBA(fragmentColors[index % fragmentColors.length], 0.7);
+            listItem.style.boxShadow = `0px 0px 20px rgba(255, 255, 255, 0.23)`;
+
             // Add action buttons container
             const buttonContainer = document.createElement('div');
             buttonContainer.style.cssText = 'display: flex; gap: 5px; margin-top: 10px;';
@@ -2227,13 +2238,14 @@ function updateFragmentList(fragmentList) {
         // Add hover effect
         listItem.addEventListener('mouseenter', () => {
             if (!fragmentsSelected.includes(index)) {
-                listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                listItem.style.transform = 'scale(1.05)';
             }
         });
 
         listItem.addEventListener('mouseleave', () => {
             if (!fragmentsSelected.includes(index)) {
-                listItem.style.backgroundColor = 'transparent';
+                listItem.style.transform = 'scale(1)';
+                listItem.style.backgroundColor = color;
             }
         });
 

@@ -1067,19 +1067,19 @@ input[type="range"]:focus {
 }
 
 #fragmentList {
-
     list-style: none;
     padding: 0;
     margin-top: 7px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: fit-content;
+    width: 300px;
     color: white;
     max-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
     padding-top: 35px;
+    padding-bottom: 35px;
     justify-content: center;
     /* background-color: #0056b3; */
 }
