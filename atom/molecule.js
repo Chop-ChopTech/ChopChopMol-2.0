@@ -403,7 +403,7 @@ export default class Molecule {
     }
 
     createLabelAtlas() {
-        const types = Object.keys(this.atomSettings);
+        const types = Object.keys(this.atomSettings).sort(); // Sort for consistent ordering
         const size = 64;
         const cols = Math.ceil(Math.sqrt(types.length));
         const rows = Math.ceil(types.length / cols);
@@ -413,10 +413,15 @@ export default class Molecule {
         canvas.height = size * rows;
         const ctx = canvas.getContext('2d');
 
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
         ctx.fillStyle = 'white';
-        ctx.font = 'bold 40px arial';
+        ctx.font = 'bold 40px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+
+        this.atomTypeMap = {};
 
         types.forEach((type, i) => {
             const col = i % cols;
@@ -426,15 +431,17 @@ export default class Molecule {
 
             ctx.fillText(type, x, y);
 
+            // UV coordinates: origin is bottom-left in WebGL
             this.atomTypeMap[type] = {
                 uMin: col / cols,
+                vMin: 1.0 - (row + 1) / rows,  // Flip V coordinate
                 uMax: (col + 1) / cols,
-                vMin: row / rows,
-                vMax: (row + 1) / rows
+                vMax: 1.0 - row / rows          // Flip V coordinate
             };
         });
 
         this.labelAtlas = new THREE.CanvasTexture(canvas);
+        this.labelAtlas.needsUpdate = true;
     }
 
     createLabelTexture(text, color) {
@@ -467,8 +474,34 @@ export default class Molecule {
 
         if (!this.labelInstancedMesh) {
             const geometry = new THREE.PlaneGeometry(1, 1);
-            const material = new THREE.MeshBasicMaterial({
-                map: this.labelAtlas,
+
+            // Create a shader material that supports per-instance UVs
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    map: { value: this.labelAtlas }
+                },
+                vertexShader: `
+                    attribute vec4 uvBounds; // uMin, vMin, uMax, vMax
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        // Interpolate UVs based on uvBounds
+                        vUv = mix(uvBounds.xy, uvBounds.zw, uv);
+                        
+                        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    uniform sampler2D map;
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        vec4 texColor = texture2D(map, vUv);
+                        if (texColor.a < 0.1) discard;
+                        gl_FragColor = texColor;
+                    }
+                `,
                 transparent: true,
                 depthTest: false,
                 depthWrite: false,
@@ -478,44 +511,20 @@ export default class Molecule {
             this.labelInstancedMesh = new THREE.InstancedMesh(geometry, material, this.atoms.length);
             this.labelInstancedMesh.renderOrder = 999;
 
-            // Set UV bounds per instance
-            const uvs = geometry.attributes.uv.array;
-            const uvBounds = new Float32Array(this.atoms.length * 8);
-
-            const matrix = new THREE.Matrix4();
-            const tempMatrix = new THREE.Matrix4();
-            const position = new THREE.Vector3();
-            const scale = new THREE.Vector3();
-            const rotation = new THREE.Quaternion();
+            // Set per-instance UV bounds
+            const uvBounds = new Float32Array(this.atoms.length * 4);
 
             this.atoms.forEach((atom, i) => {
-                this.instancedMesh.getMatrixAt(i, tempMatrix);
-                tempMatrix.decompose(position, rotation, scale);
-
-                const labelScale = scale.x * 2.0;
-                matrix.makeScale(labelScale, labelScale, 1);
-                matrix.setPosition(position);
-                this.labelInstancedMesh.setMatrixAt(i, matrix);
-
-                // Set custom UVs for this instance
                 const bounds = this.atomTypeMap[atom.type];
-                const idx = i * 8;
-                // Bottom-left
+                const idx = i * 4;
                 uvBounds[idx] = bounds.uMin;
-                uvBounds[idx + 1] = bounds.vMax;
-                // Bottom-right
+                uvBounds[idx + 1] = bounds.vMin;
                 uvBounds[idx + 2] = bounds.uMax;
                 uvBounds[idx + 3] = bounds.vMax;
-                // Top-right
-                uvBounds[idx + 4] = bounds.uMax;
-                uvBounds[idx + 5] = bounds.vMin;
-                // Top-left
-                uvBounds[idx + 6] = bounds.uMin;
-                uvBounds[idx + 7] = bounds.vMin;
             });
 
-            geometry.setAttribute('uv', new THREE.InstancedBufferAttribute(uvBounds, 2));
-            this.labelInstancedMesh.instanceMatrix.needsUpdate = true;
+            geometry.setAttribute('uvBounds', new THREE.InstancedBufferAttribute(uvBounds, 4));
+
             this.main.scene.add(this.labelInstancedMesh);
         } else {
             this.labelInstancedMesh.visible = true;
@@ -527,14 +536,12 @@ export default class Molecule {
     updateLabels() {
         if (!this.labelInstancedMesh || !this.labelInstancedMesh.visible) return;
 
-        // Make labels face camera
-        this.labelInstancedMesh.quaternion.copy(this.main.camera.quaternion);
-
         const matrix = new THREE.Matrix4();
         const tempMatrix = new THREE.Matrix4();
         const position = new THREE.Vector3();
         const scale = new THREE.Vector3();
         const rotation = new THREE.Quaternion();
+        const cameraQuaternion = window.camera.quaternion;
 
         this.atoms.forEach((atom, i) => {
             this.instancedMesh.getMatrixAt(i, tempMatrix);
@@ -543,8 +550,7 @@ export default class Molecule {
             const worldPos = position.clone().applyMatrix4(this.instancedMesh.matrixWorld);
             const labelScale = scale.x * 2.0;
 
-            matrix.makeScale(labelScale, labelScale, 1);
-            matrix.setPosition(worldPos);
+            matrix.compose(worldPos, cameraQuaternion, new THREE.Vector3(labelScale, labelScale, 1));
             this.labelInstancedMesh.setMatrixAt(i, matrix);
         });
 
@@ -552,11 +558,13 @@ export default class Molecule {
     }
 
     clearLabels() {
-        if (this.labelInstancedMesh) {
-            this.main.scene.remove(this.labelInstancedMesh);
-            this.labelInstancedMesh.geometry.dispose();
-            this.labelInstancedMesh.material.dispose();
-            this.labelInstancedMesh = null;
+        if (this.labels) {
+            this.labels.forEach(label => {
+                this.main.scene.remove(label);
+                if (label.material) label.material.dispose();
+                if (label.material && label.material.map) label.material.map.dispose();
+            });
+            this.labels = [];
         }
         if (this.labelAtlas) {
             this.labelAtlas.dispose();

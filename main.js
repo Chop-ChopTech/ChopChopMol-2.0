@@ -261,12 +261,7 @@ export default class Main {
     }
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
-        if (override) {
-            this.molecule.toggleLabels(true);
-
-        } else {
-            this.molecule.clearLabels();
-        }
+        this.molecule.toggleLabels(labelMode);
         render();
     }
     createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true, soft = false) {
