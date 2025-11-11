@@ -475,21 +475,33 @@ export default class Molecule {
         if (!this.labelInstancedMesh) {
             const geometry = new THREE.PlaneGeometry(1, 1);
 
-            // Create a shader material that supports per-instance UVs
             const material = new THREE.ShaderMaterial({
                 uniforms: {
-                    map: { value: this.labelAtlas }
+                    map: { value: this.labelAtlas },
+                    cameraPos: { value: new THREE.Vector3() }
                 },
                 vertexShader: `
-                    attribute vec4 uvBounds; // uMin, vMin, uMax, vMax
+                    attribute vec4 uvBounds;
+                    uniform vec3 cameraPos;
                     varying vec2 vUv;
                     
                     void main() {
-                        // Interpolate UVs based on uvBounds
                         vUv = mix(uvBounds.xy, uvBounds.zw, uv);
                         
-                        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-                        gl_Position = projectionMatrix * mvPosition;
+                        // Extract position and scale from instance matrix
+                        vec3 instancePos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
+                        float scaleX = length(vec3(instanceMatrix[0][0], instanceMatrix[0][1], instanceMatrix[0][2]));
+                        float scaleY = length(vec3(instanceMatrix[1][0], instanceMatrix[1][1], instanceMatrix[1][2]));
+                        
+                        // Calculate billboard vectors
+                        vec3 look = normalize(cameraPos - instancePos);
+                        vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), look));
+                        vec3 up = cross(look, right);
+                        
+                        // Build billboard position
+                        vec3 billboardPos = instancePos + right * position.x * scaleX + up * position.y * scaleY;
+                        
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(billboardPos, 1.0);
                     }
                 `,
                 fragmentShader: `
@@ -511,7 +523,6 @@ export default class Molecule {
             this.labelInstancedMesh = new THREE.InstancedMesh(geometry, material, this.atoms.length);
             this.labelInstancedMesh.renderOrder = 999;
 
-            // Set per-instance UV bounds
             const uvBounds = new Float32Array(this.atoms.length * 4);
 
             this.atoms.forEach((atom, i) => {
@@ -536,12 +547,14 @@ export default class Molecule {
     updateLabels() {
         if (!this.labelInstancedMesh || !this.labelInstancedMesh.visible) return;
 
+        // Update camera position uniform for billboarding
+        this.labelInstancedMesh.material.uniforms.cameraPos.value.copy(window.camera.position);
+
         const matrix = new THREE.Matrix4();
         const tempMatrix = new THREE.Matrix4();
         const position = new THREE.Vector3();
         const scale = new THREE.Vector3();
         const rotation = new THREE.Quaternion();
-        const cameraQuaternion = window.camera.quaternion;
 
         this.atoms.forEach((atom, i) => {
             this.instancedMesh.getMatrixAt(i, tempMatrix);
@@ -550,7 +563,9 @@ export default class Molecule {
             const worldPos = position.clone().applyMatrix4(this.instancedMesh.matrixWorld);
             const labelScale = scale.x * 2.0;
 
-            matrix.compose(worldPos, cameraQuaternion, new THREE.Vector3(labelScale, labelScale, 1));
+            // Just store position and scale, billboarding is done in shader
+            matrix.makeScale(labelScale, labelScale, 1);
+            matrix.setPosition(worldPos);
             this.labelInstancedMesh.setMatrixAt(i, matrix);
         });
 
