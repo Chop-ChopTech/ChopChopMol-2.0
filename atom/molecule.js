@@ -382,11 +382,40 @@ export default class Molecule {
     reset() {
         this.atoms = [];
         this.bonds = [];
-        this.bondGroup = new THREE.Group();
-        this.instancedMesh = null;
-        this.labels = [];
-        this.stretch = 4;
-        this.bondGroup = new THREE.Group();
+
+        if (this.instancedMesh) {
+            this.main.scene.remove(this.instancedMesh);
+            if (this.instancedMesh.geometry) {
+                this.instancedMesh.geometry.dispose();
+            }
+            if (this.instancedMesh.material) {
+                if (Array.isArray(this.instancedMesh.material)) {
+                    this.instancedMesh.material.forEach(mat => mat.dispose());
+                } else {
+                    this.instancedMesh.material.dispose();
+                }
+            }
+            this.instancedMesh = null;
+        }
+
+        if (this.bondGroup) {
+            while (this.bondGroup.children.length > 0) {
+                const child = this.bondGroup.children[0];
+                this.bondGroup.remove(child);
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => mat.dispose());
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+            }
+            this.main.scene.remove(this.bondGroup);
+            this.bondGroup = new THREE.Group();
+        }
+
+        // Clear labels properly
         this.clearLabels();
     }
 
@@ -470,6 +499,11 @@ export default class Molecule {
             return;
         }
 
+        if (!this.atoms || this.atoms.length === 0) {
+            console.warn('Cannot create labels: no atoms loaded yet');
+            return;
+        }
+
         if (!this.labelAtlas) this.createLabelAtlas();
 
         if (!this.labelInstancedMesh) {
@@ -488,17 +522,14 @@ export default class Molecule {
                     void main() {
                         vUv = mix(uvBounds.xy, uvBounds.zw, uv);
                         
-                        // Extract position and scale from instance matrix
                         vec3 instancePos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
                         float scaleX = length(vec3(instanceMatrix[0][0], instanceMatrix[0][1], instanceMatrix[0][2]));
                         float scaleY = length(vec3(instanceMatrix[1][0], instanceMatrix[1][1], instanceMatrix[1][2]));
                         
-                        // Calculate billboard vectors
                         vec3 look = normalize(cameraPos - instancePos);
                         vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), look));
                         vec3 up = cross(look, right);
                         
-                        // Build billboard position
                         vec3 billboardPos = instancePos + right * position.x * scaleX + up * position.y * scaleY;
                         
                         gl_Position = projectionMatrix * modelViewMatrix * vec4(billboardPos, 1.0);
@@ -523,10 +554,17 @@ export default class Molecule {
             this.labelInstancedMesh = new THREE.InstancedMesh(geometry, material, this.atoms.length);
             this.labelInstancedMesh.renderOrder = 999;
 
+            // CRITICAL: Disable frustum culling for large molecules
+            this.labelInstancedMesh.frustumCulled = false;
+
             const uvBounds = new Float32Array(this.atoms.length * 4);
 
             this.atoms.forEach((atom, i) => {
                 const bounds = this.atomTypeMap[atom.type];
+                if (!bounds) {
+                    console.warn(`No bounds found for atom type: ${atom.type}`);
+                    return;
+                }
                 const idx = i * 4;
                 uvBounds[idx] = bounds.uMin;
                 uvBounds[idx + 1] = bounds.vMin;
@@ -537,6 +575,7 @@ export default class Molecule {
             geometry.setAttribute('uvBounds', new THREE.InstancedBufferAttribute(uvBounds, 4));
 
             this.main.scene.add(this.labelInstancedMesh);
+            console.log(`Created labels for ${this.atoms.length} atoms`);
         } else {
             this.labelInstancedMesh.visible = true;
         }
@@ -573,6 +612,20 @@ export default class Molecule {
     }
 
     clearLabels() {
+        if (this.labelInstancedMesh) {
+            this.main.scene.remove(this.labelInstancedMesh);
+            if (this.labelInstancedMesh.geometry) {
+                this.labelInstancedMesh.geometry.dispose();
+            }
+            if (this.labelInstancedMesh.material) {
+                if (this.labelInstancedMesh.material.uniforms && this.labelInstancedMesh.material.uniforms.map) {
+                    // Don't dispose the atlas texture here, we'll reuse it
+                }
+                this.labelInstancedMesh.material.dispose();
+            }
+            this.labelInstancedMesh = null;
+        }
+
         if (this.labels) {
             this.labels.forEach(label => {
                 this.main.scene.remove(label);
@@ -581,10 +634,14 @@ export default class Molecule {
             });
             this.labels = [];
         }
+
         if (this.labelAtlas) {
             this.labelAtlas.dispose();
             this.labelAtlas = null;
         }
+
+        // Clear the atom type map so it gets regenerated
+        this.atomTypeMap = {};
     }
 
     drawMolecule() {

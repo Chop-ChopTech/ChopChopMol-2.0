@@ -238,7 +238,6 @@ export default class Main {
         render();
     }
     newMolecule(data, mode, overlay, rotation, translation, center = true, soft = false) {
-
         if (overlay) {
             this.overlayMolecule.init(data, mode, rotation, translation, center);
         } else {
@@ -246,14 +245,15 @@ export default class Main {
             this.molecule.init(data, mode, rotation, translation, center);
         }
 
-        if (labelMode) {
+        // Ensure molecule is fully initialized before creating labels
+        if (labelMode && this.molecule.atoms && this.molecule.atoms.length > 0) {
             this.toggleLabels(true);
-            this.molecule.updateLabels();
         }
+
         render();
         window.endMeasurement = performance.now();
-        const loadTimeMs = window.endMeasurement - window.startMeasurement
-        const loadTimeSec = loadTimeMs / 1000
+        const loadTimeMs = window.endMeasurement - window.startMeasurement;
+        const loadTimeSec = loadTimeMs / 1000;
         console.log(`Load time: ${loadTimeSec} s`);
 
         window.startMeasurement = null;
@@ -4247,7 +4247,10 @@ function animate() {
 }
 function render() {
     renderer.render(scene, camera);
-    updateAllBondLengthLabels(); // ADD THIS LINE
+    updateAllBondLengthLabels();
+    if (main.molecule && main.molecule.labelInstancedMesh && main.molecule.labelInstancedMesh.visible) {
+        main.molecule.updateLabels();
+    }
 }
 // Compact Molecule Database Search
 (function () {
