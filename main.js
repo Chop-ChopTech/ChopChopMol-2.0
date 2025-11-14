@@ -52,7 +52,8 @@ controls.cursorZoom = true;
 
 let shiftDown = false;
 let cmdDown = false;
-
+let ribbonMode = false;
+let ribbonGroup = null;
 let atomsSelected = [];
 let fragments = [];
 let fragmentsSelected = [];
@@ -4252,6 +4253,54 @@ function render() {
         main.molecule.updateLabels();
     }
 }
+function toggleRibbon() {
+    if (!window.main || !window.main.data || !window.main.data.ribbonData) {
+        alert('No protein backbone found in this molecule');
+        return;
+    }
+
+    ribbonMode = !ribbonMode;
+
+    if (ribbonMode) {
+        // Hide atoms and bonds
+        if (main.molecule.instancedMesh) {
+            main.molecule.instancedMesh.visible = false;
+        }
+        if (main.molecule.bondGroup) {
+            main.molecule.bondGroup.visible = false;
+        }
+
+        // Show ribbon with same offset as atoms
+        import('./ribbon.js').then(module => {
+            ribbonGroup = module.createRibbon(
+                window.main.data.ribbonData,
+                scene,
+                main.molecule.stretch,
+                main.molecule.offset  // Pass the molecule's centering offset
+            );
+            render();
+        });
+    } else {
+        // Show atoms and bonds
+        if (main.molecule.instancedMesh) {
+            main.molecule.instancedMesh.visible = true;
+        }
+        if (main.molecule.bondGroup) {
+            main.molecule.bondGroup.visible = true;
+        }
+
+        // Remove ribbon
+        if (ribbonGroup) {
+            import('./ribbon.js').then(module => {
+                module.removeRibbon(ribbonGroup, scene);
+                ribbonGroup = null;
+                render();
+            });
+        }
+    }
+}
+
+window.toggleRibbon = toggleRibbon;
 // Compact Molecule Database Search
 (function () {
     const panel = document.getElementById('dbSearchPanel');

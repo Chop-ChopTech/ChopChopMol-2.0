@@ -121,7 +121,11 @@ export default class FileHandler {
         const lines = pdbText.split(/\r?\n|\r/);
         const atomData = [];
 
-        // All elements now available in your atomSettings.json
+        // RIBBON DATA STRUCTURES
+        const backboneAtoms = [];
+        const helices = [];
+        const sheets = [];
+
         const AVAILABLE_ELEMENTS = new Set([
             'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
             'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca',
@@ -137,9 +141,8 @@ export default class FileHandler {
             'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og'
         ]);
 
-        // Map common PDB variants to proper capitalization
         const CAPITALIZATION_MAP = {
-            'D': 'H',   // Deuterium
+            'D': 'H',
             'CA': 'Ca', 'MG': 'Mg', 'FE': 'Fe', 'CU': 'Cu', 'ZN': 'Zn',
             'MN': 'Mn', 'CO': 'Co', 'NI': 'Ni', 'BR': 'Br', 'CL': 'Cl',
             'SE': 'Se', 'AG': 'Ag', 'AU': 'Au', 'HG': 'Hg', 'PB': 'Pb'
@@ -150,6 +153,31 @@ export default class FileHandler {
             'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR'
         ]);
 
+        // FIRST PASS: Parse HELIX and SHEET records
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line) continue;
+
+            const recordType = line.substring(0, 6).trim();
+
+            if (recordType === 'HELIX') {
+                const chainId = line.charAt(19);
+                const startRes = parseInt(line.substring(21, 25).trim());
+                const endRes = parseInt(line.substring(33, 37).trim());
+                if (!isNaN(startRes) && !isNaN(endRes)) {
+                    helices.push({ chain: chainId, start: startRes, end: endRes });
+                }
+            } else if (recordType === 'SHEET') {
+                const chainId = line.charAt(21);
+                const startRes = parseInt(line.substring(22, 26).trim());
+                const endRes = parseInt(line.substring(33, 37).trim());
+                if (!isNaN(startRes) && !isNaN(endRes)) {
+                    sheets.push({ chain: chainId, start: startRes, end: endRes });
+                }
+            }
+        }
+
+        // SECOND PASS: Parse atoms
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
 
@@ -158,7 +186,6 @@ export default class FileHandler {
             const recordType = line.substring(0, 6).trim();
             if (recordType !== 'ATOM' && recordType !== 'HETATM') continue;
 
-            // Parse coordinates (fixed column positions)
             const x = parseFloat(line.substring(30, 38));
             const y = parseFloat(line.substring(38, 46));
             const z = parseFloat(line.substring(46, 54));
@@ -167,26 +194,39 @@ export default class FileHandler {
 
             let element = null;
 
+            // Extract atom metadata for CA detection and ribbon
+            const fullAtomName = line.substring(12, 16);
+            const atomName = fullAtomName.trim().toUpperCase();
+            const chainId = line.charAt(21);
+            const resSeq = parseInt(line.substring(22, 26).trim());
+            const residueName = line.length >= 20 ? line.substring(17, 20).trim().toUpperCase() : '';
+
+            // CAPTURE CA ATOMS FOR RIBBON
+            if (atomName === 'CA' && fullAtomName.charAt(0) === ' ' && AMINO_ACIDS.has(residueName)) {
+                backboneAtoms.push({
+                    x: x,
+                    y: y,
+                    z: z,
+                    chain: chainId,
+                    resSeq: resSeq,
+                    residue: residueName
+                });
+            }
+
             // Strategy 1: Try element column (77-78)
             if (line.length >= 78) {
                 let elementField = line.substring(76, 78).trim();
 
                 if (elementField) {
-                    // Try as-is
                     if (AVAILABLE_ELEMENTS.has(elementField)) {
                         element = elementField;
-                    }
-                    // Try uppercase
-                    else {
+                    } else {
                         elementField = elementField.toUpperCase();
                         if (CAPITALIZATION_MAP[elementField]) {
                             element = CAPITALIZATION_MAP[elementField];
-                        }
-                        else if (AVAILABLE_ELEMENTS.has(elementField)) {
+                        } else if (AVAILABLE_ELEMENTS.has(elementField)) {
                             element = elementField;
-                        }
-                        // Try proper capitalization (e.g., FE -> Fe)
-                        else if (elementField.length === 2) {
+                        } else if (elementField.length === 2) {
                             const properCap = elementField.charAt(0) + elementField.charAt(1).toLowerCase();
                             if (AVAILABLE_ELEMENTS.has(properCap)) {
                                 element = properCap;
@@ -201,14 +241,9 @@ export default class FileHandler {
                 }
             }
 
-            // Strategy 2: Parse from atom name (columns 13-16)
-            const fullAtomName = line.substring(12, 16);
-            const atomName = fullAtomName.trim().toUpperCase();
-            const residueName = line.length >= 20 ? line.substring(17, 20).trim().toUpperCase() : '';
-
+            // Strategy 2: Parse from atom name
             if (!atomName) continue;
 
-            // Handle hydrogen with leading digit (1HG, 2HB, etc)
             if (/^\d/.test(atomName)) {
                 element = atomName.charAt(1).toUpperCase();
                 if (element === 'H') {
@@ -217,33 +252,26 @@ export default class FileHandler {
                 }
             }
 
-            // Handle CA ambiguity (CRITICAL!)
-            // " CA " (with leading space) = carbon alpha in protein backbone
-            // "CA  " (no leading space) = calcium ion
             if (atomName === 'CA') {
                 if (fullAtomName.charAt(0) === ' ' && AMINO_ACIDS.has(residueName)) {
-                    element = 'C';  // Carbon alpha in amino acid
+                    element = 'C';
                 } else if (recordType === 'HETATM') {
-                    element = 'Ca'; // Calcium ion
+                    element = 'Ca';
                 } else if (AMINO_ACIDS.has(residueName)) {
-                    element = 'C';  // Default to carbon in proteins
+                    element = 'C';
                 } else {
-                    element = 'Ca'; // Calcium otherwise
+                    element = 'Ca';
                 }
                 atomData.push({ element, x, y, z });
                 continue;
             }
 
-            // Try two-character element (FE, MG, ZN, CU, etc)
             if (atomName.length >= 2 && fullAtomName.charAt(0) !== ' ') {
                 let twoChar = atomName.substring(0, 2);
 
-                // Try with capitalization map
                 if (CAPITALIZATION_MAP[twoChar]) {
                     element = CAPITALIZATION_MAP[twoChar];
-                }
-                // Try proper capitalization (Fe, Mg, etc)
-                else {
+                } else {
                     const properCap = twoChar.charAt(0) + twoChar.charAt(1).toLowerCase();
                     if (AVAILABLE_ELEMENTS.has(properCap)) {
                         element = properCap;
@@ -256,7 +284,6 @@ export default class FileHandler {
                 }
             }
 
-            // Try first character as element
             const firstChar = atomName.charAt(0);
             if (AVAILABLE_ELEMENTS.has(firstChar)) {
                 element = firstChar;
@@ -264,22 +291,32 @@ export default class FileHandler {
                 continue;
             }
 
-            // Final fallback based on common patterns
             if (atomName.startsWith('C')) element = 'C';
             else if (atomName.startsWith('N')) element = 'N';
             else if (atomName.startsWith('O')) element = 'O';
             else if (atomName.startsWith('S')) element = 'S';
             else if (atomName.startsWith('P')) element = 'P';
             else if (atomName.startsWith('H')) element = 'H';
-            else element = 'C'; // Ultimate fallback
+            else element = 'C';
 
             atomData.push({ element, x, y, z });
         }
 
-        return {
-            atomData,
+        const result = {
+            atomData: atomData,
             numAtoms: atomData.length
         };
+
+        // Add ribbon data if protein backbone found
+        if (backboneAtoms.length > 0) {
+            result.ribbonData = {
+                backbone: backboneAtoms,
+                helices: helices,
+                sheets: sheets
+            };
+        }
+
+        return result;
     }
     parseXYZ(text) {
         try {
