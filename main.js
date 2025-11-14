@@ -208,6 +208,14 @@ export default class Main {
             this.bondGroup = new THREE.Group();
         }
 
+        // Clear ribbon
+        if (ribbonGroup) {
+            import('./ribbon.js').then(module => {
+                module.removeRibbon(ribbonGroup, scene);
+                ribbonGroup = null;
+            });
+        }
+
         this.labels = [];
 
         atomsSelected = [];
@@ -226,8 +234,6 @@ export default class Main {
             labels = [];
             clearAllBondLengthLabels();
             fragmentsSelected = [];
-
-
         }
         this.molecule.reset();
 
@@ -238,16 +244,35 @@ export default class Main {
         updateFragmentList(document.getElementById('fragmentList'));
         render();
     }
-    newMolecule(data, mode, overlay, rotation, translation, center = true, soft = false) {
+    newMolecule(data, mode, overlay, rotation, translation, center = true, soft = false, useRibbonMode = false) {
         if (overlay) {
-            this.overlayMolecule.init(data, mode, rotation, translation, center);
+            this.overlayMolecule.init(data, mode, rotation, translation, center, false);
         } else {
             this.reset(soft);
-            this.molecule.init(data, mode, rotation, translation, center);
+            this.molecule.init(data, mode, rotation, translation, center, useRibbonMode);
+
+            // If ribbon mode, create ribbon instead of showing atoms
+            if (useRibbonMode && data.ribbonData) {
+                import('./ribbon.js').then(module => {
+                    ribbonGroup = module.createRibbon(
+                        data.ribbonData,
+                        scene,
+                        this.molecule.stretch,
+                        this.molecule.offset
+                    );
+                    render();
+                });
+                ribbonMode = true;
+                disableAtomInteractions();
+            } else {
+                // Normal mode - ensure interactions are enabled
+                ribbonMode = false;
+                enableAtomInteractions();
+            }
         }
 
-        // Ensure molecule is fully initialized before creating labels
-        if (labelMode && this.molecule.atoms && this.molecule.atoms.length > 0) {
+        // Labels only work in normal mode
+        if (!useRibbonMode && labelMode && this.molecule.atoms && this.molecule.atoms.length > 0) {
             this.toggleLabels(true);
         }
 
@@ -268,7 +293,18 @@ export default class Main {
     createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true, soft = false) {
         const data = JSON.parse(json);
         console.log(this.mode);
-        this.newMolecule(data, this.mode, overlay, rotation, translation, center, false, soft);
+
+        // Check if this is a protein - if not, force ball-and-stick mode
+        const hasProteinData = data.ribbonData && data.ribbonData.backbone && data.ribbonData.backbone.length > 0;
+        const useRibbon = ribbonMode && hasProteinData;
+
+        // If current ribbonMode is true but molecule has no protein data, disable ribbon mode
+        if (ribbonMode && !hasProteinData) {
+            console.log('Non-protein molecule loaded - switching to ball-and-stick mode');
+            ribbonMode = false;
+        }
+
+        this.newMolecule(data, this.mode, overlay, rotation, translation, center, soft, useRibbon);
         this.data = data;
     }
     setNewMode(style = false) {
@@ -897,6 +933,7 @@ function createAxisVisualizer(atom1, atom2) {
 }
 
 function onPointerDown(event) {
+    if (ribbonMode) return;
     if (editingMolecule) {
         if (isUserSignedIn) {
             if (!main.molecule || !main.molecule.instancedMesh) {
@@ -1038,6 +1075,7 @@ function onPointerDown(event) {
 
 
 function onPointerMove(event) {
+    if (ribbonMode) return;
     if (!dragging) return;
 
     // Convert mouse to normalized device coordinates
@@ -1128,7 +1166,7 @@ function onPointerMove(event) {
 
 
 function onPointerMove2(event) {
-    // Skip if we're selecting or dragging
+    if (ribbonMode) return;
     if (dragging || isSelecting) return;
 
     if (!editingMolecule || !main.molecule || !main.molecule.instancedMesh || !main.molecule.atoms) return;
@@ -4254,54 +4292,69 @@ function render() {
     }
 }
 function toggleRibbon() {
-    if (!window.main || !window.main.data || !window.main.data.ribbonData) {
-        alert('No protein backbone found in this molecule');
+    if (!window.main || !window.main.data) {
+        alert('No molecule loaded');
+        return;
+    }
+
+    if (!window.main.data.ribbonData) {
+        alert('No protein backbone found - this molecule is not a protein');
         return;
     }
 
     ribbonMode = !ribbonMode;
 
-    if (ribbonMode) {
-        // Hide atoms and bonds
-        if (main.molecule.instancedMesh) {
-            main.molecule.instancedMesh.visible = false;
-        }
-        if (main.molecule.bondGroup) {
-            main.molecule.bondGroup.visible = false;
-        }
+    // Store current data and mode
+    const currentData = window.main.data;
+    const currentMode = window.main.mode;
 
-        // Show ribbon with same offset as atoms
-        import('./ribbon.js').then(module => {
-            ribbonGroup = module.createRibbon(
-                window.main.data.ribbonData,
-                scene,
-                main.molecule.stretch,
-                main.molecule.offset  // Pass the molecule's centering offset
-            );
-            render();
-        });
-    } else {
-        // Show atoms and bonds
-        if (main.molecule.instancedMesh) {
-            main.molecule.instancedMesh.visible = true;
-        }
-        if (main.molecule.bondGroup) {
-            main.molecule.bondGroup.visible = true;
-        }
+    // Completely recreate the molecule in the new mode
+    console.log(`Switching to ${ribbonMode ? 'ribbon' : 'ball-and-stick'} mode`);
 
-        // Remove ribbon
-        if (ribbonGroup) {
-            import('./ribbon.js').then(module => {
-                module.removeRibbon(ribbonGroup, scene);
-                ribbonGroup = null;
-                render();
-            });
-        }
-    }
+    window.main.newMolecule(
+        currentData,
+        currentMode,
+        false,
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 },
+        true,
+        false,
+        ribbonMode  // Pass ribbonMode state
+    );
+
+    // Recenter camera
+    window.main.zoomCameraToFitMolecule();
+}
+
+function disableAtomInteractions() {
+    // Remove pointer event listeners
+    renderer.domElement.removeEventListener('pointerdown', onPointerDown, false);
+    renderer.domElement.removeEventListener('pointermove', onPointerMove2, false);
+    renderer.domElement.style.cursor = 'default';
+
+    // Clear any selections
+    atomsSelected = [];
+    hoveredAtom = null;
+
+    // Hide editing panels
+    const editPanel = document.getElementById('editMoleculePanel');
+    if (editPanel) editPanel.classList.add('on');
+
+    console.log('Atom interactions disabled');
+}
+
+function enableAtomInteractions() {
+    // Re-attach pointer event listeners (avoid duplicates)
+    renderer.domElement.removeEventListener('pointerdown', onPointerDown, false);
+    renderer.domElement.removeEventListener('pointermove', onPointerMove2, false);
+
+    renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
+    window.addEventListener('pointermove', onPointerMove2, false);
+
+    console.log('Atom interactions enabled');
 }
 
 window.toggleRibbon = toggleRibbon;
-// Compact Molecule Database Search
 (function () {
     const panel = document.getElementById('dbSearchPanel');
     const input = document.getElementById('dbSearchInput');

@@ -19,15 +19,37 @@ export default class Molecule {
         this.bondGroup = new THREE.Group();
     }
 
-    init(data, mode, rotation, translation, center) {
+    init(data, mode, rotation, translation, center, ribbonMode = false) {
         this.reset();
         console.log(data);
 
+        if (ribbonMode) {
+            // RIBBON MODE: Skip all atom/bond creation
+            // Just store offset for centering (calculate from ribbon data)
+            if (data.ribbonData && data.ribbonData.backbone.length > 0) {
+                const backbone = data.ribbonData.backbone;
+                let sumX = 0, sumY = 0, sumZ = 0;
+                backbone.forEach(atom => {
+                    sumX += atom.x * this.stretch;
+                    sumY += atom.y * this.stretch;
+                    sumZ += atom.z * this.stretch;
+                });
+                this.offset = new THREE.Vector3(
+                    sumX / backbone.length,
+                    sumY / backbone.length,
+                    sumZ / backbone.length
+                );
+            } else {
+                this.offset = new THREE.Vector3(0, 0, 0);
+            }
+            return; // Exit early, don't create atoms
+        }
+
+        // NORMAL MODE: Create atoms and bonds
         const bondThreshold = 1;
 
         this.createAtoms(data, rotation, translation, mode);
         this.centerMolecule(!center);
-
 
         this.main.scene.add(this.instancedMesh);
 
@@ -293,6 +315,12 @@ export default class Molecule {
                 z: pos.z / this.stretch,
             });
         });
+
+        // PRESERVE ribbonData if it exists in the old data
+        if (this.main.data && this.main.data.ribbonData) {
+            data.ribbonData = this.main.data.ribbonData;
+        }
+
         console.log(data)
         this.main.data = data
     }

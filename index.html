@@ -482,7 +482,7 @@
                 if (window.loadStylePreferences) {
                     // Use shorter delay if molecule is already loaded
                     const hasMolecule = window.main && window.main.molecule && window.main.data && window.main.data.numAtoms > 0;
-                    const delay = hasMolecule ? 100 : 1000;
+                    const delay = 10;
 
                     setTimeout(() => {
                         window.loadStylePreferences(user.uid, window.renderer);
@@ -616,13 +616,13 @@
                         File</button>
                     <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
                         JSON</button>
-                    <button class="dropdown-icon" id="toggle-ribbon" onclick="window.toggleRibbon()"
-                        title="Toggle Ribbon View" style="border: none;">
-                        <i class="fa-solid fa-dna"></i>
-                    </button>
+
                 </div>
             </div>
-
+            <button class="dropdown-icon" id="toggle-ribbon" onclick="window.toggleRibbon()" title="Toggle Ribbon View"
+                style="border: none;">
+                <i class="fa-solid fa-dna"></i>
+            </button>
             <button class="dropdown-icon" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
 
             <button class="dropdown-icon" id="reset-camera" style="border: none; margin-right: 10px;"
