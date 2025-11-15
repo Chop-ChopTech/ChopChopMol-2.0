@@ -267,6 +267,7 @@ export default class Main {
             } else {
                 // Normal mode - ensure interactions are enabled
                 ribbonMode = false;
+                console.log("numAtoms", this.molecule.atoms.length);
                 enableAtomInteractions();
             }
         }

@@ -26,8 +26,9 @@ export default class FileHandler {
                     parsedData = this.parsePdbToJson(text);
                 } else if (fileType === 'xyz') {
                     parsedData = this.parseXyzToJson(text);
+                } else if (fileType === 'cif') {
+                    parsedData = this.parseCifToJson(text);  // ADD THIS
                 }
-
 
                 if (overlay) {
                     const transformation = alignMolecules(parsedData, this.main.data);
@@ -46,9 +47,9 @@ export default class FileHandler {
                 this.main.createNewMoleculeFromJSON(JSON.stringify(parsedData), overlay, rotation, translation, true, false);
                 this.main.zoomCameraToFitMolecule();
 
-
             } catch (error) {
                 console.error("Error parsing file:", error);
+                alert('Error parsing file: ' + error.message);
             }
         };
         reader.readAsText(file);
@@ -301,6 +302,238 @@ export default class FileHandler {
 
             atomData.push({ element, x, y, z });
         }
+
+        const result = {
+            atomData: atomData,
+            numAtoms: atomData.length
+        };
+
+        // Add ribbon data if protein backbone found
+        if (backboneAtoms.length > 0) {
+            result.ribbonData = {
+                backbone: backboneAtoms,
+                helices: helices,
+                sheets: sheets
+            };
+        }
+
+        return result;
+    }
+
+    parseCifToJson(cifText) {
+        const lines = cifText.split(/\r?\n|\r/);
+        const atomData = [];
+        const backboneAtoms = [];
+        const helices = [];
+        const sheets = [];
+
+        const AVAILABLE_ELEMENTS = new Set([
+            'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
+            'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca',
+            'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',
+            'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr',
+            'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn',
+            'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd',
+            'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb',
+            'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg',
+            'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th',
+            'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm',
+            'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds',
+            'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og'
+        ]);
+
+        const AMINO_ACIDS = new Set([
+            'ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE', 'LYS', 'LEU',
+            'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR'
+        ]);
+
+        // Find _atom_site loop
+        let inAtomSite = false;
+        let atomSiteHeaders = [];
+        let atomSiteData = [];
+
+        // Find secondary structure (struct_conf for helices, struct_sheet_range for sheets)
+        let inStructConf = false;
+        let structConfHeaders = [];
+        let structConfData = [];
+
+        let inSheetRange = false;
+        let sheetRangeHeaders = [];
+        let sheetRangeData = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+
+            // Skip empty lines and comments
+            if (!line || line.startsWith('#')) continue;
+
+            // ATOM SITE PARSING
+            if (line === 'loop_') {
+                // Check if next section is _atom_site
+                if (i + 1 < lines.length && lines[i + 1].trim().startsWith('_atom_site.')) {
+                    inAtomSite = true;
+                    atomSiteHeaders = [];
+                    continue;
+                } else if (i + 1 < lines.length && lines[i + 1].trim().startsWith('_struct_conf.')) {
+                    inStructConf = true;
+                    structConfHeaders = [];
+                    continue;
+                } else if (i + 1 < lines.length && lines[i + 1].trim().startsWith('_struct_sheet_range.')) {
+                    inSheetRange = true;
+                    sheetRangeHeaders = [];
+                    continue;
+                }
+            }
+
+            // Parse atom_site headers
+            if (inAtomSite && line.startsWith('_atom_site.')) {
+                atomSiteHeaders.push(line.substring(11)); // Remove '_atom_site.'
+                continue;
+            }
+
+            // Parse struct_conf headers (helices)
+            if (inStructConf && line.startsWith('_struct_conf.')) {
+                structConfHeaders.push(line.substring(13));
+                continue;
+            }
+
+            // Parse sheet range headers
+            if (inSheetRange && line.startsWith('_struct_sheet_range.')) {
+                sheetRangeHeaders.push(line.substring(20));
+                continue;
+            }
+
+            // End of loops
+            if (line.startsWith('_') && !line.startsWith('_atom_site.') && inAtomSite) {
+                inAtomSite = false;
+            }
+            if (line.startsWith('_') && !line.startsWith('_struct_conf.') && inStructConf) {
+                inStructConf = false;
+            }
+            if (line.startsWith('_') && !line.startsWith('_struct_sheet_range.') && inSheetRange) {
+                inSheetRange = false;
+            }
+
+            // Parse atom data
+            if (inAtomSite && atomSiteHeaders.length > 0 && !line.startsWith('_')) {
+                // Parse the data line (handle quoted strings)
+                const values = parseCifLine(line);
+                if (values.length === atomSiteHeaders.length) {
+                    atomSiteData.push(values);
+                }
+            }
+
+            // Parse helix data
+            if (inStructConf && structConfHeaders.length > 0 && !line.startsWith('_')) {
+                const values = parseCifLine(line);
+                if (values.length === structConfHeaders.length) {
+                    structConfData.push(values);
+                }
+            }
+
+            // Parse sheet data
+            if (inSheetRange && sheetRangeHeaders.length > 0 && !line.startsWith('_')) {
+                const values = parseCifLine(line);
+                if (values.length === sheetRangeHeaders.length) {
+                    sheetRangeData.push(values);
+                }
+            }
+        }
+
+        // Process helices
+        if (structConfData.length > 0) {
+            const confTypeIdx = structConfHeaders.indexOf('conf_type_id');
+            const begChainIdx = structConfHeaders.indexOf('beg_label_asym_id');
+            const begSeqIdx = structConfHeaders.indexOf('beg_label_seq_id');
+            const endChainIdx = structConfHeaders.indexOf('end_label_asym_id');
+            const endSeqIdx = structConfHeaders.indexOf('end_label_seq_id');
+
+            structConfData.forEach(row => {
+                const confType = row[confTypeIdx];
+                if (confType && confType.includes('HELX')) {
+                    const chain = row[begChainIdx] || 'A';
+                    const start = parseInt(row[begSeqIdx]);
+                    const end = parseInt(row[endSeqIdx]);
+                    if (!isNaN(start) && !isNaN(end)) {
+                        helices.push({ chain, start, end });
+                    }
+                }
+            });
+        }
+
+        // Process sheets
+        if (sheetRangeData.length > 0) {
+            const begChainIdx = sheetRangeHeaders.indexOf('beg_label_asym_id');
+            const begSeqIdx = sheetRangeHeaders.indexOf('beg_label_seq_id');
+            const endChainIdx = sheetRangeHeaders.indexOf('end_label_asym_id');
+            const endSeqIdx = sheetRangeHeaders.indexOf('end_label_seq_id');
+
+            sheetRangeData.forEach(row => {
+                const chain = row[begChainIdx] || 'A';
+                const start = parseInt(row[begSeqIdx]);
+                const end = parseInt(row[endSeqIdx]);
+                if (!isNaN(start) && !isNaN(end)) {
+                    sheets.push({ chain, start, end });
+                }
+            });
+        }
+
+        // Process atoms
+        const groupIdx = atomSiteHeaders.indexOf('group_PDB');
+        const atomNameIdx = atomSiteHeaders.indexOf('label_atom_id');
+        const elementIdx = atomSiteHeaders.indexOf('type_symbol');
+        const xIdx = atomSiteHeaders.indexOf('Cartn_x');
+        const yIdx = atomSiteHeaders.indexOf('Cartn_y');
+        const zIdx = atomSiteHeaders.indexOf('Cartn_z');
+        const chainIdx = atomSiteHeaders.indexOf('label_asym_id');
+        const resSeqIdx = atomSiteHeaders.indexOf('label_seq_id');
+        const resNameIdx = atomSiteHeaders.indexOf('label_comp_id');
+
+        atomSiteData.forEach(row => {
+            const group = row[groupIdx];
+
+            // Only process ATOM and HETATM
+            if (group !== 'ATOM' && group !== 'HETATM') return;
+
+            const x = parseFloat(row[xIdx]);
+            const y = parseFloat(row[yIdx]);
+            const z = parseFloat(row[zIdx]);
+
+            if (isNaN(x) || isNaN(y) || isNaN(z)) return;
+
+            let element = row[elementIdx];
+            const atomName = row[atomNameIdx];
+            const chainId = row[chainIdx] || 'A';
+            const resSeq = parseInt(row[resSeqIdx]);
+            const resName = row[resNameIdx];
+
+            // Capture CA atoms for ribbon
+            if (atomName === 'CA' && AMINO_ACIDS.has(resName)) {
+                backboneAtoms.push({
+                    x: x,
+                    y: y,
+                    z: z,
+                    chain: chainId,
+                    resSeq: resSeq,
+                    residue: resName
+                });
+            }
+
+            // Clean up element symbol
+            if (element) {
+                element = element.trim();
+                // Ensure proper capitalization
+                if (element.length === 2) {
+                    element = element.charAt(0).toUpperCase() + element.charAt(1).toLowerCase();
+                } else {
+                    element = element.toUpperCase();
+                }
+
+                if (AVAILABLE_ELEMENTS.has(element)) {
+                    atomData.push({ element, x, y, z });
+                }
+            }
+        });
 
         const result = {
             atomData: atomData,

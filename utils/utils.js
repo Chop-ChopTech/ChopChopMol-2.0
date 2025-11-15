@@ -31,7 +31,38 @@ function clearScene(scene) {
         scene.remove(object);
     });
 }
+// Helper function to parse mmCIF data lines (handles quotes and whitespace)
+function parseCifLine(line) {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    let quoteChar = null;
 
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if ((char === '"' || char === "'") && !inQuotes) {
+            inQuotes = true;
+            quoteChar = char;
+        } else if (char === quoteChar && inQuotes) {
+            inQuotes = false;
+            quoteChar = null;
+        } else if (char === ' ' && !inQuotes) {
+            if (current) {
+                values.push(current);
+                current = '';
+            }
+        } else {
+            current += char;
+        }
+    }
+
+    if (current) {
+        values.push(current);
+    }
+
+    return values;
+}
 function findFileType(file) {
     const fileName = file.name;
     const fileType = fileName.split('.').pop().toLowerCase()
