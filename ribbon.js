@@ -39,8 +39,8 @@ export function createRibbon(ribbonData, scene, stretch = 4, offset = { x: 0, y:
         );
 
         // High-quality smooth curve with many interpolated points
-        const curve = new THREE.CatmullRomCurve3(caPoints, false, 'catmullrom', 0.5);
-        const numPoints = chain.length * 10; // High resolution
+        const curve = new THREE.CatmullRomCurve3(caPoints, false, 'catmullrom', 0.9);
+        const numPoints = chain.length * 5;
         const smoothPoints = curve.getPoints(numPoints);
 
         // Determine secondary structure for each smooth point
@@ -88,32 +88,52 @@ export function createRibbon(ribbonData, scene, stretch = 4, offset = { x: 0, y:
 
 function createContinuousRibbon(points, structureTypes, helixW, helixT, sheetW, sheetT, loopW, loopT, colorMode, totalPoints) {
     const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    const indices = [];
-    const colors = [];
 
-    // Compute smooth frame (rotation-minimizing)
+    // PRE-ALLOCATE with exact sizes
+    const radialSegments = 12;
+    const vertexCount = points.length * (radialSegments + 1);
+    const vertices = new Float32Array(vertexCount * 3);
+    const colors = new Float32Array(vertexCount * 3);
+    const indices = new Uint32Array((points.length - 1) * radialSegments * 6);
+
+    let vertexIndex = 0;
+    let colorIndex = 0;
+    let indexIndex = 0;
+
+    // Compute frame once
     const frame = computeRMF(points);
 
-    // Color map
-    const helixColor = new THREE.Color(0xd946d9); // Magenta
-    const sheetColor = new THREE.Color(0xffd700); // Yellow
-    const loopColor = new THREE.Color(0x4df0a6);  // Cyan-green
+    // Color constants
+    const helixColor = new THREE.Color(0xd946d9);
+    const sheetColor = new THREE.Color(0xffd700);
+    const loopColor = new THREE.Color(0x4df0a6);
 
-    const radialSegments = 12; // Smooth cross-section
+    // REUSABLE VECTORS (critical optimization!)
+    const tempNormal = new THREE.Vector3();
+    const tempBinormal = new THREE.Vector3();
+    const tempOffset = new THREE.Vector3();
+    const tempVertex = new THREE.Vector3();
 
-    // Create ribbon with smooth transitions
+    // Pre-compute transition regions (avoid checking every point)
+    const transitionRegions = new Set();
+    for (let i = 1; i < points.length; i++) {
+        if (structureTypes[i] !== structureTypes[i - 1]) {
+            for (let j = Math.max(0, i - 5); j < Math.min(points.length, i + 5); j++) {
+                transitionRegions.add(j);
+            }
+        }
+    }
+
+    // Create vertices
     for (let i = 0; i < points.length; i++) {
         const point = points[i];
         const normal = frame.normals[i];
         const binormal = frame.binormals[i];
         const structType = structureTypes[i];
 
-        // Smoothly interpolate dimensions at transitions
-        let width, thickness;
-        let color;
+        // Get base dimensions
+        let width, thickness, color;
 
-        // Get dimensions for current structure with smooth transitions
         if (structType === 'helix') {
             width = helixW;
             thickness = helixT;
@@ -128,70 +148,79 @@ function createContinuousRibbon(points, structureTypes, helixW, helixT, sheetW, 
             color = loopColor;
         }
 
-        // Smooth transition at boundaries
-        if (i > 0 && structureTypes[i] !== structureTypes[i - 1]) {
-            // We're at a transition - blend dimensions
-            const transitionWindow = 5;
-            if (i < transitionWindow) {
-                const t = i / transitionWindow;
-                const prevWidth = getWidth(structureTypes[0], helixW, sheetW, loopW);
-                const prevThickness = getThickness(structureTypes[0], helixT, sheetT, loopT);
-                width = prevWidth + (width - prevWidth) * t;
-                thickness = prevThickness + (thickness - prevThickness) * t;
+        // Only compute transitions for points in transition regions
+        if (transitionRegions.has(i)) {
+            // Simplified transition logic
+            if (i > 0 && structureTypes[i] !== structureTypes[i - 1]) {
+                const transitionWindow = 5;
+                const distFromTransition = i % transitionWindow;
+                if (distFromTransition < transitionWindow) {
+                    const t = distFromTransition / transitionWindow;
+                    const prevWidth = getWidth(structureTypes[i - 1], helixW, sheetW, loopW);
+                    const prevThickness = getThickness(structureTypes[i - 1], helixT, sheetT, loopT);
+                    width = prevWidth + (width - prevWidth) * t;
+                    thickness = prevThickness + (thickness - prevThickness) * t;
+                }
             }
         }
 
-        if (i < points.length - 1 && structureTypes[i] !== structureTypes[i + 1]) {
-            const transitionWindow = 5;
-            const remaining = points.length - i - 1;
-            if (remaining < transitionWindow) {
-                const t = remaining / transitionWindow;
-                const nextWidth = getWidth(structureTypes[i + 1], helixW, sheetW, loopW);
-                const nextThickness = getThickness(structureTypes[i + 1], helixT, sheetT, loopT);
-                width = width + (nextWidth - width) * (1 - t);
-                thickness = thickness + (nextThickness - thickness) * (1 - t);
-            }
-        }
-
-        // Rainbow coloring option
+        // Rainbow mode
         if (colorMode === 'rainbow') {
             const t = i / points.length;
             const hue = (1.0 - t) * 0.7;
-            color = new THREE.Color().setHSL(hue, 1.0, 0.5);
+            color.setHSL(hue, 1.0, 0.5);
         }
 
-        // Create elliptical cross-section
+        // Create cross-section using reusable vectors
+        const halfWidth = width * 0.5;
+        const halfThickness = thickness * 0.5;
+        const angleStep = (Math.PI * 2) / radialSegments;
+
         for (let j = 0; j <= radialSegments; j++) {
-            const angle = (j / radialSegments) * Math.PI * 2;
-            const x = Math.cos(angle) * width / 2;
-            const y = Math.sin(angle) * thickness / 2;
+            const angle = j * angleStep;
+            const cosAngle = Math.cos(angle);
+            const sinAngle = Math.sin(angle);
 
-            const offset = normal.clone().multiplyScalar(x)
-                .add(binormal.clone().multiplyScalar(y));
-            const vertex = point.clone().add(offset);
+            // Reuse vectors instead of creating new ones
+            tempNormal.copy(normal).multiplyScalar(cosAngle * halfWidth);
+            tempBinormal.copy(binormal).multiplyScalar(sinAngle * halfThickness);
+            tempOffset.addVectors(tempNormal, tempBinormal);
+            tempVertex.addVectors(point, tempOffset);
 
-            vertices.push(vertex.x, vertex.y, vertex.z);
-            colors.push(color.r, color.g, color.b);
+            // Direct assignment to typed array
+            vertices[vertexIndex++] = tempVertex.x;
+            vertices[vertexIndex++] = tempVertex.y;
+            vertices[vertexIndex++] = tempVertex.z;
+
+            colors[colorIndex++] = color.r;
+            colors[colorIndex++] = color.g;
+            colors[colorIndex++] = color.b;
         }
     }
 
-    // Create faces connecting cross-sections
+    // Create indices (triangles)
+    const vertsPerSlice = radialSegments + 1;
     for (let i = 0; i < points.length - 1; i++) {
+        const base = i * vertsPerSlice;
         for (let j = 0; j < radialSegments; j++) {
-            const base = i * (radialSegments + 1);
             const a = base + j;
             const b = base + j + 1;
-            const c = base + j + radialSegments + 1;
-            const d = base + j + radialSegments + 2;
+            const c = base + j + vertsPerSlice;
+            const d = base + j + vertsPerSlice + 1;
 
-            indices.push(a, c, b);
-            indices.push(b, c, d);
+            indices[indexIndex++] = a;
+            indices[indexIndex++] = c;
+            indices[indexIndex++] = b;
+
+            indices[indexIndex++] = b;
+            indices[indexIndex++] = c;
+            indices[indexIndex++] = d;
         }
     }
 
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    geometry.setIndex(indices);
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
     geometry.computeVertexNormals();
 
     return geometry;
