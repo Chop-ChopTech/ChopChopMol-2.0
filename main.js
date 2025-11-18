@@ -2090,12 +2090,14 @@ function resetIsolationState() {
     originalMoleculeData = null;
     originalFragments = [];
 
-    // Remove any UI indicators
-    const indicator = document.getElementById('isolationModeIndicator');
-    if (indicator) {
-        indicator.remove();
-    }
+    globalFragmentStore = {
+        originalAtomCount: 0,
+        fragments: [],
+        fragmentIdMap: new Map()
+    };
 }
+
+window.resetIsolationState = resetIsolationState;
 
 function resetFragments() {
     fragments = [];
@@ -2189,7 +2191,7 @@ function updateFragmentList(fragmentList) {
             background-color: rgb(64, 215, 64);
             padding: 8px 12px;
             font-size: 13px;
-            width: 100%;
+            width: 50px%;
             z-index: 10000000000000000000!important;
         `;
         showAllBtn.addEventListener('click', restoreOriginalMolecule);
@@ -3384,6 +3386,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const moleculeData = JSON.parse(select.value);
+        resetIsolationState();
         loadMolecule(moleculeData);
 
         // Hide the selection UI

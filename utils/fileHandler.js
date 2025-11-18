@@ -43,7 +43,7 @@ export default class FileHandler {
                     this.main.setNewMode();
                     document.getElementById("toggleStyleChanges").checked = false;
                 }
-
+                window.resetIsolationState();
                 this.main.createNewMoleculeFromJSON(JSON.stringify(parsedData), overlay, rotation, translation, true, false);
                 this.main.zoomCameraToFitMolecule();
 
