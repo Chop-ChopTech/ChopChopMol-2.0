@@ -3530,19 +3530,171 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
         color = "rgb(0, 170, 255)"; // Blue for bond lengths
     }
 
-    // Create CSS2D label
+    // Create label element
     const labelDiv = document.createElement('div');
     labelDiv.className = isDihedral ? 'dihedral-label' : (isAngle ? 'angle-label' : 'bond-length-label');
-    labelDiv.textContent = value;
-    labelDiv.style.cssText = `
-        color: ${color};
+
+    if (!isDihedral && !isAngle) {
+        // For bond length: create an editable input that looks like a label
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = value;
+        input.style.cssText = `
+            color: ${color};
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+            font-weight: normal;
+            background: none;
+            border: none;
+            padding: 4px 8px;
+            text-align: center;
+            width: 60px;
+            cursor: text;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            outline: none;
+        `;
+
+        let justAppliedTransform = false; // Flag to prevent blur from resetting
+
+        // Handle Enter key to apply distance
+        // Handle Enter key to apply distance
+        // Handle Enter key to apply distance
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const targetDistance = parseFloat(input.value);
+                if (!isNaN(targetDistance) && targetDistance > 0) {
+                    // Determine which atoms to move and which atom is the anchor
+                    let atomsToMove = [];
+                    let anchorAtomIndex;
+
+                    if (atomsSelected.length > 0) {
+                        // Check which label atom is in the selection
+                        const atom1InSelection = atomsSelected.includes(atom1Index);
+                        const atom2InSelection = atomsSelected.includes(atom2Index);
+
+                        if (atom1InSelection && !atom2InSelection) {
+                            // Move all selected atoms, anchor is atom2
+                            atomsToMove = [...atomsSelected];
+                            anchorAtomIndex = atom2Index;
+                        } else if (atom2InSelection && !atom1InSelection) {
+                            // Move all selected atoms, anchor is atom1
+                            atomsToMove = [...atomsSelected];
+                            anchorAtomIndex = atom1Index;
+                        } else {
+                            // If both or neither in selection, move atom2 only
+                            atomsToMove = [atom2Index];
+                            anchorAtomIndex = atom1Index;
+                        }
+                    } else {
+                        // No selection - default to moving atom2 relative to atom1
+                        atomsToMove = [atom2Index];
+                        anchorAtomIndex = atom1Index;
+                    }
+
+                    // Get the reference atom from the label (the one in atomsToMove)
+                    let referenceAtomIndex;
+                    if (atomsToMove.includes(atom1Index)) {
+                        referenceAtomIndex = atom1Index;
+                    } else {
+                        referenceAtomIndex = atom2Index;
+                    }
+
+                    // Convert from displayed units to internal units
+                    const targetDistanceInternal = targetDistance * 4;
+                    const anchorAtom = main.molecule.atoms[anchorAtomIndex];
+                    const referenceAtom = main.molecule.atoms[referenceAtomIndex];
+
+                    // Calculate translation needed
+                    const currentVector = new THREE.Vector3().subVectors(referenceAtom.position, anchorAtom.position);
+                    const currentDistance = currentVector.length();
+
+                    if (currentDistance === 0) {
+                        console.warn('Cannot set distance between atoms at the same position');
+                        input.blur();
+                        return;
+                    }
+
+                    const translationDistance = targetDistanceInternal - currentDistance;
+                    const direction = currentVector.normalize();
+                    const translationVector = direction.multiplyScalar(translationDistance);
+
+                    // Move ALL atoms in the group by the same translation
+                    atomsToMove.forEach(atomIdx => {
+                        const atom = main.molecule.atoms[atomIdx];
+                        atom.position.add(translationVector);
+                        atom.x = atom.position.x;
+                        atom.y = atom.position.y;
+                        atom.z = atom.position.z;
+                        updateAtomMatrix(atomIdx);
+                    });
+
+                    // Update everything
+                    main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+                    main.molecule.updateBonds(main.mode);
+                    if (main.molecule.labels && main.molecule.labels.length > 0) {
+                        main.molecule.updateLabels();
+                    }
+
+                    // Set flag before updating labels and blurring
+                    justAppliedTransform = true;
+
+                    // Update all labels (this will update our input to the new correct value)
+                    updateAllBondLengthLabels();
+
+                    saveUndoState("Set Distance");
+                    main.molecule.updateMainCoordinates();
+                    render();
+
+                    console.log(`Moved ${atomsToMove.length} atom(s) to set distance to ${targetDistance}`);
+
+                    // Blur after everything is updated
+                    input.blur();
+                    return;
+                }
+                input.blur();
+            } else if (e.key === 'Escape') {
+                input.value = calculateBondLength(atom1, atom2);
+                input.blur();
+            }
+        });
+
+        // Focus effect
+        input.addEventListener('focus', () => {
+            input.style.background = 'rgba(0, 0, 0, 0.6)';
+            input.style.border = '1px solid ' + color;
+            input.style.borderRadius = '4px';
+            input.select();
+        });
+
+        input.addEventListener('blur', () => {
+            input.style.background = 'none';
+            input.style.border = 'none';
+
+            // Only reset value if we didn't just apply a transform
+            if (!justAppliedTransform) {
+                input.value = calculateBondLength(atom1, atom2);
+            }
+
+            // Reset the flag for next time
+            justAppliedTransform = false;
+        });
+
+        labelDiv.appendChild(input);
+        labelDiv.style.pointerEvents = 'auto';
+        labelDiv.inputElement = input; // Store reference
+    } else {
+        // For angles and dihedrals: just text
+        labelDiv.textContent = value;
+        labelDiv.style.pointerEvents = 'none';
+    }
+
+    labelDiv.style.cssText += `
         font-family: Arial, sans-serif;
         font-size: 20px;
         font-weight: normal;
         background: none;
         padding: 4px 8px;
         border-radius: 4px;
-        pointer-events: none;
         user-select: none;
         white-space: nowrap;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
@@ -3879,7 +4031,12 @@ function updateBondLengthLabel(labelInfo) {
         labelInfo.element.textContent = `${newAngle}°`;
     } else {
         const newDistance = calculateBondLength(atom1, atom2);
-        labelInfo.element.textContent = `${newDistance}`;
+        // Update input value if it exists and is not focused
+        if (labelInfo.element.inputElement && document.activeElement !== labelInfo.element.inputElement) {
+            labelInfo.element.inputElement.value = newDistance;
+        } else if (!labelInfo.element.inputElement) {
+            labelInfo.element.textContent = newDistance;
+        }
     }
 
     // UPDATE THE VISUALIZATION GEOMETRY
@@ -4191,11 +4348,52 @@ document.addEventListener('keydown', (event) => {
             );
 
             if (existingLabel === -1) {
+                // Create label
                 labels.push([atomsSelected[0], atomsSelected[1]]);
                 console.log(labels);
                 createInfoLabel(atomsSelected[0], atomsSelected[1]);
+
+                // Also create axis automatically
+                const atom1 = main.molecule.atoms[atomsSelected[0]];
+                const atom2 = main.molecule.atoms[atomsSelected[1]];
+
+                const pos1 = atom1.position.clone();
+                const pos2 = atom2.position.clone();
+
+                rotationAxis = {
+                    point: pos1.clone(),
+                    direction: new THREE.Vector3().subVectors(pos2, pos1).normalize()
+                };
+
+                axisAtoms = [...atomsSelected];
+                createAxisVisualizer(atom1, atom2);
+
+                // Update UI to show axis controls
+                const element = main.molecule.atoms[atomsSelected[0]].type;
+                updateEditingContent(element, main.molecule.atomSettings[element].color);
+
+                console.log('Created bond length label and axis');
             } else {
+                // Remove both label and axis
                 removeBondLengthLabel(existingLabel);
+
+                // Remove axis
+                rotationAxis = null;
+                axisAtoms = [];
+                if (axisVisualizer) {
+                    main.scene.remove(axisVisualizer);
+                    axisVisualizer.geometry.dispose();
+                    axisVisualizer.material.dispose();
+                    axisVisualizer = null;
+                }
+
+                // Update UI
+                if (atomsSelected.length > 0) {
+                    const element = main.molecule.atoms[atomsSelected[0]].type;
+                    updateEditingContent(element, main.molecule.atomSettings[element].color);
+                }
+
+                console.log('Removed bond length label and axis');
             }
         } else if (atomsSelected.length === 3) {
             // Angle functionality for 3 atoms
@@ -4237,6 +4435,16 @@ document.addEventListener('keydown', (event) => {
     if (event.key === 'l' || event.key === 'L') {
         if (event.shiftKey) {
             clearAllBondLengthLabels();
+
+            // Also remove axis
+            rotationAxis = null;
+            axisAtoms = [];
+            if (axisVisualizer) {
+                main.scene.remove(axisVisualizer);
+                axisVisualizer.geometry.dispose();
+                axisVisualizer.material.dispose();
+                axisVisualizer = null;
+            }
         }
     }
     if (event.key == ' ') {
@@ -4244,7 +4452,6 @@ document.addEventListener('keydown', (event) => {
             const atom1 = main.molecule.atoms[atomsSelected[0]];
             const atom2 = main.molecule.atoms[atomsSelected[1]];
 
-            // Use atom positions directly (they're already in the correct coordinate system)
             const pos1 = atom1.position.clone();
             const pos2 = atom2.position.clone();
 
@@ -4254,18 +4461,24 @@ document.addEventListener('keydown', (event) => {
             };
 
             axisAtoms = [...atomsSelected];
-
-            // Create visual representation
             createAxisVisualizer(atom1, atom2);
 
-            // Update UI
+            // Also create label if it doesn't exist
+            const existingLabel = bondLengthLabels.findIndex(label =>
+                !label.isAngle && !label.isDihedral &&
+                ((label.atom1Index === atomsSelected[0] && label.atom2Index === atomsSelected[1]) ||
+                    (label.atom1Index === atomsSelected[1] && label.atom2Index === atomsSelected[0]))
+            );
+
+            if (existingLabel === -1) {
+                labels.push([atomsSelected[0], atomsSelected[1]]);
+                createInfoLabel(atomsSelected[0], atomsSelected[1]);
+            }
+
             updateEditingContent(atom1.type, main.molecule.atomSettings[atom1.type].color);
-
-            console.log('Axis defined:', rotationAxis);
+            console.log('Axis and label defined');
         }
-
     }
-
 });
 
 function createRenderer(antialiasOn) {
