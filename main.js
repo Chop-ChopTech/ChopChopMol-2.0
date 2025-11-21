@@ -734,7 +734,14 @@ function generateDataFromAtoms(atomIndexes) {
     const cooordinates = []
     atomIndexes.forEach(idx => {
         const pos = main.molecule.atoms[idx].position
-        cooordinates.push({ element: main.molecule.atoms[idx].type, x: pos.x / 4, y: pos.y / 4, z: pos.z / 4 })
+        const atom = main.molecule.atoms[idx];
+        cooordinates.push({
+            element: atom.type,
+            x: pos.x / 4,
+            y: pos.y / 4,
+            z: pos.z / 4,
+            originalIndex: atom.originalIndex  // JUST ADD THIS LINE
+        })
     })
     data.atomData = cooordinates
     data.numAtoms = atomIndexes.length

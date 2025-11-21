@@ -61,43 +61,6 @@ export default class Molecule {
         }
     }
 
-    // createAtoms(data) {
-    //     const resolution = 16;
-    //     const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
-    //     const material = new THREE.MeshLambertMaterial({ vertexColors: true });
-
-    //     this.instancedMesh = new THREE.InstancedMesh(atomGeometry, material, data.numAtoms);
-
-    //     const colorAttribute = new THREE.InstancedBufferAttribute(new Float32Array(data.numAtoms * 3), 3);
-    //     this.instancedMesh.geometry.setAttribute('color', colorAttribute);
-
-    //     for (let i = 0; i < data.numAtoms; i++) {
-
-    //         const x = data.atomData[i].x * this.stretch;
-    //         const y = data.atomData[i].y * this.stretch;
-    //         const z = data.atomData[i].z * this.stretch;
-    //         const element = data.atomData[i].element;
-    //         const coordinates = new THREE.Vector3(x, y, z);
-    //         const id = getRandomArbitrary(0, 1000);
-
-    //         const atom = new Atom(this.main, element, coordinates, id);
-    //         this.atoms.push(atom);
-
-    //         const radius = this.atomSettings[element]?.realRadius * 1.5 || 1;
-
-    //         const matrix = new THREE.Matrix4();
-    //         matrix.setPosition(atom.position);
-    //         matrix.scale(new THREE.Vector3(radius, radius, radius));
-
-    //         this.instancedMesh.setMatrixAt(i, matrix);
-
-    //         const color = new THREE.Color(this.atomSettings[element].color);
-    //         colorAttribute.setXYZ(i, color.r, color.g, color.b);
-    //     }
-
-    //     this.instancedMesh.instanceMatrix.needsUpdate = true;
-    //     colorAttribute.needsUpdate = true;
-    // }
     createAtoms(data, rotation, translation, mode) {
         const resolution = mode.resolution || 8;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
@@ -135,7 +98,9 @@ export default class Molecule {
             const y = atomData.y * stretch;
             const z = atomData.z * stretch;
 
-            const atom = new Atom(this.main, element, new THREE.Vector3(x, y, z), i);
+            // CHANGED: Pass originalIndex if available in atomData
+            const originalIndex = atomData.originalIndex !== undefined ? atomData.originalIndex : i;
+            const atom = new Atom(this.main, element, new THREE.Vector3(x, y, z), i, originalIndex);
             this.atoms.push(atom);
 
             let radius = (this.atomSettings[element]?.realRadius || 0.67) * 1.5 * atomSize;
@@ -486,7 +451,9 @@ export default class Molecule {
                 const x = col * size + size / 2;
                 const y = row * size + size / 2;
 
-                ctx.fillText((i + 1).toString(), x, y);
+                // CHANGED: Use originalIndex instead of i+1
+                const displayIndex = this.atoms[i].originalIndex + 1;
+                ctx.fillText(displayIndex.toString(), x, y);
 
                 this.atomTypeMap[i] = {
                     uMin: col / cols,
@@ -499,7 +466,7 @@ export default class Molecule {
             this.labelAtlas = new THREE.CanvasTexture(canvas);
             this.labelAtlas.needsUpdate = true;
         } else {
-            // Element mode - ORIGINAL CODE
+            // Element mode - keep original code
             const types = Object.keys(this.atomSettings).sort();
             const size = 64;
             const cols = Math.ceil(Math.sqrt(types.length));
