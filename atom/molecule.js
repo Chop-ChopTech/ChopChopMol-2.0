@@ -459,46 +459,85 @@ export default class Molecule {
         }
     }
 
-    createLabelAtlas() {
-        const types = Object.keys(this.atomSettings).sort(); // Sort for consistent ordering
-        const size = 64;
-        const cols = Math.ceil(Math.sqrt(types.length));
-        const rows = Math.ceil(types.length / cols);
+    createLabelAtlas(useIndices = false) {
+        if (useIndices) {
+            // Index mode
+            const numAtoms = this.atoms.length;
+            const size = 64;
+            const cols = Math.ceil(Math.sqrt(numAtoms));
+            const rows = Math.ceil(numAtoms / cols);
 
-        const canvas = document.createElement('canvas');
-        canvas.width = size * cols;
-        canvas.height = size * rows;
-        const ctx = canvas.getContext('2d');
+            const canvas = document.createElement('canvas');
+            canvas.width = size * cols;
+            canvas.height = size * rows;
+            const ctx = canvas.getContext('2d');
 
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
 
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 40px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+            this.atomTypeMap = {};
 
-        this.atomTypeMap = {};
+            for (let i = 0; i < numAtoms; i++) {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = col * size + size / 2;
+                const y = row * size + size / 2;
 
-        types.forEach((type, i) => {
-            const col = i % cols;
-            const row = Math.floor(i / cols);
-            const x = col * size + size / 2;
-            const y = row * size + size / 2;
+                ctx.fillText((i + 1).toString(), x, y);
 
-            ctx.fillText(type, x, y);
+                this.atomTypeMap[i] = {
+                    uMin: col / cols,
+                    vMin: 1.0 - (row + 1) / rows,
+                    uMax: (col + 1) / cols,
+                    vMax: 1.0 - row / rows
+                };
+            }
 
-            // UV coordinates: origin is bottom-left in WebGL
-            this.atomTypeMap[type] = {
-                uMin: col / cols,
-                vMin: 1.0 - (row + 1) / rows,  // Flip V coordinate
-                uMax: (col + 1) / cols,
-                vMax: 1.0 - row / rows          // Flip V coordinate
-            };
-        });
+            this.labelAtlas = new THREE.CanvasTexture(canvas);
+            this.labelAtlas.needsUpdate = true;
+        } else {
+            // Element mode - ORIGINAL CODE
+            const types = Object.keys(this.atomSettings).sort();
+            const size = 64;
+            const cols = Math.ceil(Math.sqrt(types.length));
+            const rows = Math.ceil(types.length / cols);
 
-        this.labelAtlas = new THREE.CanvasTexture(canvas);
-        this.labelAtlas.needsUpdate = true;
+            const canvas = document.createElement('canvas');
+            canvas.width = size * cols;
+            canvas.height = size * rows;
+            const ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 40px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            this.atomTypeMap = {};
+
+            types.forEach((type, i) => {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = col * size + size / 2;
+                const y = row * size + size / 2;
+
+                ctx.fillText(type, x, y);
+
+                this.atomTypeMap[type] = {
+                    uMin: col / cols,
+                    vMin: 1.0 - (row + 1) / rows,
+                    uMax: (col + 1) / cols,
+                    vMax: 1.0 - row / rows
+                };
+            });
+
+            this.labelAtlas = new THREE.CanvasTexture(canvas);
+            this.labelAtlas.needsUpdate = true;
+        }
     }
 
     createLabelTexture(text, color) {
@@ -521,7 +560,7 @@ export default class Molecule {
         return texture;
     }
 
-    toggleLabels(show) {
+    toggleLabels(show, useIndices = false) {
         if (!show) {
             if (this.labelInstancedMesh) this.labelInstancedMesh.visible = false;
             return;
@@ -532,7 +571,12 @@ export default class Molecule {
             return;
         }
 
-        if (!this.labelAtlas) this.createLabelAtlas();
+        // Recreate atlas if mode changed
+        if (this.labelAtlas) {
+            this.labelAtlas.dispose();
+            this.labelAtlas = null;
+        }
+        this.createLabelAtlas(useIndices);
 
         if (!this.labelInstancedMesh) {
             const geometry = new THREE.PlaneGeometry(1, 1);
@@ -585,9 +629,9 @@ export default class Molecule {
             const uvBounds = new Float32Array(this.atoms.length * 4);
 
             this.atoms.forEach((atom, i) => {
-                const bounds = this.atomTypeMap[atom.type];
+                const bounds = useIndices ? this.atomTypeMap[i] : this.atomTypeMap[atom.type];
                 if (!bounds) {
-                    console.warn(`No bounds found for atom type: ${atom.type}`);
+                    console.warn(`No bounds found for ${useIndices ? 'index' : 'atom type'}: ${useIndices ? i : atom.type}`);
                     return;
                 }
                 const idx = i * 4;
@@ -602,6 +646,22 @@ export default class Molecule {
             this.main.scene.add(this.labelInstancedMesh);
             console.log(`Created labels for ${this.atoms.length} atoms`);
         } else {
+            // Update existing mesh
+            this.labelInstancedMesh.material.uniforms.map.value = this.labelAtlas;
+
+            const uvBounds = new Float32Array(this.atoms.length * 4);
+            this.atoms.forEach((atom, i) => {
+                const bounds = useIndices ? this.atomTypeMap[i] : this.atomTypeMap[atom.type];
+                if (!bounds) return;
+                const idx = i * 4;
+                uvBounds[idx] = bounds.uMin;
+                uvBounds[idx + 1] = bounds.vMin;
+                uvBounds[idx + 2] = bounds.uMax;
+                uvBounds[idx + 3] = bounds.vMax;
+            });
+
+            this.labelInstancedMesh.geometry.attributes.uvBounds.array = uvBounds;
+            this.labelInstancedMesh.geometry.attributes.uvBounds.needsUpdate = true;
             this.labelInstancedMesh.visible = true;
         }
 

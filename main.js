@@ -288,7 +288,9 @@ export default class Main {
     }
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
-        this.molecule.toggleLabels(labelMode);
+        if (this.molecule && this.molecule.atoms && this.molecule.atoms.length > 0) {
+            this.molecule.toggleLabels(labelMode, window.labelIndexMode);
+        }
         render();
     }
     createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true, soft = false) {
@@ -562,6 +564,7 @@ document.addEventListener('click', function (event) {
 });
 toggleLabelsButton.addEventListener('change', () => {
     main.toggleLabels(toggleLabelsButton.checked);
+    render();
 });
 
 window.addEventListener('replyUpdated', (event) => {
@@ -4767,6 +4770,23 @@ window.toggleRibbon = toggleRibbon;
         };
     }
 })();
+window.labelIndexMode = false;
+
+// ADD this event listener (put it with other DOM event listeners):
+document.getElementById('labelModeBtn').addEventListener('click', () => {
+    if (!main.molecule || !main.molecule.atoms || main.molecule.atoms.length === 0) {
+        return;
+    }
+
+    window.labelIndexMode = !window.labelIndexMode;
+    document.getElementById('labelModeBtn').textContent =
+        `Mode: ${window.labelIndexMode ? 'Indices' : 'Elements'}`;
+
+    if (labelMode) {
+        main.toggleLabels(true);
+        render();
+    }
+});
 render();
 controls.addEventListener('change', () => {
     render();
