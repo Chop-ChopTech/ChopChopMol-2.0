@@ -27,7 +27,15 @@ export default class FileHandler {
                 } else if (fileType === 'xyz') {
                     parsedData = this.parseXyzToJson(text);
                 } else if (fileType === 'cif') {
-                    parsedData = this.parseCifToJson(text);  // ADD THIS
+                    parsedData = this.parseCifToJson(text);
+                } else if (fileType === 'mol2') {
+                    parsedData = this.parseMol2ToJson(text);
+                } else if (fileType === 'pqr') {
+                    parsedData = this.parsePqrToJson(text);
+                } else if (fileType === 'gro') {
+                    parsedData = this.parseGroToJson(text);
+                } else if (fileType === 'cml') {
+                    parsedData = this.parseCmlToJson(text);
                 }
 
                 if (overlay) {
@@ -578,6 +586,102 @@ export default class FileHandler {
             console.error("Error processing XYZ file:", error);
             return null;
         }
+    }
+
+    parseMol2ToJson(text) {
+        const lines = text.split('\n');
+        const atomData = [];
+        let inAtomSection = false;
+
+        for (const line of lines) {
+            if (line.startsWith('@<TRIPOS>ATOM')) {
+                inAtomSection = true;
+                continue;
+            }
+            if (line.startsWith('@<TRIPOS>') && inAtomSection) {
+                break;
+            }
+            if (inAtomSection && line.trim()) {
+                const parts = line.trim().split(/\s+/);
+                if (parts.length >= 6) {
+                    const x = parseFloat(parts[2]);
+                    const y = parseFloat(parts[3]);
+                    const z = parseFloat(parts[4]);
+                    const atomType = parts[5];
+                    const element = atomType.split('.')[0];
+                    atomData.push({ element, x, y, z });
+                }
+            }
+        }
+        return { atomData, numAtoms: atomData.length };
+    }
+
+    parsePqrToJson(text) {
+        // PQR is like PDB but with charge and radius columns
+        const lines = text.split(/\r?\n|\r/);
+        const atomData = [];
+
+        for (const line of lines) {
+            if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+                const x = parseFloat(line.substring(30, 38).trim());
+                const y = parseFloat(line.substring(38, 46).trim());
+                const z = parseFloat(line.substring(46, 54).trim());
+                const element = line.substring(12, 16).trim().replace(/[0-9]/g, '');
+
+                if (!isNaN(x) && !isNaN(y) && !isNaN(z) && element) {
+                    atomData.push({ element, x, y, z });
+                }
+            }
+        }
+        return { atomData, numAtoms: atomData.length };
+    }
+
+    parseGroToJson(text) {
+        // GROMACS format
+        const lines = text.split('\n');
+        const atomData = [];
+        let numAtoms = 0;
+
+        if (lines.length >= 2) {
+            numAtoms = parseInt(lines[1].trim());
+        }
+
+        for (let i = 2; i < 2 + numAtoms && i < lines.length; i++) {
+            const line = lines[i];
+            if (line.length >= 44) {
+                const atomName = line.substring(10, 15).trim();
+                const element = atomName.replace(/[0-9]/g, '');
+                const x = parseFloat(line.substring(20, 28).trim()) * 10; // nm to Å
+                const y = parseFloat(line.substring(28, 36).trim()) * 10;
+                const z = parseFloat(line.substring(36, 44).trim()) * 10;
+
+                if (!isNaN(x) && !isNaN(y) && !isNaN(z) && element) {
+                    atomData.push({ element, x, y, z });
+                }
+            }
+        }
+        return { atomData, numAtoms: atomData.length };
+    }
+
+    parseCmlToJson(text) {
+        // Chemical Markup Language (XML-based)
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, 'text/xml');
+        const atomData = [];
+
+        const atoms = xml.getElementsByTagName('atom');
+        for (const atom of atoms) {
+            const element = atom.getAttribute('elementType') ||
+                atom.getAttribute('id')?.replace(/[0-9]/g, '') || 'C';
+            const x = parseFloat(atom.getAttribute('x3') || atom.getAttribute('x2') || 0);
+            const y = parseFloat(atom.getAttribute('y3') || atom.getAttribute('y2') || 0);
+            const z = parseFloat(atom.getAttribute('z3') || 0);
+
+            if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                atomData.push({ element, x, y, z });
+            }
+        }
+        return { atomData, numAtoms: atomData.length };
     }
     parseJSON() {
         return fetch('./utils/atomSettings.json')

@@ -64,10 +64,16 @@ function parseCifLine(line) {
     return values;
 }
 function findFileType(file) {
-    const fileName = file.name;
-    const fileType = fileName.split('.').pop().toLowerCase()
-
-    return fileType
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.mol') || name.endsWith('.sdf')) return 'mol';
+    if (name.endsWith('.pdb')) return 'pdb';
+    if (name.endsWith('.xyz')) return 'xyz';
+    if (name.endsWith('.cif') || name.endsWith('.mmcif')) return 'cif';
+    if (name.endsWith('.mol2')) return 'mol2';
+    if (name.endsWith('.pqr')) return 'pqr';
+    if (name.endsWith('.gro')) return 'gro';
+    if (name.endsWith('.cml')) return 'cml';
+    return 'mol';
 }
 function alignMolecules(movingMolecule, fixedMolecule) {
     // Helper function to calculate distance between two atoms
