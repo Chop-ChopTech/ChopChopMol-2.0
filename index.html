@@ -1440,10 +1440,77 @@
             }
         })();
     </script>
+    <!-- Frame slider for multi-frame XYZ files -->
+    <div id="frameSliderContainer" style="
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(30, 30, 50, 0.85);
+        backdrop-filter: blur(10px);
+        padding: 12px 24px;
+        border-radius: 30px;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 1000;
+        ">
+        <span id="frameLabel"
+            style="color: white; font-family: 'Rubik', sans-serif; font-size: 14px; min-width: 100px;">Frame 1 /
+            1</span>
+        <input type="range" id="frameSlider" min="0" max="0" value="0" style="
+            width: 200px;
+            accent-color: #667eea;">
+        <button id="playFrames" class="fancy-button" style="
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            background: linear-gradient(135deg, #ff2c2c 0%, #2d30ff 100%);">
+            <i class="fa-solid fa-play"></i></button>
+    </div>
+
+    <script>
+        document.getElementById('frameSlider')?.addEventListener('input', function () {
+            const frameIndex = parseInt(this.value);
+            if (window.xyzFrames && window.xyzFrames[frameIndex]) {
+                const frame = window.xyzFrames[frameIndex];
+                window.main.createNewMoleculeFromJSON(JSON.stringify({
+                    atomData: frame.atomData,
+                    numAtoms: frame.numAtoms
+                }), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);  // Changed false to true for center
+                document.getElementById('frameLabel').textContent =
+                    `Frame ${frameIndex + 1} / ${window.xyzFrames.length}`;
+            }
+        });
+
+        // Play animation
+        let frameInterval = null;
+        document.getElementById('playFrames')?.addEventListener('click', function () {
+            const slider = document.getElementById('frameSlider');
+            const icon = this.querySelector('i');
+
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+                icon.className = 'fa-solid fa-play';
+            } else {
+                icon.className = 'fa-solid fa-pause';
+                frameInterval = setInterval(() => {
+                    let next = parseInt(slider.value) + 1;
+                    if (next > parseInt(slider.max)) next = 0;
+                    slider.value = next;
+                    slider.dispatchEvent(new Event('input'));
+                }, 100);
+            }
+        });
+    </script>
     <pre id="output"></pre>
     <script src="stripe.js"></script>
 
     <script type="module" src="main.js"></script>
+
+
 </body>
 
 </html>

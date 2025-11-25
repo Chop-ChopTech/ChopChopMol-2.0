@@ -53,6 +53,19 @@ export default class FileHandler {
                 }
                 window.resetIsolationState();
                 this.main.createNewMoleculeFromJSON(JSON.stringify(parsedData), overlay, rotation, translation, true, false);
+                const frameSliderContainer = document.getElementById('frameSliderContainer');
+                if (frameSliderContainer) {
+                    if (window.xyzFrames && window.xyzFrames.length > 1) {
+                        frameSliderContainer.style.display = 'flex';
+                        const slider = document.getElementById('frameSlider');
+                        const label = document.getElementById('frameLabel');
+                        slider.max = window.xyzFrames.length - 1;
+                        slider.value = 0;
+                        label.textContent = `Frame 1 / ${window.xyzFrames.length}`;
+                    } else {
+                        frameSliderContainer.style.display = 'none';
+                    }
+                }
                 this.main.zoomCameraToFitMolecule();
 
             } catch (error) {
@@ -69,38 +82,61 @@ export default class FileHandler {
             throw new Error('Invalid XYZ format: Too few lines');
         }
 
-        const numAtoms = parseInt(lines[0].trim(), 10);
-        if (isNaN(numAtoms) || numAtoms <= 0) {
-            throw new Error('Invalid XYZ format: Invalid number of atoms');
-        }
+        const frames = [];
+        let i = 0;
 
-        // Skip the comment line (lines[1])
-
-        const atomData = [];
-        const startLine = 2;
-        if (lines.length < startLine + numAtoms) {
-            throw new Error('Invalid XYZ format: Insufficient atom lines');
-        }
-
-        for (let i = startLine; i < startLine + numAtoms; i++) {
-            const parts = lines[i].trim().split(/\s+/);
-            if (parts.length !== 4) {
-                throw new Error(`Invalid XYZ format: Incorrect number of fields in line ${i + 1}`);
+        while (i < lines.length) {
+            // Skip empty lines
+            if (!lines[i].trim()) {
+                i++;
+                continue;
             }
 
-            const element = parts[0].trim();
-            const x = parseFloat(parts[1]);
-            const y = parseFloat(parts[2]);
-            const z = parseFloat(parts[3]);
-
-            if (isNaN(x) || isNaN(y) || isNaN(z)) {
-                throw new Error(`Invalid XYZ format: Non-numeric coordinates in line ${i + 1}`);
+            const numAtoms = parseInt(lines[i].trim(), 10);
+            if (isNaN(numAtoms) || numAtoms <= 0) {
+                break;
             }
 
-            atomData.push({ element, x, y, z });
+            // Comment line
+            const comment = lines[i + 1] ? lines[i + 1].trim() : '';
+
+            const atomData = [];
+            const startLine = i + 2;
+
+            if (lines.length < startLine + numAtoms) {
+                throw new Error('Invalid XYZ format: Insufficient atom lines');
+            }
+
+            for (let j = startLine; j < startLine + numAtoms; j++) {
+                const parts = lines[j].trim().split(/\s+/);
+                if (parts.length < 4) continue;
+
+                const element = parts[0].trim();
+                const x = parseFloat(parts[1]);
+                const y = parseFloat(parts[2]);
+                const z = parseFloat(parts[3]);
+
+                if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                    atomData.push({ element, x, y, z });
+                }
+            }
+
+            frames.push({ atomData, numAtoms: atomData.length, comment });
+            i = startLine + numAtoms;
         }
 
-        return { atomData, numAtoms };
+        // Store frames globally for slider access
+        window.xyzFrames = frames.length > 1 ? frames : null;
+
+        // Return first frame data (no circular reference)
+        if (frames.length === 0) {
+            return { atomData: [], numAtoms: 0 };
+        }
+
+        return {
+            atomData: frames[0].atomData,
+            numAtoms: frames[0].numAtoms
+        };
     }
 
 
