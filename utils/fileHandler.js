@@ -12,6 +12,7 @@ export default class FileHandler {
         let rotation = { x: 0, y: 0, z: 0 };
         let translation = { x: 0, y: 0, z: 0 };
         if (!file) return;
+        window.xyzFrames = null;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -64,6 +65,8 @@ export default class FileHandler {
                         label.textContent = `Frame 1 / ${window.xyzFrames.length}`;
                     } else {
                         frameSliderContainer.style.display = 'none';
+                        document.getElementById('frameSlider').value = 0;
+                        window.xyzFrames = null;
                     }
                 }
                 this.main.zoomCameraToFitMolecule();
