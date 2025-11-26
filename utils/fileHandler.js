@@ -12,6 +12,7 @@ export default class FileHandler {
         let rotation = { x: 0, y: 0, z: 0 };
         let translation = { x: 0, y: 0, z: 0 };
         if (!file) return;
+        window.xyzFrames = null;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -26,8 +27,17 @@ export default class FileHandler {
                     parsedData = this.parsePdbToJson(text);
                 } else if (fileType === 'xyz') {
                     parsedData = this.parseXyzToJson(text);
+                } else if (fileType === 'cif') {
+                    parsedData = this.parseCifToJson(text);
+                } else if (fileType === 'mol2') {
+                    parsedData = this.parseMol2ToJson(text);
+                } else if (fileType === 'pqr') {
+                    parsedData = this.parsePqrToJson(text);
+                } else if (fileType === 'gro') {
+                    parsedData = this.parseGroToJson(text);
+                } else if (fileType === 'cml') {
+                    parsedData = this.parseCmlToJson(text);
                 }
-
 
                 if (overlay) {
                     const transformation = alignMolecules(parsedData, this.main.data);
@@ -42,13 +52,28 @@ export default class FileHandler {
                     this.main.setNewMode();
                     document.getElementById("toggleStyleChanges").checked = false;
                 }
-
+                window.resetIsolationState();
                 this.main.createNewMoleculeFromJSON(JSON.stringify(parsedData), overlay, rotation, translation, true, false);
+                const frameSliderContainer = document.getElementById('frameSliderContainer');
+                if (frameSliderContainer) {
+                    if (window.xyzFrames && window.xyzFrames.length > 1) {
+                        frameSliderContainer.style.display = 'flex';
+                        const slider = document.getElementById('frameSlider');
+                        const label = document.getElementById('frameLabel');
+                        slider.max = window.xyzFrames.length - 1;
+                        slider.value = 0;
+                        label.textContent = `Frame 1 / ${window.xyzFrames.length}`;
+                    } else {
+                        frameSliderContainer.style.display = 'none';
+                        document.getElementById('frameSlider').value = 0;
+                        window.xyzFrames = null;
+                    }
+                }
                 this.main.zoomCameraToFitMolecule();
-
 
             } catch (error) {
                 console.error("Error parsing file:", error);
+                alert('Error parsing file: ' + error.message);
             }
         };
         reader.readAsText(file);
@@ -60,38 +85,61 @@ export default class FileHandler {
             throw new Error('Invalid XYZ format: Too few lines');
         }
 
-        const numAtoms = parseInt(lines[0].trim(), 10);
-        if (isNaN(numAtoms) || numAtoms <= 0) {
-            throw new Error('Invalid XYZ format: Invalid number of atoms');
-        }
+        const frames = [];
+        let i = 0;
 
-        // Skip the comment line (lines[1])
-
-        const atomData = [];
-        const startLine = 2;
-        if (lines.length < startLine + numAtoms) {
-            throw new Error('Invalid XYZ format: Insufficient atom lines');
-        }
-
-        for (let i = startLine; i < startLine + numAtoms; i++) {
-            const parts = lines[i].trim().split(/\s+/);
-            if (parts.length !== 4) {
-                throw new Error(`Invalid XYZ format: Incorrect number of fields in line ${i + 1}`);
+        while (i < lines.length) {
+            // Skip empty lines
+            if (!lines[i].trim()) {
+                i++;
+                continue;
             }
 
-            const element = parts[0].trim();
-            const x = parseFloat(parts[1]);
-            const y = parseFloat(parts[2]);
-            const z = parseFloat(parts[3]);
-
-            if (isNaN(x) || isNaN(y) || isNaN(z)) {
-                throw new Error(`Invalid XYZ format: Non-numeric coordinates in line ${i + 1}`);
+            const numAtoms = parseInt(lines[i].trim(), 10);
+            if (isNaN(numAtoms) || numAtoms <= 0) {
+                break;
             }
 
-            atomData.push({ element, x, y, z });
+            // Comment line
+            const comment = lines[i + 1] ? lines[i + 1].trim() : '';
+
+            const atomData = [];
+            const startLine = i + 2;
+
+            if (lines.length < startLine + numAtoms) {
+                throw new Error('Invalid XYZ format: Insufficient atom lines');
+            }
+
+            for (let j = startLine; j < startLine + numAtoms; j++) {
+                const parts = lines[j].trim().split(/\s+/);
+                if (parts.length < 4) continue;
+
+                const element = parts[0].trim();
+                const x = parseFloat(parts[1]);
+                const y = parseFloat(parts[2]);
+                const z = parseFloat(parts[3]);
+
+                if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                    atomData.push({ element, x, y, z });
+                }
+            }
+
+            frames.push({ atomData, numAtoms: atomData.length, comment });
+            i = startLine + numAtoms;
         }
 
-        return { atomData, numAtoms };
+        // Store frames globally for slider access
+        window.xyzFrames = frames.length > 1 ? frames : null;
+
+        // Return first frame data (no circular reference)
+        if (frames.length === 0) {
+            return { atomData: [], numAtoms: 0 };
+        }
+
+        return {
+            atomData: frames[0].atomData,
+            numAtoms: frames[0].numAtoms
+        };
     }
 
 
@@ -121,7 +169,11 @@ export default class FileHandler {
         const lines = pdbText.split(/\r?\n|\r/);
         const atomData = [];
 
-        // All elements now available in your atomSettings.json
+        // RIBBON DATA STRUCTURES
+        const backboneAtoms = [];
+        const helices = [];
+        const sheets = [];
+
         const AVAILABLE_ELEMENTS = new Set([
             'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
             'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca',
@@ -137,9 +189,8 @@ export default class FileHandler {
             'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og'
         ]);
 
-        // Map common PDB variants to proper capitalization
         const CAPITALIZATION_MAP = {
-            'D': 'H',   // Deuterium
+            'D': 'H',
             'CA': 'Ca', 'MG': 'Mg', 'FE': 'Fe', 'CU': 'Cu', 'ZN': 'Zn',
             'MN': 'Mn', 'CO': 'Co', 'NI': 'Ni', 'BR': 'Br', 'CL': 'Cl',
             'SE': 'Se', 'AG': 'Ag', 'AU': 'Au', 'HG': 'Hg', 'PB': 'Pb'
@@ -150,6 +201,31 @@ export default class FileHandler {
             'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR'
         ]);
 
+        // FIRST PASS: Parse HELIX and SHEET records
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line) continue;
+
+            const recordType = line.substring(0, 6).trim();
+
+            if (recordType === 'HELIX') {
+                const chainId = line.charAt(19);
+                const startRes = parseInt(line.substring(21, 25).trim());
+                const endRes = parseInt(line.substring(33, 37).trim());
+                if (!isNaN(startRes) && !isNaN(endRes)) {
+                    helices.push({ chain: chainId, start: startRes, end: endRes });
+                }
+            } else if (recordType === 'SHEET') {
+                const chainId = line.charAt(21);
+                const startRes = parseInt(line.substring(22, 26).trim());
+                const endRes = parseInt(line.substring(33, 37).trim());
+                if (!isNaN(startRes) && !isNaN(endRes)) {
+                    sheets.push({ chain: chainId, start: startRes, end: endRes });
+                }
+            }
+        }
+
+        // SECOND PASS: Parse atoms
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
 
@@ -158,7 +234,6 @@ export default class FileHandler {
             const recordType = line.substring(0, 6).trim();
             if (recordType !== 'ATOM' && recordType !== 'HETATM') continue;
 
-            // Parse coordinates (fixed column positions)
             const x = parseFloat(line.substring(30, 38));
             const y = parseFloat(line.substring(38, 46));
             const z = parseFloat(line.substring(46, 54));
@@ -167,26 +242,39 @@ export default class FileHandler {
 
             let element = null;
 
+            // Extract atom metadata for CA detection and ribbon
+            const fullAtomName = line.substring(12, 16);
+            const atomName = fullAtomName.trim().toUpperCase();
+            const chainId = line.charAt(21);
+            const resSeq = parseInt(line.substring(22, 26).trim());
+            const residueName = line.length >= 20 ? line.substring(17, 20).trim().toUpperCase() : '';
+
+            // CAPTURE CA ATOMS FOR RIBBON
+            if (atomName === 'CA' && fullAtomName.charAt(0) === ' ' && AMINO_ACIDS.has(residueName)) {
+                backboneAtoms.push({
+                    x: x,
+                    y: y,
+                    z: z,
+                    chain: chainId,
+                    resSeq: resSeq,
+                    residue: residueName
+                });
+            }
+
             // Strategy 1: Try element column (77-78)
             if (line.length >= 78) {
                 let elementField = line.substring(76, 78).trim();
 
                 if (elementField) {
-                    // Try as-is
                     if (AVAILABLE_ELEMENTS.has(elementField)) {
                         element = elementField;
-                    }
-                    // Try uppercase
-                    else {
+                    } else {
                         elementField = elementField.toUpperCase();
                         if (CAPITALIZATION_MAP[elementField]) {
                             element = CAPITALIZATION_MAP[elementField];
-                        }
-                        else if (AVAILABLE_ELEMENTS.has(elementField)) {
+                        } else if (AVAILABLE_ELEMENTS.has(elementField)) {
                             element = elementField;
-                        }
-                        // Try proper capitalization (e.g., FE -> Fe)
-                        else if (elementField.length === 2) {
+                        } else if (elementField.length === 2) {
                             const properCap = elementField.charAt(0) + elementField.charAt(1).toLowerCase();
                             if (AVAILABLE_ELEMENTS.has(properCap)) {
                                 element = properCap;
@@ -201,14 +289,9 @@ export default class FileHandler {
                 }
             }
 
-            // Strategy 2: Parse from atom name (columns 13-16)
-            const fullAtomName = line.substring(12, 16);
-            const atomName = fullAtomName.trim().toUpperCase();
-            const residueName = line.length >= 20 ? line.substring(17, 20).trim().toUpperCase() : '';
-
+            // Strategy 2: Parse from atom name
             if (!atomName) continue;
 
-            // Handle hydrogen with leading digit (1HG, 2HB, etc)
             if (/^\d/.test(atomName)) {
                 element = atomName.charAt(1).toUpperCase();
                 if (element === 'H') {
@@ -217,33 +300,26 @@ export default class FileHandler {
                 }
             }
 
-            // Handle CA ambiguity (CRITICAL!)
-            // " CA " (with leading space) = carbon alpha in protein backbone
-            // "CA  " (no leading space) = calcium ion
             if (atomName === 'CA') {
                 if (fullAtomName.charAt(0) === ' ' && AMINO_ACIDS.has(residueName)) {
-                    element = 'C';  // Carbon alpha in amino acid
+                    element = 'C';
                 } else if (recordType === 'HETATM') {
-                    element = 'Ca'; // Calcium ion
+                    element = 'Ca';
                 } else if (AMINO_ACIDS.has(residueName)) {
-                    element = 'C';  // Default to carbon in proteins
+                    element = 'C';
                 } else {
-                    element = 'Ca'; // Calcium otherwise
+                    element = 'Ca';
                 }
                 atomData.push({ element, x, y, z });
                 continue;
             }
 
-            // Try two-character element (FE, MG, ZN, CU, etc)
             if (atomName.length >= 2 && fullAtomName.charAt(0) !== ' ') {
                 let twoChar = atomName.substring(0, 2);
 
-                // Try with capitalization map
                 if (CAPITALIZATION_MAP[twoChar]) {
                     element = CAPITALIZATION_MAP[twoChar];
-                }
-                // Try proper capitalization (Fe, Mg, etc)
-                else {
+                } else {
                     const properCap = twoChar.charAt(0) + twoChar.charAt(1).toLowerCase();
                     if (AVAILABLE_ELEMENTS.has(properCap)) {
                         element = properCap;
@@ -256,7 +332,6 @@ export default class FileHandler {
                 }
             }
 
-            // Try first character as element
             const firstChar = atomName.charAt(0);
             if (AVAILABLE_ELEMENTS.has(firstChar)) {
                 element = firstChar;
@@ -264,22 +339,264 @@ export default class FileHandler {
                 continue;
             }
 
-            // Final fallback based on common patterns
             if (atomName.startsWith('C')) element = 'C';
             else if (atomName.startsWith('N')) element = 'N';
             else if (atomName.startsWith('O')) element = 'O';
             else if (atomName.startsWith('S')) element = 'S';
             else if (atomName.startsWith('P')) element = 'P';
             else if (atomName.startsWith('H')) element = 'H';
-            else element = 'C'; // Ultimate fallback
+            else element = 'C';
 
             atomData.push({ element, x, y, z });
         }
 
-        return {
-            atomData,
+        const result = {
+            atomData: atomData,
             numAtoms: atomData.length
         };
+
+        // Add ribbon data if protein backbone found
+        if (backboneAtoms.length > 0) {
+            result.ribbonData = {
+                backbone: backboneAtoms,
+                helices: helices,
+                sheets: sheets
+            };
+        }
+
+        return result;
+    }
+
+    parseCifToJson(cifText) {
+        const lines = cifText.split(/\r?\n|\r/);
+        const atomData = [];
+        const backboneAtoms = [];
+        const helices = [];
+        const sheets = [];
+
+        const AVAILABLE_ELEMENTS = new Set([
+            'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
+            'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca',
+            'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',
+            'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr',
+            'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn',
+            'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd',
+            'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb',
+            'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg',
+            'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th',
+            'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm',
+            'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds',
+            'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og'
+        ]);
+
+        const AMINO_ACIDS = new Set([
+            'ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE', 'LYS', 'LEU',
+            'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR'
+        ]);
+
+        // Find _atom_site loop
+        let inAtomSite = false;
+        let atomSiteHeaders = [];
+        let atomSiteData = [];
+
+        // Find secondary structure (struct_conf for helices, struct_sheet_range for sheets)
+        let inStructConf = false;
+        let structConfHeaders = [];
+        let structConfData = [];
+
+        let inSheetRange = false;
+        let sheetRangeHeaders = [];
+        let sheetRangeData = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+
+            // Skip empty lines and comments
+            if (!line || line.startsWith('#')) continue;
+
+            // ATOM SITE PARSING
+            if (line === 'loop_') {
+                // Check if next section is _atom_site
+                if (i + 1 < lines.length && lines[i + 1].trim().startsWith('_atom_site.')) {
+                    inAtomSite = true;
+                    atomSiteHeaders = [];
+                    continue;
+                } else if (i + 1 < lines.length && lines[i + 1].trim().startsWith('_struct_conf.')) {
+                    inStructConf = true;
+                    structConfHeaders = [];
+                    continue;
+                } else if (i + 1 < lines.length && lines[i + 1].trim().startsWith('_struct_sheet_range.')) {
+                    inSheetRange = true;
+                    sheetRangeHeaders = [];
+                    continue;
+                }
+            }
+
+            // Parse atom_site headers
+            if (inAtomSite && line.startsWith('_atom_site.')) {
+                atomSiteHeaders.push(line.substring(11)); // Remove '_atom_site.'
+                continue;
+            }
+
+            // Parse struct_conf headers (helices)
+            if (inStructConf && line.startsWith('_struct_conf.')) {
+                structConfHeaders.push(line.substring(13));
+                continue;
+            }
+
+            // Parse sheet range headers
+            if (inSheetRange && line.startsWith('_struct_sheet_range.')) {
+                sheetRangeHeaders.push(line.substring(20));
+                continue;
+            }
+
+            // End of loops
+            if (line.startsWith('_') && !line.startsWith('_atom_site.') && inAtomSite) {
+                inAtomSite = false;
+            }
+            if (line.startsWith('_') && !line.startsWith('_struct_conf.') && inStructConf) {
+                inStructConf = false;
+            }
+            if (line.startsWith('_') && !line.startsWith('_struct_sheet_range.') && inSheetRange) {
+                inSheetRange = false;
+            }
+
+            // Parse atom data
+            if (inAtomSite && atomSiteHeaders.length > 0 && !line.startsWith('_')) {
+                // Parse the data line (handle quoted strings)
+                const values = parseCifLine(line);
+                if (values.length === atomSiteHeaders.length) {
+                    atomSiteData.push(values);
+                }
+            }
+
+            // Parse helix data
+            if (inStructConf && structConfHeaders.length > 0 && !line.startsWith('_')) {
+                const values = parseCifLine(line);
+                if (values.length === structConfHeaders.length) {
+                    structConfData.push(values);
+                }
+            }
+
+            // Parse sheet data
+            if (inSheetRange && sheetRangeHeaders.length > 0 && !line.startsWith('_')) {
+                const values = parseCifLine(line);
+                if (values.length === sheetRangeHeaders.length) {
+                    sheetRangeData.push(values);
+                }
+            }
+        }
+
+        // Process helices
+        if (structConfData.length > 0) {
+            const confTypeIdx = structConfHeaders.indexOf('conf_type_id');
+            const begChainIdx = structConfHeaders.indexOf('beg_label_asym_id');
+            const begSeqIdx = structConfHeaders.indexOf('beg_label_seq_id');
+            const endChainIdx = structConfHeaders.indexOf('end_label_asym_id');
+            const endSeqIdx = structConfHeaders.indexOf('end_label_seq_id');
+
+            structConfData.forEach(row => {
+                const confType = row[confTypeIdx];
+                if (confType && confType.includes('HELX')) {
+                    const chain = row[begChainIdx] || 'A';
+                    const start = parseInt(row[begSeqIdx]);
+                    const end = parseInt(row[endSeqIdx]);
+                    if (!isNaN(start) && !isNaN(end)) {
+                        helices.push({ chain, start, end });
+                    }
+                }
+            });
+        }
+
+        // Process sheets
+        if (sheetRangeData.length > 0) {
+            const begChainIdx = sheetRangeHeaders.indexOf('beg_label_asym_id');
+            const begSeqIdx = sheetRangeHeaders.indexOf('beg_label_seq_id');
+            const endChainIdx = sheetRangeHeaders.indexOf('end_label_asym_id');
+            const endSeqIdx = sheetRangeHeaders.indexOf('end_label_seq_id');
+
+            sheetRangeData.forEach(row => {
+                const chain = row[begChainIdx] || 'A';
+                const start = parseInt(row[begSeqIdx]);
+                const end = parseInt(row[endSeqIdx]);
+                if (!isNaN(start) && !isNaN(end)) {
+                    sheets.push({ chain, start, end });
+                }
+            });
+        }
+
+        // Process atoms
+        const groupIdx = atomSiteHeaders.indexOf('group_PDB');
+        const atomNameIdx = atomSiteHeaders.indexOf('label_atom_id');
+        const elementIdx = atomSiteHeaders.indexOf('type_symbol');
+        const xIdx = atomSiteHeaders.indexOf('Cartn_x');
+        const yIdx = atomSiteHeaders.indexOf('Cartn_y');
+        const zIdx = atomSiteHeaders.indexOf('Cartn_z');
+        const chainIdx = atomSiteHeaders.indexOf('label_asym_id');
+        const resSeqIdx = atomSiteHeaders.indexOf('label_seq_id');
+        const resNameIdx = atomSiteHeaders.indexOf('label_comp_id');
+
+        atomSiteData.forEach(row => {
+            const group = row[groupIdx];
+
+            // Only process ATOM and HETATM
+            if (group !== 'ATOM' && group !== 'HETATM') return;
+
+            const x = parseFloat(row[xIdx]);
+            const y = parseFloat(row[yIdx]);
+            const z = parseFloat(row[zIdx]);
+
+            if (isNaN(x) || isNaN(y) || isNaN(z)) return;
+
+            let element = row[elementIdx];
+            const atomName = row[atomNameIdx];
+            const chainId = row[chainIdx] || 'A';
+            const resSeq = parseInt(row[resSeqIdx]);
+            const resName = row[resNameIdx];
+
+            // Capture CA atoms for ribbon
+            if (atomName === 'CA' && AMINO_ACIDS.has(resName)) {
+                backboneAtoms.push({
+                    x: x,
+                    y: y,
+                    z: z,
+                    chain: chainId,
+                    resSeq: resSeq,
+                    residue: resName
+                });
+            }
+
+            // Clean up element symbol
+            if (element) {
+                element = element.trim();
+                // Ensure proper capitalization
+                if (element.length === 2) {
+                    element = element.charAt(0).toUpperCase() + element.charAt(1).toLowerCase();
+                } else {
+                    element = element.toUpperCase();
+                }
+
+                if (AVAILABLE_ELEMENTS.has(element)) {
+                    atomData.push({ element, x, y, z });
+                }
+            }
+        });
+
+        const result = {
+            atomData: atomData,
+            numAtoms: atomData.length
+        };
+
+        // Add ribbon data if protein backbone found
+        if (backboneAtoms.length > 0) {
+            result.ribbonData = {
+                backbone: backboneAtoms,
+                helices: helices,
+                sheets: sheets
+            };
+        }
+
+        return result;
     }
     parseXYZ(text) {
         try {
@@ -308,6 +625,102 @@ export default class FileHandler {
             console.error("Error processing XYZ file:", error);
             return null;
         }
+    }
+
+    parseMol2ToJson(text) {
+        const lines = text.split('\n');
+        const atomData = [];
+        let inAtomSection = false;
+
+        for (const line of lines) {
+            if (line.startsWith('@<TRIPOS>ATOM')) {
+                inAtomSection = true;
+                continue;
+            }
+            if (line.startsWith('@<TRIPOS>') && inAtomSection) {
+                break;
+            }
+            if (inAtomSection && line.trim()) {
+                const parts = line.trim().split(/\s+/);
+                if (parts.length >= 6) {
+                    const x = parseFloat(parts[2]);
+                    const y = parseFloat(parts[3]);
+                    const z = parseFloat(parts[4]);
+                    const atomType = parts[5];
+                    const element = atomType.split('.')[0];
+                    atomData.push({ element, x, y, z });
+                }
+            }
+        }
+        return { atomData, numAtoms: atomData.length };
+    }
+
+    parsePqrToJson(text) {
+        // PQR is like PDB but with charge and radius columns
+        const lines = text.split(/\r?\n|\r/);
+        const atomData = [];
+
+        for (const line of lines) {
+            if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+                const x = parseFloat(line.substring(30, 38).trim());
+                const y = parseFloat(line.substring(38, 46).trim());
+                const z = parseFloat(line.substring(46, 54).trim());
+                const element = line.substring(12, 16).trim().replace(/[0-9]/g, '');
+
+                if (!isNaN(x) && !isNaN(y) && !isNaN(z) && element) {
+                    atomData.push({ element, x, y, z });
+                }
+            }
+        }
+        return { atomData, numAtoms: atomData.length };
+    }
+
+    parseGroToJson(text) {
+        // GROMACS format
+        const lines = text.split('\n');
+        const atomData = [];
+        let numAtoms = 0;
+
+        if (lines.length >= 2) {
+            numAtoms = parseInt(lines[1].trim());
+        }
+
+        for (let i = 2; i < 2 + numAtoms && i < lines.length; i++) {
+            const line = lines[i];
+            if (line.length >= 44) {
+                const atomName = line.substring(10, 15).trim();
+                const element = atomName.replace(/[0-9]/g, '');
+                const x = parseFloat(line.substring(20, 28).trim()) * 10; // nm to Å
+                const y = parseFloat(line.substring(28, 36).trim()) * 10;
+                const z = parseFloat(line.substring(36, 44).trim()) * 10;
+
+                if (!isNaN(x) && !isNaN(y) && !isNaN(z) && element) {
+                    atomData.push({ element, x, y, z });
+                }
+            }
+        }
+        return { atomData, numAtoms: atomData.length };
+    }
+
+    parseCmlToJson(text) {
+        // Chemical Markup Language (XML-based)
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, 'text/xml');
+        const atomData = [];
+
+        const atoms = xml.getElementsByTagName('atom');
+        for (const atom of atoms) {
+            const element = atom.getAttribute('elementType') ||
+                atom.getAttribute('id')?.replace(/[0-9]/g, '') || 'C';
+            const x = parseFloat(atom.getAttribute('x3') || atom.getAttribute('x2') || 0);
+            const y = parseFloat(atom.getAttribute('y3') || atom.getAttribute('y2') || 0);
+            const z = parseFloat(atom.getAttribute('z3') || 0);
+
+            if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                atomData.push({ element, x, y, z });
+            }
+        }
+        return { atomData, numAtoms: atomData.length };
     }
     parseJSON() {
         return fetch('./utils/atomSettings.json')

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export default class Atom {
-    constructor(main, type, coordinates, id) {
+    constructor(main, type, coordinates, id, originalIndex = null) {
         this.molecule = main.molecule;
         this.main = main;
         this.position = coordinates;
@@ -10,6 +10,7 @@ export default class Atom {
         this.z = coordinates.z;
         this.type = type;
         this.id = id;
+        this.originalIndex = originalIndex !== null ? originalIndex : id; // Use originalIndex if provided, else use id
         this.realRadius = this.molecule.atomSettings[this.type].realRadius;
 
         this.radius = this.molecule.atomSettings[this.type].radius;

@@ -11,20 +11,45 @@ export default class Molecule {
         this.instancedMesh = null;
         this.atomSettings = atomSettings;
         this.labels = [];
+        this.labelInstancedMesh = null;
+        this.labelAtlas = null;
+        this.atomTypeMap = {};
         this.stretch = 4;
-        this.overlay = overlay
+        this.overlay = overlay;
         this.bondGroup = new THREE.Group();
     }
 
-    init(data, mode, rotation, translation, center) {
+    init(data, mode, rotation, translation, center, ribbonMode = false) {
         this.reset();
         console.log(data);
 
+        if (ribbonMode) {
+            // RIBBON MODE: Skip all atom/bond creation
+            // Just store offset for centering (calculate from ribbon data)
+            if (data.ribbonData && data.ribbonData.backbone.length > 0) {
+                const backbone = data.ribbonData.backbone;
+                let sumX = 0, sumY = 0, sumZ = 0;
+                backbone.forEach(atom => {
+                    sumX += atom.x * this.stretch;
+                    sumY += atom.y * this.stretch;
+                    sumZ += atom.z * this.stretch;
+                });
+                this.offset = new THREE.Vector3(
+                    sumX / backbone.length,
+                    sumY / backbone.length,
+                    sumZ / backbone.length
+                );
+            } else {
+                this.offset = new THREE.Vector3(0, 0, 0);
+            }
+            return; // Exit early, don't create atoms
+        }
+
+        // NORMAL MODE: Create atoms and bonds
         const bondThreshold = 1;
 
         this.createAtoms(data, rotation, translation, mode);
         this.centerMolecule(!center);
-
 
         this.main.scene.add(this.instancedMesh);
 
@@ -36,43 +61,6 @@ export default class Molecule {
         }
     }
 
-    // createAtoms(data) {
-    //     const resolution = 16;
-    //     const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
-    //     const material = new THREE.MeshLambertMaterial({ vertexColors: true });
-
-    //     this.instancedMesh = new THREE.InstancedMesh(atomGeometry, material, data.numAtoms);
-
-    //     const colorAttribute = new THREE.InstancedBufferAttribute(new Float32Array(data.numAtoms * 3), 3);
-    //     this.instancedMesh.geometry.setAttribute('color', colorAttribute);
-
-    //     for (let i = 0; i < data.numAtoms; i++) {
-
-    //         const x = data.atomData[i].x * this.stretch;
-    //         const y = data.atomData[i].y * this.stretch;
-    //         const z = data.atomData[i].z * this.stretch;
-    //         const element = data.atomData[i].element;
-    //         const coordinates = new THREE.Vector3(x, y, z);
-    //         const id = getRandomArbitrary(0, 1000);
-
-    //         const atom = new Atom(this.main, element, coordinates, id);
-    //         this.atoms.push(atom);
-
-    //         const radius = this.atomSettings[element]?.realRadius * 1.5 || 1;
-
-    //         const matrix = new THREE.Matrix4();
-    //         matrix.setPosition(atom.position);
-    //         matrix.scale(new THREE.Vector3(radius, radius, radius));
-
-    //         this.instancedMesh.setMatrixAt(i, matrix);
-
-    //         const color = new THREE.Color(this.atomSettings[element].color);
-    //         colorAttribute.setXYZ(i, color.r, color.g, color.b);
-    //     }
-
-    //     this.instancedMesh.instanceMatrix.needsUpdate = true;
-    //     colorAttribute.needsUpdate = true;
-    // }
     createAtoms(data, rotation, translation, mode) {
         const resolution = mode.resolution || 8;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
@@ -110,7 +98,9 @@ export default class Molecule {
             const y = atomData.y * stretch;
             const z = atomData.z * stretch;
 
-            const atom = new Atom(this.main, element, new THREE.Vector3(x, y, z), i);
+            // CHANGED: Pass originalIndex if available in atomData
+            const originalIndex = atomData.originalIndex !== undefined ? atomData.originalIndex : i;
+            const atom = new Atom(this.main, element, new THREE.Vector3(x, y, z), i, originalIndex);
             this.atoms.push(atom);
 
             let radius = (this.atomSettings[element]?.realRadius || 0.67) * 1.5 * atomSize;
@@ -290,6 +280,12 @@ export default class Molecule {
                 z: pos.z / this.stretch,
             });
         });
+
+        // PRESERVE ribbonData if it exists in the old data
+        if (this.main.data && this.main.data.ribbonData) {
+            data.ribbonData = this.main.data.ribbonData;
+        }
+
         console.log(data)
         this.main.data = data
     }
@@ -379,11 +375,40 @@ export default class Molecule {
     reset() {
         this.atoms = [];
         this.bonds = [];
-        this.bondGroup = new THREE.Group();
-        this.instancedMesh = null;
-        this.labels = [];
-        this.stretch = 4;
-        this.bondGroup = new THREE.Group();
+
+        if (this.instancedMesh) {
+            this.main.scene.remove(this.instancedMesh);
+            if (this.instancedMesh.geometry) {
+                this.instancedMesh.geometry.dispose();
+            }
+            if (this.instancedMesh.material) {
+                if (Array.isArray(this.instancedMesh.material)) {
+                    this.instancedMesh.material.forEach(mat => mat.dispose());
+                } else {
+                    this.instancedMesh.material.dispose();
+                }
+            }
+            this.instancedMesh = null;
+        }
+
+        if (this.bondGroup) {
+            while (this.bondGroup.children.length > 0) {
+                const child = this.bondGroup.children[0];
+                this.bondGroup.remove(child);
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => mat.dispose());
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+            }
+            this.main.scene.remove(this.bondGroup);
+            this.bondGroup = new THREE.Group();
+        }
+
+        // Clear labels properly
         this.clearLabels();
     }
 
@@ -396,6 +421,89 @@ export default class Molecule {
             this.visualizeBondsFast(this.bonds, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
         } else {
             this.visualizeBondsStyle(this.bonds, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+        }
+    }
+
+    createLabelAtlas(useIndices = false) {
+        if (useIndices) {
+            // Index mode
+            const numAtoms = this.atoms.length;
+            const size = 64;
+            const cols = Math.ceil(Math.sqrt(numAtoms));
+            const rows = Math.ceil(numAtoms / cols);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = size * cols;
+            canvas.height = size * rows;
+            const ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            this.atomTypeMap = {};
+
+            for (let i = 0; i < numAtoms; i++) {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = col * size + size / 2;
+                const y = row * size + size / 2;
+
+                // CHANGED: Use originalIndex instead of i+1
+                const displayIndex = this.atoms[i].originalIndex + 1;
+                ctx.fillText(displayIndex.toString(), x, y);
+
+                this.atomTypeMap[i] = {
+                    uMin: col / cols,
+                    vMin: 1.0 - (row + 1) / rows,
+                    uMax: (col + 1) / cols,
+                    vMax: 1.0 - row / rows
+                };
+            }
+
+            this.labelAtlas = new THREE.CanvasTexture(canvas);
+            this.labelAtlas.needsUpdate = true;
+        } else {
+            // Element mode - keep original code
+            const types = Object.keys(this.atomSettings).sort();
+            const size = 64;
+            const cols = Math.ceil(Math.sqrt(types.length));
+            const rows = Math.ceil(types.length / cols);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = size * cols;
+            canvas.height = size * rows;
+            const ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 40px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            this.atomTypeMap = {};
+
+            types.forEach((type, i) => {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = col * size + size / 2;
+                const y = row * size + size / 2;
+
+                ctx.fillText(type, x, y);
+
+                this.atomTypeMap[type] = {
+                    uMin: col / cols,
+                    vMin: 1.0 - (row + 1) / rows,
+                    uMax: (col + 1) / cols,
+                    vMax: 1.0 - row / rows
+                };
+            });
+
+            this.labelAtlas = new THREE.CanvasTexture(canvas);
+            this.labelAtlas.needsUpdate = true;
         }
     }
 
@@ -419,93 +527,169 @@ export default class Molecule {
         return texture;
     }
 
-    toggleLabels(show) {
-        this.labels.forEach(label => this.main.scene.remove(label));
-        this.labels = [];
-        if (show) {
-            // Keep atoms visible - remove this line if you want to hide atoms
-            // this.instancedMesh.visible = true;
-
-            // Create a helper matrix and position vector for extracting world positions
-            const matrix = new THREE.Matrix4();
-            const position = new THREE.Vector3();
-            const scale = new THREE.Vector3();
-            const rotation = new THREE.Quaternion();
-
-            this.atoms.forEach((atom, index) => {
-                // Get the instance's transformation matrix
-                this.instancedMesh.getMatrixAt(index, matrix);
-
-                // Decompose the matrix to get position and scale
-                matrix.decompose(position, rotation, scale);
-
-                // Apply the instancedMesh's world transformation to get final world position
-                const worldPosition = position.clone();
-                worldPosition.applyMatrix4(this.instancedMesh.matrixWorld);
-
-                // Create the label sprite
-                const spriteMaterial = new THREE.SpriteMaterial({
-                    map: this.createLabelTexture(atom.type, "white"),
-                    transparent: true,
-                    depthTest: false,  // Ensure label renders on top
-                    depthWrite: false  // Ensure label renders on top
-                });
-                const sprite = new THREE.Sprite(spriteMaterial);
-
-                // Position the sprite at the exact world position of the atom
-                sprite.position.copy(worldPosition);
-
-                // Scale the sprite to match or slightly exceed the atom size
-                // The scale.x represents the radius of the atom sphere
-                const labelScale = scale.x * 2.0; // Adjust multiplier as needed (2.0 covers the full atom)
-                sprite.scale.set(labelScale, labelScale, labelScale);
-
-                // Optionally set render order to ensure labels appear on top
-                sprite.renderOrder = 999;
-
-                this.main.scene.add(sprite);
-                this.labels.push(sprite);
-            });
-        } else {
-            this.instancedMesh.visible = true; // Ensure atoms are visible
-            this.clearLabels();
+    toggleLabels(show, useIndices = false) {
+        if (!show) {
+            if (this.labelInstancedMesh) this.labelInstancedMesh.visible = false;
+            return;
         }
+
+        if (!this.atoms || this.atoms.length === 0) {
+            console.warn('Cannot create labels: no atoms loaded yet');
+            return;
+        }
+
+        // Recreate atlas if mode changed
+        if (this.labelAtlas) {
+            this.labelAtlas.dispose();
+            this.labelAtlas = null;
+        }
+        this.createLabelAtlas(useIndices);
+
+        if (!this.labelInstancedMesh) {
+            const geometry = new THREE.PlaneGeometry(1, 1);
+
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    map: { value: this.labelAtlas }
+                },
+                vertexShader: `
+                    attribute vec4 uvBounds;
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        vUv = mix(uvBounds.xy, uvBounds.zw, uv);
+                        
+                        // Extract position and scale from instance matrix
+                        vec3 instancePos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
+                        float scaleX = length(vec3(instanceMatrix[0][0], instanceMatrix[0][1], instanceMatrix[0][2]));
+                        float scaleY = length(vec3(instanceMatrix[1][0], instanceMatrix[1][1], instanceMatrix[1][2]));
+                        
+                        // Transform instance position to view space
+                        vec4 mvPosition = modelViewMatrix * vec4(instancePos, 1.0);
+                        
+                        // Add the billboard offset in view space (always facing camera)
+                        mvPosition.xy += position.xy * vec2(scaleX, scaleY);
+                        
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    uniform sampler2D map;
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        vec4 texColor = texture2D(map, vUv);
+                        if (texColor.a < 0.1) discard;
+                        gl_FragColor = texColor;
+                    }
+                `,
+                transparent: true,
+                depthTest: false,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+
+            this.labelInstancedMesh = new THREE.InstancedMesh(geometry, material, this.atoms.length);
+            this.labelInstancedMesh.renderOrder = 999;
+            this.labelInstancedMesh.frustumCulled = false;
+
+            const uvBounds = new Float32Array(this.atoms.length * 4);
+
+            this.atoms.forEach((atom, i) => {
+                const bounds = useIndices ? this.atomTypeMap[i] : this.atomTypeMap[atom.type];
+                if (!bounds) {
+                    console.warn(`No bounds found for ${useIndices ? 'index' : 'atom type'}: ${useIndices ? i : atom.type}`);
+                    return;
+                }
+                const idx = i * 4;
+                uvBounds[idx] = bounds.uMin;
+                uvBounds[idx + 1] = bounds.vMin;
+                uvBounds[idx + 2] = bounds.uMax;
+                uvBounds[idx + 3] = bounds.vMax;
+            });
+
+            geometry.setAttribute('uvBounds', new THREE.InstancedBufferAttribute(uvBounds, 4));
+
+            this.main.scene.add(this.labelInstancedMesh);
+            console.log(`Created labels for ${this.atoms.length} atoms`);
+        } else {
+            // Update existing mesh
+            this.labelInstancedMesh.material.uniforms.map.value = this.labelAtlas;
+
+            const uvBounds = new Float32Array(this.atoms.length * 4);
+            this.atoms.forEach((atom, i) => {
+                const bounds = useIndices ? this.atomTypeMap[i] : this.atomTypeMap[atom.type];
+                if (!bounds) return;
+                const idx = i * 4;
+                uvBounds[idx] = bounds.uMin;
+                uvBounds[idx + 1] = bounds.vMin;
+                uvBounds[idx + 2] = bounds.uMax;
+                uvBounds[idx + 3] = bounds.vMax;
+            });
+
+            this.labelInstancedMesh.geometry.attributes.uvBounds.array = uvBounds;
+            this.labelInstancedMesh.geometry.attributes.uvBounds.needsUpdate = true;
+            this.labelInstancedMesh.visible = true;
+        }
+
+        this.updateLabels();
     }
 
     updateLabels() {
-        this.toggleLabels(true);
-        if (this.labels.length === 0) return;
+        if (!this.labelInstancedMesh || !this.labelInstancedMesh.visible) return;
 
         const matrix = new THREE.Matrix4();
+        const tempMatrix = new THREE.Matrix4();
         const position = new THREE.Vector3();
         const scale = new THREE.Vector3();
         const rotation = new THREE.Quaternion();
 
-        this.labels.forEach((label, index) => {
-            // Get the updated position of the atom
-            this.instancedMesh.getMatrixAt(index, matrix);
-            matrix.decompose(position, rotation, scale);
+        this.atoms.forEach((atom, i) => {
+            this.instancedMesh.getMatrixAt(i, tempMatrix);
+            tempMatrix.decompose(position, rotation, scale);
 
-            // Apply world transformation
-            const worldPosition = position.clone();
-            worldPosition.applyMatrix4(this.instancedMesh.matrixWorld);
-
-            // Update label position
-            label.position.copy(worldPosition);
-
-            // Update label scale if needed
+            const worldPos = position.clone().applyMatrix4(this.instancedMesh.matrixWorld);
             const labelScale = scale.x * 2.0;
-            label.scale.set(labelScale, labelScale, labelScale);
+
+            matrix.makeScale(labelScale, labelScale, 1);
+            matrix.setPosition(worldPos);
+            this.labelInstancedMesh.setMatrixAt(i, matrix);
         });
+
+        this.labelInstancedMesh.instanceMatrix.needsUpdate = true;
     }
 
     clearLabels() {
-        this.labels.forEach(label => {
-            this.main.scene.remove(label);
-            if (label.material.map) label.material.map.dispose();
-            label.material.dispose();
-        });
-        this.labels = [];
+        if (this.labelInstancedMesh) {
+            this.main.scene.remove(this.labelInstancedMesh);
+            if (this.labelInstancedMesh.geometry) {
+                this.labelInstancedMesh.geometry.dispose();
+            }
+            if (this.labelInstancedMesh.material) {
+                if (this.labelInstancedMesh.material.uniforms && this.labelInstancedMesh.material.uniforms.map) {
+                    // Don't dispose the atlas texture here, we'll reuse it
+                }
+                this.labelInstancedMesh.material.dispose();
+            }
+            this.labelInstancedMesh = null;
+        }
+
+        if (this.labels) {
+            this.labels.forEach(label => {
+                this.main.scene.remove(label);
+                if (label.material) label.material.dispose();
+                if (label.material && label.material.map) label.material.map.dispose();
+            });
+            this.labels = [];
+        }
+
+        if (this.labelAtlas) {
+            this.labelAtlas.dispose();
+            this.labelAtlas = null;
+        }
+
+        // Clear the atom type map so it gets regenerated
+        this.atomTypeMap = {};
     }
 
     drawMolecule() {

@@ -31,12 +31,49 @@ function clearScene(scene) {
         scene.remove(object);
     });
 }
+// Helper function to parse mmCIF data lines (handles quotes and whitespace)
+function parseCifLine(line) {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    let quoteChar = null;
 
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if ((char === '"' || char === "'") && !inQuotes) {
+            inQuotes = true;
+            quoteChar = char;
+        } else if (char === quoteChar && inQuotes) {
+            inQuotes = false;
+            quoteChar = null;
+        } else if (char === ' ' && !inQuotes) {
+            if (current) {
+                values.push(current);
+                current = '';
+            }
+        } else {
+            current += char;
+        }
+    }
+
+    if (current) {
+        values.push(current);
+    }
+
+    return values;
+}
 function findFileType(file) {
-    const fileName = file.name;
-    const fileType = fileName.split('.').pop().toLowerCase()
-
-    return fileType
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.mol') || name.endsWith('.sdf')) return 'mol';
+    if (name.endsWith('.pdb')) return 'pdb';
+    if (name.endsWith('.xyz')) return 'xyz';
+    if (name.endsWith('.cif') || name.endsWith('.mmcif')) return 'cif';
+    if (name.endsWith('.mol2')) return 'mol2';
+    if (name.endsWith('.pqr')) return 'pqr';
+    if (name.endsWith('.gro')) return 'gro';
+    if (name.endsWith('.cml')) return 'cml';
+    return 'mol';
 }
 function alignMolecules(movingMolecule, fixedMolecule) {
     // Helper function to calculate distance between two atoms

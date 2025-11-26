@@ -482,7 +482,7 @@
                 if (window.loadStylePreferences) {
                     // Use shorter delay if molecule is already loaded
                     const hasMolecule = window.main && window.main.molecule && window.main.data && window.main.data.numAtoms > 0;
-                    const delay = hasMolecule ? 100 : 1000;
+                    const delay = 10;
 
                     setTimeout(() => {
                         window.loadStylePreferences(user.uid, window.renderer);
@@ -604,28 +604,33 @@
         }
     </script>
     <div id="buttons">
-        <input id="fileInput" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
-        <input id="compare" type="file" accept=".xyz, .mol, .pdb" style="display: none;">
-        <div id="toolbar-background">
+        <input type="file" id="fileInput" accept=".pdb,.mol,.sdf,.xyz,.cif,.mmcif,.mol2,.pqr,.gro,.cml"
+            style="display: none;" />
+        <input id="compare" type="file" accept=".xyz, .mol, .pdb, .cif" style="display: none;">
+        <div id="toolbar-background" class="shine">
             <div class="dropdown">
                 <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
                 </span>
-                <div class="dropdown-content" style="left: 50%;">
+                <div class="dropdown-content shine" style="left: 50%;">
                     <button class="fancy-button" style="width: 140px; height: 31px; border-radius: 30px;"
                         id="customButton"><i class="fa-solid fa-bolt"></i> Open
                         File</button>
                     <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
                         JSON</button>
+
                 </div>
             </div>
-
+            <button class="dropdown-icon" id="toggle-ribbon" onclick="window.toggleRibbon()" title="Toggle Ribbon View"
+                style="border: none;">
+                <i class="fa-solid fa-dna"></i>
+            </button>
             <button class="dropdown-icon" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
 
             <button class="dropdown-icon" id="reset-camera" style="border: none; margin-right: 10px;"
                 onclick="window.resetCamera()"><i class="fa-solid fa-arrows-to-eye"></i></button>
             <div class="dropdown" id="saveMoleculeToCloud">
                 <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
-                <div class="dropdown-content" style="width: 200px;">
+                <div class="dropdown-content shine" style="width: 200px;">
                     <div id="molecule-save-section">
                         <div id="load-save-message"></div>
                         <input type="text" id="molecule-name-input" placeholder="Molecule name" class="fancy-textbox"
@@ -658,7 +663,7 @@
             <!--  -->
             <div class="dropdown">
                 <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
-                <div class="dropdown-content">
+                <div class="dropdown-content shine">
                     <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
                     <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255); "><i
                             class="fas fa-file-download"></i> Save XYZ</button>
@@ -670,7 +675,7 @@
 
         <div class="dropdown" id="settings">
             <span class="dropdown-icon" style="font-size: 35px;"><i class="fa-solid fa-circle-user"></i></span>
-            <div class="dropdown-content "
+            <div class="dropdown-content shine "
                 style="left: 100px; align-items: center; justify-content: center; display: flex; flex-direction: column; ">
 
                 <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
@@ -697,9 +702,6 @@
     <!-- Add this below #buttons to show user info -->
     <div id="userStatus" style="color: white;"></div>
     <div id="styleSelector" class="on" style="border-radius: 30px; width: 300px; height: 100vh;">
-        <!-- <button id="closeStyleSelector" class="dismiss"
-            style="align-self: flex-end; position: absolute; font-weight: bold; "><i
-                class="fa-solid fa-xmark"></i></button> -->
         <div class="switch-container">
             <span class="switch-label">Toggle Style Changes</span>
             <label class="switch">
@@ -739,6 +741,11 @@
         <div>
             <input type="checkbox" id="toggleLabels">
             <span>Toggle Atom labels</span>
+        </div>
+        <div style="margin-top: 10px;">
+            <button id="labelModeBtn" class="fancy-button" style="padding: 5px 10px; font-size: 12px;">
+                Mode: Elements
+            </button>
         </div>
         <button class="fancy-button glass" id="makeDefaultButton" style="
             margin-top: 20px;
@@ -823,7 +830,15 @@
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
     </div>
     <!-- Premium Upgrade Button - Add this after your settings dropdown -->
+    <!-- Add this button to your toolbar/buttons div near the top -->
 
+
+    <!-- Compact search panel -->
+    <div id="dbSearchPanel" class="db-search-panel">
+        <input id="dbSearchInput" class="db-search-input shine" type="text" placeholder="Search Molecules"
+            autocomplete="off">
+        <div id="dbSearchDropdown" class="db-search-dropdown"></div>
+    </div>
 
     <!-- Premium Modal - Add this before closing body tag -->
     <div id="premiumModal" class="premium-modal">
@@ -1425,10 +1440,77 @@
             }
         })();
     </script>
+    <!-- Frame slider for multi-frame XYZ files -->
+    <div id="frameSliderContainer" style="
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(30, 30, 50, 0.85);
+        backdrop-filter: blur(10px);
+        padding: 12px 24px;
+        border-radius: 30px;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 1000;
+        ">
+        <span id="frameLabel"
+            style="color: white; font-family: 'Rubik', sans-serif; font-size: 14px; min-width: 100px;">Frame 1 /
+            1</span>
+        <input type="range" id="frameSlider" min="0" max="0" value="0" style="
+            width: 200px;
+            accent-color: #667eea;">
+        <button id="playFrames" class="fancy-button" style="
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            background: linear-gradient(135deg, #ff2c2c 0%, #2d30ff 100%);">
+            <i class="fa-solid fa-play"></i></button>
+    </div>
+
+    <script>
+        document.getElementById('frameSlider')?.addEventListener('input', function () {
+            const frameIndex = parseInt(this.value);
+            if (window.xyzFrames && window.xyzFrames[frameIndex]) {
+                const frame = window.xyzFrames[frameIndex];
+                window.main.createNewMoleculeFromJSON(JSON.stringify({
+                    atomData: frame.atomData,
+                    numAtoms: frame.numAtoms
+                }), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);  // Changed false to true for center
+                document.getElementById('frameLabel').textContent =
+                    `Frame ${frameIndex + 1} / ${window.xyzFrames.length}`;
+            }
+        });
+
+        // Play animation
+        let frameInterval = null;
+        document.getElementById('playFrames')?.addEventListener('click', function () {
+            const slider = document.getElementById('frameSlider');
+            const icon = this.querySelector('i');
+
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+                icon.className = 'fa-solid fa-play';
+            } else {
+                icon.className = 'fa-solid fa-pause';
+                frameInterval = setInterval(() => {
+                    let next = parseInt(slider.value) + 1;
+                    if (next > parseInt(slider.max)) next = 0;
+                    slider.value = next;
+                    slider.dispatchEvent(new Event('input'));
+                }, 100);
+            }
+        });
+    </script>
     <pre id="output"></pre>
     <script src="stripe.js"></script>
 
     <script type="module" src="main.js"></script>
+
+
 </body>
 
 </html>

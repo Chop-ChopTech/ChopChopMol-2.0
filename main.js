@@ -33,8 +33,12 @@ import {
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000000);
 
-let renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
-renderer.setSize(window.innerWidth, window.innerHeight);
+let renderer = new THREE.WebGLRenderer({
+    antialias: false,
+    powerPreference: "high-performance",
+    alpha: true,
+    preserveDrawingBuffer: true
+}); renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
@@ -48,7 +52,8 @@ controls.cursorZoom = true;
 
 let shiftDown = false;
 let cmdDown = false;
-
+let ribbonMode = false;
+let ribbonGroup = null;
 let atomsSelected = [];
 let fragments = [];
 let fragmentsSelected = [];
@@ -120,6 +125,16 @@ let globalFragmentStore = {
     fragments: [],  // Array of fragments, each is an array of original atom indices
     fragmentIdMap: new Map() // Maps fragment signatures to avoid duplicates
 };
+const fragmentColors = [
+    0x0352ff,
+    0xf5b638,
+    0x7af538,
+    0xd75eff,
+    0x5eb9ff,
+    0x00ffff,
+    0x715eff,
+    0xf7baff
+];
 
 export default class Main {
     constructor() {
@@ -193,6 +208,14 @@ export default class Main {
             this.bondGroup = new THREE.Group();
         }
 
+        // Clear ribbon
+        if (ribbonGroup) {
+            import('./ribbon.js').then(module => {
+                module.removeRibbon(ribbonGroup, scene);
+                ribbonGroup = null;
+            });
+        }
+
         this.labels = [];
 
         atomsSelected = [];
@@ -211,8 +234,6 @@ export default class Main {
             labels = [];
             clearAllBondLengthLabels();
             fragmentsSelected = [];
-
-
         }
         this.molecule.reset();
 
@@ -223,23 +244,43 @@ export default class Main {
         updateFragmentList(document.getElementById('fragmentList'));
         render();
     }
-    newMolecule(data, mode, overlay, rotation, translation, center = true, soft = false) {
-
+    newMolecule(data, mode, overlay, rotation, translation, center = true, soft = false, useRibbonMode = false) {
         if (overlay) {
-            this.overlayMolecule.init(data, mode, rotation, translation, center);
+            this.overlayMolecule.init(data, mode, rotation, translation, center, false);
         } else {
             this.reset(soft);
-            this.molecule.init(data, mode, rotation, translation, center);
+            this.molecule.init(data, mode, rotation, translation, center, useRibbonMode);
+
+            // If ribbon mode, create ribbon instead of showing atoms
+            if (useRibbonMode && data.ribbonData) {
+                import('./ribbon.js').then(module => {
+                    ribbonGroup = module.createRibbon(
+                        data.ribbonData,
+                        scene,
+                        this.molecule.stretch,
+                        this.molecule.offset
+                    );
+                    render();
+                });
+                ribbonMode = true;
+                disableAtomInteractions();
+            } else {
+                // Normal mode - ensure interactions are enabled
+                ribbonMode = false;
+                console.log("numAtoms", this.molecule.atoms.length);
+                enableAtomInteractions();
+            }
         }
 
-        if (labelMode) {
+        // Labels only work in normal mode
+        if (!useRibbonMode && labelMode && this.molecule.atoms && this.molecule.atoms.length > 0) {
             this.toggleLabels(true);
-            this.molecule.updateLabels();
         }
+
         render();
         window.endMeasurement = performance.now();
-        const loadTimeMs = window.endMeasurement - window.startMeasurement
-        const loadTimeSec = loadTimeMs / 1000
+        const loadTimeMs = window.endMeasurement - window.startMeasurement;
+        const loadTimeSec = loadTimeMs / 1000;
         console.log(`Load time: ${loadTimeSec} s`);
 
         window.startMeasurement = null;
@@ -247,18 +288,26 @@ export default class Main {
     }
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
-        if (override) {
-            this.molecule.toggleLabels(true);
-
-        } else {
-            this.molecule.clearLabels();
+        if (this.molecule && this.molecule.atoms && this.molecule.atoms.length > 0) {
+            this.molecule.toggleLabels(labelMode, window.labelIndexMode);
         }
         render();
     }
     createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true, soft = false) {
         const data = JSON.parse(json);
         console.log(this.mode);
-        this.newMolecule(data, this.mode, overlay, rotation, translation, center, false, soft);
+
+        // Check if this is a protein - if not, force ball-and-stick mode
+        const hasProteinData = data.ribbonData && data.ribbonData.backbone && data.ribbonData.backbone.length > 0;
+        const useRibbon = ribbonMode && hasProteinData;
+
+        // If current ribbonMode is true but molecule has no protein data, disable ribbon mode
+        if (ribbonMode && !hasProteinData) {
+            console.log('Non-protein molecule loaded - switching to ball-and-stick mode');
+            ribbonMode = false;
+        }
+
+        this.newMolecule(data, this.mode, overlay, rotation, translation, center, soft, useRibbon);
         this.data = data;
     }
     setNewMode(style = false) {
@@ -312,10 +361,22 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+// In main.js, replace the fileInput event listener:
+
 fileInput.addEventListener("change", (e) => {
     console.log(e)
     main.loader.handleFile(e, false);
 }, false);
+
+window.addEventListener('blur', () => {
+    cmdDown = false;
+    shiftDown = false;
+    controls.enabled = true;
+});
+window.addEventListener('focus', () => {
+    cmdDown = false;
+    shiftDown = false;
+});
 
 document.getElementById("compare").addEventListener("change", (e) => {
     const file = e.target.files[0]
@@ -503,6 +564,7 @@ document.addEventListener('click', function (event) {
 });
 toggleLabelsButton.addEventListener('change', () => {
     main.toggleLabels(toggleLabelsButton.checked);
+    render();
 });
 
 window.addEventListener('replyUpdated', (event) => {
@@ -672,7 +734,14 @@ function generateDataFromAtoms(atomIndexes) {
     const cooordinates = []
     atomIndexes.forEach(idx => {
         const pos = main.molecule.atoms[idx].position
-        cooordinates.push({ element: main.molecule.atoms[idx].type, x: pos.x / 4, y: pos.y / 4, z: pos.z / 4 })
+        const atom = main.molecule.atoms[idx];
+        cooordinates.push({
+            element: atom.type,
+            x: pos.x / 4,
+            y: pos.y / 4,
+            z: pos.z / 4,
+            originalIndex: atom.originalIndex  // JUST ADD THIS LINE
+        })
     })
     data.atomData = cooordinates
     data.numAtoms = atomIndexes.length
@@ -875,6 +944,7 @@ function createAxisVisualizer(atom1, atom2) {
 }
 
 function onPointerDown(event) {
+    if (ribbonMode) return;
     if (editingMolecule) {
         if (isUserSignedIn) {
             if (!main.molecule || !main.molecule.instancedMesh) {
@@ -1016,6 +1086,7 @@ function onPointerDown(event) {
 
 
 function onPointerMove(event) {
+    if (ribbonMode) return;
     if (!dragging) return;
 
     // Convert mouse to normalized device coordinates
@@ -1106,7 +1177,7 @@ function onPointerMove(event) {
 
 
 function onPointerMove2(event) {
-    // Skip if we're selecting or dragging
+    if (ribbonMode) return;
     if (dragging || isSelecting) return;
 
     if (!editingMolecule || !main.molecule || !main.molecule.instancedMesh || !main.molecule.atoms) return;
@@ -2008,18 +2079,9 @@ function highlightFragment(fragmentIndex) {
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
 
     // Define distinct colors for fragments
-    const fragmentColors = [
-        new THREE.Color(0x0352ff),
-        new THREE.Color(0xf5b638),
-        new THREE.Color(0x7af538),
-        new THREE.Color(0xd75eff),
-        new THREE.Color(0x5eb9ff),
-        new THREE.Color(0x00ffff),
-        new THREE.Color(0x715eff),
-        new THREE.Color(0xf7baff),
-    ];
 
-    const color = fragmentColors[fragmentIndex % fragmentColors.length];
+
+    const color = new THREE.Color(fragmentColors[fragmentIndex % fragmentColors.length]);
 
     // Apply the fragment color
     fragment.forEach(atomIndex => {
@@ -2038,12 +2100,14 @@ function resetIsolationState() {
     originalMoleculeData = null;
     originalFragments = [];
 
-    // Remove any UI indicators
-    const indicator = document.getElementById('isolationModeIndicator');
-    if (indicator) {
-        indicator.remove();
-    }
+    globalFragmentStore = {
+        originalAtomCount: 0,
+        fragments: [],
+        fragmentIdMap: new Map()
+    };
 }
+
+window.resetIsolationState = resetIsolationState;
 
 function resetFragments() {
     fragments = [];
@@ -2081,7 +2145,7 @@ function updateEditingContent(element = null, color = null) {
         // Show axis controls if an axis is defined
         if (rotationAxis) {
             axisControlsHtml = `
-                <div style="margin-top: 20px; padding: 20px; background-color: rgba(0, 115, 255, 0.2); border-radius: 15px;">
+                <div style="margin-top: 20px; padding: 20px; background-color: rgba(0, 115, 255, 0.2); border-radius: 15px;" class="shine">
                     <button id="removeAxisBtn" style="background-color:rgb(255, 100, 100); margin:5px;" class="fancy-button">Remove Axis</button>
                     <div style="margin-top: 10px;">
                         <label style="color: white; display: block; margin-bottom: 5px; font-size: 14px;">Rotate ${atomsSelected.length > 0 ? 'Selected Atoms' : 'Entire Molecule'}:</label>
@@ -2096,7 +2160,7 @@ function updateEditingContent(element = null, color = null) {
         }
 
         editMoleculeContent.innerHTML = `
-            <button id="closeEditing" class="dismiss" title="Dismiss" style="position: absolute; top: 0%; left: 0%; margin: 10px"><i class="fa-solid fa-angles-left"></i></button>
+            <button id="closeEditing" class="dismiss" title="Dismiss" style="position: absolute; top: 0%; left: 0%; margin: 10px;"><i class="fa-solid fa-angles-left"></i></button>
         `;
         editMoleculeContent.innerHTML += `
             <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
@@ -2137,7 +2201,7 @@ function updateFragmentList(fragmentList) {
             background-color: rgb(64, 215, 64);
             padding: 8px 12px;
             font-size: 13px;
-            width: 100%;
+            width: 50px%;
             z-index: 10000000000000000000!important;
         `;
         showAllBtn.addEventListener('click', restoreOriginalMolecule);
@@ -2163,25 +2227,35 @@ function updateFragmentList(fragmentList) {
             fragmentList.appendChild(currentInfo);
         }
     }
-
+    function hexToRGBA(hex, alpha = 1) {
+        const r = (hex >> 16) & 0xff;
+        const g = (hex >> 8) & 0xff;
+        const b = hex & 0xff;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
     fragments.forEach((fragment, index) => {
         const listItem = document.createElement('li');
+        const color = hexToRGBA(fragmentColors[index % fragmentColors.length], 0.3);
         listItem.innerHTML = '';
         listItem.textContent = `Fragment ${index + 1}`;
         listItem.style.cursor = 'pointer';
-        listItem.style.padding = '5px';
+        listItem.style.padding = '7px';
         listItem.style.margin = '2px';
-        listItem.style.borderRadius = '10px';
-        listItem.style.transition = 'background-color 0.3s';
+        listItem.style.borderRadius = '20px';
+        listItem.style.transition = 'all ease-in-out 0.3s';
         listItem.style.paddingLeft = '20px';
         listItem.style.paddingRight = '20px';
+        listItem.style.boxShadow = `0 4px 10px rgba(0, 0, 0, 0.513), inset 1px 1px 5px rgba(145, 145, 145, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.07)`;
+        listItem.style.backgroundColor = color;
         listItem.dataset.fragmentIndex = index;
 
 
         // Check if this fragment is currently selected
         if (fragmentsSelected.includes(index)) {
             listItem.classList.add('selected');
-            listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+            listItem.style.backgroundColor = hexToRGBA(fragmentColors[index % fragmentColors.length], 0.7);
+            listItem.style.boxShadow = `0px 0px 20px rgba(255, 255, 255, 0.23)`;
+
             // Add action buttons container
             const buttonContainer = document.createElement('div');
             buttonContainer.style.cssText = 'display: flex; gap: 5px; margin-top: 10px;';
@@ -2211,13 +2285,14 @@ function updateFragmentList(fragmentList) {
         // Add hover effect
         listItem.addEventListener('mouseenter', () => {
             if (!fragmentsSelected.includes(index)) {
-                listItem.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                listItem.style.transform = 'scale(1.05)';
             }
         });
 
         listItem.addEventListener('mouseleave', () => {
             if (!fragmentsSelected.includes(index)) {
-                listItem.style.backgroundColor = 'transparent';
+                listItem.style.transform = 'scale(1)';
+                listItem.style.backgroundColor = color;
             }
         });
 
@@ -2836,8 +2911,10 @@ function recreateRenderer(antialiasEnabled) {
 
     // Create new renderer with updated antialias
     renderer = new THREE.WebGLRenderer({
-        antialias: antialiasEnabled,
-        powerPreference: "high-performance"
+        antialias: false,
+        powerPreference: "high-performance",
+        alpha: true,
+        preserveDrawingBuffer: true
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -3042,17 +3119,32 @@ function unselectAtom(index = null) {
 }
 
 function saveImage() {
-    if (!main.data || !main.data.atomData || main.data.atomData.length === 0) {
-        alert('No molecule loaded to save!');
+    if (!main.data || main.data.numAtoms === 0) {
+        alert('No molecule loaded to capture');
         return;
     }
+
+    const originalBackground = scene.background;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const scale = 2; // 2x resolution, increase for higher quality
+
+    // Temporarily increase resolution
+    renderer.setSize(width * scale, height * scale, false);
+    scene.background = null;
     renderer.render(scene, camera);
+
     let imgData = renderer.domElement.toDataURL("image/png", 1.0);
     const link = document.createElement('a');
     link.setAttribute('href', imgData);
     link.setAttribute('target', '_blank');
     link.setAttribute('download', 'molecule.png');
     link.click();
+
+    // Restore original
+    renderer.setSize(width, height, false);
+    scene.background = originalBackground;
+    renderer.render(scene, camera);
 }
 function getScreenUrl() {
 
@@ -3304,6 +3396,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const moleculeData = JSON.parse(select.value);
+        resetIsolationState();
         loadMolecule(moleculeData);
 
         // Hide the selection UI
@@ -3447,19 +3540,171 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
         color = "rgb(0, 170, 255)"; // Blue for bond lengths
     }
 
-    // Create CSS2D label
+    // Create label element
     const labelDiv = document.createElement('div');
     labelDiv.className = isDihedral ? 'dihedral-label' : (isAngle ? 'angle-label' : 'bond-length-label');
-    labelDiv.textContent = value;
-    labelDiv.style.cssText = `
-        color: ${color};
+
+    if (!isDihedral && !isAngle) {
+        // For bond length: create an editable input that looks like a label
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = value;
+        input.style.cssText = `
+            color: ${color};
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+            font-weight: normal;
+            background: none;
+            border: none;
+            padding: 4px 8px;
+            text-align: center;
+            width: 60px;
+            cursor: text;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            outline: none;
+        `;
+
+        let justAppliedTransform = false; // Flag to prevent blur from resetting
+
+        // Handle Enter key to apply distance
+        // Handle Enter key to apply distance
+        // Handle Enter key to apply distance
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const targetDistance = parseFloat(input.value);
+                if (!isNaN(targetDistance) && targetDistance > 0) {
+                    // Determine which atoms to move and which atom is the anchor
+                    let atomsToMove = [];
+                    let anchorAtomIndex;
+
+                    if (atomsSelected.length > 0) {
+                        // Check which label atom is in the selection
+                        const atom1InSelection = atomsSelected.includes(atom1Index);
+                        const atom2InSelection = atomsSelected.includes(atom2Index);
+
+                        if (atom1InSelection && !atom2InSelection) {
+                            // Move all selected atoms, anchor is atom2
+                            atomsToMove = [...atomsSelected];
+                            anchorAtomIndex = atom2Index;
+                        } else if (atom2InSelection && !atom1InSelection) {
+                            // Move all selected atoms, anchor is atom1
+                            atomsToMove = [...atomsSelected];
+                            anchorAtomIndex = atom1Index;
+                        } else {
+                            // If both or neither in selection, move atom2 only
+                            atomsToMove = [atom2Index];
+                            anchorAtomIndex = atom1Index;
+                        }
+                    } else {
+                        // No selection - default to moving atom2 relative to atom1
+                        atomsToMove = [atom2Index];
+                        anchorAtomIndex = atom1Index;
+                    }
+
+                    // Get the reference atom from the label (the one in atomsToMove)
+                    let referenceAtomIndex;
+                    if (atomsToMove.includes(atom1Index)) {
+                        referenceAtomIndex = atom1Index;
+                    } else {
+                        referenceAtomIndex = atom2Index;
+                    }
+
+                    // Convert from displayed units to internal units
+                    const targetDistanceInternal = targetDistance * 4;
+                    const anchorAtom = main.molecule.atoms[anchorAtomIndex];
+                    const referenceAtom = main.molecule.atoms[referenceAtomIndex];
+
+                    // Calculate translation needed
+                    const currentVector = new THREE.Vector3().subVectors(referenceAtom.position, anchorAtom.position);
+                    const currentDistance = currentVector.length();
+
+                    if (currentDistance === 0) {
+                        console.warn('Cannot set distance between atoms at the same position');
+                        input.blur();
+                        return;
+                    }
+
+                    const translationDistance = targetDistanceInternal - currentDistance;
+                    const direction = currentVector.normalize();
+                    const translationVector = direction.multiplyScalar(translationDistance);
+
+                    // Move ALL atoms in the group by the same translation
+                    atomsToMove.forEach(atomIdx => {
+                        const atom = main.molecule.atoms[atomIdx];
+                        atom.position.add(translationVector);
+                        atom.x = atom.position.x;
+                        atom.y = atom.position.y;
+                        atom.z = atom.position.z;
+                        updateAtomMatrix(atomIdx);
+                    });
+
+                    // Update everything
+                    main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+                    main.molecule.updateBonds(main.mode);
+                    if (main.molecule.labels && main.molecule.labels.length > 0) {
+                        main.molecule.updateLabels();
+                    }
+
+                    // Set flag before updating labels and blurring
+                    justAppliedTransform = true;
+
+                    // Update all labels (this will update our input to the new correct value)
+                    updateAllBondLengthLabels();
+
+                    saveUndoState("Set Distance");
+                    main.molecule.updateMainCoordinates();
+                    render();
+
+                    console.log(`Moved ${atomsToMove.length} atom(s) to set distance to ${targetDistance}`);
+
+                    // Blur after everything is updated
+                    input.blur();
+                    return;
+                }
+                input.blur();
+            } else if (e.key === 'Escape') {
+                input.value = calculateBondLength(atom1, atom2);
+                input.blur();
+            }
+        });
+
+        // Focus effect
+        input.addEventListener('focus', () => {
+            input.style.background = 'rgba(0, 0, 0, 0.6)';
+            input.style.border = '1px solid ' + color;
+            input.style.borderRadius = '4px';
+            input.select();
+        });
+
+        input.addEventListener('blur', () => {
+            input.style.background = 'none';
+            input.style.border = 'none';
+
+            // Only reset value if we didn't just apply a transform
+            if (!justAppliedTransform) {
+                input.value = calculateBondLength(atom1, atom2);
+            }
+
+            // Reset the flag for next time
+            justAppliedTransform = false;
+        });
+
+        labelDiv.appendChild(input);
+        labelDiv.style.pointerEvents = 'auto';
+        labelDiv.inputElement = input; // Store reference
+    } else {
+        // For angles and dihedrals: just text
+        labelDiv.textContent = value;
+        labelDiv.style.pointerEvents = 'none';
+    }
+
+    labelDiv.style.cssText += `
         font-family: Arial, sans-serif;
         font-size: 20px;
         font-weight: normal;
         background: none;
         padding: 4px 8px;
         border-radius: 4px;
-        pointer-events: none;
         user-select: none;
         white-space: nowrap;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
@@ -3796,7 +4041,12 @@ function updateBondLengthLabel(labelInfo) {
         labelInfo.element.textContent = `${newAngle}°`;
     } else {
         const newDistance = calculateBondLength(atom1, atom2);
-        labelInfo.element.textContent = `${newDistance}`;
+        // Update input value if it exists and is not focused
+        if (labelInfo.element.inputElement && document.activeElement !== labelInfo.element.inputElement) {
+            labelInfo.element.inputElement.value = newDistance;
+        } else if (!labelInfo.element.inputElement) {
+            labelInfo.element.textContent = newDistance;
+        }
     }
 
     // UPDATE THE VISUALIZATION GEOMETRY
@@ -4108,11 +4358,52 @@ document.addEventListener('keydown', (event) => {
             );
 
             if (existingLabel === -1) {
+                // Create label
                 labels.push([atomsSelected[0], atomsSelected[1]]);
                 console.log(labels);
                 createInfoLabel(atomsSelected[0], atomsSelected[1]);
+
+                // Also create axis automatically
+                const atom1 = main.molecule.atoms[atomsSelected[0]];
+                const atom2 = main.molecule.atoms[atomsSelected[1]];
+
+                const pos1 = atom1.position.clone();
+                const pos2 = atom2.position.clone();
+
+                rotationAxis = {
+                    point: pos1.clone(),
+                    direction: new THREE.Vector3().subVectors(pos2, pos1).normalize()
+                };
+
+                axisAtoms = [...atomsSelected];
+                createAxisVisualizer(atom1, atom2);
+
+                // Update UI to show axis controls
+                const element = main.molecule.atoms[atomsSelected[0]].type;
+                updateEditingContent(element, main.molecule.atomSettings[element].color);
+
+                console.log('Created bond length label and axis');
             } else {
+                // Remove both label and axis
                 removeBondLengthLabel(existingLabel);
+
+                // Remove axis
+                rotationAxis = null;
+                axisAtoms = [];
+                if (axisVisualizer) {
+                    main.scene.remove(axisVisualizer);
+                    axisVisualizer.geometry.dispose();
+                    axisVisualizer.material.dispose();
+                    axisVisualizer = null;
+                }
+
+                // Update UI
+                if (atomsSelected.length > 0) {
+                    const element = main.molecule.atoms[atomsSelected[0]].type;
+                    updateEditingContent(element, main.molecule.atomSettings[element].color);
+                }
+
+                console.log('Removed bond length label and axis');
             }
         } else if (atomsSelected.length === 3) {
             // Angle functionality for 3 atoms
@@ -4154,6 +4445,16 @@ document.addEventListener('keydown', (event) => {
     if (event.key === 'l' || event.key === 'L') {
         if (event.shiftKey) {
             clearAllBondLengthLabels();
+
+            // Also remove axis
+            rotationAxis = null;
+            axisAtoms = [];
+            if (axisVisualizer) {
+                main.scene.remove(axisVisualizer);
+                axisVisualizer.geometry.dispose();
+                axisVisualizer.material.dispose();
+                axisVisualizer = null;
+            }
         }
     }
     if (event.key == ' ') {
@@ -4161,7 +4462,6 @@ document.addEventListener('keydown', (event) => {
             const atom1 = main.molecule.atoms[atomsSelected[0]];
             const atom2 = main.molecule.atoms[atomsSelected[1]];
 
-            // Use atom positions directly (they're already in the correct coordinate system)
             const pos1 = atom1.position.clone();
             const pos2 = atom2.position.clone();
 
@@ -4171,18 +4471,24 @@ document.addEventListener('keydown', (event) => {
             };
 
             axisAtoms = [...atomsSelected];
-
-            // Create visual representation
             createAxisVisualizer(atom1, atom2);
 
-            // Update UI
+            // Also create label if it doesn't exist
+            const existingLabel = bondLengthLabels.findIndex(label =>
+                !label.isAngle && !label.isDihedral &&
+                ((label.atom1Index === atomsSelected[0] && label.atom2Index === atomsSelected[1]) ||
+                    (label.atom1Index === atomsSelected[1] && label.atom2Index === atomsSelected[0]))
+            );
+
+            if (existingLabel === -1) {
+                labels.push([atomsSelected[0], atomsSelected[1]]);
+                createInfoLabel(atomsSelected[0], atomsSelected[1]);
+            }
+
             updateEditingContent(atom1.type, main.molecule.atomSettings[atom1.type].color);
-
-            console.log('Axis defined:', rotationAxis);
+            console.log('Axis and label defined');
         }
-
     }
-
 });
 
 function createRenderer(antialiasOn) {
@@ -4207,8 +4513,287 @@ function animate() {
 }
 function render() {
     renderer.render(scene, camera);
-    updateAllBondLengthLabels(); // ADD THIS LINE
+    updateAllBondLengthLabels();
+    if (main.molecule && main.molecule.labelInstancedMesh && main.molecule.labelInstancedMesh.visible) {
+        main.molecule.updateLabels();
+    }
 }
+function toggleRibbon() {
+    if (!window.main || !window.main.data) {
+        alert('No molecule loaded');
+        return;
+    }
+
+    if (!window.main.data.ribbonData) {
+        alert('No protein backbone found - this molecule is not a protein');
+        return;
+    }
+
+    ribbonMode = !ribbonMode;
+
+    // Store current data and mode
+    const currentData = window.main.data;
+    const currentMode = window.main.mode;
+
+    // Completely recreate the molecule in the new mode
+    console.log(`Switching to ${ribbonMode ? 'ribbon' : 'ball-and-stick'} mode`);
+
+    window.main.newMolecule(
+        currentData,
+        currentMode,
+        false,
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 },
+        true,
+        false,
+        ribbonMode  // Pass ribbonMode state
+    );
+
+    // Recenter camera
+    window.main.zoomCameraToFitMolecule();
+}
+
+function disableAtomInteractions() {
+    // Remove pointer event listeners
+    renderer.domElement.removeEventListener('pointerdown', onPointerDown, false);
+    renderer.domElement.removeEventListener('pointermove', onPointerMove2, false);
+    renderer.domElement.style.cursor = 'default';
+
+    // Clear any selections
+    atomsSelected = [];
+    hoveredAtom = null;
+
+    // Hide editing panels
+    const editPanel = document.getElementById('editMoleculePanel');
+    if (editPanel) editPanel.classList.add('on');
+
+    console.log('Atom interactions disabled');
+}
+
+function enableAtomInteractions() {
+    // Re-attach pointer event listeners (avoid duplicates)
+    renderer.domElement.removeEventListener('pointerdown', onPointerDown, false);
+    renderer.domElement.removeEventListener('pointermove', onPointerMove2, false);
+
+    renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
+    window.addEventListener('pointermove', onPointerMove2, false);
+
+    console.log('Atom interactions enabled');
+}
+
+window.toggleRibbon = toggleRibbon;
+(function () {
+    const panel = document.getElementById('dbSearchPanel');
+    const input = document.getElementById('dbSearchInput');
+    const dropdown = document.getElementById('dbSearchDropdown');
+    panel.classList.add('active');
+
+    if (!panel || !input || !dropdown) return;
+
+    // Add loader
+    const loader = document.createElement('div');
+    loader.className = 'db-search-loader';
+    panel.appendChild(loader);
+
+    let debounce;
+    let activeIdx = -1;
+    let items = [];
+
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target)) {
+            dropdown.classList.remove('show');
+        }
+    })
+    input.addEventListener('focus', () => {
+        dropdown.classList.add('show');
+    });
+
+    // Search on input
+    input.oninput = (e) => {
+        const q = e.target.value.trim();
+        clearTimeout(debounce);
+
+        if (q.length < 2) {
+            dropdown.classList.remove('show');
+            return;
+        }
+
+        loader.classList.add('show');
+
+        debounce = setTimeout(() => search(q), 300);
+    };
+
+    async function search(q) {
+        try {
+            const res = await fetch(
+                `https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/${encodeURIComponent(q)}/json`
+            );
+            const data = await res.json();
+            items = data.dictionary_terms?.compound || [];
+            show(items);
+        } catch (err) {
+            console.error(err);
+            dropdown.innerHTML = '<div class="db-search-empty">Search failed</div>';
+            dropdown.classList.add('show');
+        } finally {
+            loader.classList.remove('show');
+        }
+    }
+
+    function show(list) {
+        if (!list.length) {
+            dropdown.innerHTML = '<div class="db-search-empty">No results</div>';
+            dropdown.classList.add('show');
+            return;
+        }
+
+        dropdown.innerHTML = list.map((name, i) =>
+            `<div class="db-search-item" data-i="${i}">${name}</div>`
+        ).join('');
+        dropdown.classList.add('show');
+        activeIdx = -1;
+
+        dropdown.querySelectorAll('.db-search-item').forEach(el => {
+            el.onclick = () => load(el.textContent);
+        });
+    }
+
+    // Keyboard nav
+    input.onkeydown = (e) => {
+        const els = dropdown.querySelectorAll('.db-search-item');
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIdx = Math.min(activeIdx + 1, els.length - 1);
+            update(els);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIdx = Math.max(activeIdx - 1, 0);
+            update(els);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIdx >= 0 && els[activeIdx]) {
+                load(els[activeIdx].textContent);
+            }
+        } else if (e.key === 'Escape') {
+            panel.classList.remove('active');
+        }
+    };
+
+    function update(els) {
+        els.forEach((el, i) => {
+            el.classList.toggle('active', i === activeIdx);
+            if (i === activeIdx) {
+                el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        });
+    }
+
+    async function load(name) {
+        dropdown.classList.remove('show');
+        input.value = name;
+        loader.classList.add('show');
+
+        try {
+            // Get CID
+            const cidRes = await fetch(
+                `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`
+            );
+            const cidData = await cidRes.json();
+            const cid = cidData.IdentifierList.CID[0];
+
+            // Get SDF format with 3D coordinates
+            const sdfRes = await fetch(
+                `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF?record_type=3d`
+            );
+
+            if (!sdfRes.ok) throw new Error('3D structure unavailable');
+
+            const sdfText = await sdfRes.text();
+
+            // Parse SDF to get atom data
+            const molData = parseSDF(sdfText);
+
+            window.main.newMolecule(molData, window.main.setNewMode(molData.numAtoms <= 2000), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, false, false);
+            window.main.zoomCameraToFitMolecule();
+
+
+            loader.classList.remove('show');
+        } catch (err) {
+            console.error('Load error:', err);
+            alert('Failed to load: ' + err.message);
+            loader.classList.remove('show');
+        }
+    }
+
+    function parseSDF(sdfText) {
+        const lines = sdfText.split('\n');
+        const atomData = [];
+
+        // SDF format: line 4 (index 3) contains atom and bond counts
+        const countsLine = lines[3];
+        if (!countsLine) {
+            throw new Error('Invalid SDF format');
+        }
+
+        // First 3 characters are atom count, next 3 are bond count
+        const numAtoms = parseInt(countsLine.substring(0, 3).trim());
+
+        if (isNaN(numAtoms) || numAtoms <= 0) {
+            throw new Error('Invalid atom count in SDF');
+        }
+
+        // Atom block starts at line 5 (index 4)
+        // Each line: x(10 chars) y(10 chars) z(10 chars) symbol(3 chars)
+        for (let i = 0; i < numAtoms; i++) {
+            const lineIndex = 4 + i;
+
+            if (lineIndex >= lines.length) {
+                throw new Error(`Missing atom data at line ${lineIndex + 1}`);
+            }
+
+            const line = lines[lineIndex];
+
+            // Parse coordinates (columns 1-10, 11-20, 21-30)
+            const x = parseFloat(line.substring(0, 10).trim());
+            const y = parseFloat(line.substring(10, 20).trim());
+            const z = parseFloat(line.substring(20, 30).trim());
+
+            // Element symbol at column 32-34 (index 31-33)
+            const element = line.substring(31, 34).trim();
+
+            // Validate parsed data
+            if (isNaN(x) || isNaN(y) || isNaN(z) || !element) {
+                throw new Error(`Invalid atom data at line ${lineIndex + 1}`);
+            }
+
+            atomData.push({ element, x, y, z });
+        }
+
+        // Return data in the format ChopChopMol expects
+        return {
+            atomData: atomData,
+            numAtoms: numAtoms
+        };
+    }
+})();
+window.labelIndexMode = false;
+
+// ADD this event listener (put it with other DOM event listeners):
+document.getElementById('labelModeBtn').addEventListener('click', () => {
+    if (!main.molecule || !main.molecule.atoms || main.molecule.atoms.length === 0) {
+        return;
+    }
+
+    window.labelIndexMode = !window.labelIndexMode;
+    document.getElementById('labelModeBtn').textContent =
+        `Mode: ${window.labelIndexMode ? 'Indices' : 'Elements'}`;
+
+    if (labelMode) {
+        main.toggleLabels(true);
+        render();
+    }
+});
 render();
 controls.addEventListener('change', () => {
     render();

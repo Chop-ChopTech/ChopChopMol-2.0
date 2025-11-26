@@ -662,13 +662,12 @@ body {
     top: 50%;
     left: 10px;
     z-index: 9999;
-    background-color: #ffffff00;
-    width: 250px;
+    background-color: #ff000000;
+    width: auto;
     height: auto;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
-    backdrop-filter: blur(10px);
     transform: translate(0%, -50%);
     gap: 10px;
 }
@@ -678,7 +677,7 @@ body {
 }
 
 #editMoleculeContent {
-    background-color: #ffbd8b1c;
+    background-color: #ffbd8b1c !important;
     width: fit-content;
     height: 100%;
     text-align: center;
@@ -687,10 +686,14 @@ body {
     display: flex;
     flex-direction: column;
     backdrop-filter: blur(20px);
-    box-shadow: inset 0 0 10px rgba(125, 125, 125, 0.215), 10px 10px 20px rgba(0, 0, 0, 0.259);
-    padding: 20px;
-    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(145, 145, 145, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.159);
+    padding: 30px 10px;
+    border-radius: 20px;
 
+}
+
+.shine {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 3px 3px 5px rgba(145, 145, 145, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.171);
 }
 
 #select-an-atom {
@@ -839,6 +842,129 @@ input[type="range"]:focus {
 
 }
 
+/* Compact Database Search */
+.db-search-panel {
+    position: absolute;
+    top: 0px;
+    left: 280px;
+    width: 280px;
+    background: none;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition: all 0.25s ease;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.db-search-panel.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+}
+
+.db-search-input {
+    position: relative;
+    width: 250px;
+    padding: 14px 16px;
+    top: -2px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 20px;
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: border 0.2s;
+    backdrop-filter: blur(8px);
+    /* box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285); */
+    backdrop-filter: blur(10px);
+    text-align: center;
+}
+
+.db-search-input:focus {
+    border-color: rgba(0, 217, 255, 0.5);
+}
+
+.db-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.db-search-dropdown {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+    margin-top: 6px;
+    padding: 0 10px;
+}
+
+.db-search-dropdown.show {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.db-search-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.db-search-dropdown::-webkit-scrollbar-track {
+    background: none;
+}
+
+.db-search-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.db-search-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-radius: 20px;
+    margin: 2px 0;
+    color: #fff;
+    font-size: 13px;
+    transition: background 0.15s;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.137), inset -8px -8px 16px rgba(255, 255, 255, 0.159);
+
+}
+
+.db-search-item:hover,
+.db-search-item.active {
+    background: rgb(0, 157, 255);
+    box-shadow: 0 0px 10px rgb(0, 225, 255);
+
+}
+
+.db-search-empty {
+    padding: 12px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+}
+
+.db-search-loader {
+    position: absolute;
+    right: 20px;
+    top: 22px;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #00bbff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.db-search-loader.show {
+    opacity: 1;
+}
+
 #dragFile.dragover {
     opacity: 0.4;
     z-index: 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999;
@@ -935,30 +1061,25 @@ input[type="range"]:focus {
     border-radius: 20px;
     padding: 3px 10px;
     transition: opacity 0.3s ease, transform 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
-    box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.326), 0 8px 16px rgba(0, 0, 0, 0.2);
-    background: linear-gradient(180deg,
-            rgba(255, 255, 255, 0.183) 0%,
-            rgba(255, 255, 255, 0) 20%) !important;
     background-repeat: no-repeat !important;
     perspective: 1000px;
 }
 
 #fragmentList {
-
     list-style: none;
     padding: 0;
     margin-top: 7px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: fit-content;
+    width: 300px;
     color: white;
     max-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
     padding-top: 35px;
+    padding-bottom: 35px;
     justify-content: center;
     /* background-color: #0056b3; */
 }
@@ -1359,19 +1480,13 @@ input[type="range"]:focus {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease, transform 0.3s ease;
-    /* border: 1px solid rgba(255, 255, 255, 0.1); */
-    backdrop-filter: blur(10px) !important;
     align-items: center;
     text-align: center;
     justify-content: center;
     display: flex;
     flex-direction: column;
-    box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.134), 0 8px 16px rgba(0, 0, 0, 0.2);
-    background: linear-gradient(180deg,
-            rgba(255, 255, 255, 0.183) 0%,
-            rgba(255, 255, 255, 0) 20%) !important;
-    background: none;
-
+    background: #ffffff11;
+    backdrop-filter: blur(10px) !important;
     background-repeat: no-repeat !important;
 }
 
@@ -1438,7 +1553,7 @@ input[type="range"]:focus {
     background: rgba(255, 255, 255, 0.232);
     border: none;
     color: white;
-    border-radius: 30%;
+    border-radius: 20px;
     width: 24px;
     height: 24px;
     cursor: pointer;
