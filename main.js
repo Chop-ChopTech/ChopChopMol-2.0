@@ -240,9 +240,19 @@ export default class Main {
         this.molecule.reset();
 
         clearScene(this.scene);
-        labels.forEach(label => {
-            createInfoLabel(label[0], label[1], label[2] ?? null, label[3] ?? null);
-        })
+
+        // When soft reset, re-add existing bondLengthLabel lines to scene (but not axis)
+        if (soft && bondLengthLabels.length > 0) {
+            bondLengthLabels.forEach(labelInfo => {
+                if (labelInfo.line) {
+                    this.scene.add(labelInfo.line);
+                }
+            });
+        } else {
+            labels.forEach(label => {
+                createInfoLabel(label[0], label[1], label[2] ?? null, label[3] ?? null);
+            });
+        }
         updateFragmentList(document.getElementById('fragmentList'));
         render();
     }

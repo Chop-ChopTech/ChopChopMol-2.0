@@ -400,7 +400,6 @@ body {
     font-size: 13px;
     background-color: #006dea;
     padding: 8px 16px;
-    border-radius: 8px;
     margin: 10px;
     bottom: 10px;
     right: 10px;
@@ -1124,7 +1123,7 @@ input[type="range"]:focus {
     border-radius: 3px;
 }
 
-#premiumUpgradeBtn {
+/* #premiumUpgradeBtn {
     display: flex !important;
     opacity: 1 !important;
     z-index: 10000 !important;
@@ -1138,7 +1137,7 @@ input[type="range"]:focus {
     text-decoration: none !important;
     transition: all 0.3s ease !important;
     margin-top: 10px;
-}
+} */
 
 /* Success notification style */
 .limit-notification.success {
@@ -1248,19 +1247,6 @@ input[type="range"]:focus {
     background: rgba(0, 0, 0, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: #FFD700;
-    padding: 10px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    width: 140px;
-    text-align: center;
-    justify-content: center
 }
 
 .donate-btn:hover {
