@@ -72,6 +72,8 @@ let rotationState = {
     axis: null,                   // Current rotation axis {point: Vector3, direction: Vector3}
     selectedAtoms: []             // Indices of atoms to rotate
 };
+let orthoCamera = null;
+let useOrthographic = false;
 
 window.fragments = fragments;
 let editingMolecule = true;
@@ -238,9 +240,19 @@ export default class Main {
         this.molecule.reset();
 
         clearScene(this.scene);
-        labels.forEach(label => {
-            createInfoLabel(label[0], label[1], label[2] ?? null, label[3] ?? null);
-        })
+
+        // When soft reset, re-add existing bondLengthLabel lines to scene (but not axis)
+        if (soft && bondLengthLabels.length > 0) {
+            bondLengthLabels.forEach(labelInfo => {
+                if (labelInfo.line) {
+                    this.scene.add(labelInfo.line);
+                }
+            });
+        } else {
+            labels.forEach(label => {
+                createInfoLabel(label[0], label[1], label[2] ?? null, label[3] ?? null);
+            });
+        }
         updateFragmentList(document.getElementById('fragmentList'));
         render();
     }
@@ -394,7 +406,7 @@ const atomSizeSelector = document.getElementById('style5');
 const resSelector = document.getElementById('style6')
 const toggleAntialiasing = document.getElementById('style7')
 const backgroundColorSelector = document.getElementById('style8');
-
+const toggleOrthoCamera = document.getElementById('toggleOrtho');
 const toggleStyleChanges = document.getElementById('toggleStyleChanges');
 
 roughnessSelector.addEventListener('input', () => {
@@ -4506,18 +4518,69 @@ function createRenderer(antialiasOn) {
     return renderer
 }
 
+function createOrthoCamera() {
+    const aspect = window.innerWidth / window.innerHeight;
+    const frustumSize = 30;
+    orthoCamera = new THREE.OrthographicCamera(
+        -frustumSize * aspect / 2,
+        frustumSize * aspect / 2,
+        frustumSize / 2,
+        -frustumSize / 2,
+        0.1,
+        1000000
+    );
+    orthoCamera.position.copy(camera.position);
+    orthoCamera.lookAt(controls.target);
+}
+
+toggleOrthoCamera.addEventListener('change', () => {
+    useOrthographic = toggleOrthoCamera.checked;
+
+    if (useOrthographic) {
+        if (!orthoCamera) createOrthoCamera();
+        orthoCamera.position.copy(camera.position);
+        orthoCamera.lookAt(controls.target);
+        controls.object = orthoCamera;
+    } else {
+        camera.position.copy(orthoCamera.position);
+        camera.lookAt(controls.target);
+        controls.object = camera;
+    }
+    controls.update();
+    render();
+});
+
 function animate() {
     window.fragments = fragments;
     requestAnimationFrame(animate);
     controls.update();
 }
 function render() {
-    renderer.render(scene, camera);
+    const activeCamera = useOrthographic ? orthoCamera : camera;
+    renderer.render(scene, activeCamera);
     updateAllBondLengthLabels();
     if (main.molecule && main.molecule.labelInstancedMesh && main.molecule.labelInstancedMesh.visible) {
         main.molecule.updateLabels();
     }
 }
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    if (orthoCamera) {
+        const aspect = window.innerWidth / window.innerHeight;
+        const frustumSize = 30;
+        orthoCamera.left = -frustumSize * aspect / 2;
+        orthoCamera.right = frustumSize * aspect / 2;
+        orthoCamera.top = frustumSize / 2;
+        orthoCamera.bottom = -frustumSize / 2;
+        orthoCamera.updateProjectionMatrix();
+    }
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    render();
+});
 function toggleRibbon() {
     if (!window.main || !window.main.data) {
         alert('No molecule loaded');

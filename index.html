@@ -463,8 +463,8 @@
                     if (isPremium) {
                         premiumBtn.style.display = 'none';
                     } else {
-                        premiumBtn.style.display = 'block';
-                        premiumBtn.innerHTML = '<i class="fas fa-crown"></i> Upgrade Storage (0.5MB → 70MB)';
+                        //premiumBtn.style.display = 'block';
+                        //premiumBtn.innerHTML = '<i class="fas fa-crown"></i> Upgrade Storage (0.5MB → 70MB)';
 
                     }
                 }
@@ -687,13 +687,15 @@
                     Subscription
                 </button>
 
-                <button class="donate-btn" onclick="openDonateModal()">
+                <button class="donate-btn fancy-button" onclick="openDonateModal()">
                     <i class="fas fa-heart"></i>
                     Donation
                 </button>
-                <a href="https://info.chopchopmol.com" id="tutorialLinkButton" target="_blank"
-                    rel="noopener noreferrer"><i class="fas fa-info-circle"></i>
-                    Help</a>
+                <button onclick="window.location.href='https://chopchopmol.com'" class="fancy-button"
+                    style="background-color: #006dea;">
+                    Help guide
+                </button>
+
 
             </div>
         </div>
@@ -741,6 +743,10 @@
         <div>
             <input type="checkbox" id="toggleLabels">
             <span>Toggle Atom labels</span>
+        </div>
+        <div>
+            <input type="checkbox" id="toggleOrtho">
+            <span>Orthographic Camera</span>
         </div>
         <div style="margin-top: 10px;">
             <button id="labelModeBtn" class="fancy-button" style="padding: 5px 10px; font-size: 12px;">
@@ -1405,12 +1411,12 @@
         (function () {
             function forceButtonVisible() {
                 const btn = document.getElementById('premiumUpgradeBtn');
-                if (btn) {
-                    btn.style.display = 'flex';
-                    btn.style.opacity = '1';
-                    btn.style.visibility = 'visible';
-                    btn.style.zIndex = '10000';
-                }
+                //if (btn) {
+                //  btn.style.display = 'flex';
+                //  btn.style.opacity = '1';
+                //  btn.style.visibility = 'visible';
+                //  btn.style.zIndex = '10000';
+                //}
             }
 
             // Initial check
@@ -1455,6 +1461,7 @@
         gap: 15px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         z-index: 1000;
+        font-variant-numeric: tabular-nums;
         ">
         <span id="frameLabel"
             style="color: white; font-family: 'Rubik', sans-serif; font-size: 14px; min-width: 100px;">Frame 1 /
