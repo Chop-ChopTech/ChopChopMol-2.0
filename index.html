@@ -1477,6 +1477,10 @@
             font-size: 12px;
             background: linear-gradient(135deg, #ff2c2c 0%, #2d30ff 100%);">
             <i class="fa-solid fa-play"></i></button>
+        <input type="range" id="frameSpeed" min="1" max="500" value="100" style="width: 80px; accent-color: #ff6b6b;">
+        <input type="number" id="frameSpeedInput" min="10" max="500" value="100"
+            style="width: 50px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); border-radius: 5px; color: white; text-align: center;">
+        <span style="color: white; font-family: sans-serif; font-size: 12px;">ms</span>
     </div>
 
     <script>
@@ -1487,11 +1491,36 @@
                 window.main.createNewMoleculeFromJSON(JSON.stringify({
                     atomData: frame.atomData,
                     numAtoms: frame.numAtoms
-                }), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);  // Changed false to true for center
+                }), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
                 document.getElementById('frameLabel').textContent =
                     `Frame ${frameIndex + 1} / ${window.xyzFrames.length}`;
             }
         });
+
+        // Sync slider and number input
+        document.getElementById('frameSpeed')?.addEventListener('input', function () {
+            document.getElementById('frameSpeedInput').value = this.value;
+            restartIfPlaying();
+        });
+        document.getElementById('frameSpeedInput')?.addEventListener('input', function () {
+            const val = Math.min(500, Math.max(10, parseInt(this.value) || 100));
+            document.getElementById('frameSpeed').value = val;
+            restartIfPlaying();
+        });
+
+        function restartIfPlaying() {
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                const slider = document.getElementById('frameSlider');
+                const speed = parseInt(document.getElementById('frameSpeed').value);
+                frameInterval = setInterval(() => {
+                    let next = parseInt(slider.value) + 1;
+                    if (next > parseInt(slider.max)) next = 0;
+                    slider.value = next;
+                    slider.dispatchEvent(new Event('input'));
+                }, speed);
+            }
+        }
 
         // Play animation
         let frameInterval = null;
@@ -1505,12 +1534,13 @@
                 icon.className = 'fa-solid fa-play';
             } else {
                 icon.className = 'fa-solid fa-pause';
+                const speed = parseInt(document.getElementById('frameSpeed').value);
                 frameInterval = setInterval(() => {
                     let next = parseInt(slider.value) + 1;
                     if (next > parseInt(slider.max)) next = 0;
                     slider.value = next;
                     slider.dispatchEvent(new Event('input'));
-                }, 10);
+                }, speed);
             }
         });
     </script>
