@@ -853,10 +853,10 @@ input[type="range"]:focus {
 
 /* Compact Database Search */
 .db-search-panel {
-    position: absolute;
+    /* position: absolute; */
     top: 0px;
     left: 280px;
-    width: 280px;
+    width: 180px;
     background: none;
     border: none;
     border-radius: 12px;
@@ -879,7 +879,7 @@ input[type="range"]:focus {
 
 .db-search-input {
     position: relative;
-    width: 250px;
+    width: 150px;
     padding: 14px 16px;
     top: -2px;
     background: rgba(0, 0, 0, 0.04);

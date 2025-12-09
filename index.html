@@ -618,6 +618,11 @@
                         id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
                     <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
                         JSON</button>
+                    <div id="dbSearchPanel" class="db-search-panel">
+                        <input id="dbSearchInput" class="db-search-input shine" type="text"
+                            placeholder="Search Molecules" autocomplete="off">
+                        <div id="dbSearchDropdown" class="db-search-dropdown"></div>
+                    </div>
 
                 </div>
             </div>
@@ -843,11 +848,7 @@
 
 
     <!-- Compact search panel -->
-    <div id="dbSearchPanel" class="db-search-panel">
-        <input id="dbSearchInput" class="db-search-input shine" type="text" placeholder="Search Molecules"
-            autocomplete="off">
-        <div id="dbSearchDropdown" class="db-search-dropdown"></div>
-    </div>
+
 
     <!-- Premium Modal - Add this before closing body tag -->
     <div id="premiumModal" class="premium-modal">
