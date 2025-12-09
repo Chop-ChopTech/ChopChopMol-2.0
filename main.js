@@ -609,6 +609,7 @@ function worldToScreen(worldPos, camera) {
 }
 
 function getAtomWorldPosition(atomIndex, instancedMesh) {
+    if (!instancedMesh) return new THREE.Vector3();
     const matrix = new THREE.Matrix4();
     const position = new THREE.Vector3();
     instancedMesh.getMatrixAt(atomIndex, matrix);
@@ -618,6 +619,7 @@ function getAtomWorldPosition(atomIndex, instancedMesh) {
 }
 
 function getAtomRadius(atomIndex, molecule) {
+    if (!molecule || !molecule.instancedMesh) return 1;
     const matrix = new THREE.Matrix4();
     const scale = new THREE.Vector3();
 
@@ -671,6 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Enhanced raycasting that checks distance to atom centers
 function enhancedRaycast(raycaster, instancedMesh, atoms) {
+    if (!instancedMesh || !atoms || atoms.length === 0) return [];
     // First try standard raycasting
     const intersects = raycaster.intersectObject(instancedMesh);
 
@@ -721,7 +724,7 @@ function enhancedRaycast(raycaster, instancedMesh, atoms) {
 
 // Update the bounding box computation for better selection
 function updateInstancedMeshBounds(instancedMesh, atoms) {
-    if (!instancedMesh) return;
+    if (!instancedMesh || !atoms || atoms.length === 0) return;
 
     // Force update of bounding box
     instancedMesh.computeBoundingBox();
@@ -771,7 +774,7 @@ function combineMultipleFragments(fragments) {
 
 // Check if atom is in selection box
 function isAtomInSelection(atomIndex, camera) {
-    if (!main.molecule || !main.molecule.atoms || !main.molecule.atoms[atomIndex]) {
+    if (!main.molecule || !main.molecule.atoms || !main.molecule.atoms[atomIndex] || !main.molecule.instancedMesh) {
         return false;
     }
 
@@ -802,11 +805,8 @@ function updateSelectionBox() {
 }
 
 // Update atom selection based on box
-// Update atom selection based on box
-// Update atom selection based on box
-// Update atom selection based on box
 function updateAtomSelection() {
-    if (!main.molecule || !main.molecule.atoms) return;
+    if (!main.molecule || !main.molecule.atoms || !main.molecule.instancedMesh) return;
 
     // Find atoms currently in selection box
     const atomsInBox = [];
@@ -1147,10 +1147,14 @@ function onPointerMove(event) {
         mode = main.mode
         main.molecule.updateBonds(main.mode);
 
-        updateAllBondLengthLabels(); // ADD THIS LINE
+        updateAllBondLengthLabels();
         render();
     } else {
         // NORMAL FREE DRAGGING
+        if (!main.molecule || !main.molecule.atoms || !main.molecule.instancedMesh) {
+            dragging = false;
+            return;
+        }
         atomsSelected.forEach(idx => {
             const atom = main.molecule.atoms[idx];
             const offset = dragOffsets[idx] || new THREE.Vector3();
@@ -1213,6 +1217,7 @@ function onPointerMove2(event) {
             if (hoveredAtom !== null && !atomsSelected.includes(hoveredAtom)) {
                 const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
                 const atom = main.molecule.atoms[hoveredAtom];
+                if (!atom || !colorAttr) return;
                 const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
                 colorAttr.setXYZ(hoveredAtom, color.r, color.g, color.b);
                 colorAttr.needsUpdate = true;
@@ -1238,6 +1243,10 @@ function onPointerMove2(event) {
         if (hoveredAtom !== null && !atomsSelected.includes(hoveredAtom)) {
             const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
             const atom = main.molecule.atoms[hoveredAtom];
+            if (!atom || !colorAttr) {
+                hoveredAtom = null;
+                return;
+            }
             const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
             colorAttr.setXYZ(hoveredAtom, color.r, color.g, color.b);
             colorAttr.needsUpdate = true;
@@ -2035,6 +2044,7 @@ function updateIsolationModeUI() {
 }
 
 function validateFragments() {
+    if (!main.molecule || !main.molecule.atoms) return [];
     const totalAtoms = main.molecule.atoms.length;
     const allAtomIndices = Array.from({ length: totalAtoms }, (_, i) => i);
 
@@ -2082,6 +2092,7 @@ function validateFragments() {
 
 
 function highlightFragment(fragmentIndex) {
+    if (!main.molecule || !main.molecule.instancedMesh) return;
     if (fragmentIndex >= fragments.length) {
         console.error('Invalid fragment index');
         return;
@@ -2089,6 +2100,7 @@ function highlightFragment(fragmentIndex) {
 
     const fragment = fragments[fragmentIndex];
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+    if (!colorAttr) return;
 
     // Define distinct colors for fragments
 
@@ -2124,8 +2136,11 @@ window.resetIsolationState = resetIsolationState;
 function resetFragments() {
     fragments = [];
 
+    if (!main.molecule || !main.molecule.instancedMesh || !main.molecule.atoms) return;
+
     // Reset atom colors to their original element colors
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+    if (!colorAttr) return;
     for (let i = 0; i < colorAttr.count; i++) {
         const atom = main.molecule.atoms[i];
         const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
@@ -2997,6 +3012,8 @@ function onPointerUp(event) {
     }
 }
 function selectFragment(fragmentAtoms, fragmentIndex) {
+    if (!main.molecule || !main.molecule.instancedMesh || !main.molecule.atoms) return;
+
     // Clear previous atom selection
     atomsSelected = [];
 
@@ -3009,8 +3026,10 @@ function selectFragment(fragmentAtoms, fragmentIndex) {
 
     // Reset color attributes for all atoms
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+    if (!colorAttr) return;
     for (let i = 0; i < colorAttr.count; i++) {
         const atom = main.molecule.atoms[i];
+        if (!atom) continue;
         const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
         atom.displayColor = color;
         colorAttr.setXYZ(i, color.r, color.g, color.b);
@@ -3089,8 +3108,10 @@ function arraysEqual(a, b) {
 }
 
 function selectAtom(index, reset = true) {
+    if (!main.molecule || !main.molecule.instancedMesh || !main.molecule.atoms) return;
 
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+    if (!colorAttr) return;
 
     // Only reset all colors if we're not in box selection mode
     if ((!isSelecting || !cmdDown) && reset) {
@@ -3110,7 +3131,10 @@ function selectAtom(index, reset = true) {
 
 
 function unselectAtom(index = null) {
+    if (!main.molecule || !main.molecule.instancedMesh || !main.molecule.atoms) return;
+
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+    if (!colorAttr) return;
 
     if (index === null) {
         // Reset all atoms to their default color
@@ -3504,6 +3528,7 @@ function calculateDihedral(atom1, atom2, atom3, atom4) {
     return angleDegrees;
 }
 function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index = null) {
+    if (!main.molecule || !main.molecule.atoms || !main.molecule.instancedMesh) return;
     const atom1 = main.molecule.atoms[atom1Index];
     const atom2 = main.molecule.atoms[atom2Index];
     const atom3 = atom3Index !== null ? main.molecule.atoms[atom3Index] : null;
@@ -4008,6 +4033,7 @@ window.resetCamera = resetCamera
 
 // Function to update bond length label position
 function updateBondLengthLabel(labelInfo) {
+    if (!main.molecule || !main.molecule.atoms || !main.molecule.instancedMesh) return;
     const atom1 = main.molecule.atoms[labelInfo.atom1Index];
     const atom2 = main.molecule.atoms[labelInfo.atom2Index];
     const atom3 = labelInfo.atom3Index !== null ? main.molecule.atoms[labelInfo.atom3Index] : null;
