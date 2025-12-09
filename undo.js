@@ -41,7 +41,7 @@ function restoreMoleculeState(state) {
         // Recreate the molecule visualization
         window.main.newMolecule(
             window.main.data,
-            window.main.data.atomData.length <= 700 ? 1 : 0,
+            window.main.data.atomData.length <= 2000 ? 1 : 0,
             false,
             { x: 0, y: 0, z: 0 },
             { x: 0, y: 0, z: 0 },
@@ -49,15 +49,15 @@ function restoreMoleculeState(state) {
             true
         );
 
-        // Restore atom selection
-        window.atomsSelected = [...state.selectedAtoms];
+        // Restore atom selection - filter out invalid indices
+        window.atomsSelected = state.selectedAtoms.filter(idx =>
+            idx >= 0 && idx < window.main.molecule.atoms.length
+        );
 
         // Re-select atoms visually if there's a selection
         if (window.atomsSelected.length > 0 && typeof window.selectAtom === 'function') {
             window.atomsSelected.forEach(idx => {
-                if (idx < window.main.molecule.atoms.length) {
-                    window.selectAtom(idx, false);
-                }
+                window.selectAtom(idx, false);
             });
         }
 

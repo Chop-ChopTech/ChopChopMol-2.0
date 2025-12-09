@@ -135,7 +135,15 @@ const fragmentColors = [
     0x5eb9ff,
     0x00ffff,
     0x715eff,
-    0xf7baff
+    0xf7baff,
+    0xff6b6b,
+    0x4ecdc4,
+    0xffe66d,
+    0x95e1d3,
+    0xf38181,
+    0xaa96da,
+    0xfcbad3,
+    0xa8d8ea
 ];
 
 export default class Main {
@@ -1343,7 +1351,13 @@ function attachButtonEventListeners() {
         newChangeBtn.addEventListener('click', () => {
             if (atomsSelected.length > 0) {
                 const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
-                if (replacingMolecule) {
+                if (replacingMolecule && replacingMolecule.trim()) {
+                    const element = replacingMolecule.trim();
+                    // Validate it's a known element
+                    if (!main.molecule.atomSettings[element]) {
+                        alert(`Unknown element: ${element}`);
+                        return;
+                    }
                     // Update all selected atoms
                     atomsSelected.forEach(idx => {
                         main.data.atomData[idx].element = replacingMolecule;
@@ -1364,7 +1378,7 @@ function attachButtonEventListeners() {
             sortedIndices.forEach(idx => {
                 main.data.atomData.splice(idx, 1);
             });
-            main.data.numAtoms -= atomsSelected.length;
+            main.data.numAtoms = main.data.atomData.length;  // Use actual length instead
             atomsSelected = [];
             main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
         });
@@ -2973,9 +2987,11 @@ function recreateRenderer(antialiasEnabled) {
 
 
 function updateAtomMatrix(atomIndex) {
+    if (!main.molecule || !main.molecule.atoms || !main.molecule.atoms[atomIndex]) return;
     const atom = main.molecule.atoms[atomIndex];
     const matrix = new THREE.Matrix4();
-    let radius = main.molecule.atomSettings[atom.type]?.realRadius * 1.5 || 1;
+    const settings = main.molecule.atomSettings[atom.type];
+    let radius = (settings?.realRadius || 0.67) * 1.5;
     if (main.mode && main.mode.atomSize) {
         radius *= main.mode.atomSize;
     }
@@ -3103,7 +3119,7 @@ function initializeSelectionBox() {
 function arraysEqual(a, b) {
     if (a.length !== b.length) return false;
     const sortedA = [...a].sort((x, y) => x - y);
-    const sortedB = [...b].sort((x, y) => y - y);
+    const sortedB = [...b].sort((x, y) => x - y);  // Fixed: x - y
     return sortedA.every((val, index) => val === sortedB[index]);
 }
 
@@ -3584,6 +3600,7 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
     if (!isDihedral && !isAngle) {
         // For bond length: create an editable input that looks like a label
         const input = document.createElement('input');
+        labelDiv.inputElement = input;  // Store reference for updateBondLengthLabel
         input.type = 'text';
         input.value = value;
         input.style.cssText = `

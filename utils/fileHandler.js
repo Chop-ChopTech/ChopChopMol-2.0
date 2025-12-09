@@ -55,7 +55,11 @@ export default class FileHandler {
                 window.resetIsolationState();
                 this.main.createNewMoleculeFromJSON(JSON.stringify(parsedData), overlay, rotation, translation, true, false);
                 const frameSliderContainer = document.getElementById('frameSliderContainer');
+
                 if (frameSliderContainer) {
+                    if (frameSliderContainer) {
+                        frameSliderContainer.style.display = 'none';
+                    }
                     if (window.xyzFrames && window.xyzFrames.length > 1) {
                         frameSliderContainer.style.display = 'flex';
                         const slider = document.getElementById('frameSlider');
