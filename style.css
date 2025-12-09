@@ -574,13 +574,14 @@ body {
 
 #styleSelector {
     position: absolute;
+    height: auto;
     top: 50%;
     right: 10px;
     z-index: 9999;
     background: linear-gradient(145deg, rgba(0, 133, 205, 0.501) 0%, rgba(10, 46, 118, 0.462) 67%, rgba(89, 0, 184, 0.555) 100%);
     width: 300px;
     max-height: calc(100vh - 83px);
-    overflow-y: auto;
+    overflow-y: auto !important;
     overflow-x: hidden;
     padding: 30px;
     border-radius: 10px;

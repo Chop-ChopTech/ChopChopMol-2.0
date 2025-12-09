@@ -4712,6 +4712,12 @@ function enableAtomInteractions() {
     console.log('Atom interactions enabled');
 }
 
+function testMoleculeFromJSON(json) {
+    window.main.newMolecule(json, window.main.setNewMode(json.numAtoms <= 2000), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, false, false);
+    window.main.zoomCameraToFitMolecule();
+}
+window.testMoleculeFromJSON = testMoleculeFromJSON;
+
 window.toggleRibbon = toggleRibbon;
 (function () {
     const panel = document.getElementById('dbSearchPanel');
