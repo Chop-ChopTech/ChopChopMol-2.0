@@ -3563,17 +3563,20 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
         input.value = value;
         input.style.cssText = `
             color: ${color};
-            font-family: Arial, sans-serif;
-            font-size: 20px;
-            font-weight: normal;
-            background: none;
-            border: none;
-            padding: 4px 8px;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            padding: 5px 10px;
             text-align: center;
-            width: 60px;
+            width: 65px;
             cursor: text;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
             outline: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: none!important;
         `;
 
         let justAppliedTransform = false; // Flag to prevent blur from resetting
@@ -3682,15 +3685,14 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
 
         // Focus effect
         input.addEventListener('focus', () => {
-            input.style.background = 'rgba(0, 0, 0, 0.6)';
             input.style.border = '1px solid ' + color;
-            input.style.borderRadius = '4px';
+            input.style.boxShadow = '0 0 12px ' + color.replace('rgb', 'rgba').replace(')', ', 0.4)');
             input.select();
         });
 
         input.addEventListener('blur', () => {
-            input.style.background = 'none';
-            input.style.border = 'none';
+            input.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+            input.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
 
             // Only reset value if we didn't just apply a transform
             if (!justAppliedTransform) {
@@ -3702,26 +3704,27 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
         });
 
         labelDiv.appendChild(input);
+        input.style.setProperty('transition', 'none', 'important');
+        labelDiv.style.setProperty('transition', 'none', 'important');
         labelDiv.style.pointerEvents = 'auto';
         labelDiv.inputElement = input; // Store reference
     } else {
-        // For angles and dihedrals: just text
         labelDiv.textContent = value;
-        labelDiv.style.pointerEvents = 'none';
+        labelDiv.style.cssText = `
+            color: ${color};
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            padding: 5px 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+            transition: none !important;
+        `;
     }
-
-    labelDiv.style.cssText += `
-        font-family: Arial, sans-serif;
-        font-size: 20px;
-        font-weight: normal;
-        background: none;
-        padding: 4px 8px;
-        border-radius: 4px;
-        user-select: none;
-        white-space: nowrap;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        transition: none;
-    `;
 
     // CREATE VISUALIZATION
     let visualElement;
