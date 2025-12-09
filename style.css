@@ -214,6 +214,16 @@ body {
     z-index: 999;
 }
 
+
+#showAllBondLengths {
+    color: #ffffff;
+    padding: 4px 11px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    z-index: 999;
+}
+
 .snake-container {
     position: relative;
     padding: 20px;

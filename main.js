@@ -3963,6 +3963,26 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
     render();
 }
 
+function showAllBondLengths() {
+    if (!main.molecule || !main.molecule.bonds || main.molecule.bonds.length === 0) return;
+
+    // Toggle: if labels exist, clear them; otherwise show all
+    if (bondLengthLabels.length > 0) {
+        clearAllBondLengthLabels();
+    } else {
+        main.molecule.bonds.forEach(bond => {
+            const atom1Index = main.molecule.atoms.indexOf(bond.atom1);
+            const atom2Index = main.molecule.atoms.indexOf(bond.atom2);
+            if (atom1Index !== -1 && atom2Index !== -1) {
+                createInfoLabel(atom1Index, atom2Index);
+            }
+        });
+    }
+    render();
+}
+
+document.getElementById('showAllBondLengths')?.addEventListener('click', showAllBondLengths);
+
 
 function performRotationFromBase(targetAngle, atomIndices) {
     if (!rotationAxis || !rotationAxis.direction) return;

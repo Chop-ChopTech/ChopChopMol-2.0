@@ -611,12 +611,11 @@
         <input id="compare" type="file" accept=".xyz, .mol, .pdb, .cif" style="display: none;">
         <div id="toolbar-background" class="shine">
             <div class="dropdown">
-                <span class="dropdown-icon"><i class="fa-solid fa-upload"></i>
+                <span class="dropdown-icon" title="Upload file"><i class="fa-solid fa-upload"></i>
                 </span>
                 <div class="dropdown-content shine" style="left: 50%;">
                     <button class="fancy-button" style="width: 140px; height: 31px; border-radius: 30px;"
-                        id="customButton"><i class="fa-solid fa-bolt"></i> Open
-                        File</button>
+                        id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
                     <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
                         JSON</button>
 
@@ -627,11 +626,13 @@
                 <i class="fa-solid fa-dna"></i>
             </button>
             <button class="dropdown-icon" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
-
-            <button class="dropdown-icon" id="reset-camera" style="border: none; margin-right: 10px;"
-                onclick="window.resetCamera()"><i class="fa-solid fa-arrows-to-eye"></i></button>
+            <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"><i
+                    class="fas fa-ruler"></i></button>
+            <button class="dropdown-icon" id="reset-camera" title="Reset Camera"
+                style="border: none; margin-right: 10px;" onclick="window.resetCamera()"><i
+                    class="fa-solid fa-arrows-to-eye"></i></button>
             <div class="dropdown" id="saveMoleculeToCloud">
-                <span class="dropdown-icon"><i class="fa-solid fa-cloud"></i></span>
+                <span class="dropdown-icon" title="Upload or load from cloud"><i class="fa-solid fa-cloud"></i></span>
                 <div class="dropdown-content shine" style="width: 200px;">
                     <div id="molecule-save-section">
                         <div id="load-save-message"></div>
