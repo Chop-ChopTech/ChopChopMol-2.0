@@ -636,6 +636,10 @@ function getAtomRadius(atomIndex, molecule) {
     return scale.x;
 }
 
+function getActiveCamera() {
+    return useOrthographic ? orthoCamera : camera;
+}
+
 function saveAsXYZ() {
     if (!main.data || !main.data.atomData || main.data.atomData.length === 0) {
         alert('No molecule loaded to save!');
@@ -788,7 +792,7 @@ function isAtomInSelection(atomIndex, camera) {
 
     // Get the actual world position from the instanced mesh
     const worldPos = getAtomWorldPosition(atomIndex, main.molecule.instancedMesh);
-    const screenPos = worldToScreen(worldPos, camera);
+    const screenPos = worldToScreen(worldPos, getActiveCamera());
 
     const minX = Math.min(selectionStart.x, selectionEnd.x);
     const maxX = Math.max(selectionStart.x, selectionEnd.x);
@@ -819,7 +823,7 @@ function updateAtomSelection() {
     // Find atoms currently in selection box
     const atomsInBox = [];
     for (let i = 0; i < main.molecule.atoms.length; i++) {
-        if (isAtomInSelection(i, camera)) {
+        if (isAtomInSelection(i, getActiveCamera())) {
             atomsInBox.push(i);
         }
     }
@@ -876,7 +880,7 @@ function onSelectionUp(event) {
         if (main.molecule && main.molecule.atoms) {
             const newlySelected = [];
             for (let i = 0; i < main.molecule.atoms.length; i++) {
-                if (isAtomInSelection(i, camera)) {
+                if (isAtomInSelection(i, getActiveCamera())) {
                     if (!atomsSelected.includes(i)) {
                         newlySelected.push(i);
                         atomsSelected.push(i);
@@ -981,7 +985,7 @@ function onPointerDown(event) {
                 // Update bounds before raycasting
                 updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
 
-                raycaster.setFromCamera(mouse, camera);
+                raycaster.setFromCamera(mouse, getActiveCamera());
 
                 // Use enhanced raycasting
                 const intersects = enhancedRaycast(raycaster, main.molecule.instancedMesh, main.molecule.atoms);
@@ -1114,8 +1118,7 @@ function onPointerMove(event) {
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    raycaster.setFromCamera(mouse, camera);
-
+    raycaster.setFromCamera(mouse, getActiveCamera());
     // Find intersection with drag plane
     const intersection = new THREE.Vector3();
     raycaster.ray.intersectPlane(dragPlane, intersection);
@@ -1210,7 +1213,7 @@ function onPointerMove2(event) {
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    raycaster.setFromCamera(mouse, camera);
+    raycaster.setFromCamera(mouse, getActiveCamera());
 
     // Update bounds before raycasting
     updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
@@ -4082,7 +4085,7 @@ function updateBondLengthLabel(labelInfo) {
     }
 
     // Convert 3D position to 2D screen position
-    const screenPos = worldToScreen(labelInfo.midpoint, camera);
+    const screenPos = worldToScreen(labelInfo.midpoint, getActiveCamera());
 
     // Update label position
     labelInfo.element.style.position = 'absolute';
@@ -4602,8 +4605,7 @@ function animate() {
     controls.update();
 }
 function render() {
-    const activeCamera = useOrthographic ? orthoCamera : camera;
-    renderer.render(scene, activeCamera);
+    renderer.render(scene, getActiveCamera());
     updateAllBondLengthLabels();
     if (main.molecule && main.molecule.labelInstancedMesh && main.molecule.labelInstancedMesh.visible) {
         main.molecule.updateLabels();
