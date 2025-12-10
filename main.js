@@ -4936,4 +4936,66 @@ controls.addEventListener('change', () => {
     render();
 });
 
+// Export THREE.js
+window.THREE = THREE;
+
+// Export functions
+window.selectAtom = selectAtom;
+window.unselectAtom = unselectAtom;
+window.rotateSelectedAtoms = rotateSelectedAtoms;
+window.translateSelectedAtoms = translateSelectedAtoms;
+window.updateEditingContent = updateEditingContent;
+window.attachButtonEventListeners = attachButtonEventListeners;
+window.rotateCamera = rotateCamera;
+window.render = render;
+window.initializeRotationState = initializeRotationState;
+window.updateMoleculeVisualization = updateMoleculeVisualization;
+window.createInfoLabel = createInfoLabel;
+window.clearAllBondLengthLabels = clearAllBondLengthLabels;
+window.calculateBondLength = calculateBondLength;
+window.calculateAngle = calculateAngle;
+
+// Export variables using defineProperty to keep in sync
+Object.defineProperty(window, 'atomsSelected', {
+    get: function () { return atomsSelected; },
+    set: function (val) { atomsSelected = val; },
+    configurable: true
+});
+
+Object.defineProperty(window, 'rotationAxis', {
+    get: function () { return rotationAxis; },
+    set: function (val) { rotationAxis = val; },
+    configurable: true
+});
+
+Object.defineProperty(window, 'axisAtoms', {
+    get: function () { return axisAtoms; },
+    set: function (val) { axisAtoms = val; },
+    configurable: true
+});
+
+Object.defineProperty(window, 'rotationState', {
+    get: function () { return rotationState; },
+    set: function (val) { rotationState = val; },
+    configurable: true
+});
+
+Object.defineProperty(window, 'labelMode', {
+    get: function () { return labelMode; },
+    set: function (val) { labelMode = val; },
+    configurable: true
+});
+
+Object.defineProperty(window, 'ribbonMode', {
+    get: function () { return typeof ribbonMode !== 'undefined' ? ribbonMode : false; },
+    set: function (val) { if (typeof ribbonMode !== 'undefined') ribbonMode = val; },
+    configurable: true
+});
+
+Object.defineProperty(window, 'fragments', {
+    get: function () { return fragments; },
+    set: function (val) { fragments = val; },
+    configurable: true
+});
+
 animate();
