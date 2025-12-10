@@ -3,7 +3,7 @@
 const AI_CONFIG = {
     apiKey: '',
     model: 'gpt-5-nano',
-    max_completion_tokens: 2048
+    max_completion_tokens: 16384
 };
 
 let conversationHistory = [];
@@ -45,6 +45,78 @@ const FUNCTIONS = {
             }
             if (typeof window.render === 'function') window.render();
             return { success: true, message: `Selected ${params.indices.length} atoms: [${params.indices.join(', ')}]` };
+        }
+    },
+
+    add_atom: {
+        description: "Add a new atom at a specific position or bonded to a selected atom",
+        parameters: {
+            type: "object",
+            properties: {
+                element: { type: "string", description: "Element symbol (e.g., 'C', 'H', 'O')" },
+                x: { type: "number", description: "X coordinate (optional if bonding to selected atom)" },
+                y: { type: "number", description: "Y coordinate" },
+                z: { type: "number", description: "Z coordinate" },
+                bondToSelected: { type: "boolean", description: "If true, add atom bonded to the selected atom at typical bond length" }
+            },
+            required: ["element"]
+        },
+        execute: (params) => {
+            if (!window.main?.data?.atomData) return { success: false, message: "No molecule loaded" };
+
+            let x, y, z;
+            if (params.bondToSelected && window.atomsSelected?.length === 1) {
+                // Add at typical bond distance from selected atom
+                const selectedIdx = window.atomsSelected[0];
+                const selectedAtom = window.main.data.atomData[selectedIdx];
+                const bondLength = 1.5; // Typical C-C bond in Angstroms
+                x = selectedAtom.x + bondLength;
+                y = selectedAtom.y;
+                z = selectedAtom.z;
+            } else {
+                x = params.x ?? 0;
+                y = params.y ?? 0;
+                z = params.z ?? 0;
+            }
+
+            window.main.data.atomData.push({ element: params.element.toUpperCase(), x, y, z });
+            window.main.data.numAtoms++;
+            window.main.newMolecule(window.main.data, window.main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+            return { success: true, message: `Added ${params.element} at (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})` };
+        }
+    },
+
+    set_bond_distance: {
+        description: "Set exact distance between two selected atoms (in Angstroms)",
+        parameters: {
+            type: "object",
+            properties: {
+                distance: { type: "number", description: "Target distance in Angstroms" }
+            },
+            required: ["distance"]
+        },
+        execute: (params) => {
+            if (!window.atomsSelected || window.atomsSelected.length !== 2)
+                return { success: false, message: "Select exactly 2 atoms first" };
+
+            const idx1 = window.atomsSelected[0], idx2 = window.atomsSelected[1];
+            const atom1 = window.main.molecule.atoms[idx1];
+            const atom2 = window.main.molecule.atoms[idx2];
+
+            const targetInternal = params.distance * 4; // Convert to internal units
+            const currentVector = new window.THREE.Vector3().subVectors(atom2.position, atom1.position);
+            const currentDist = currentVector.length();
+
+            if (currentDist === 0) return { success: false, message: "Atoms at same position" };
+
+            const translation = currentVector.normalize().multiplyScalar(targetInternal - currentDist);
+            atom2.position.add(translation);
+            atom2.x = atom2.position.x;
+            atom2.y = atom2.position.y;
+            atom2.z = atom2.position.z;
+
+            if (typeof window.updateMoleculeVisualization === 'function') window.updateMoleculeVisualization();
+            return { success: true, message: `Set distance to ${params.distance} Å` };
         }
     },
 
@@ -363,18 +435,46 @@ const FUNCTIONS = {
     },
 
     toggle_labels: {
-        description: "Show or hide atom labels",
+        description: "Show or hide atom labels (element symbols or indices)",
         parameters: {
             type: "object",
-            properties: { show: { type: "boolean", description: "true to show, false to hide" } }
+            properties: {
+                show: { type: "boolean", description: "True to show, false to hide" },
+                showIndices: { type: "boolean", description: "If true, show atom numbers instead of elements" }
+            },
+            required: ["show"]
         },
         execute: (params) => {
-            if (window.main?.toggleLabels) {
-                window.main.toggleLabels(params.show ?? true);
-                if (typeof window.render === 'function') window.render();
-                return { success: true, message: `Labels ${params.show ? 'shown' : 'hidden'}` };
+            if (!window.main?.molecule) return { success: false, message: "No molecule loaded" };
+
+            if (params.showIndices !== undefined) window.labelIndexMode = params.showIndices;
+            window.main.toggleLabels(params.show);
+            if (typeof window.render === 'function') window.render();
+            return { success: true, message: params.show ? "Labels shown" : "Labels hidden" };
+        }
+    },
+
+    select_connected: {
+        description: "Expand selection to all atoms connected (bonded) to currently selected atoms",
+        parameters: { type: "object", properties: {} },
+        execute: () => {
+            if (!window.main?.molecule?.bonds) return { success: false, message: "No molecule loaded" };
+            if (!window.atomsSelected?.length) return { success: false, message: "No atoms selected" };
+
+            const connected = new Set(window.atomsSelected);
+            let added = true;
+
+            while (added) {
+                added = false;
+                window.main.molecule.bonds.forEach(bond => {
+                    const idx1 = window.main.molecule.atoms.indexOf(bond.atom1);
+                    const idx2 = window.main.molecule.atoms.indexOf(bond.atom2);
+                    if (connected.has(idx1) && !connected.has(idx2)) { connected.add(idx2); added = true; }
+                    if (connected.has(idx2) && !connected.has(idx1)) { connected.add(idx1); added = true; }
+                });
             }
-            return { success: false, message: "Labels not available" };
+
+            return FUNCTIONS.select_atoms.execute({ indices: Array.from(connected), add: false });
         }
     },
 
@@ -577,19 +677,62 @@ Call these 4 functions:
 3. select_atoms({indices: [2, 3]})
 4. translate_molecule({distance: 2})
 
-Call ALL required functions in sequence in one response if possible. If more steps needed, the system will handle multiple rounds. Always complete the full sequence for transformations.
+ALL AVAILABLE FUNCTIONS:
 
-OTHER CAPABILITIES:
-- change_atom_element: Change element type of selected atoms
-- remove_atoms: Delete selected atoms
-- measure_distance/angle/dihedral: Create measurement labels
-- create_fragment: Group selected atoms
-- set_style: Change visual appearance
-- get_atom_info: Get coordinates of specific atoms
+=== SELECTION ===
+- select_atoms: Select atoms by indices array. Use add:true to add to selection, add:false to replace.
+- clear_selection: Deselect all atoms
+- select_all_atoms: Select every atom in the molecule
+- select_atoms_by_element: Select all atoms of a specific element (e.g., "C", "N", "O", "H")
+- select_connected: Expand selection to all atoms bonded/connected to currently selected atoms
 
-Atom indices are 0-based. Always call ALL required functions in sequence. Be concise. Also, you are not limited to calling only one function! Use as many as you need! It is actually encouraged to use more than one function at most times.
-In addition to that, After all tool calls, your final message must be extremely brief: only 1-2 sentences summarizing outcomes. Do not explain steps, repeat tool results, or add unnecessary details. If it is a straightforward task, no need to 
-even respond in words, just perform the function and done.`;
+=== BUILDING & EDITING ===
+- add_atom: Add a new atom. Specify element and x,y,z coordinates, OR set bondToSelected:true to place near selected atom
+- change_atom_element: Change selected atoms to a different element type
+- remove_atoms: Delete all currently selected atoms
+- set_bond_distance: Set exact distance (in Å) between 2 selected atoms
+
+=== TRANSFORMATIONS (require axis) ===
+- define_axis: Create rotation/translation axis from 2 selected atoms (MUST select 2 atoms first)
+- remove_axis: Remove the current axis
+- rotate_molecule: Rotate selected atoms around axis by angle in degrees (-180 to 180)
+- translate_molecule: Move selected atoms along axis by distance in angstroms
+
+=== MEASUREMENTS ===
+- measure_distance: Create distance label between 2 selected atoms
+- measure_angle: Create angle label for 3 selected atoms (middle atom is vertex)
+- measure_dihedral: Create dihedral/torsion angle label for 4 selected atoms
+- clear_measurements: Remove all measurement labels
+
+=== FRAGMENTS ===
+- create_fragment: Group selected atoms into a fragment for easier manipulation
+- isolate_selection: Isolate selected atoms/fragment to view separately
+
+=== VIEW & CAMERA ===
+- reset_camera: Reset camera to default position
+- zoom_to_fit: Zoom camera to fit entire molecule in view
+- rotate_camera: Rotate camera view by angle in degrees
+- toggle_labels: Show/hide atom labels. Use show:true/false, showIndices:true for atom numbers
+- toggle_ribbon: Toggle ribbon view for proteins (only works if protein loaded)
+
+=== STYLE ===
+- set_style: Change appearance. Options: roughness (0-1), metalness (0-1), opacity (0-1), atomSize (0.1-3), backgroundColor (hex like "#000000")
+
+=== FILE OPERATIONS ===
+- save_image: Save screenshot as PNG
+- save_xyz: Export molecule as XYZ file
+- load_molecule: Search PubChem database by molecule name (e.g., "caffeine", "aspirin")
+
+=== INFO ===
+- get_molecule_info: Get atom count, element breakdown, selection status
+- get_atom_info: Get coordinates and element type for specific atom indices
+
+=== UNDO/REDO ===
+- undo: Undo last action
+- redo: Redo last undone action
+
+Atom indices are 0-based internally. Always call ALL required functions in sequence. Be concise. Use multiple functions when needed!
+After all tool calls, respond with 1-2 sentences max summarizing what was done. No need to explain steps or repeat results.`;
 
     conversationHistory.push({ role: "user", content: userMessage });
     let messages = [{ role: "system", content: systemPrompt }, ...conversationHistory.slice(-10)];
