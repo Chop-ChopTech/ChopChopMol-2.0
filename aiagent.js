@@ -69,6 +69,45 @@ const FUNCTIONS = {
         }
     },
 
+    select_atoms_by_element: {
+        description: "Select all atoms of a specific element type (e.g., C, N, O, H). Much faster than selecting by indices.",
+        parameters: {
+            type: "object",
+            properties: {
+                element: {
+                    type: "string",
+                    description: "Element symbol (e.g., 'C' for carbon, 'N' for nitrogen, 'O' for oxygen, 'H' for hydrogen)"
+                },
+                add: {
+                    type: "boolean",
+                    description: "If true, add to current selection; if false, replace selection"
+                }
+            },
+            required: ["element"]
+        },
+        execute: (params) => {
+            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
+
+            // Find all atoms matching the element
+            const matchingIndices = [];
+            window.main.molecule.atoms.forEach((atom, idx) => {
+                if (atom.type.toUpperCase() === params.element.toUpperCase()) {
+                    matchingIndices.push(idx);
+                }
+            });
+
+            if (matchingIndices.length === 0) {
+                return { success: false, message: `No ${params.element} atoms found` };
+            }
+
+            // Use existing select_atoms logic
+            return FUNCTIONS.select_atoms.execute({
+                indices: matchingIndices,
+                add: params.add || false
+            });
+        }
+    },
+
     // === AXIS DEFINITION ===
     define_axis: {
         description: "Define rotation/translation axis from 2 selected atoms. MUST have exactly 2 atoms selected first.",
