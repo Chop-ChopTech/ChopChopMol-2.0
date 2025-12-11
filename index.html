@@ -1558,7 +1558,7 @@
                 <button id="aiClearBtn" class="ai-header-btn" title="Clear chat">
                     <i class="fas fa-trash"></i>
                 </button>
-                <button id="aiSettingsBtn" class="ai-header-btn" title="API Settings">
+                <button id="aiSettingsBtn" style="display: none;" class="ai-header-btn" title="API Settings">
                     <i class="fas fa-cog"></i>
                 </button>
                 <button id="aiCloseBtn" class="ai-header-btn" title="Close">
@@ -1684,13 +1684,6 @@
             async function handleSend() {
                 const message = chatInput.value.trim();
                 if (!message) return;
-
-                // Check for API key
-                if (!window.AIAgent?.hasApiKey()) {
-                    addMessage('error', 'Please set your OpenAI API key first. Click the ⚙️ icon.');
-                    settingsModal.classList.add('open');
-                    return;
-                }
 
                 // Add user message
                 addMessage('user', message);
