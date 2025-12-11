@@ -2,8 +2,8 @@
 
 const AI_CONFIG = {
     apiKey: '',
-    model: 'gpt-5-nano',
-    max_completion_tokens: 16384
+    model: 'gpt-5.1',
+    max_completion_tokens: 1024
 };
 
 let conversationHistory = [];
@@ -455,26 +455,25 @@ const FUNCTIONS = {
     },
 
     select_connected: {
-        description: "Expand selection to all atoms connected (bonded) to currently selected atoms",
+        description: "Select atoms directly bonded to currently selected atoms (one bond away)",
         parameters: { type: "object", properties: {} },
         execute: () => {
             if (!window.main?.molecule?.bonds) return { success: false, message: "No molecule loaded" };
             if (!window.atomsSelected?.length) return { success: false, message: "No atoms selected" };
 
-            const connected = new Set(window.atomsSelected);
-            let added = true;
+            const selected = new Set(window.atomsSelected);
+            const directlyBonded = new Set();
 
-            while (added) {
-                added = false;
-                window.main.molecule.bonds.forEach(bond => {
-                    const idx1 = window.main.molecule.atoms.indexOf(bond.atom1);
-                    const idx2 = window.main.molecule.atoms.indexOf(bond.atom2);
-                    if (connected.has(idx1) && !connected.has(idx2)) { connected.add(idx2); added = true; }
-                    if (connected.has(idx2) && !connected.has(idx1)) { connected.add(idx1); added = true; }
-                });
-            }
+            window.main.molecule.bonds.forEach(bond => {
+                const idx1 = window.main.molecule.atoms.indexOf(bond.atom1);
+                const idx2 = window.main.molecule.atoms.indexOf(bond.atom2);
+                if (selected.has(idx1) && !selected.has(idx2)) directlyBonded.add(idx2);
+                if (selected.has(idx2) && !selected.has(idx1)) directlyBonded.add(idx1);
+            });
 
-            return FUNCTIONS.select_atoms.execute({ indices: Array.from(connected), add: false });
+            if (directlyBonded.size === 0) return { success: false, message: "No bonded atoms found" };
+
+            return FUNCTIONS.select_atoms.execute({ indices: [...selected, ...directlyBonded], add: false });
         }
     },
 
@@ -741,7 +740,8 @@ After all tool calls, respond with 1-2 sentences max summarizing what was done. 
     let finalContent = null;
 
     try {
-        while (true) {
+        const MAX_ITERATIONS = 5;
+        for (let i = 0; i < MAX_ITERATIONS; i++) {
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AI_CONFIG.apiKey}` },
@@ -774,10 +774,14 @@ After all tool calls, respond with 1-2 sentences max summarizing what was done. 
                 for (const tc of msg.tool_calls) {
                     const fn = tc.function.name;
                     const args = JSON.parse(tc.function.arguments || '{}');
+                    console.log('AI calling:', fn, args);
                     if (FUNCTIONS[fn]) {
                         const res = await FUNCTIONS[fn].execute(args);
+                        console.log('Result:', res);
                         results.push({ tool_call_id: tc.id, role: "tool", name: fn, content: JSON.stringify(res) });
                         executed.push({ name: fn, args, result: res });
+                    } else {
+                        console.log('Function not found:', fn);
                     }
                 }
 
