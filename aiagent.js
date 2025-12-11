@@ -8,6 +8,7 @@ const AI_CONFIG = {
 if (!localStorage.getItem('chopchop_ai_session')) {
     localStorage.setItem('chopchop_ai_session', AI_CONFIG.sessionId);
 }
+//
 
 // ALL functions the AI can execute (kept on frontend - they manipulate DOM/Three.js)
 const FUNCTIONS = {
