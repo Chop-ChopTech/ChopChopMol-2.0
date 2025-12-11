@@ -1685,9 +1685,6 @@
                 const message = chatInput.value.trim();
                 if (!message) return;
 
-                if (!window.AIAgent) return;
-
-
                 // Add user message
                 addMessage('user', message);
                 chatInput.value = '';
