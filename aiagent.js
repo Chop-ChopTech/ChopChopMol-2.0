@@ -143,6 +143,63 @@ const FUNCTIONS = {
         }
     },
 
+    get_bonded_atoms: {
+        execute: (params) => {
+            if (!window.main?.molecule?.bonds) return { success: false, message: "No molecule loaded" };
+
+            const atoms = window.main.molecule.atoms;
+            const bonds = window.main.molecule.bonds;
+            const queryIndices = params.indices || window.atomsSelected || [];
+
+            if (queryIndices.length === 0) {
+                return { success: false, message: "No atoms specified" };
+            }
+
+            const querySet = new Set(queryIndices);
+            const result = {};
+
+            // For each queried atom, find what it's bonded to
+            queryIndices.forEach(idx => {
+                result[idx] = [];
+            });
+
+            bonds.forEach(bond => {
+                const idx1 = atoms.indexOf(bond.atom1);
+                const idx2 = atoms.indexOf(bond.atom2);
+
+                if (querySet.has(idx1)) {
+                    result[idx1].push({
+                        atom: idx2,
+                        element: atoms[idx2].type
+                    });
+                }
+                if (querySet.has(idx2)) {
+                    result[idx2].push({
+                        atom: idx1,
+                        element: atoms[idx1].type
+                    });
+                }
+            });
+
+            // Build readable summary
+            const summary = queryIndices.map(idx => {
+                const bondedTo = result[idx];
+                const atomEl = atoms[idx].type;
+                if (bondedTo.length === 0) {
+                    return `Atom ${idx} (${atomEl}): no bonds`;
+                }
+                const bondList = bondedTo.map(b => `${b.atom}(${b.element})`).join(', ');
+                return `Atom ${idx} (${atomEl}): bonded to ${bondList}`;
+            }).join('; ');
+
+            return {
+                success: true,
+                bonds: result,
+                message: summary
+            };
+        }
+    },
+
     rotate_molecule: {
         execute: (params) => {
             if (!window.rotationAxis) return { success: false, message: "No axis defined" };
