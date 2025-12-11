@@ -1582,7 +1582,7 @@
         </div>
 
         <div class="ai-chat-input-area">
-            <input type="text" id="aiChatInput" placeholder="Ask me anything" autocomplete="off">
+            <textarea id="aiChatInput" placeholder="Ask me anything" rows="3"></textarea>
             <button id="aiSendBtn"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
@@ -1613,6 +1613,11 @@
             const cancelKeyBtn = document.getElementById('aiCancelKeyBtn');
             const apiKeyInput = document.getElementById('aiApiKeyInput');
             const chatInput = document.getElementById('aiChatInput');
+            // Auto-resize textarea
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
+            });
             const sendBtn = document.getElementById('aiSendBtn');
             const messagesContainer = document.getElementById('aiChatMessages');
             const quickBtns = document.querySelectorAll('.ai-quick-btn');
