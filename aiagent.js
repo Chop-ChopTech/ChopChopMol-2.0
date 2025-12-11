@@ -115,11 +115,16 @@ const FUNCTIONS = {
             const idx1 = window.atomsSelected[0], idx2 = window.atomsSelected[1];
             const atom1 = window.main.molecule.atoms[idx1], atom2 = window.main.molecule.atoms[idx2];
             if (window.THREE) {
-                const pos1 = new window.THREE.Vector3(atom1.x, atom1.y, atom1.z);
-                const pos2 = new window.THREE.Vector3(atom2.x, atom2.y, atom2.z);
-                window.rotationAxis = { point: pos1.clone(), direction: new window.THREE.Vector3().subVectors(pos2, pos1).normalize() };
+                // Use atom.position (THREE.Vector3) for most accurate current position
+                const pos1 = atom1.position.clone();
+                const pos2 = atom2.position.clone();
+                window.rotationAxis = {
+                    point: pos1.clone(),
+                    direction: new window.THREE.Vector3().subVectors(pos2, pos1).normalize()
+                };
                 window.axisAtoms = [idx1, idx2];
             }
+            // Try clicking the button to create visual axis, but don't depend on it
             const btn = document.getElementById('defineAxisBtn');
             if (btn) btn.click();
             if (typeof window.render === 'function') window.render();
@@ -142,13 +147,28 @@ const FUNCTIONS = {
         execute: (params) => {
             if (!window.rotationAxis) return { success: false, message: "No axis defined" };
             if (typeof window.rotateSelectedAtoms !== 'function') return { success: false, message: "Rotation not available" };
-            if (typeof window.initializeRotationState === 'function' && window.rotationState) {
-                const atoms = window.atomsSelected?.length > 0 ? window.atomsSelected : Array.from({ length: window.main.molecule.atoms.length }, (_, i) => i);
-                window.initializeRotationState(atoms, window.rotationAxis);
+
+            // Reset rotation state to ensure clean rotation from current positions
+            if (window.rotationState) {
+                window.rotationState.basePositions = {};
+                window.rotationState.currentAngle = 0;
+                window.rotationState.isActive = false;
             }
-            window.rotateSelectedAtoms(params.angle, { relative: false });
+
+            // Perform the rotation
+            const result = window.rotateSelectedAtoms(params.angle, { relative: false });
+
+            // Finalize to commit the rotation
+            if (typeof window.finalizeRotation === 'function') {
+                window.finalizeRotation();
+            }
+
+            if (typeof window.updateMoleculeVisualization === 'function') {
+                window.updateMoleculeVisualization();
+            }
             if (typeof window.render === 'function') window.render();
-            return { success: true, message: `Rotated ${params.angle}°` };
+
+            return { success: result !== false, message: result !== false ? `Rotated ${params.angle}°` : "Rotation failed" };
         }
     },
 
@@ -156,7 +176,10 @@ const FUNCTIONS = {
         execute: (params) => {
             if (!window.rotationAxis) return { success: false, message: "No axis defined" };
             if (typeof window.translateSelectedAtoms !== 'function') return { success: false, message: "Translation not available" };
-            window.translateSelectedAtoms(params.distance);
+            // Convert angstroms to internal units (stretch factor is 4)
+            const stretchFactor = window.main?.molecule?.stretch || 4;
+            const internalDistance = params.distance * stretchFactor;
+            window.translateSelectedAtoms(internalDistance);
             if (typeof window.updateMoleculeVisualization === 'function') window.updateMoleculeVisualization();
             else if (typeof window.render === 'function') window.render();
             return { success: true, message: `Translated ${params.distance} Å` };

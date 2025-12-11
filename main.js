@@ -3342,6 +3342,7 @@ window.camera = camera
 window.labels = labels
 window.rotateSelectedAtoms = rotateSelectedAtoms;
 window.translateSelectedAtoms = translateSelectedAtoms;
+window.updateAtomMatrix = updateAtomMatrix;
 window.resetRotation = resetRotation;
 window.finalizeRotation = finalizeRotation;
 window.initializeRotationSystem = initializeRotationSystem;
