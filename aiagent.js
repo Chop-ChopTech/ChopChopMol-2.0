@@ -2,8 +2,12 @@
 
 const AI_CONFIG = {
     backendUrl: 'https://chopchopmol-ai-backend.onrender.com',
-    sessionId: localStorage.getItem('chopchop_ai_session') || null
+    sessionId: localStorage.getItem('chopchop_ai_session') || crypto.randomUUID()
 };
+// Save immediately if new
+if (!localStorage.getItem('chopchop_ai_session')) {
+    localStorage.setItem('chopchop_ai_session', AI_CONFIG.sessionId);
+}
 
 // ALL functions the AI can execute (kept on frontend - they manipulate DOM/Three.js)
 const FUNCTIONS = {
@@ -497,6 +501,7 @@ async function sendToAI(userMessage) {
 window.AIAgent = {
     send: sendToAI,
     clearHistory: async () => {
+        // Clear on backend
         if (AI_CONFIG.sessionId) {
             await fetch(`${AI_CONFIG.backendUrl}/ai/clear`, {
                 method: 'POST',
@@ -504,8 +509,9 @@ window.AIAgent = {
                 body: JSON.stringify({ sessionId: AI_CONFIG.sessionId })
             });
         }
-        AI_CONFIG.sessionId = null;
-        localStorage.removeItem('chopchop_ai_session');
+        // Generate NEW session ID so it's a fresh conversation
+        AI_CONFIG.sessionId = crypto.randomUUID();
+        localStorage.setItem('chopchop_ai_session', AI_CONFIG.sessionId);
     },
     // Keep these for backwards compatibility but they're not needed anymore
     setApiKey: () => console.log('API key is now stored on the backend'),
