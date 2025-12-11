@@ -2420,30 +2420,33 @@ input[type="range"]:focus {
 
 /* Input Area */
 .ai-chat-input-area {
-    position: relative;
-    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
     background: rgba(0, 0, 0, 0.3);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 10px;
 }
 
 #aiChatInput {
     width: 100%;
     box-sizing: border-box;
-    padding: 12px 12px 12px 16px;
+    padding: 12px 16px;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    border-radius: 20px;
     background: rgba(255, 255, 255, 0.05);
     color: white;
     font-size: 14px;
     font-family: 'Rubik', sans-serif;
     outline: none;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
     resize: none;
-    min-height: 80px;
-    max-height: 150px;
+    min-height: 24px;
+    max-height: 120px;
     overflow-y: auto;
     line-height: 1.4;
 }
+
 
 #aiChatInput::-webkit-scrollbar {
     width: 6px;
@@ -2473,22 +2476,21 @@ input[type="range"]:focus {
 }
 
 #aiSendBtn {
-    position: absolute;
-    right: 22px;
-    bottom: 27px;
+    align-self: flex-end;
     width: 36px;
     height: 36px;
     border: none;
     border-radius: 50%;
-    background-color: #006dea;
+    background: linear-gradient(135deg, #c96442, #b8860b);
     color: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 14px;
-    transition: all 0.2s;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.752);
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    flex-shrink: 0;
 }
 
 #aiSendBtn:hover {
