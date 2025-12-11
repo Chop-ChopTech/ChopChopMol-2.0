@@ -1685,6 +1685,9 @@
                 const message = chatInput.value.trim();
                 if (!message) return;
 
+                if (!window.AIAgent) return;
+
+
                 // Add user message
                 addMessage('user', message);
                 chatInput.value = '';
@@ -1783,7 +1786,7 @@
     <script src="stripe.js"></script>
 
     <script type="module" src="main.js"></script>
-    <script src="aiAgent.js"></script>
+    <script src="aiagent.js"></script>
 
 </body>
 
