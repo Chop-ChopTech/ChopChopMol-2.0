@@ -34,10 +34,7 @@ const FUNCTIONS = {
                     window.attachButtonEventListeners();
             }
             if (typeof window.render === 'function') window.render();
-
-            // Include axis status in return message
-            const axisStatus = window.rotationAxis ? " (axis still defined)" : "";
-            return { success: true, message: `Selected ${params.indices.length} atoms${axisStatus}` };
+            return { success: true, message: `Selected ${params.indices.length} atoms` };
         }
     },
 
@@ -59,115 +56,6 @@ const FUNCTIONS = {
             window.main.data.numAtoms++;
             window.main.newMolecule(window.main.data, window.main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
             return { success: true, message: `Added ${params.element}` };
-        }
-    },
-
-    transform_atoms: {
-        execute: async (params) => {
-            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
-
-            const { axisAtom1, axisAtom2, atomsToMove, angle, distance } = params;
-            const molecule = window.main.molecule;
-
-            // Validate axis atoms
-            const atom1 = molecule.atoms[axisAtom1];
-            const atom2 = molecule.atoms[axisAtom2];
-            if (!atom1 || !atom2) return { success: false, message: "Invalid axis atoms" };
-
-            // Capture starting positions
-            const startPositions = {};
-            atomsToMove.forEach(idx => {
-                const atom = molecule.atoms[idx];
-                if (atom) startPositions[idx] = { x: atom.x, y: atom.y, z: atom.z };
-            });
-
-            // Set up axis
-            const pos1 = atom1.position.clone();
-            const pos2 = atom2.position.clone();
-            window.rotationAxis = {
-                point: pos1.clone(),
-                direction: new window.THREE.Vector3().subVectors(pos2, pos1).normalize()
-            };
-            window.axisAtoms = [axisAtom1, axisAtom2];
-            window.atomsSelected = [...atomsToMove];
-
-            // Apply transformation instantly to get target positions
-            if (angle !== undefined) {
-                if (window.rotationState) {
-                    window.rotationState.basePositions = {};
-                    window.rotationState.currentAngle = 0;
-                    window.rotationState.isActive = false;
-                }
-                window.rotateSelectedAtoms(angle, { relative: false });
-                if (typeof window.finalizeRotation === 'function') window.finalizeRotation();
-            } else if (distance !== undefined) {
-                const stretch = molecule.stretch || 4;
-                window.translateSelectedAtoms(distance * stretch);
-            }
-
-            // Capture target positions
-            const targetPositions = {};
-            atomsToMove.forEach(idx => {
-                const atom = molecule.atoms[idx];
-                if (atom) targetPositions[idx] = { x: atom.x, y: atom.y, z: atom.z };
-            });
-
-            // Restore starting positions
-            atomsToMove.forEach(idx => {
-                const atom = molecule.atoms[idx];
-                const start = startPositions[idx];
-                if (atom && start) {
-                    atom.x = start.x;
-                    atom.y = start.y;
-                    atom.z = start.z;
-                    atom.position.set(start.x, start.y, start.z);
-                }
-            });
-
-            // Animate from start to target
-            const duration = 400;
-            const startTime = performance.now();
-
-            await new Promise(resolve => {
-                function tick() {
-                    const t = Math.min((performance.now() - startTime) / duration, 1);
-                    const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-
-                    atomsToMove.forEach(idx => {
-                        const atom = molecule.atoms[idx];
-                        const start = startPositions[idx];
-                        const end = targetPositions[idx];
-                        if (!atom || !start || !end) return;
-
-                        atom.x = start.x + (end.x - start.x) * eased;
-                        atom.y = start.y + (end.y - start.y) * eased;
-                        atom.z = start.z + (end.z - start.z) * eased;
-                        atom.position.set(atom.x, atom.y, atom.z);
-
-                        if (typeof window.updateAtomMatrix === 'function') {
-                            window.updateAtomMatrix(idx);
-                        }
-                    });
-
-                    if (molecule.instancedMesh) {
-                        molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-                    }
-                    molecule.updateBonds?.(window.main.mode);
-                    window.render?.();
-
-                    if (t < 1) {
-                        requestAnimationFrame(tick);
-                    } else {
-                        resolve();
-                    }
-                }
-                requestAnimationFrame(tick);
-            });
-
-            if (typeof window.updateMoleculeVisualization === 'function') window.updateMoleculeVisualization();
-
-            const action = angle !== undefined ? `Rotated ${angle}°` : `Translated ${distance} Å`;
-            return { success: true, message: `${action} for ${atomsToMove.length} atoms` };
         }
     },
 
@@ -224,40 +112,23 @@ const FUNCTIONS = {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
             if (!window.atomsSelected || window.atomsSelected.length !== 2)
                 return { success: false, message: `Need exactly 2 atoms selected. Have ${window.atomsSelected?.length || 0}.` };
-
             const idx1 = window.atomsSelected[0], idx2 = window.atomsSelected[1];
             const atom1 = window.main.molecule.atoms[idx1], atom2 = window.main.molecule.atoms[idx2];
-
-            if (!atom1 || !atom2) return { success: false, message: "Invalid atom indices" };
-
             if (window.THREE) {
+                // Use atom.position (THREE.Vector3) for most accurate current position
                 const pos1 = atom1.position.clone();
                 const pos2 = atom2.position.clone();
-                const direction = new window.THREE.Vector3().subVectors(pos2, pos1);
-
-                if (direction.length() < 0.001) {
-                    return { success: false, message: "Atoms too close - cannot define axis" };
-                }
-
                 window.rotationAxis = {
                     point: pos1.clone(),
-                    direction: direction.normalize()
+                    direction: new window.THREE.Vector3().subVectors(pos2, pos1).normalize()
                 };
                 window.axisAtoms = [idx1, idx2];
-
-                // Also reset rotation state for clean transformation
-                if (window.rotationState) {
-                    window.rotationState.basePositions = {};
-                    window.rotationState.currentAngle = 0;
-                    window.rotationState.isActive = false;
-                }
             }
-
+            // Try clicking the button to create visual axis, but don't depend on it
             const btn = document.getElementById('defineAxisBtn');
             if (btn) btn.click();
             if (typeof window.render === 'function') window.render();
-
-            return { success: true, message: `Axis defined from atom ${idx1 + 1} to atom ${idx2 + 1}` };
+            return { success: true, message: `Axis defined between atoms ${idx1} and ${idx2}` };
         }
     },
 
@@ -272,60 +143,46 @@ const FUNCTIONS = {
         }
     },
 
-    get_bonded_atoms: {
+    rotate_molecule: {
         execute: (params) => {
-            if (!window.main?.molecule?.bonds) return { success: false, message: "No molecule loaded" };
+            if (!window.rotationAxis) return { success: false, message: "No axis defined" };
+            if (typeof window.rotateSelectedAtoms !== 'function') return { success: false, message: "Rotation not available" };
 
-            const atoms = window.main.molecule.atoms;
-            const bonds = window.main.molecule.bonds;
-            const queryIndices = params.indices || window.atomsSelected || [];
-
-            if (queryIndices.length === 0) {
-                return { success: false, message: "No atoms specified" };
+            // Reset rotation state to ensure clean rotation from current positions
+            if (window.rotationState) {
+                window.rotationState.basePositions = {};
+                window.rotationState.currentAngle = 0;
+                window.rotationState.isActive = false;
             }
 
-            const querySet = new Set(queryIndices);
-            const result = {};
+            // Perform the rotation
+            const result = window.rotateSelectedAtoms(params.angle, { relative: false });
 
-            // For each queried atom, find what it's bonded to
-            queryIndices.forEach(idx => {
-                result[idx] = [];
-            });
+            // Finalize to commit the rotation
+            if (typeof window.finalizeRotation === 'function') {
+                window.finalizeRotation();
+            }
 
-            bonds.forEach(bond => {
-                const idx1 = atoms.indexOf(bond.atom1);
-                const idx2 = atoms.indexOf(bond.atom2);
+            if (typeof window.updateMoleculeVisualization === 'function') {
+                window.updateMoleculeVisualization();
+            }
+            if (typeof window.render === 'function') window.render();
 
-                if (querySet.has(idx1)) {
-                    result[idx1].push({
-                        atom: idx2,
-                        element: atoms[idx2].type
-                    });
-                }
-                if (querySet.has(idx2)) {
-                    result[idx2].push({
-                        atom: idx1,
-                        element: atoms[idx1].type
-                    });
-                }
-            });
+            return { success: result !== false, message: result !== false ? `Rotated ${params.angle}°` : "Rotation failed" };
+        }
+    },
 
-            // Build readable summary
-            const summary = queryIndices.map(idx => {
-                const bondedTo = result[idx];
-                const atomEl = atoms[idx].type;
-                if (bondedTo.length === 0) {
-                    return `Atom ${idx} (${atomEl}): no bonds`;
-                }
-                const bondList = bondedTo.map(b => `${b.atom}(${b.element})`).join(', ');
-                return `Atom ${idx} (${atomEl}): bonded to ${bondList}`;
-            }).join('; ');
-
-            return {
-                success: true,
-                bonds: result,
-                message: summary
-            };
+    translate_molecule: {
+        execute: (params) => {
+            if (!window.rotationAxis) return { success: false, message: "No axis defined" };
+            if (typeof window.translateSelectedAtoms !== 'function') return { success: false, message: "Translation not available" };
+            // Convert angstroms to internal units (stretch factor is 4)
+            const stretchFactor = window.main?.molecule?.stretch || 4;
+            const internalDistance = params.distance * stretchFactor;
+            window.translateSelectedAtoms(internalDistance);
+            if (typeof window.updateMoleculeVisualization === 'function') window.updateMoleculeVisualization();
+            else if (typeof window.render === 'function') window.render();
+            return { success: true, message: `Translated ${params.distance} Å` };
         }
     },
 
@@ -663,63 +520,6 @@ async function sendToAI(userMessage) {
         console.error('AI Error:', e);
         return { error: e.message };
     }
-}
-
-// Add this utility function (put it near the top of aiagent.js or in a utils file)
-
-function animateAtomPositions(atomIndices, targetPositions, duration = 400) {
-    const molecule = window.main?.molecule;
-    if (!molecule) return Promise.resolve();
-
-    // Capture starting positions
-    const startPositions = {};
-    atomIndices.forEach(idx => {
-        const atom = molecule.atoms[idx];
-        startPositions[idx] = { x: atom.x, y: atom.y, z: atom.z };
-    });
-
-    const startTime = performance.now();
-
-    return new Promise(resolve => {
-        function tick() {
-            const elapsed = performance.now() - startTime;
-            const t = Math.min(elapsed / duration, 1);
-
-            // Ease-out cubic
-            const eased = 1 - Math.pow(1 - t, 3);
-
-            // Lerp all atoms
-            atomIndices.forEach(idx => {
-                const atom = molecule.atoms[idx];
-                const start = startPositions[idx];
-                const end = targetPositions[idx];
-
-                atom.x = start.x + (end.x - start.x) * eased;
-                atom.y = start.y + (end.y - start.y) * eased;
-                atom.z = start.z + (end.z - start.z) * eased;
-                atom.position.set(atom.x, atom.y, atom.z);
-
-                // Update instanced mesh matrix
-                if (typeof window.updateAtomMatrix === 'function') {
-                    window.updateAtomMatrix(idx);
-                }
-            });
-
-            // Update visuals
-            if (molecule.instancedMesh) {
-                molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-            }
-            molecule.updateBonds?.(window.main.mode);
-            window.render?.();
-
-            if (t < 1) {
-                requestAnimationFrame(tick);
-            } else {
-                resolve();
-            }
-        }
-        requestAnimationFrame(tick);
-    });
 }
 
 window.AIAgent = {
