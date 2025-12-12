@@ -1689,39 +1689,51 @@
             async function handleSend() {
                 const message = chatInput.value.trim();
                 if (!message) return;
-
                 if (!window.AIAgent) return;
 
-
-                // Add user message
                 addMessage('user', message);
                 chatInput.value = '';
                 sendBtn.disabled = true;
 
-                // Show typing indicator
-                const typingEl = showTyping();
+                // Create streaming message element
+                const msgEl = document.createElement('div');
+                msgEl.className = 'ai-message assistant';
+                msgEl.innerHTML = '<div class="ai-message-content"></div>';
+                const welcome = messagesContainer.querySelector('.ai-welcome');
+                if (welcome) welcome.remove();
+                messagesContainer.appendChild(msgEl);
+                const contentEl = msgEl.querySelector('.ai-message-content');
+
+                let fullText = "";
 
                 try {
-                    const response = await window.AIAgent.send(message);
-
-                    // Remove typing indicator
-                    typingEl.remove();
+                    const response = await window.AIAgent.send(message, (chunk) => {
+                        fullText += chunk;
+                        contentEl.textContent = fullText;
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    });
 
                     if (response.error) {
-                        addMessage('error', response.error);
-                    } else {
-                        addMessage('assistant', response.content, response.actions);
+                        msgEl.classList.add('error');
+                        contentEl.textContent = response.error;
+                    } else if (response.actions?.length > 0) {
+                        // Add actions badge
+                        const actionsHtml = `
+                            <div class="ai-actions-badge">
+                                ${response.actions.map(a => `<span class="ai-action-tag"><i class="fas fa-bolt"></i> ${a.name}</span>`).join('')}
+                            </div>
+                        `;
+                        contentEl.innerHTML = escapeHtml(fullText) + actionsHtml;
                     }
                 } catch (err) {
-                    typingEl.remove();
-                    addMessage('error', 'Something went wrong. Please try again.');
+                    msgEl.classList.add('error');
+                    contentEl.textContent = 'Something went wrong. Please try again.';
                     console.error('AI Chat Error:', err);
                 }
 
                 sendBtn.disabled = false;
                 chatInput.focus();
             }
-
             sendBtn.addEventListener('click', handleSend);
 
             chatInput.addEventListener('keydown', (e) => {

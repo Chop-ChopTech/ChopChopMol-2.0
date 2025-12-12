@@ -584,11 +584,12 @@ function getMoleculeState() {
     };
 }
 
-async function sendToAI(userMessage) {
+async function sendToAI(userMessage, onChunk) {
     const state = getMoleculeState();
     let executed = [];
     let sessionId = AI_CONFIG.sessionId;
     let assistantMessage = null;
+    let fullContent = "";
 
     try {
         const MAX_ITERATIONS = 5;
@@ -599,7 +600,6 @@ async function sendToAI(userMessage) {
                 state
             };
 
-            // If we have tool results to send back
             if (assistantMessage) {
                 payload.toolResults = {
                     assistantMessage,
@@ -608,10 +608,10 @@ async function sendToAI(userMessage) {
                         content: JSON.stringify(e.result)
                     }))
                 };
-                executed = []; // Clear for next iteration
+                executed = [];
             }
 
-            const response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat`, {
+            const response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat/stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -622,24 +622,51 @@ async function sendToAI(userMessage) {
                 return { error: err.error || 'Backend error' };
             }
 
-            const data = await response.json();
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let iterationContent = "";
+            let toolCalls = null;
 
-            // Update session ID
-            if (data.sessionId) {
-                AI_CONFIG.sessionId = data.sessionId;
-                localStorage.setItem('chopchop_ai_session', data.sessionId);
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep incomplete line in buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = JSON.parse(line.slice(6));
+
+                        if (data.type === 'text') {
+                            iterationContent += data.content;
+                            fullContent += data.content;
+                            if (onChunk) onChunk(data.content);
+                        } else if (data.type === 'tool_calls') {
+                            toolCalls = data.toolCalls;
+                            assistantMessage = data.assistantMessage;
+                            if (data.sessionId) {
+                                AI_CONFIG.sessionId = data.sessionId;
+                                localStorage.setItem('chopchop_ai_session', data.sessionId);
+                            }
+                        } else if (data.type === 'done') {
+                            if (data.sessionId) {
+                                AI_CONFIG.sessionId = data.sessionId;
+                                localStorage.setItem('chopchop_ai_session', data.sessionId);
+                            }
+                            return { content: fullContent, actions: executed };
+                        } else if (data.type === 'error') {
+                            return { error: data.error };
+                        }
+                    }
+                }
             }
 
-            // If done, return final response
-            if (data.done) {
-                return { content: data.content, actions: executed };
-            }
-
-            // If we have tool calls, execute them
-            if (data.toolCalls?.length > 0) {
-                assistantMessage = data.assistantMessage;
-
-                for (const tc of data.toolCalls) {
+            // Execute tool calls if any
+            if (toolCalls?.length > 0) {
+                for (const tc of toolCalls) {
                     const fn = tc.function.name;
                     const args = JSON.parse(tc.function.arguments || '{}');
                     console.log('AI calling:', fn, args);
@@ -653,12 +680,11 @@ async function sendToAI(userMessage) {
                     }
                 }
             } else {
-                // No tool calls and not done - shouldn't happen, but break to avoid infinite loop
                 break;
             }
         }
 
-        return { content: "Completed", actions: executed };
+        return { content: fullContent, actions: executed };
 
     } catch (e) {
         console.error('AI Error:', e);
