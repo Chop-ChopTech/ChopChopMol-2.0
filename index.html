@@ -1697,23 +1697,36 @@
                 chatInput.value = '';
                 sendBtn.disabled = true;
 
-                // Create streaming message element
+                // Remove welcome and show typing indicator
+                const welcome = messagesContainer.querySelector('.ai-welcome');
+                if (welcome) welcome.remove();
+                const typingEl = showTyping();
+
+                // Prepare message element (added after first chunk)
                 const msgEl = document.createElement('div');
                 msgEl.className = 'ai-message assistant';
                 msgEl.innerHTML = '<div class="ai-message-content"></div>';
-                const welcome = messagesContainer.querySelector('.ai-welcome');
-                if (welcome) welcome.remove();
-                messagesContainer.appendChild(msgEl);
                 const contentEl = msgEl.querySelector('.ai-message-content');
 
                 let fullText = "";
+                let typingRemoved = false;
 
                 try {
                     const response = await window.AIAgent.send(message, (chunk) => {
+                        if (!typingRemoved) {
+                            typingEl.remove();
+                            messagesContainer.appendChild(msgEl);
+                            typingRemoved = true;
+                        }
                         fullText += chunk;
                         contentEl.textContent = fullText;
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     });
+
+                    if (!typingRemoved) {
+                        typingEl.remove();
+                        messagesContainer.appendChild(msgEl);
+                    }
 
                     if (response.error) {
                         msgEl.classList.add('error');
@@ -1728,6 +1741,10 @@
                         contentEl.innerHTML = escapeHtml(fullText) + actionsHtml;
                     }
                 } catch (err) {
+                    if (!typingRemoved) {
+                        typingEl.remove();
+                        messagesContainer.appendChild(msgEl);
+                    }
                     msgEl.classList.add('error');
                     contentEl.textContent = 'Something went wrong. Please try again.';
                     console.error('AI Chat Error:', err);
