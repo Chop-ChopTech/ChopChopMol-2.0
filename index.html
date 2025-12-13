@@ -630,6 +630,9 @@
                 style="border: none;">
                 <i class="fa-solid fa-dna"></i>
             </button>
+            <button id="toggleFileExplorer" class="dropdown-icon dropdown" title="File Explorer">
+                <i class="fas fa-folder-tree"></i>
+            </button>
             <button class="dropdown-icon" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
             <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"><i
                     class="fas fa-ruler"></i></button>
@@ -1551,6 +1554,37 @@
     </script>
 
     <!-- AI Chat Panel -->
+    <div id="fileExplorerPanel" class="file-explorer-panel">
+        <div class="file-explorer-header">
+            <span class="file-explorer-title">Explorer</span>
+            <div class="file-explorer-actions">
+                <button id="openFolderBtn" title="Open Folder"><i class="fas fa-folder-open"></i></button>
+                <button id="newFileBtn" title="New File" disabled><i class="fas fa-file-plus"></i></button>
+                <button id="refreshFolderBtn" title="Refresh" disabled><i class="fas fa-sync-alt"></i></button>
+                <button id="closeExplorerBtn" title="Close"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div id="fileTree" class="file-tree">
+            <div class="file-tree-empty">
+                <i class="fas fa-folder-open"></i>
+                <p>No folder open</p>
+                <button id="openFolderPrompt" class="fancy-button">Open Folder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Text Editor Modal (for non-molecule files) -->
+    <div id="textEditorModal" class="text-editor-modal">
+        <div class="text-editor-header">
+            <span id="textEditorFilename">file.txt</span>
+            <div class="text-editor-actions">
+                <button id="saveTextFileBtn" title="Save"><i class="fas fa-save"></i> Save</button>
+                <button id="closeTextEditorBtn" title="Close"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <textarea id="textEditorContent" spellcheck="false"></textarea>
+        <div id="textEditorStatus" class="text-editor-status">Ready</div>
+    </div>
     <div id="aiChatPanel" class="ai-chat-panel">
         <div class="ai-chat-header">
             <span><i class="fas fa-robot"></i> AI Assistant</span>
@@ -1822,6 +1856,7 @@
     <script src="stripe.js"></script>
 
     <script type="module" src="main.js"></script>
+    <script src="fileExplorer.js"></script>
     <script src="aiagent.js"></script>
 
 </body>

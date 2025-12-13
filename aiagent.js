@@ -12,6 +12,42 @@ if (!localStorage.getItem('chopchop_ai_session')) {
 
 // ALL functions the AI can execute (kept on frontend - they manipulate DOM/Three.js)
 const FUNCTIONS = {
+
+    create_file: {
+        execute: (params) => {
+            if (!window.fileExplorer?.directoryHandle) {
+                return { success: false, message: "No folder open in explorer" };
+            }
+            return window.fileExplorer.createFile(params.filename, params.content || '');
+        }
+    },
+
+    edit_file: {
+        execute: (params) => {
+            if (!window.fileExplorer?.directoryHandle) {
+                return { success: false, message: "No folder open in explorer" };
+            }
+            return window.fileExplorer.editFile(params.filename, params.content);
+        }
+    },
+
+    read_file: {
+        execute: (params) => {
+            if (!window.fileExplorer?.directoryHandle) {
+                return { success: false, message: "No folder open in explorer" };
+            }
+            return window.fileExplorer.readFile(params.filename);
+        }
+    },
+
+    list_folder_files: {
+        execute: () => {
+            if (!window.fileExplorer?.directoryHandle) {
+                return { success: false, message: "No folder open in explorer" };
+            }
+            return window.fileExplorer.listFiles();
+        }
+    },
     select_atoms: {
         execute: (params) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
