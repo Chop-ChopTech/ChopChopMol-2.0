@@ -26,6 +26,7 @@ class FileExplorer {
 
         // Event listeners
         document.getElementById('toggleFileExplorer')?.addEventListener('click', () => this.toggle());
+        document.getElementById('openFileBtn')?.addEventListener('click', () => document.getElementById('fileInput')?.click());
         document.getElementById('openFolderBtn')?.addEventListener('click', () => this.openFolder());
         document.getElementById('openFolderPrompt')?.addEventListener('click', () => this.openFolder());
         document.getElementById('newFileBtn')?.addEventListener('click', () => this.promptNewFile());
@@ -54,6 +55,15 @@ class FileExplorer {
 
         // Try to restore previous folder on load
         this.tryRestorePreviousFolder();
+        // Tab switching
+        document.querySelectorAll('.explorer-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.explorer-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.explorer-tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + 'Tab')?.classList.add('active');
+            });
+        });
     }
 
     toggle() {
