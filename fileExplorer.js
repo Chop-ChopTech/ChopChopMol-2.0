@@ -59,13 +59,29 @@ class FileExplorer {
 
     async openFolder() {
         try {
-            this.directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            // Request readwrite permission upfront
+            this.directoryHandle = await window.showDirectoryPicker({
+                mode: 'readwrite'
+            });
+
+            // Verify permission was granted
+            const permission = await this.directoryHandle.queryPermission({ mode: 'readwrite' });
+            if (permission !== 'granted') {
+                const requested = await this.directoryHandle.requestPermission({ mode: 'readwrite' });
+                if (requested !== 'granted') {
+                    alert('Write permission is required to save files');
+                    this.directoryHandle = null;
+                    return;
+                }
+            }
+
             document.getElementById('newFileBtn').disabled = false;
             document.getElementById('refreshFolderBtn').disabled = false;
             await this.refresh();
         } catch (err) {
             if (err.name !== 'AbortError') {
                 console.error('Error opening folder:', err);
+                alert('Error opening folder: ' + err.message);
             }
         }
     }
@@ -233,20 +249,35 @@ class FileExplorer {
 
     async createFile(filename, content) {
         if (!this.directoryHandle) {
-            return { success: false, error: 'No folder open' };
+            return { success: false, error: 'No folder open. Please open a folder first.' };
         }
 
         try {
-            const handle = await this.directoryHandle.getFileHandle(filename, { create: true });
-            const writable = await handle.createWritable();
+            // Verify we still have permission
+            const permission = await this.directoryHandle.queryPermission({ mode: 'readwrite' });
+            if (permission !== 'granted') {
+                const requested = await this.directoryHandle.requestPermission({ mode: 'readwrite' });
+                if (requested !== 'granted') {
+                    return { success: false, error: 'Write permission denied' };
+                }
+            }
+
+            // Create the file in the directory
+            const fileHandle = await this.directoryHandle.getFileHandle(filename, { create: true });
+
+            // Write content to the file
+            const writable = await fileHandle.createWritable();
             await writable.write(content);
             await writable.close();
 
+            // Track as AI-created and refresh tree
             this.aiCreatedFiles.add(filename);
+            this.fileHandles.set(filename, fileHandle);
             await this.refresh();
 
-            return { success: true, path: filename };
+            return { success: true, path: filename, message: `Created ${filename} in folder` };
         } catch (err) {
+            console.error('Error creating file:', err);
             return { success: false, error: err.message };
         }
     }
@@ -257,18 +288,22 @@ class FileExplorer {
             return { success: false, error: 'AI can only edit files it created' };
         }
 
-        const handle = this.fileHandles.get(filename);
-        if (!handle) {
-            return { success: false, error: 'File not found' };
+        if (!this.directoryHandle) {
+            return { success: false, error: 'No folder open' };
         }
 
         try {
-            const writable = await handle.createWritable();
+            // Get the file handle from the directory
+            const fileHandle = await this.directoryHandle.getFileHandle(filename);
+
+            // Write new content
+            const writable = await fileHandle.createWritable();
             await writable.write(content);
             await writable.close();
 
-            return { success: true };
+            return { success: true, message: `Updated ${filename}` };
         } catch (err) {
+            console.error('Error editing file:', err);
             return { success: false, error: err.message };
         }
     }
