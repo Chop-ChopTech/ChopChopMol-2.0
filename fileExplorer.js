@@ -9,6 +9,8 @@ class FileExplorer {
         this.aiCreatedFiles = new Set(); // tracks files created by AI
         this.currentFile = null;
         this.unsavedChanges = false;
+        this.dbName = 'ChopChopMolDB';
+        this.storeName = 'directoryHandles';
 
         this.init();
     }
@@ -45,6 +47,9 @@ class FileExplorer {
                 this.saveCurrentTextFile();
             }
         });
+
+        // Try to restore previous folder on load
+        this.tryRestorePreviousFolder();
     }
 
     toggle() {
@@ -59,12 +64,10 @@ class FileExplorer {
 
     async openFolder() {
         try {
-            // Request readwrite permission upfront
             this.directoryHandle = await window.showDirectoryPicker({
                 mode: 'readwrite'
             });
 
-            // Verify permission was granted
             const permission = await this.directoryHandle.queryPermission({ mode: 'readwrite' });
             if (permission !== 'granted') {
                 const requested = await this.directoryHandle.requestPermission({ mode: 'readwrite' });
@@ -74,6 +77,9 @@ class FileExplorer {
                     return;
                 }
             }
+
+            // Save handle to IndexedDB for next session
+            await this.saveDirectoryHandle(this.directoryHandle);
 
             document.getElementById('newFileBtn').disabled = false;
             document.getElementById('refreshFolderBtn').disabled = false;
@@ -333,6 +339,98 @@ class FileExplorer {
 
     isAIEditable(filename) {
         return this.aiCreatedFiles.has(filename);
+    }
+
+    // === IndexedDB methods for persisting directory handle ===
+
+    async openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+            request.onupgradeneeded = (e) => {
+                e.target.result.createObjectStore(this.storeName);
+            };
+        });
+    }
+
+    async saveDirectoryHandle(handle) {
+        try {
+            const db = await this.openDB();
+            const tx = db.transaction(this.storeName, 'readwrite');
+            tx.objectStore(this.storeName).put(handle, 'lastDirectory');
+            await new Promise((resolve, reject) => {
+                tx.oncomplete = resolve;
+                tx.onerror = () => reject(tx.error);
+            });
+            db.close();
+        } catch (err) {
+            console.error('Error saving directory handle:', err);
+        }
+    }
+
+    async getSavedDirectoryHandle() {
+        try {
+            const db = await this.openDB();
+            const tx = db.transaction(this.storeName, 'readonly');
+            const request = tx.objectStore(this.storeName).get('lastDirectory');
+            const handle = await new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+            db.close();
+            return handle;
+        } catch (err) {
+            console.error('Error getting saved directory handle:', err);
+            return null;
+        }
+    }
+
+    async tryRestorePreviousFolder() {
+        const handle = await this.getSavedDirectoryHandle();
+        if (!handle) return;
+
+        try {
+            const permission = await handle.queryPermission({ mode: 'readwrite' });
+
+            if (permission === 'granted') {
+                this.directoryHandle = handle;
+                document.getElementById('newFileBtn').disabled = false;
+                document.getElementById('refreshFolderBtn').disabled = false;
+                await this.refresh();
+            } else {
+                this.showReconnectPrompt(handle);
+            }
+        } catch (err) {
+            console.error('Error restoring folder:', err);
+        }
+    }
+
+    showReconnectPrompt(handle) {
+        this.fileTree.innerHTML = `
+            <div class="file-tree-empty">
+                <i class="fas fa-folder"></i>
+                <p>Previous: ${handle.name}</p>
+                <button id="reconnectFolderBtn" class="fancy-button" style="background-color: #00aa55;">Reconnect</button>
+                <button id="openNewFolderBtn" class="fancy-button" style="background-color: #006dea; margin-top: 8px;">Open Different</button>
+            </div>
+        `;
+
+        document.getElementById('reconnectFolderBtn')?.addEventListener('click', async () => {
+            try {
+                const permission = await handle.requestPermission({ mode: 'readwrite' });
+                if (permission === 'granted') {
+                    this.directoryHandle = handle;
+                    document.getElementById('newFileBtn').disabled = false;
+                    document.getElementById('refreshFolderBtn').disabled = false;
+                    await this.refresh();
+                }
+            } catch (err) {
+                console.error('Error reconnecting:', err);
+            }
+        });
+
+        document.getElementById('openNewFolderBtn')?.addEventListener('click', () => this.openFolder());
     }
 }
 

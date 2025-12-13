@@ -4660,7 +4660,7 @@ function updateRendererSize() {
     render();
 }
 window.addEventListener('resize', updateRendererSize);
-window.updateRendererSize = updateRendererSize;
+window.updateRendererSize = null;
 function toggleRibbon() {
     if (!window.main || !window.main.data) {
         alert('No molecule loaded');
