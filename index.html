@@ -1556,7 +1556,13 @@
     <!-- AI Chat Panel -->
     <div id="fileExplorerPanel" class="file-explorer-panel">
         <div class="file-explorer-header">
-            <span class="file-explorer-title">Explorer</span>
+            <div class="file-sort-dropdown">
+                <select id="fileSortSelect" class="file-sort-select" title="Sort files by">
+                    <option value="name">A-Z</option>
+                    <option value="date">Date</option>
+                    <option value="extension">Extension</option>
+                </select>
+            </div>
             <div class="file-explorer-actions">
                 <button id="openFolderBtn" title="Open Folder"><i class="fas fa-folder-open"></i></button>
                 <button id="newFileBtn" title="New File" disabled><i class="fas fa-file-plus"></i></button>
@@ -1568,7 +1574,8 @@
             <div class="file-tree-empty">
                 <i class="fas fa-folder-open"></i>
                 <p>No folder open</p>
-                <button id="openFolderPrompt" class="fancy-button" style="background-color: #006dea;">Open Folder</button>
+                <button id="openFolderPrompt" class="fancy-button" style="background-color: #006dea;">Open
+                    Folder</button>
             </div>
         </div>
     </div>

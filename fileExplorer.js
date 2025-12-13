@@ -11,7 +11,7 @@ class FileExplorer {
         this.unsavedChanges = false;
         this.dbName = 'ChopChopMolDB';
         this.storeName = 'directoryHandles';
-
+        this.sortMode = 'name'; // 'name', 'date', 'extension'
         this.init();
     }
 
@@ -33,6 +33,10 @@ class FileExplorer {
         document.getElementById('closeExplorerBtn')?.addEventListener('click', () => this.close());
         document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
         document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
+        document.getElementById('fileSortSelect')?.addEventListener('change', (e) => {
+            this.sortMode = e.target.value;
+            this.refresh();
+        });
 
         // Track unsaved changes
         this.textContent?.addEventListener('input', () => {
@@ -108,9 +112,20 @@ class FileExplorer {
             entries.push(entry);
         }
 
-        // Sort: folders first, then files alphabetically
+        // Sort: folders first, then files by selected mode
         entries.sort((a, b) => {
             if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+            if (a.kind === 'directory') return a.name.localeCompare(b.name);
+
+            if (this.sortMode === 'extension') {
+                const extA = a.name.includes('.') ? a.name.split('.').pop().toLowerCase() : '';
+                const extB = b.name.includes('.') ? b.name.split('.').pop().toLowerCase() : '';
+                if (extA !== extB) return extA.localeCompare(extB);
+                return a.name.localeCompare(b.name);
+            }
+            if (this.sortMode === 'date') {
+                return b.name.localeCompare(a.name); // Reverse for newest first (approximation)
+            }
             return a.name.localeCompare(b.name);
         });
 

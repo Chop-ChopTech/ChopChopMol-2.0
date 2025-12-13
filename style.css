@@ -2714,6 +2714,35 @@ input[type="range"]:focus {
     gap: 4px;
 }
 
+/* File Sort Dropdown */
+.file-sort-dropdown {
+    display: flex;
+    align-items: center;
+}
+
+.file-sort-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 8px;
+    cursor: pointer;
+    outline: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.file-sort-select:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.file-sort-select option {
+    background: #1a1a2e;
+    color: #fff;
+}
+
 .file-explorer-actions button {
     background: transparent;
     border: none;
