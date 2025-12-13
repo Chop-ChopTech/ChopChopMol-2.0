@@ -1629,11 +1629,13 @@
                 if (panel.classList.contains('open')) {
                     chatInput.focus();
                 }
+                setTimeout(() => window.updateRendererSize?.(), 310);
             });
 
             closeBtn.addEventListener('click', () => {
                 panel.classList.remove('open');
                 toggleBtn.classList.remove('active');
+                setTimeout(() => window.updateRendererSize?.(), 310);
             });
 
             // Clear chat

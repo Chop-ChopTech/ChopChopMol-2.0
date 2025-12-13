@@ -1100,7 +1100,7 @@ input[type="range"]:focus {
     justify-content: top;
     flex-direction: column;
     width: 190px;
-    height: 100vh;
+    height: auto;
     padding: 10px 0;
     position: absolute;
     top: 0;
@@ -2235,7 +2235,7 @@ input[type="range"]:focus {
     display: flex;
     flex-direction: column;
     z-index: 10001;
-    transition: right 0.3s ease !important;
+    transition: all 0.3s ease !important;
     box-shadow: -5px 0 30px rgba(0, 0, 0, 0.5);
     font-family: 'Rubik', sans-serif;
 }

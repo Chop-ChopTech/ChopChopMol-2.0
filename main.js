@@ -609,8 +609,11 @@ function worldToScreen(worldPos, camera) {
     vector.copy(worldPos);
     vector.project(camera);
 
-    // Correct viewport transformation
-    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+    const panel = document.getElementById('aiChatPanel');
+    const panelWidth = panel && panel.classList.contains('open') ? 380 : 0;
+    const viewportWidth = window.innerWidth - panelWidth;
+
+    const x = (vector.x * 0.5 + 0.5) * viewportWidth + panelWidth;
     const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
 
     return { x, y };
@@ -4633,12 +4636,17 @@ function render() {
     }
 }
 
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+function updateRendererSize() {
+    const panel = document.getElementById('aiChatPanel');
+    const panelWidth = panel && panel.classList.contains('open') ? 380 : 0;
+    const width = window.innerWidth - panelWidth;
+    const height = window.innerHeight;
+
+    camera.aspect = width / height;
     camera.updateProjectionMatrix();
 
     if (orthoCamera) {
-        const aspect = window.innerWidth / window.innerHeight;
+        const aspect = width / height;
         const frustumSize = 30;
         orthoCamera.left = -frustumSize * aspect / 2;
         orthoCamera.right = frustumSize * aspect / 2;
@@ -4647,9 +4655,12 @@ window.addEventListener('resize', () => {
         orthoCamera.updateProjectionMatrix();
     }
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(width, height);
+    renderer.domElement.style.marginLeft = panelWidth + 'px';
     render();
-});
+}
+window.addEventListener('resize', updateRendererSize);
+window.updateRendererSize = updateRendererSize;
 function toggleRibbon() {
     if (!window.main || !window.main.data) {
         alert('No molecule loaded');
