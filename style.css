@@ -2943,3 +2943,202 @@ input[type="range"]:focus {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
 }
+
+/* Explorer Tabs */
+.explorer-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.explorer-tab {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.explorer-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.explorer-tab.active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 2px solid #0088ff;
+}
+
+.tab-content {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+.local-actions {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.local-actions button {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.local-actions button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.local-actions button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Cloud Tab */
+.cloud-save-section {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cloud-input {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+}
+
+.cloud-input:focus {
+    border-color: rgba(0, 136, 255, 0.5);
+}
+
+.cloud-save-section button {
+    background: linear-gradient(135deg, #46a9ff, #343eff);
+    border: none;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.cloud-save-section button:hover {
+    opacity: 0.8;
+}
+
+.cloud-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.cloud-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cloud-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.cloud-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cloud-item-name {
+    color: #fff;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cloud-item-meta {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.cloud-item-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.cloud-item-actions button {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+}
+
+.cloud-item-actions button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.cloud-item-actions .import-btn {
+    background: rgba(0, 200, 100, 0.2);
+    color: #4ade80;
+}
+
+.cloud-item-actions .import-btn:hover {
+    background: rgba(0, 200, 100, 0.4);
+}
+
+.cloud-item-actions .delete-btn:hover {
+    background: rgba(255, 80, 80, 0.3);
+    color: #ff6b6b;
+}
+
+.cloud-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: rgba(255, 255, 255, 0.4);
+    gap: 8px;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.cloud-empty i {
+    font-size: 36px;
+    opacity: 0.3;
+}
+
+.cloud-loading {
+    text-align: center;
+    padding: 40px;
+    color: rgba(255, 255, 255, 0.5);
+}

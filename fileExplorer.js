@@ -33,6 +33,22 @@ class FileExplorer {
         document.getElementById('closeExplorerBtn')?.addEventListener('click', () => this.close());
         document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
         document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
+        // Tab switching
+        document.querySelectorAll('.explorer-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.explorer-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + 'TabContent').classList.add('active');
+                if (tab.dataset.tab === 'cloud') this.loadCloudMolecules();
+            });
+        });
+
+        // Cloud save
+        document.getElementById('cloudSaveBtn')?.addEventListener('click', () => this.saveToCloud());
+        document.getElementById('cloudSaveInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.saveToCloud();
+        });
 
         // Track unsaved changes
         this.textContent?.addEventListener('input', () => {
@@ -431,6 +447,88 @@ class FileExplorer {
         });
 
         document.getElementById('openNewFolderBtn')?.addEventListener('click', () => this.openFolder());
+    }
+    async saveToCloud() {
+        const input = document.getElementById('cloudSaveInput');
+        const name = input.value.trim();
+        if (!name) return alert('Enter a molecule name');
+        if (!window.main?.data) return alert('No molecule loaded');
+
+        const saved = await window.saveMolecule(name);
+        if (saved) {
+            input.value = '';
+            this.loadCloudMolecules();
+        }
+    }
+
+    async loadCloudMolecules() {
+        const list = document.getElementById('cloudList');
+        list.innerHTML = '<div class="cloud-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+
+        const molecules = await window.loadMoleculesList();
+
+        if (!molecules.length) {
+            list.innerHTML = '<div class="cloud-empty"><i class="fas fa-cloud"></i><p>No saved molecules</p></div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        molecules.forEach(mol => {
+            const date = mol.timestamp?.toDate?.() || new Date();
+            const item = document.createElement('div');
+            item.className = 'cloud-item';
+            item.innerHTML = `
+            <div class="cloud-item-info">
+                <div class="cloud-item-name">${mol.name}</div>
+                <div class="cloud-item-meta">${mol.atomCount || '?'} atoms • ${date.toLocaleDateString()}</div>
+            </div>
+            <div class="cloud-item-actions">
+                ${this.directoryHandle ? '<button class="import-btn" title="Save as XYZ"><i class="fas fa-download"></i></button>' : ''}
+                <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+
+            item.querySelector('.cloud-item-info').addEventListener('click', () => {
+                window.resetIsolationState?.();
+                window.loadMolecule(mol);
+                if (mol.data?.fragments) window.fragments = mol.data.fragments.map(f => f.atoms);
+            });
+
+            item.querySelector('.import-btn')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.importAsXYZ(mol);
+            });
+
+            item.querySelector('.delete-btn').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (await window.deleteMolecule(mol.id)) this.loadCloudMolecules();
+            });
+
+            list.appendChild(item);
+        });
+    }
+
+    async importAsXYZ(mol) {
+        if (!this.directoryHandle) return alert('Open a local folder first');
+        if (!mol.data?.molecule?.atomData) return alert('Invalid molecule data');
+
+        const atoms = mol.data.molecule.atomData;
+        let xyz = `${atoms.length}\n${mol.name}\n`;
+        atoms.forEach(a => {
+            xyz += `${a.element}  ${a.x.toFixed(6)}  ${a.y.toFixed(6)}  ${a.z.toFixed(6)}\n`;
+        });
+
+        const filename = mol.name.replace(/[^a-zA-Z0-9]/g, '_') + '.xyz';
+        try {
+            const fileHandle = await this.directoryHandle.getFileHandle(filename, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(xyz);
+            await writable.close();
+            this.refresh();
+            window.showSaveNotification?.(`Imported: ${filename}`);
+        } catch (err) {
+            alert('Error saving file: ' + err.message);
+        }
     }
 }
 

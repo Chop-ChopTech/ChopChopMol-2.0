@@ -639,38 +639,6 @@
             <button class="dropdown-icon" id="reset-camera" title="Reset Camera"
                 style="border: none; margin-right: 10px;" onclick="window.resetCamera()"><i
                     class="fa-solid fa-arrows-to-eye"></i></button>
-            <div class="dropdown" id="saveMoleculeToCloud">
-                <span class="dropdown-icon" title="Upload or load from cloud"><i class="fa-solid fa-cloud"></i></span>
-                <div class="dropdown-content shine" style="width: 200px;">
-                    <div id="molecule-save-section">
-                        <div id="load-save-message"></div>
-                        <input type="text" id="molecule-name-input" placeholder="Molecule name" class="fancy-textbox"
-                            style="margin-top: 10px; margin-bottom: 10px; width: calc(100% - 40px);">
-                        <button class="fancy-button" id="save-molecule-btn"
-                            style="background: linear-gradient(135deg, #46a9ff 0%, #343eff 100%);  width: 182px; height: 31px; border-radius: 30px; margin-bottom: 10px;">
-                            <i class="fas fa-cloud-upload-alt"></i> Save to Cloud
-                        </button>
-                        <button class="fancy-button" id="load-molecules-btn"
-                            style="background: linear-gradient(135deg, #ba6aff 0%, #a710ff 100%); width: 182px; height: 31px; border-radius: 30px;">
-                            <i class="fas fa-folder-open"></i> My Molecules
-                        </button>
-                        <select id="molecules-list" class="fancy-textbox"
-                            style="display: none; margin: 5px; width: calc(100% - 10px);">
-                            <option value="">Select a molecule...</option>
-                        </select>
-                        <div id="molecule-actions" style="display: none;">
-                            <button class="fancy-button" id="load-selected-btn"
-                                style="background: #4CAF50; margin: 5px;">
-                                Load
-                            </button>
-                            <button class="fancy-button" id="delete-selected-btn"
-                                style="background: #f44336; margin: 5px;">
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
             <!--  -->
             <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant" style="border: none;">
                 <i class="fa-solid fa-comment-dots"></i>
@@ -1558,18 +1526,34 @@
         <div class="file-explorer-header">
             <span class="file-explorer-title">Explorer</span>
             <div class="file-explorer-actions">
-                <button id="openFolderBtn" title="Open Folder"><i class="fas fa-folder-open"></i></button>
-                <button id="newFileBtn" title="New File" disabled><i class="fas fa-file-plus"></i></button>
-                <button id="refreshFolderBtn" title="Refresh" disabled><i class="fas fa-sync-alt"></i></button>
                 <button id="closeExplorerBtn" title="Close"><i class="fas fa-times"></i></button>
             </div>
         </div>
-        <div id="fileTree" class="file-tree">
-            <div class="file-tree-empty">
-                <i class="fas fa-folder-open"></i>
-                <p>No folder open</p>
-                <button id="openFolderPrompt" class="fancy-button" style="background-color: #006dea;">Open Folder</button>
+        <div class="explorer-tabs">
+            <button class="explorer-tab active" data-tab="local"><i class="fas fa-folder"></i> Local</button>
+            <button class="explorer-tab" data-tab="cloud"><i class="fas fa-cloud"></i> Cloud</button>
+        </div>
+        <div id="localTabContent" class="tab-content active">
+            <div class="local-actions">
+                <button id="openFolderBtn" title="Open Folder"><i class="fas fa-folder-open"></i></button>
+                <button id="newFileBtn" title="New File" disabled><i class="fas fa-file-plus"></i></button>
+                <button id="refreshFolderBtn" title="Refresh" disabled><i class="fas fa-sync-alt"></i></button>
             </div>
+            <div id="fileTree" class="file-tree">
+                <div class="file-tree-empty">
+                    <i class="fas fa-folder-open"></i>
+                    <p>No folder open</p>
+                    <button id="openFolderPrompt" class="fancy-button" style="background-color: #006dea;">Open
+                        Folder</button>
+                </div>
+            </div>
+        </div>
+        <div id="cloudTabContent" class="tab-content">
+            <div class="cloud-save-section">
+                <input type="text" id="cloudSaveInput" placeholder="Molecule name..." class="cloud-input">
+                <button id="cloudSaveBtn" title="Save to Cloud"><i class="fas fa-cloud-upload-alt"></i></button>
+            </div>
+            <div id="cloudList" class="cloud-list"></div>
         </div>
     </div>
 
