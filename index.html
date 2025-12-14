@@ -610,66 +610,83 @@
             style="display: none;" />
         <input id="compare" type="file" accept=".xyz, .mol, .pdb, .cif" style="display: none;">
         <div id="toolbar-background" class="shine">
-            <!-- FILE OPERATIONS DROPDOWN -->
             <div class="dropdown">
-                <span class="dropdown-icon" title="File Operations"><i class="fa-solid fa-folder-open"></i></span>
-                <div class="dropdown-content shine" style="left: 50%; min-width: 200px;">
-                    <button class="fancy-button" id="toggleFileExplorer"
-                        style="width: auto; padding-left: 33px; padding-right: 33px; background-color: #006dea;">
-                        <i class="fas fa-folder-tree"></i> File Explorer
-                    </button>
-                    <button class="fancy-button" id="import-json" style="width: 100%;">
-                        <i class="fas fa-file-code"></i> Load JSON
-                    </button>
-                    <div id="dbSearchPanel" class="db-search-panel" style="width: 100%;">
+                <span class="dropdown-icon" title="Upload file"><i class="fa-solid fa-upload"></i>
+                </span>
+                <div class="dropdown-content shine" style="left: 50%;">
+                    <button class="fancy-button" style="width: 140px; height: 31px; border-radius: 30px;"
+                        id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
+                    <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
+                        JSON</button>
+                    <div id="dbSearchPanel" class="db-search-panel">
                         <input id="dbSearchInput" class="db-search-input shine" type="text"
                             placeholder="Search Molecules" autocomplete="off">
                         <div id="dbSearchDropdown" class="db-search-dropdown"></div>
                     </div>
+
                 </div>
             </div>
-
-            <!-- VIEW DROPDOWN -->
-            <div class="dropdown">
-                <span class="dropdown-icon" title="View Options"><i class="fa-solid fa-eye"></i></span>
-                <div class="dropdown-content shine" style="left: 50%; min-width: 180px;">
-                    <button class="fancy-button" id="reset-camera" style="width: 100%;" onclick="window.resetCamera()">
-                        <i class="fa-solid fa-arrows-to-eye"></i> Reset Camera
-                    </button>
-                    <button class="fancy-button" id="toggle-ribbon" style="width: 100%;"
-                        onclick="window.toggleRibbon()">
-                        <i class="fa-solid fa-dna"></i> Toggle Ribbon
-                    </button>
-                    <button class="fancy-button" id="showAllBondLengths" style="width: 100%;">
-                        <i class="fas fa-ruler"></i> Bond Lengths
-                    </button>
-                    <button class="fancy-button" id="switchMode" style="width: 100%;">
-                        <i class="fa-solid fa-wand-sparkles"></i> Style Settings
-                    </button>
+            <button class="dropdown-icon" id="toggle-ribbon" onclick="window.toggleRibbon()" title="Toggle Ribbon View"
+                style="border: none;">
+                <i class="fa-solid fa-dna"></i>
+            </button>
+            <button class="dropdown-icon" id="toggleFileExplorer" title="File Explorer" style="border: none;">
+                <i class="fas fa-folder-tree"></i>
+            </button>
+            <button class="dropdown-icon" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
+            <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"><i
+                    class="fas fa-ruler"></i></button>
+            <button class="dropdown-icon" id="reset-camera" title="Reset Camera"
+                style="border: none; margin-right: 10px;" onclick="window.resetCamera()"><i
+                    class="fa-solid fa-arrows-to-eye"></i></button>
+            <div class="dropdown" id="saveMoleculeToCloud">
+                <span class="dropdown-icon" title="Upload or load from cloud"><i class="fa-solid fa-cloud"></i></span>
+                <div class="dropdown-content shine" style="width: 200px;">
+                    <div id="molecule-save-section">
+                        <div id="load-save-message"></div>
+                        <input type="text" id="molecule-name-input" placeholder="Molecule name" class="fancy-textbox"
+                            style="margin-top: 10px; margin-bottom: 10px; width: calc(100% - 40px);">
+                        <button class="fancy-button" id="save-molecule-btn"
+                            style="background: linear-gradient(135deg, #46a9ff 0%, #343eff 100%);  width: 182px; height: 31px; border-radius: 30px; margin-bottom: 10px;">
+                            <i class="fas fa-cloud-upload-alt"></i> Save to Cloud
+                        </button>
+                        <button class="fancy-button" id="load-molecules-btn"
+                            style="background: linear-gradient(135deg, #ba6aff 0%, #a710ff 100%); width: 182px; height: 31px; border-radius: 30px;">
+                            <i class="fas fa-folder-open"></i> My Molecules
+                        </button>
+                        <select id="molecules-list" class="fancy-textbox"
+                            style="display: none; margin: 5px; width: calc(100% - 10px);">
+                            <option value="">Select a molecule...</option>
+                        </select>
+                        <div id="molecule-actions" style="display: none;">
+                            <button class="fancy-button" id="load-selected-btn"
+                                style="background: #4CAF50; margin: 5px;">
+                                Load
+                            </button>
+                            <button class="fancy-button" id="delete-selected-btn"
+                                style="background: #f44336; margin: 5px;">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- AI ASSISTANT -->
+            <!--  -->
             <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant" style="border: none;">
                 <i class="fa-solid fa-comment-dots"></i>
             </button>
-
-            <!-- EXPORT DROPDOWN -->
             <div class="dropdown">
-                <span class="dropdown-icon" title="Export"><i class="fa-solid fa-download"></i></span>
-                <div class="dropdown-content shine" style="left: 50%;">
+                <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
+                <div class="dropdown-content shine">
                     <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
-                    <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255);">
-                        <i class="fas fa-file-download"></i> Save XYZ
-                    </button>
+                    <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255); "><i
+                            class="fas fa-file-download"></i> Save XYZ</button>
+
                 </div>
             </div>
+
         </div>
 
-        <!-- Hidden file inputs -->
-        <input type="file" id="fileInput" accept=".pdb,.mol,.sdf,.xyz,.cif,.mmcif,.mol2,.pqr,.gro,.cml"
-            style="display: none;" />
-        <input id="compare" type="file" accept=".xyz, .mol, .pdb, .cif" style="display: none;">
         <div class="dropdown" id="settings">
             <span class="dropdown-icon" style="font-size: 35px;"><i class="fa-solid fa-circle-user"></i></span>
             <div class="dropdown-content shine "
@@ -1539,65 +1556,23 @@
     <!-- AI Chat Panel -->
     <div id="fileExplorerPanel" class="file-explorer-panel">
         <div class="file-explorer-header">
-            <span class="file-explorer-title">Files</span>
+            <span class="file-explorer-title">Explorer</span>
             <div class="file-explorer-actions">
-                <button id="closeExplorerBtn" title="Close"><i class="fas fa-times"></i></button>
-            </div>
-        </div>
-
-        <!-- Tab Navigation -->
-        <div class="explorer-tabs">
-            <button class="explorer-tab active" data-tab="local">
-                <i class="fas fa-folder"></i> Local
-            </button>
-            <button class="explorer-tab" data-tab="cloud">
-                <i class="fas fa-cloud"></i> Cloud
-            </button>
-        </div>
-
-        <!-- Local Files Tab -->
-        <div id="localTab" class="explorer-tab-content active">
-            <div class="explorer-tab-actions">
-                <button id="openFileBtn" title="Open File"><i class="fas fa-file-import"></i></button>
                 <button id="openFolderBtn" title="Open Folder"><i class="fas fa-folder-open"></i></button>
                 <button id="newFileBtn" title="New File" disabled><i class="fas fa-file-plus"></i></button>
                 <button id="refreshFolderBtn" title="Refresh" disabled><i class="fas fa-sync-alt"></i></button>
-                <div class="file-sort-dropdown">
-                    <select id="fileSortSelect" class="file-sort-select" title="Sort by">
-                        <option value="name">A-Z</option>
-                        <option value="date">Date</option>
-                        <option value="extension">Extension</option>
-                    </select>
-                </div>
-            </div>
-            <div id="fileTree" class="file-tree">
-                <div class="file-tree-empty">
-                    <i class="fas fa-folder-open"></i>
-                    <p>No folder open</p>
-                    <button id="openFolderPrompt" class="explorer-action-btn">Open Folder</button>
-                </div>
+                <button id="closeExplorerBtn" title="Close"><i class="fas fa-times"></i></button>
             </div>
         </div>
-
-        <!-- Cloud Files Tab -->
-        <div id="cloudTab" class="explorer-tab-content">
-            <div class="cloud-save-section">
-                <input type="text" id="molecule-name-input" placeholder="Molecule name..." class="explorer-input">
-                <button id="save-molecule-btn" class="explorer-action-btn save-btn">
-                    <i class="fas fa-cloud-upload-alt"></i> Save Current
-                </button>
+        <div id="fileTree" class="file-tree">
+            <div class="file-tree-empty">
+                <i class="fas fa-folder-open"></i>
+                <p>No folder open</p>
+                <button id="openFolderPrompt" class="fancy-button" style="background-color: #006dea;">Open Folder</button>
             </div>
-            <div class="cloud-divider"></div>
-            <div id="cloudFileTree" class="file-tree">
-                <div class="file-tree-empty" id="cloudEmptyState">
-                    <i class="fas fa-cloud"></i>
-                    <p>No cloud files</p>
-                    <button id="load-molecules-btn" class="explorer-action-btn">Load My Files</button>
-                </div>
-            </div>
-            <div id="load-save-message" class="cloud-message"></div>
         </div>
     </div>
+
     <!-- Text Editor Modal (for non-molecule files) -->
     <div id="textEditorModal" class="text-editor-modal">
         <div class="text-editor-header">

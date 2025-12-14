@@ -3398,85 +3398,52 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-molecule-btn')?.addEventListener('click', async () => {
         const nameInput = document.getElementById('molecule-name-input');
         const name = nameInput.value.trim();
-        const msgEl = document.getElementById('load-save-message');
 
         if (!name) {
-            msgEl.textContent = 'Please enter a name';
-            msgEl.className = 'cloud-message error';
+            alert('Please enter a molecule name');
             return;
         }
-
-        msgEl.textContent = 'Saving...';
-        msgEl.className = 'cloud-message';
 
         const saved = await saveMolecule(name);
         if (saved) {
             nameInput.value = '';
-            msgEl.textContent = 'Saved successfully!';
-            msgEl.className = 'cloud-message success';
-            // Refresh the cloud file list
-            document.getElementById('load-molecules-btn')?.click();
-            setTimeout(() => { msgEl.textContent = ''; }, 2000);
-        } else {
-            msgEl.textContent = 'Failed to save';
-            msgEl.className = 'cloud-message error';
+
+            const select = document.getElementById('molecules-list');
+            if (select.style.display !== 'none') {
+                const molecules = await loadMoleculesList();
+                select.innerHTML = '<option value="">Select a molecule...</option>';
+                molecules.forEach(mol => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify(mol);
+                    option.textContent = `${mol.name} (${mol.atomCount} atoms)`;
+                    select.appendChild(option);
+                });
+            }
         }
     });
 
     // Load molecules list
     document.getElementById('load-molecules-btn')?.addEventListener('click', async () => {
         const molecules = await loadMoleculesList();
-        const cloudTree = document.getElementById('cloudFileTree');
-        const emptyState = document.getElementById('cloudEmptyState');
+        const select = document.getElementById('molecules-list');
+        const actions = document.getElementById('molecule-actions');
 
         if (molecules.length === 0) {
-            cloudTree.innerHTML = '';
-            cloudTree.appendChild(emptyState);
-            emptyState.querySelector('p').textContent = 'No saved molecules';
+            alert('No saved molecules found');
             return;
         }
 
-        cloudTree.innerHTML = '';
+        // Clear and populate
+        select.innerHTML = '<option value="">Select a molecule...</option>';
         molecules.forEach(mol => {
-            const item = document.createElement('div');
-            item.className = 'cloud-file-item';
-            item.innerHTML = `
-            <div class="cloud-file-info">
-                <i class="fas fa-atom"></i>
-                <div>
-                    <div class="cloud-file-name">${mol.name}</div>
-                    <div class="cloud-file-meta">${mol.atomCount} atoms</div>
-                </div>
-            </div>
-            <div class="cloud-file-actions">
-                <button class="load-btn" title="Load"><i class="fas fa-download"></i></button>
-                <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
-
-            item.querySelector('.load-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                loadMoleculeFromCloud(mol);
-            });
-
-            item.querySelector('.delete-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (confirm(`Delete "${mol.name}"?`)) {
-                    deleteMoleculeFromCloud(mol.id || mol.name);
-                }
-            });
-
-            item.addEventListener('click', () => {
-                document.querySelectorAll('.cloud-file-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-            });
-
-            item.addEventListener('dblclick', () => {
-                loadMoleculeFromCloud(mol);
-            });
-
-            cloudTree.appendChild(item);
+            const option = document.createElement('option');
+            option.value = JSON.stringify(mol);
+            option.textContent = `${mol.name} (${mol.atomCount} atoms)`;
+            select.appendChild(option);
         });
+
+        select.style.display = 'block';
+        actions.style.display = 'block';
     });
 
     // Load selected

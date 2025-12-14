@@ -11,7 +11,7 @@ class FileExplorer {
         this.unsavedChanges = false;
         this.dbName = 'ChopChopMolDB';
         this.storeName = 'directoryHandles';
-        this.sortMode = 'name'; // 'name', 'date', 'extension'
+
         this.init();
     }
 
@@ -26,7 +26,6 @@ class FileExplorer {
 
         // Event listeners
         document.getElementById('toggleFileExplorer')?.addEventListener('click', () => this.toggle());
-        document.getElementById('openFileBtn')?.addEventListener('click', () => document.getElementById('fileInput')?.click());
         document.getElementById('openFolderBtn')?.addEventListener('click', () => this.openFolder());
         document.getElementById('openFolderPrompt')?.addEventListener('click', () => this.openFolder());
         document.getElementById('newFileBtn')?.addEventListener('click', () => this.promptNewFile());
@@ -34,10 +33,6 @@ class FileExplorer {
         document.getElementById('closeExplorerBtn')?.addEventListener('click', () => this.close());
         document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
         document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
-        document.getElementById('fileSortSelect')?.addEventListener('change', (e) => {
-            this.sortMode = e.target.value;
-            this.refresh();
-        });
 
         // Track unsaved changes
         this.textContent?.addEventListener('input', () => {
@@ -55,15 +50,6 @@ class FileExplorer {
 
         // Try to restore previous folder on load
         this.tryRestorePreviousFolder();
-        // Tab switching
-        document.querySelectorAll('.explorer-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.explorer-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.explorer-tab-content').forEach(c => c.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById(tab.dataset.tab + 'Tab')?.classList.add('active');
-            });
-        });
     }
 
     toggle() {
@@ -122,20 +108,9 @@ class FileExplorer {
             entries.push(entry);
         }
 
-        // Sort: folders first, then files by selected mode
+        // Sort: folders first, then files alphabetically
         entries.sort((a, b) => {
             if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
-            if (a.kind === 'directory') return a.name.localeCompare(b.name);
-
-            if (this.sortMode === 'extension') {
-                const extA = a.name.includes('.') ? a.name.split('.').pop().toLowerCase() : '';
-                const extB = b.name.includes('.') ? b.name.split('.').pop().toLowerCase() : '';
-                if (extA !== extB) return extA.localeCompare(extB);
-                return a.name.localeCompare(b.name);
-            }
-            if (this.sortMode === 'date') {
-                return b.name.localeCompare(a.name); // Reverse for newest first (approximation)
-            }
             return a.name.localeCompare(b.name);
         });
 
