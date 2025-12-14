@@ -11,8 +11,7 @@ class FileExplorer {
         this.unsavedChanges = false;
         this.dbName = 'ChopChopMolDB';
         this.storeName = 'directoryHandles';
-        this.activeTab = 'local';
-        this.cloudMolecules = [];
+
         this.init();
     }
 
@@ -27,7 +26,6 @@ class FileExplorer {
 
         // Event listeners
         document.getElementById('toggleFileExplorer')?.addEventListener('click', () => this.toggle());
-        document.getElementById('openFileBtn')?.addEventListener('click', () => document.getElementById('fileInput')?.click());
         document.getElementById('openFolderBtn')?.addEventListener('click', () => this.openFolder());
         document.getElementById('openFolderPrompt')?.addEventListener('click', () => this.openFolder());
         document.getElementById('newFileBtn')?.addEventListener('click', () => this.promptNewFile());
@@ -35,8 +33,7 @@ class FileExplorer {
         document.getElementById('closeExplorerBtn')?.addEventListener('click', () => this.close());
         document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
         document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
-        document.getElementById('localTab')?.addEventListener('click', () => this.switchTab('local'));
-        document.getElementById('cloudTab')?.addEventListener('click', () => this.switchTab('cloud'));
+
         // Track unsaved changes
         this.textContent?.addEventListener('input', () => {
             this.unsavedChanges = true;
@@ -53,64 +50,6 @@ class FileExplorer {
 
         // Try to restore previous folder on load
         this.tryRestorePreviousFolder();
-    }
-
-    switchTab(tab) {
-        this.activeTab = tab;
-        document.getElementById('localTab')?.classList.toggle('active', tab === 'local');
-        document.getElementById('cloudTab')?.classList.toggle('active', tab === 'cloud');
-        document.getElementById('openFolderBtn').style.display = tab === 'local' ? '' : 'none';
-        document.getElementById('newFileBtn').style.display = tab === 'local' ? '' : 'none';
-        tab === 'local' ? this.showLocalFiles() : this.showCloudFiles();
-    }
-
-    showLocalFiles() {
-        if (this.directoryHandle) {
-            this.refresh();
-        } else {
-            this.fileTree.innerHTML = `<div class="file-tree-empty"><i class="fas fa-folder-open"></i><p>No folder open</p><button id="openFolderPrompt" class="fancy-button" style="background-color: #006dea;">Open Folder</button></div>`;
-            document.getElementById('openFolderPrompt')?.addEventListener('click', () => this.openFolder());
-        }
-    }
-
-    async showCloudFiles() {
-        this.fileTree.innerHTML = `<div class="file-tree-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>`;
-        if (!window.currentUser) {
-            this.fileTree.innerHTML = `<div class="file-tree-empty"><i class="fas fa-cloud"></i><p>Sign in to access cloud storage</p></div>`;
-            return;
-        }
-        try {
-            this.cloudMolecules = await window.loadMoleculesList();
-            if (!this.cloudMolecules.length) {
-                this.fileTree.innerHTML = `<div class="file-tree-empty"><i class="fas fa-cloud"></i><p>No saved molecules</p></div>`;
-                return;
-            }
-            this.fileTree.innerHTML = '';
-            for (const mol of this.cloudMolecules) {
-                const el = document.createElement('div');
-                el.className = 'file-item cloud-file';
-                el.dataset.id = mol.id;
-                const date = mol.timestamp?.toDate?.()?.toLocaleDateString() || '';
-                el.innerHTML = `<i class="fas fa-atom file-mol"></i><div class="cloud-file-info"><span class="cloud-file-name">${mol.name}</span><span class="cloud-file-meta">${mol.atomCount || '?'} atoms • ${date}</span></div><div class="cloud-file-actions">${this.directoryHandle ? `<button class="cloud-action-btn import-btn" title="Import to local"><i class="fas fa-download"></i></button>` : ''}<button class="cloud-action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button></div>`;
-                el.addEventListener('click', (e) => { if (!e.target.closest('.cloud-action-btn')) window.loadMolecule?.(mol); });
-                el.querySelector('.import-btn')?.addEventListener('click', (e) => { e.stopPropagation(); this.importToLocal(mol); });
-                el.querySelector('.delete-btn')?.addEventListener('click', (e) => { e.stopPropagation(); if (confirm(`Delete "${mol.name}"?`)) window.deleteMolecule?.(mol.id).then(() => this.showCloudFiles()); });
-                this.fileTree.appendChild(el);
-            }
-        } catch (err) {
-            this.fileTree.innerHTML = `<div class="file-tree-empty"><i class="fas fa-exclamation-triangle"></i><p>Error loading</p></div>`;
-        }
-    }
-
-    async importToLocal(mol) {
-        if (!this.directoryHandle) return alert('Open a local folder first');
-        const data = mol.data?.molecule || mol.data;
-        if (!data?.atoms) return alert('Invalid molecule data');
-        let xyz = `${data.numAtoms}\n${mol.name}\n`;
-        for (const a of data.atoms) xyz += `${a.element} ${a.x.toFixed(6)} ${a.y.toFixed(6)} ${a.z.toFixed(6)}\n`;
-        const fh = await this.directoryHandle.getFileHandle(`${mol.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.xyz`, { create: true });
-        const w = await fh.createWritable(); await w.write(xyz); await w.close();
-        window.showSaveNotification?.(`Imported to local folder`);
     }
 
     toggle() {
@@ -154,7 +93,6 @@ class FileExplorer {
     }
 
     async refresh() {
-        if (this.activeTab === 'cloud') { this.showCloudFiles(); return; }
         if (!this.directoryHandle) return;
 
         this.fileHandles.clear();
