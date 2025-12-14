@@ -30,6 +30,7 @@ class FileExplorer {
         document.getElementById('openFolderPrompt')?.addEventListener('click', () => this.openFolder());
         document.getElementById('newFileBtn')?.addEventListener('click', () => this.promptNewFile());
         document.getElementById('refreshFolderBtn')?.addEventListener('click', () => this.refresh());
+        document.getElementById('fileSortSelect')?.addEventListener('change', () => this.refresh());
         document.getElementById('closeExplorerBtn')?.addEventListener('click', () => this.close());
         document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
         document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
@@ -124,11 +125,35 @@ class FileExplorer {
             entries.push(entry);
         }
 
-        // Sort: folders first, then files alphabetically
-        entries.sort((a, b) => {
-            if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
-            return a.name.localeCompare(b.name);
-        });
+        // Sort based on dropdown selection
+        const sortMode = document.getElementById('fileSortSelect')?.value || 'alpha';
+
+        // Get file dates if sorting by date
+        if (sortMode === 'date') {
+            const dateMap = new Map();
+            for (const entry of entries) {
+                if (entry.kind === 'file') {
+                    const file = await entry.getFile();
+                    dateMap.set(entry.name, file.lastModified);
+                }
+            }
+            entries.sort((a, b) => {
+                if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+                if (a.kind === 'directory') return a.name.localeCompare(b.name);
+                return (dateMap.get(b.name) || 0) - (dateMap.get(a.name) || 0);
+            });
+        } else {
+            entries.sort((a, b) => {
+                if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+                if (a.kind === 'directory') return a.name.localeCompare(b.name);
+                if (sortMode === 'ext') {
+                    const extA = a.name.split('.').pop().toLowerCase();
+                    const extB = b.name.split('.').pop().toLowerCase();
+                    return extA.localeCompare(extB) || a.name.localeCompare(b.name);
+                }
+                return a.name.localeCompare(b.name);
+            });
+        }
 
         for (const entry of entries) {
             const fullPath = path ? `${path}/${entry.name}` : entry.name;

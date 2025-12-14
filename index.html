@@ -1524,7 +1524,11 @@
     <!-- AI Chat Panel -->
     <div id="fileExplorerPanel" class="file-explorer-panel">
         <div class="file-explorer-header">
-            <span class="file-explorer-title">Explorer</span>
+            <select id="fileSortSelect" class="file-explorer-title" title="Sort files">
+                <option value="alpha">A-Z</option>
+                <option value="date">Date</option>
+                <option value="ext">Extension</option>
+            </select>
             <div class="file-explorer-actions">
                 <button id="closeExplorerBtn" title="Close"><i class="fas fa-times"></i></button>
             </div>

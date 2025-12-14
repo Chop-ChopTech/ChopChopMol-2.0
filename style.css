@@ -2707,6 +2707,17 @@ input[type="range"]:focus {
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    outline: none;
+}
+
+.file-explorer-title option {
+    background: #1a1a2e;
+    color: #fff;
 }
 
 .file-explorer-actions {
