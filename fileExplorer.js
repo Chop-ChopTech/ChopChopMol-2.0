@@ -34,6 +34,10 @@ class FileExplorer {
         document.getElementById('closeExplorerBtn')?.addEventListener('click', () => this.close());
         document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
         document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
+        // File search filter
+        document.getElementById('fileSearchInput')?.addEventListener('input', (e) => {
+            this.filterFiles(e.target.value.toLowerCase());
+        });
         // Tab switching
         document.querySelectorAll('.explorer-tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -69,6 +73,46 @@ class FileExplorer {
         this.tryRestorePreviousFolder();
     }
 
+    filterFiles(query) {
+        const items = this.fileTree.querySelectorAll('.file-item, .folder-item');
+
+        if (!query) {
+            // Show all
+            items.forEach(item => item.classList.remove('hidden'));
+            this.fileTree.querySelectorAll('.folder-contents').forEach(fc => fc.classList.remove('hidden'));
+            return;
+        }
+
+        items.forEach(item => {
+            const name = item.querySelector('span')?.textContent?.toLowerCase() || '';
+            const matches = name.includes(query);
+            item.classList.toggle('hidden', !matches);
+
+            // If it's a matching folder, show its contents
+            if (item.classList.contains('folder-item') && matches) {
+                const contents = item.nextElementSibling;
+                if (contents?.classList.contains('folder-contents')) {
+                    contents.classList.remove('hidden');
+                    contents.querySelectorAll('.file-item, .folder-item').forEach(child => child.classList.remove('hidden'));
+                }
+            }
+        });
+
+        // Show parent folders of matching files
+        this.fileTree.querySelectorAll('.file-item:not(.hidden)').forEach(file => {
+            let parent = file.parentElement;
+            while (parent && parent !== this.fileTree) {
+                parent.classList.remove('hidden');
+                const folderItem = parent.previousElementSibling;
+                if (folderItem?.classList.contains('folder-item')) {
+                    folderItem.classList.remove('hidden');
+                    folderItem.classList.add('expanded');
+                }
+                parent = parent.parentElement;
+            }
+        });
+    }
+
     toggle() {
         this.panel?.classList.toggle('open');
         window.updateRendererSize?.();
@@ -99,6 +143,7 @@ class FileExplorer {
             await this.saveDirectoryHandle(this.directoryHandle);
 
             document.getElementById('newFileBtn').disabled = false;
+            document.getElementById('fileSearchInput').disabled = false;
             document.getElementById('refreshFolderBtn').disabled = false;
             await this.refresh();
         } catch (err) {
@@ -437,6 +482,7 @@ class FileExplorer {
             if (permission === 'granted') {
                 this.directoryHandle = handle;
                 document.getElementById('newFileBtn').disabled = false;
+                document.getElementById('fileSearchInput').disabled = false;
                 document.getElementById('refreshFolderBtn').disabled = false;
                 await this.refresh();
             } else {
