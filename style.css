@@ -881,8 +881,7 @@ input[type="range"]:focus {
 .db-search-input {
     position: relative;
     width: 150px;
-    padding: 14px 16px;
-    top: -2px;
+    padding: 8px 16px;
     background: rgba(0, 0, 0, 0.04);
     border-radius: 20px;
     border: none;
@@ -2942,4 +2941,90 @@ input[type="range"]:focus {
 #textEditorContent::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
+}
+
+.file-explorer-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.explorer-tab {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.explorer-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.explorer-tab.active {
+    color: #fff;
+    background: rgba(0, 136, 255, 0.2);
+    border-bottom: 2px solid #0088ff;
+}
+
+.cloud-file-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.cloud-file-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cloud-file-meta {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 2px;
+}
+
+.cloud-file-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.cloud-file:hover .cloud-file-actions {
+    opacity: 1;
+}
+
+.cloud-action-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cloud-action-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.cloud-action-btn.delete-btn:hover {
+    background: rgba(255, 100, 100, 0.3);
+    color: #ff6666;
 }
