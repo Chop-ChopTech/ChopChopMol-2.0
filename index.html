@@ -1526,6 +1526,7 @@
 
     <!-- AI Chat Panel -->
     <div id="fileExplorerPanel" class="file-explorer-panel">
+        <div class="panel-resizer panel-resizer-horizontal" id="explorerResizer"></div>
         <div class="file-explorer-header">
             <select id="fileSortSelect" class="file-explorer-title" title="Sort files">
                 <option value="alpha">A-Z</option>
@@ -1546,7 +1547,7 @@
             </div>
             <div id="cloudList" class="cloud-list"></div>
         </div>
-        <div class="explorer-divider"></div>
+        <div class="explorer-divider explorer-divider-resizer" id="explorerDivider"></div>
         <div class="explorer-section local-section">
             <div class="section-header">
                 <span><i class="fas fa-folder"></i> Local</span>
@@ -1582,6 +1583,7 @@
         <div id="textEditorStatus" class="text-editor-status">Ready</div>
     </div>
     <div id="aiChatPanel" class="ai-chat-panel">
+        <div class="panel-resizer panel-resizer-horizontal" id="aiPanelResizer"></div>
         <div class="ai-chat-header">
             <span><i class="fas fa-robot"></i> AI Assistant</span>
             <div class="ai-header-buttons">
@@ -1846,6 +1848,110 @@
                 console.log('AI Agent: API key loaded from storage');
             }
         })();
+
+        // Panel Resizers
+        (function () {
+            // AI Panel width resizer
+            const aiPanel = document.getElementById('aiChatPanel');
+            const aiResizer = document.getElementById('aiPanelResizer');
+
+            if (aiResizer && aiPanel) {
+                let startX, startWidth;
+
+                aiResizer.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    startX = e.clientX;
+                    startWidth = aiPanel.offsetWidth;
+                    aiResizer.classList.add('active');
+                    document.addEventListener('mousemove', resizeAI);
+                    document.addEventListener('mouseup', stopResizeAI);
+                });
+
+                function resizeAI(e) {
+                    aiPanel.classList.add('resizing');
+                    const diff = e.clientX - startX;
+                    const newWidth = Math.max(280, Math.min(600, startWidth + diff));
+                    aiPanel.style.width = newWidth + 'px';
+                    window.updateRendererSize?.();
+                }
+
+                function stopResizeAI() {
+                    aiPanel.classList.remove('resizing');
+                    aiResizer.classList.remove('active');
+                    document.removeEventListener('mousemove', resizeAI);
+                    document.removeEventListener('mouseup', stopResizeAI);
+                }
+            }
+
+            // File Explorer width resizer
+            const explorerPanel = document.getElementById('fileExplorerPanel');
+            const explorerResizer = document.getElementById('explorerResizer');
+
+            if (explorerResizer && explorerPanel) {
+                let startX, startWidth;
+
+                explorerResizer.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    startX = e.clientX;
+                    startWidth = explorerPanel.offsetWidth;
+                    explorerResizer.classList.add('active');
+                    document.addEventListener('mousemove', resizeExplorer);
+                    document.addEventListener('mouseup', stopResizeExplorer);
+                });
+
+                function resizeExplorer(e) {
+                    explorerPanel.classList.add('resizing');
+                    const diff = startX - e.clientX;
+                    const newWidth = Math.max(200, Math.min(500, startWidth + diff));
+                    explorerPanel.style.width = newWidth + 'px';
+                    window.updateRendererSize?.();
+                }
+
+                function stopResizeExplorer() {
+                    explorerPanel.classList.remove('resizing');
+                    explorerResizer.classList.remove('active');
+                    document.removeEventListener('mousemove', resizeExplorer);
+                    document.removeEventListener('mouseup', stopResizeExplorer);
+                }
+            }
+
+            // Cloud/Local divider resizer
+            const divider = document.getElementById('explorerDivider');
+            const cloudSection = document.querySelector('.cloud-section');
+            const localSection = document.querySelector('.local-section');
+
+            if (divider && cloudSection && localSection) {
+                let startY, startCloudHeight;
+
+                divider.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    startY = e.clientY;
+                    startCloudHeight = cloudSection.offsetHeight;
+                    divider.classList.add('active');
+                    document.addEventListener('mousemove', resizeSections);
+                    document.addEventListener('mouseup', stopResizeSections);
+                });
+
+                function resizeSections(e) {
+                    cloudSection.classList.add('resizing');
+                    localSection.classList.add('resizing');
+                    const diff = e.clientY - startY;
+                    const parentHeight = cloudSection.parentElement.offsetHeight;
+                    const newHeight = Math.max(80, Math.min(parentHeight - 150, startCloudHeight + diff));
+                    cloudSection.style.height = newHeight + 'px';
+                    cloudSection.style.flex = 'none';
+                }
+
+                function stopResizeSections() {
+                    cloudSection.classList.remove('resizing');
+                    localSection.classList.remove('resizing');
+                    divider.classList.remove('active');
+                    document.removeEventListener('mousemove', resizeSections);
+                    document.removeEventListener('mouseup', stopResizeSections);
+                }
+            }
+        })();
+    </script>
     </script>
     <pre id="output"></pre>
     <script src="stripe.js"></script>
