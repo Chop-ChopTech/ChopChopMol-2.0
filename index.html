@@ -1199,11 +1199,13 @@
 
         window.addEventListener('dragover', (event) => {
             event.preventDefault(); // Prevent default to allow drop
+            if (event.dataTransfer.types.includes('application/json')) return;
             dropZone.classList.add('dragover');
         });
 
         window.addEventListener('dragenter', (event) => {
             event.preventDefault();
+            if (event.dataTransfer.types.includes('application/json')) return;
             dropZone.classList.add('dragover');
         });
 
@@ -1534,11 +1536,21 @@
                 <button id="closeExplorerBtn" title="Close"><i class="fas fa-times"></i></button>
             </div>
         </div>
-        <div class="explorer-tabs">
-            <button class="explorer-tab active" data-tab="local"><i class="fas fa-folder"></i> Local</button>
-            <button class="explorer-tab" data-tab="cloud"><i class="fas fa-cloud"></i> Cloud</button>
+        <div class="explorer-section cloud-section">
+            <div class="section-header">
+                <span><i class="fas fa-cloud"></i> Cloud</span>
+            </div>
+            <div class="cloud-save-section">
+                <input type="text" id="cloudSaveInput" placeholder="Molecule name..." class="cloud-input">
+                <button id="cloudSaveBtn" title="Save to Cloud"><i class="fas fa-cloud-upload-alt"></i></button>
+            </div>
+            <div id="cloudList" class="cloud-list"></div>
         </div>
-        <div id="localTabContent" class="tab-content active">
+        <div class="explorer-divider"></div>
+        <div class="explorer-section local-section">
+            <div class="section-header">
+                <span><i class="fas fa-folder"></i> Local</span>
+            </div>
             <div class="local-actions">
                 <button id="openFolderBtn" title="Open Folder"><i class="fas fa-folder-open"></i></button>
                 <button id="newFileBtn" title="New File" disabled><i class="fas fa-file-plus"></i></button>
@@ -1554,13 +1566,6 @@
                         Folder</button>
                 </div>
             </div>
-        </div>
-        <div id="cloudTabContent" class="tab-content">
-            <div class="cloud-save-section">
-                <input type="text" id="cloudSaveInput" placeholder="Molecule name..." class="cloud-input">
-                <button id="cloudSaveBtn" title="Save to Cloud"><i class="fas fa-cloud-upload-alt"></i></button>
-            </div>
-            <div id="cloudList" class="cloud-list"></div>
         </div>
     </div>
 
@@ -1616,7 +1621,6 @@
     <div id="aiSettingsModal" class="ai-settings-modal">
         <div class="ai-settings-content">
             <h3><i class="fas fa-key"></i> OpenAI API Key</h3>
-            <input type="password" id="aiApiKeyInput" placeholder="sk-...">
             <p class="ai-settings-note">Your key is stored locally in your browser and never sent anywhere except
                 OpenAI.</p>
             <div class="ai-settings-buttons">
@@ -1636,7 +1640,7 @@
             const settingsModal = document.getElementById('aiSettingsModal');
             const saveKeyBtn = document.getElementById('aiSaveKeyBtn');
             const cancelKeyBtn = document.getElementById('aiCancelKeyBtn');
-            const apiKeyInput = document.getElementById('aiApiKeyInput');
+            const apiKeyInput = null;
             const chatInput = document.getElementById('aiChatInput');
             // Auto-resize textarea
             chatInput.addEventListener('input', () => {

@@ -38,16 +38,6 @@ class FileExplorer {
         document.getElementById('fileSearchInput')?.addEventListener('input', (e) => {
             this.filterFiles(e.target.value.toLowerCase());
         });
-        // Tab switching
-        document.querySelectorAll('.explorer-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.explorer-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById(tab.dataset.tab + 'TabContent').classList.add('active');
-                if (tab.dataset.tab === 'cloud') this.loadCloudMolecules();
-            });
-        });
 
         // Cloud save
         document.getElementById('cloudSaveBtn')?.addEventListener('click', () => this.saveToCloud());
@@ -68,11 +58,50 @@ class FileExplorer {
                 this.saveCurrentTextFile();
             }
         });
+        // Load cloud molecules on startup
+        if (window.loadMoleculesList) {
+            this.loadCloudMolecules();
+        } else {
+            window.addEventListener('authStateChanged', () => {
+                if (window.loadMoleculesList) this.loadCloudMolecules();
+            }, { once: true });
+        }
+
+        // Setup drag-drop for local folder
+        this.setupCloudDragDrop();
 
         // Try to restore previous folder on load
         this.tryRestorePreviousFolder();
     }
+    setupCloudDragDrop() {
+        const fileTree = document.getElementById('fileTree');
 
+        fileTree.addEventListener('dragover', (e) => {
+            if (!this.directoryHandle) return;
+            e.preventDefault();
+            fileTree.classList.add('drag-over');
+        });
+
+        fileTree.addEventListener('dragleave', () => {
+            fileTree.classList.remove('drag-over');
+        });
+
+        fileTree.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            fileTree.classList.remove('drag-over');
+
+            if (!this.directoryHandle) {
+                alert('Open a local folder first');
+                return;
+            }
+
+            const molData = e.dataTransfer.getData('application/json');
+            if (molData) {
+                const mol = JSON.parse(molData);
+                await this.importAsXYZ(mol);
+            }
+        });
+    }
     filterFiles(query) {
         const items = this.fileTree.querySelectorAll('.file-item, .folder-item');
 
@@ -532,6 +561,7 @@ class FileExplorer {
         }
     }
 
+    // Find where cloud items are created and add draggable attribute + events:
     async loadCloudMolecules() {
         const list = document.getElementById('cloudList');
         list.innerHTML = '<div class="cloud-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
@@ -548,6 +578,7 @@ class FileExplorer {
             const date = mol.timestamp?.toDate?.() || new Date();
             const item = document.createElement('div');
             item.className = 'cloud-item';
+            item.draggable = true;  // ADD THIS
             item.innerHTML = `
             <div class="cloud-item-info">
                 <div class="cloud-item-name">${mol.name}</div>
@@ -558,6 +589,17 @@ class FileExplorer {
                 <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
             </div>
         `;
+
+            // ADD drag events
+            item.addEventListener('dragstart', (e) => {
+                item.classList.add('dragging');
+                e.dataTransfer.setData('application/json', JSON.stringify(mol));
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+            });
 
             item.querySelector('.cloud-item-info').addEventListener('click', () => {
                 window.resetIsolationState?.();
