@@ -590,6 +590,125 @@ const FUNCTIONS = {
         }
     },
 
+    rotational_scan: {
+        execute: (params) => {
+            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
+            
+            const { axisAtom1, axisAtom2, atomsToMove, increment } = params;
+            const molecule = window.main.molecule;
+            const stretch = molecule.stretch || 4;
+            
+            // Validate
+            const atom1 = molecule.atoms[axisAtom1];
+            const atom2 = molecule.atoms[axisAtom2];
+            if (!atom1 || !atom2) return { success: false, message: "Invalid axis atoms" };
+            if (!atomsToMove || atomsToMove.length === 0) return { success: false, message: "No atoms to rotate" };
+            if (!increment || increment <= 0) return { success: false, message: "Increment must be positive" };
+            
+            const steps = Math.floor(360 / increment);
+            const frames = [];
+            
+            // Get all atom data for XYZ generation
+            const allAtoms = molecule.atoms;
+            
+            // Store original positions of atoms to move
+            const originalPositions = {};
+            atomsToMove.forEach(idx => {
+                const atom = allAtoms[idx];
+                if (atom) originalPositions[idx] = atom.position.clone();
+            });
+            
+            // Axis setup
+            const pos1 = atom1.position.clone();
+            const pos2 = atom2.position.clone();
+            const axisDirection = new window.THREE.Vector3().subVectors(pos2, pos1).normalize();
+            const axisPoint = pos1.clone();
+            
+            // Generate frames
+            for (let step = 0; step < steps; step++) {
+                const angle = step * increment;
+                const angleRadians = angle * Math.PI / 180;
+                const rotationMatrix = new window.THREE.Matrix4().makeRotationAxis(axisDirection, angleRadians);
+                
+                // Build XYZ for this frame
+                let xyz = `${allAtoms.length}\nRotational scan angle=${angle}\n`;
+                
+                allAtoms.forEach((atom, idx) => {
+                    let x, y, z;
+                    
+                    if (atomsToMove.includes(idx)) {
+                        // Rotate this atom
+                        const basePos = originalPositions[idx].clone();
+                        basePos.sub(axisPoint);
+                        basePos.applyMatrix4(rotationMatrix);
+                        basePos.add(axisPoint);
+                        x = basePos.x / stretch;
+                        y = basePos.y / stretch;
+                        z = basePos.z / stretch;
+                    } else {
+                        // Keep original position
+                        x = atom.position.x / stretch;
+                        y = atom.position.y / stretch;
+                        z = atom.position.z / stretch;
+                    }
+                    
+                    xyz += `${atom.type}  ${x.toFixed(6)}  ${y.toFixed(6)}  ${z.toFixed(6)}\n`;
+                });
+                
+                frames.push(xyz);
+            }
+            
+            // Combine all frames into multi-frame XYZ
+            const combinedXYZ = frames.join('');
+            
+            // Parse into xyzFrames format for the player
+            const parsedFrames = [];
+            frames.forEach((frameXYZ, idx) => {
+                const lines = frameXYZ.trim().split('\n');
+                const numAtoms = parseInt(lines[0]);
+                const comment = lines[1];
+                const atomData = [];
+                
+                for (let i = 2; i < 2 + numAtoms; i++) {
+                    const parts = lines[i].trim().split(/\s+/);
+                    atomData.push({
+                        element: parts[0],
+                        x: parseFloat(parts[1]),
+                        y: parseFloat(parts[2]),
+                        z: parseFloat(parts[3])
+                    });
+                }
+                
+                parsedFrames.push({ atomData, numAtoms, comment });
+            });
+            
+            // Set up frame player
+            window.xyzFrames = parsedFrames;
+            
+            // Show frame slider
+            const frameSliderContainer = document.getElementById('frameSliderContainer');
+            if (frameSliderContainer) {
+                frameSliderContainer.style.display = 'flex';
+                const slider = document.getElementById('frameSlider');
+                const label = document.getElementById('frameLabel');
+                if (slider) {
+                    slider.max = parsedFrames.length - 1;
+                    slider.value = 0;
+                }
+                if (label) {
+                    label.textContent = `Frame 1 / ${parsedFrames.length}`;
+                }
+            }
+            
+            return { 
+                success: true, 
+                message: `Generated ${steps} frames (0° to ${(steps-1) * increment}° in ${increment}° increments). Use the frame slider to play.`,
+                frameCount: steps,
+                xyzContent: combinedXYZ
+            };
+        }
+},
+
     toggle_labels: {
         execute: (params) => {
             if (!window.main?.molecule) return { success: false, message: "No molecule loaded" };
