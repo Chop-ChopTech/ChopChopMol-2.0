@@ -34,6 +34,7 @@ class FileExplorer {
         document.getElementById('closeExplorerBtn')?.addEventListener('click', () => this.close());
         document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
         document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
+        document.getElementById('saveLocalBtn')?.addEventListener('click', () => this.saveToLocal());
         // File search filter
         document.getElementById('fileSearchInput')?.addEventListener('input', (e) => {
             this.filterFiles(e.target.value.toLowerCase());
@@ -101,6 +102,231 @@ class FileExplorer {
                 await this.importAsXYZ(mol);
             }
         });
+    }
+
+    async saveToLocal() {
+        if (!this.directoryHandle) return;
+        if (!window.main?.data) return window.showSaveNotification?.('No molecule loaded');
+
+        const atoms = window.main.data?.atomData || window.main.molecule?.atomData || [];
+        if (!atoms.length) return window.showSaveNotification?.('No atom data to save');
+
+        const defaultName = (window.main.data.name || 'molecule').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        // Create inline save dialog
+        const existing = document.getElementById('localSaveDialog');
+        if (existing) existing.remove();
+
+        const dialog = document.createElement('div');
+        dialog.id = 'localSaveDialog';
+        dialog.className = 'local-save-dialog';
+        dialog.innerHTML = `
+        <input type="text" id="localSaveInput" placeholder="filename" value="${defaultName}">
+        <select id="localSaveExt">
+            <option value="xyz">.xyz</option>
+            <option value="pdb">.pdb</option>
+            <option value="mol">.mol</option>
+        </select>
+        <button id="localSaveConfirm" title="Save"><i class="fas fa-check"></i></button>
+        <button id="localSaveCancel" title="Cancel"><i class="fas fa-times"></i></button>
+    `;
+
+        const localActions = document.querySelector('.local-actions');
+        localActions.insertAdjacentElement('afterend', dialog);
+
+        const input = document.getElementById('localSaveInput');
+        const extSelect = document.getElementById('localSaveExt');
+        input.focus();
+        input.select();
+
+        const cleanup = () => dialog.remove();
+
+        const doSave = async () => {
+            const name = input.value.trim();
+            if (!name) return;
+
+            const ext = extSelect.value;
+            const filename = name + '.' + ext;
+            let content = '';
+
+            if (ext === 'xyz') {
+                content = `${atoms.length}\n${name}\n`;
+                atoms.forEach(a => {
+                    content += `${a.element}  ${a.x.toFixed(6)}  ${a.y.toFixed(6)}  ${a.z.toFixed(6)}\n`;
+                });
+            } else if (ext === 'pdb') {
+                atoms.forEach((a, i) => {
+                    const serial = String(i + 1).padStart(5);
+                    const atomName = a.element.padEnd(4);
+                    const x = a.x.toFixed(3).padStart(8);
+                    const y = a.y.toFixed(3).padStart(8);
+                    const z = a.z.toFixed(3).padStart(8);
+                    content += `ATOM  ${serial}  ${atomName}MOL     1    ${x}${y}${z}  1.00  0.00          ${a.element.padStart(2)}\n`;
+                });
+                content += 'END\n';
+            } else if (ext === 'mol') {
+                content = `${name}\n  ChopChopMol\n\n`;
+                const bonds = window.main.molecule?.bonds || [];
+                content += `${String(atoms.length).padStart(3)}${String(bonds.length).padStart(3)}  0  0  0  0  0  0  0  0999 V2000\n`;
+                atoms.forEach(a => {
+                    content += `${a.x.toFixed(4).padStart(10)}${a.y.toFixed(4).padStart(10)}${a.z.toFixed(4).padStart(10)} ${a.element.padEnd(3)} 0  0  0  0  0  0  0  0  0  0  0  0\n`;
+                });
+                bonds.forEach(b => {
+                    content += `${String(b.start + 1).padStart(3)}${String(b.end + 1).padStart(3)}${String(b.order || 1).padStart(3)}  0  0  0  0\n`;
+                });
+                content += 'M  END\n';
+            }
+
+            try {
+                const fileHandle = await this.directoryHandle.getFileHandle(filename, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(content);
+                await writable.close();
+                cleanup();
+                this.refresh();
+                window.showSaveNotification?.(`Saved: ${filename}`);
+            } catch (err) {
+                window.showSaveNotification?.('Error: ' + err.message);
+            }
+        };
+
+        document.getElementById('localSaveConfirm').addEventListener('click', doSave);
+        document.getElementById('localSaveCancel').addEventListener('click', cleanup);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') doSave();
+            if (e.key === 'Escape') cleanup();
+        });
+    }
+
+    async renameFile(path) {
+        const handle = this.fileHandles.get(path);
+        if (!handle) return;
+
+        const oldName = path.split('/').pop();
+        const fileItem = document.querySelector(`.file-item[data-path="${path}"]`);
+        if (!fileItem) return;
+
+        const originalHTML = fileItem.innerHTML;
+        fileItem.innerHTML = `
+        <input type="text" class="rename-input" value="${oldName}">
+        <button class="rename-confirm" title="Confirm"><i class="fas fa-check"></i></button>
+        <button class="rename-cancel" title="Cancel"><i class="fas fa-times"></i></button>
+    `;
+
+        const input = fileItem.querySelector('.rename-input');
+        input.focus();
+        const dotIndex = oldName.lastIndexOf('.');
+        input.setSelectionRange(0, dotIndex > 0 ? dotIndex : oldName.length);
+
+        const cleanup = () => { fileItem.innerHTML = originalHTML; };
+
+        const doRename = async () => {
+            const newName = input.value.trim();
+            if (!newName || newName === oldName) return cleanup();
+
+            try {
+                const file = await handle.getFile();
+                const content = await file.text();
+
+                const newHandle = await this.directoryHandle.getFileHandle(newName, { create: true });
+                const writable = await newHandle.createWritable();
+                await writable.write(content);
+                await writable.close();
+
+                await this.directoryHandle.removeEntry(oldName);
+
+                this.fileHandles.delete(path);
+                this.fileHandles.set(newName, newHandle);
+                if (this.aiCreatedFiles.has(oldName)) {
+                    this.aiCreatedFiles.delete(oldName);
+                    this.aiCreatedFiles.add(newName);
+                }
+
+                this.refresh();
+                window.showSaveNotification?.(`Renamed to: ${newName}`);
+            } catch (err) {
+                window.showSaveNotification?.('Error: ' + err.message);
+                cleanup();
+            }
+        };
+
+        fileItem.querySelector('.rename-confirm').addEventListener('click', doRename);
+        fileItem.querySelector('.rename-cancel').addEventListener('click', cleanup);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') doRename();
+            if (e.key === 'Escape') cleanup();
+        });
+        input.addEventListener('blur', (e) => {
+            if (!e.relatedTarget?.closest('.file-item')) cleanup();
+        });
+    }
+    async deleteFile(path) {
+        const name = path.split('/').pop();
+        const fileItem = document.querySelector(`.file-item[data-path="${path}"]`);
+        if (!fileItem) return;
+
+        const originalHTML = fileItem.innerHTML;
+        fileItem.innerHTML = `
+        <span class="delete-prompt">Delete "${name}"?</span>
+        <button class="delete-confirm" title="Yes"><i class="fas fa-check"></i></button>
+        <button class="delete-cancel" title="No"><i class="fas fa-times"></i></button>
+    `;
+
+        const cleanup = () => { fileItem.innerHTML = originalHTML; };
+
+        const doDelete = async () => {
+            try {
+                await this.directoryHandle.removeEntry(name);
+                this.fileHandles.delete(path);
+                this.aiCreatedFiles.delete(name);
+                this.refresh();
+                window.showSaveNotification?.(`Deleted: ${name}`);
+            } catch (err) {
+                window.showSaveNotification?.('Error: ' + err.message);
+                cleanup();
+            }
+        };
+
+        fileItem.querySelector('.delete-confirm').addEventListener('click', doDelete);
+        fileItem.querySelector('.delete-cancel').addEventListener('click', cleanup);
+    }
+
+    showContextMenu(e, path) {
+        e.preventDefault();
+
+        // Remove existing menu
+        document.querySelector('.file-context-menu')?.remove();
+
+        const menu = document.createElement('div');
+        menu.className = 'file-context-menu';
+        menu.innerHTML = `
+        <div class="file-context-menu-item" data-action="open"><i class="fas fa-external-link-alt"></i> Open</div>
+        <div class="file-context-menu-item" data-action="rename"><i class="fas fa-pen"></i> Rename</div>
+        <div class="file-context-menu-divider"></div>
+        <div class="file-context-menu-item danger" data-action="delete"><i class="fas fa-trash"></i> Delete</div>
+    `;
+
+        menu.style.left = e.clientX + 'px';
+        menu.style.top = e.clientY + 'px';
+        document.body.appendChild(menu);
+
+        // Keep menu in viewport
+        const rect = menu.getBoundingClientRect();
+        if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
+        if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
+
+        menu.addEventListener('click', (ev) => {
+            const action = ev.target.closest('.file-context-menu-item')?.dataset.action;
+            if (action === 'open') this.openFile(path);
+            if (action === 'rename') this.renameFile(path);
+            if (action === 'delete') this.deleteFile(path);
+            menu.remove();
+        });
+
+        // Close on click outside
+        setTimeout(() => {
+            document.addEventListener('click', () => menu.remove(), { once: true });
+        }, 0);
     }
     filterFiles(query) {
         const items = this.fileTree.querySelectorAll('.file-item, .folder-item');
@@ -174,6 +400,7 @@ class FileExplorer {
             document.getElementById('newFileBtn').disabled = false;
             document.getElementById('fileSearchInput').disabled = false;
             document.getElementById('refreshFolderBtn').disabled = false;
+            document.getElementById('saveLocalBtn').disabled = false;
             await this.refresh();
         } catch (err) {
             if (err.name !== 'AbortError') {
@@ -279,6 +506,7 @@ class FileExplorer {
                 `;
 
                 fileEl.addEventListener('click', () => this.openFile(fullPath));
+                fileEl.addEventListener('contextmenu', (e) => this.showContextMenu(e, fullPath));
                 container.appendChild(fileEl);
             }
         }
@@ -513,6 +741,7 @@ class FileExplorer {
                 document.getElementById('newFileBtn').disabled = false;
                 document.getElementById('fileSearchInput').disabled = false;
                 document.getElementById('refreshFolderBtn').disabled = false;
+                document.getElementById('saveLocalBtn').disabled = false;
                 await this.refresh();
             } else {
                 this.showReconnectPrompt(handle);
@@ -539,6 +768,7 @@ class FileExplorer {
                     this.directoryHandle = handle;
                     document.getElementById('newFileBtn').disabled = false;
                     document.getElementById('refreshFolderBtn').disabled = false;
+                    document.getElementById('saveLocalBtn').disabled = false;
                     await this.refresh();
                 }
             } catch (err) {

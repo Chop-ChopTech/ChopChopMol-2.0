@@ -3090,6 +3090,164 @@ input[type="range"]:focus {
     flex-direction: column;
 }
 
+/* File Context Menu */
+.file-context-menu {
+    position: fixed;
+    background: rgba(20, 25, 40, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 4px 0;
+    min-width: 140px;
+    z-index: 20000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+}
+
+.file-context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.file-context-menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.file-context-menu-item i {
+    width: 16px;
+    text-align: center;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.file-context-menu-item.danger {
+    color: #f87171;
+}
+
+.file-context-menu-item.danger:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.file-context-menu-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 4px 0;
+}
+
+/* Local Save Dialog */
+.local-save-dialog {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+    background: rgba(0, 100, 200, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    align-items: center;
+}
+
+.local-save-dialog input[type="text"] {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 6px 10px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    min-width: 0;
+}
+
+.local-save-dialog input[type="text"]:focus {
+    border-color: rgba(0, 136, 255, 0.5);
+}
+
+.local-save-dialog select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 6px 8px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+}
+
+.local-save-dialog select option {
+    background: #1a1a2e;
+}
+
+.local-save-dialog button {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.local-save-dialog button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#localSaveConfirm:hover {
+    background: rgba(0, 200, 100, 0.3);
+    color: #4ade80;
+}
+
+#localSaveCancel:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+
+/* Inline Rename/Delete */
+.file-item .rename-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(0, 136, 255, 0.5);
+    border-radius: 3px;
+    padding: 2px 6px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    min-width: 0;
+}
+
+.file-item .rename-confirm,
+.file-item .rename-cancel,
+.file-item .delete-confirm,
+.file-item .delete-cancel {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.file-item .rename-confirm:hover,
+.file-item .delete-confirm:hover {
+    color: #4ade80;
+}
+
+.file-item .rename-cancel:hover,
+.file-item .delete-cancel:hover {
+    color: #f87171;
+}
+
+.file-item .delete-prompt {
+    flex: 1;
+    font-size: 11px;
+    color: #f87171;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .ai-chat-panel.resizing,
 .file-explorer-panel.resizing {
     transition: none !important;
