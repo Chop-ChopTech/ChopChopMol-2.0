@@ -4966,6 +4966,8 @@ window.createInfoLabel = createInfoLabel;
 window.clearAllBondLengthLabels = clearAllBondLengthLabels;
 window.calculateBondLength = calculateBondLength;
 window.calculateAngle = calculateAngle;
+window.updateFragmentList = updateFragmentList;
+window.updateEditingContent = updateEditingContent;
 
 // Export variables using defineProperty to keep in sync
 Object.defineProperty(window, 'atomsSelected', {

@@ -365,6 +365,114 @@ const FUNCTIONS = {
         }
     },
 
+    split_molecule: {
+    execute: (params) => {
+        if (!window.main?.molecule?.atoms || !window.main?.molecule?.bonds) {
+            return { success: false, message: "No molecule loaded" };
+        }
+        
+        const atoms = window.main.molecule.atoms;
+        const bonds = window.main.molecule.bonds;
+        const { atom1, atom2 } = params;
+        
+        // Validate atom indices
+        if (atom1 === undefined || atom2 === undefined) {
+            return { success: false, message: "Must specify atom1 and atom2 indices" };
+        }
+        if (atom1 < 0 || atom1 >= atoms.length || atom2 < 0 || atom2 >= atoms.length) {
+            return { success: false, message: "Invalid atom indices" };
+        }
+        if (atom1 === atom2) {
+            return { success: false, message: "atom1 and atom2 must be different" };
+        }
+        
+        // Build adjacency list
+        const adj = Array.from({ length: atoms.length }, () => []);
+        bonds.forEach(bond => {
+            const idx1 = atoms.indexOf(bond.atom1);
+            const idx2 = atoms.indexOf(bond.atom2);
+            if (idx1 !== -1 && idx2 !== -1) {
+                adj[idx1].push(idx2);
+                adj[idx2].push(idx1);
+            }
+        });
+        
+        // Check if atom1 and atom2 are bonded
+        if (!adj[atom1].includes(atom2)) {
+            return { success: false, message: `Atoms ${atom1} and ${atom2} are not bonded` };
+        }
+        
+        // BFS from atom1, excluding the bond to atom2
+        const visited = new Set();
+        const queue = [atom1];
+        visited.add(atom1);
+        
+        while (queue.length > 0) {
+            const current = queue.shift();
+            for (const neighbor of adj[current]) {
+                // Skip the bond between atom1 and atom2
+                if (current === atom1 && neighbor === atom2) continue;
+                if (current === atom2 && neighbor === atom1) continue;
+                
+                if (!visited.has(neighbor)) {
+                    visited.add(neighbor);
+                    queue.push(neighbor);
+                }
+            }
+        }
+        
+        // If atom2 is reachable, there's a ring - can't split
+        if (visited.has(atom2)) {
+            return { success: false, message: "Cannot split: atoms are part of a ring" };
+        }
+        
+        // Create two fragments
+        const fragment1 = [...visited].sort((a, b) => a - b);
+        const fragment2 = [];
+        for (let i = 0; i < atoms.length; i++) {
+            if (!visited.has(i)) fragment2.push(i);
+        }
+        
+        // Update global fragments array
+        window.fragments = window.fragments || [];
+        
+        // Remove these atoms from existing fragments
+        window.fragments = window.fragments.map(frag => 
+            frag.filter(idx => !fragment1.includes(idx) && !fragment2.includes(idx))
+        ).filter(frag => frag.length > 0);
+        
+        // Add new fragments
+        window.fragments.push(fragment1);
+        window.fragments.push(fragment2);
+        
+        // Update UI
+        const fragmentList = document.getElementById('fragmentList');
+        if (fragmentList && typeof window.updateFragmentList === 'function') {
+            window.updateFragmentList(fragmentList);
+        }
+        if (typeof window.updateEditingContent === 'function') {
+            window.updateEditingContent();
+        }
+
+        // Show create fragment button
+        const createFragmentBtn = document.getElementById('createFragment');
+        if (createFragmentBtn) {
+            createFragmentBtn.style.display = 'block';
+        }
+
+        if (typeof window.render === 'function') {
+            window.render();
+        }
+        
+        return { 
+            success: true, 
+            message: `Split molecule into 2 fragments: [${fragment1.join(',')}] (${fragment1.length} atoms) and [${fragment2.join(',')}] (${fragment2.length} atoms)`,
+            fragment1,
+            fragment2
+        };
+    }
+},
+
     change_atom_element: {
         execute: (params) => {
             if (!window.main?.data?.atomData) return { success: false, message: "No molecule loaded" };
