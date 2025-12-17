@@ -810,15 +810,13 @@ class FileExplorer {
             item.className = 'cloud-item';
             item.draggable = true;  // ADD THIS
             item.innerHTML = `
-            <div class="cloud-item-info">
                 <div class="cloud-item-name">${mol.name}</div>
-                <div class="cloud-item-meta">${mol.atomCount || '?'} atoms • ${date.toLocaleDateString()}</div>
-            </div>
-            <div class="cloud-item-actions">
-                ${this.directoryHandle ? '<button class="import-btn" title="Save as XYZ"><i class="fas fa-download"></i></button>' : ''}
-                <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
+                <span class="cloud-item-date">${date.toLocaleDateString()}</span>
+                <div class="cloud-item-actions">
+                    <button class="import-btn" title="Download as XYZ"><i class="fas fa-download"></i></button>
+                    <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
 
             // ADD drag events
             item.addEventListener('dragstart', (e) => {
@@ -831,7 +829,7 @@ class FileExplorer {
                 item.classList.remove('dragging');
             });
 
-            item.querySelector('.cloud-item-info').addEventListener('click', () => {
+            item.querySelector('.cloud-item-name').addEventListener('click', () => {
                 window.resetIsolationState?.();
                 window.loadMolecule(mol);
                 if (mol.data?.fragments) window.fragments = mol.data.fragments.map(f => f.atoms);

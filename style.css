@@ -3366,48 +3366,54 @@ input[type="range"]:focus {
     padding: 8px 0;
 }
 
-.cloud-item {
-    display: flex;
-    align-items: center;
-    padding: 10px 12px;
-    cursor: pointer;
-    transition: background 0.15s;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
+
 
 .cloud-item:hover {
     background: rgba(255, 255, 255, 0.05);
 }
 
-.cloud-item-info {
-    flex: 1;
-    min-width: 0;
+
+.cloud-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: grab;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .cloud-item-name {
+    flex: 1;
     color: #fff;
     font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer;
 }
 
-.cloud-item-meta {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 11px;
-    margin-top: 2px;
+.cloud-item-name:hover {
+    color: #46a9ff;
+}
+
+.cloud-item-date {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 10px;
+    flex-shrink: 0;
 }
 
 .cloud-item-actions {
     display: flex;
-    gap: 4px;
+    gap: 2px;
+    flex-shrink: 0;
 }
 
 .cloud-item-actions button {
-    background: rgba(255, 255, 255, 0.1);
+    background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.6);
-    padding: 6px 8px;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 4px 6px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 11px;
@@ -3415,17 +3421,18 @@ input[type="range"]:focus {
 }
 
 .cloud-item-actions button:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
     color: #fff;
 }
 
-.cloud-item-actions .import-btn {
-    background: rgba(0, 200, 100, 0.2);
-    color: #4ade80;
+.cloud-item-actions .delete-btn:hover {
+    color: #ff6b6b;
 }
 
-.cloud-item-actions .import-btn:hover {
-    background: rgba(0, 200, 100, 0.4);
+
+.cloud-item-actions button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
 }
 
 .cloud-item-actions .delete-btn:hover {
