@@ -1470,10 +1470,11 @@
                 window.main.createNewMoleculeFromJSON(JSON.stringify({
                     atomData: frame.atomData,
                     numAtoms: frame.numAtoms
-                }), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+                }), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false, true);
                 document.getElementById('frameLabel').textContent =
                     `Frame ${frameIndex + 1} / ${window.xyzFrames.length}`;
             }
+            window.resetCamera()
         });
 
         // Sync slider and number input

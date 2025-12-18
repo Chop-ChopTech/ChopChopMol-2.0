@@ -366,112 +366,112 @@ const FUNCTIONS = {
     },
 
     split_molecule: {
-    execute: (params) => {
-        if (!window.main?.molecule?.atoms || !window.main?.molecule?.bonds) {
-            return { success: false, message: "No molecule loaded" };
-        }
-        
-        const atoms = window.main.molecule.atoms;
-        const bonds = window.main.molecule.bonds;
-        const { atom1, atom2 } = params;
-        
-        // Validate atom indices
-        if (atom1 === undefined || atom2 === undefined) {
-            return { success: false, message: "Must specify atom1 and atom2 indices" };
-        }
-        if (atom1 < 0 || atom1 >= atoms.length || atom2 < 0 || atom2 >= atoms.length) {
-            return { success: false, message: "Invalid atom indices" };
-        }
-        if (atom1 === atom2) {
-            return { success: false, message: "atom1 and atom2 must be different" };
-        }
-        
-        // Build adjacency list
-        const adj = Array.from({ length: atoms.length }, () => []);
-        bonds.forEach(bond => {
-            const idx1 = atoms.indexOf(bond.atom1);
-            const idx2 = atoms.indexOf(bond.atom2);
-            if (idx1 !== -1 && idx2 !== -1) {
-                adj[idx1].push(idx2);
-                adj[idx2].push(idx1);
+        execute: (params) => {
+            if (!window.main?.molecule?.atoms || !window.main?.molecule?.bonds) {
+                return { success: false, message: "No molecule loaded" };
             }
-        });
-        
-        // Check if atom1 and atom2 are bonded
-        if (!adj[atom1].includes(atom2)) {
-            return { success: false, message: `Atoms ${atom1} and ${atom2} are not bonded` };
-        }
-        
-        // BFS from atom1, excluding the bond to atom2
-        const visited = new Set();
-        const queue = [atom1];
-        visited.add(atom1);
-        
-        while (queue.length > 0) {
-            const current = queue.shift();
-            for (const neighbor of adj[current]) {
-                // Skip the bond between atom1 and atom2
-                if (current === atom1 && neighbor === atom2) continue;
-                if (current === atom2 && neighbor === atom1) continue;
-                
-                if (!visited.has(neighbor)) {
-                    visited.add(neighbor);
-                    queue.push(neighbor);
+
+            const atoms = window.main.molecule.atoms;
+            const bonds = window.main.molecule.bonds;
+            const { atom1, atom2 } = params;
+
+            // Validate atom indices
+            if (atom1 === undefined || atom2 === undefined) {
+                return { success: false, message: "Must specify atom1 and atom2 indices" };
+            }
+            if (atom1 < 0 || atom1 >= atoms.length || atom2 < 0 || atom2 >= atoms.length) {
+                return { success: false, message: "Invalid atom indices" };
+            }
+            if (atom1 === atom2) {
+                return { success: false, message: "atom1 and atom2 must be different" };
+            }
+
+            // Build adjacency list
+            const adj = Array.from({ length: atoms.length }, () => []);
+            bonds.forEach(bond => {
+                const idx1 = atoms.indexOf(bond.atom1);
+                const idx2 = atoms.indexOf(bond.atom2);
+                if (idx1 !== -1 && idx2 !== -1) {
+                    adj[idx1].push(idx2);
+                    adj[idx2].push(idx1);
+                }
+            });
+
+            // Check if atom1 and atom2 are bonded
+            if (!adj[atom1].includes(atom2)) {
+                return { success: false, message: `Atoms ${atom1} and ${atom2} are not bonded` };
+            }
+
+            // BFS from atom1, excluding the bond to atom2
+            const visited = new Set();
+            const queue = [atom1];
+            visited.add(atom1);
+
+            while (queue.length > 0) {
+                const current = queue.shift();
+                for (const neighbor of adj[current]) {
+                    // Skip the bond between atom1 and atom2
+                    if (current === atom1 && neighbor === atom2) continue;
+                    if (current === atom2 && neighbor === atom1) continue;
+
+                    if (!visited.has(neighbor)) {
+                        visited.add(neighbor);
+                        queue.push(neighbor);
+                    }
                 }
             }
-        }
-        
-        // If atom2 is reachable, there's a ring - can't split
-        if (visited.has(atom2)) {
-            return { success: false, message: "Cannot split: atoms are part of a ring" };
-        }
-        
-        // Create two fragments
-        const fragment1 = [...visited].sort((a, b) => a - b);
-        const fragment2 = [];
-        for (let i = 0; i < atoms.length; i++) {
-            if (!visited.has(i)) fragment2.push(i);
-        }
-        
-        // Update global fragments array
-        window.fragments = window.fragments || [];
-        
-        // Remove these atoms from existing fragments
-        window.fragments = window.fragments.map(frag => 
-            frag.filter(idx => !fragment1.includes(idx) && !fragment2.includes(idx))
-        ).filter(frag => frag.length > 0);
-        
-        // Add new fragments
-        window.fragments.push(fragment1);
-        window.fragments.push(fragment2);
-        
-        // Update UI
-        const fragmentList = document.getElementById('fragmentList');
-        if (fragmentList && typeof window.updateFragmentList === 'function') {
-            window.updateFragmentList(fragmentList);
-        }
-        if (typeof window.updateEditingContent === 'function') {
-            window.updateEditingContent();
-        }
 
-        // Show create fragment button
-        const createFragmentBtn = document.getElementById('createFragment');
-        if (createFragmentBtn) {
-            createFragmentBtn.style.display = 'block';
-        }
+            // If atom2 is reachable, there's a ring - can't split
+            if (visited.has(atom2)) {
+                return { success: false, message: "Cannot split: atoms are part of a ring" };
+            }
 
-        if (typeof window.render === 'function') {
-            window.render();
+            // Create two fragments
+            const fragment1 = [...visited].sort((a, b) => a - b);
+            const fragment2 = [];
+            for (let i = 0; i < atoms.length; i++) {
+                if (!visited.has(i)) fragment2.push(i);
+            }
+
+            // Update global fragments array
+            window.fragments = window.fragments || [];
+
+            // Remove these atoms from existing fragments
+            window.fragments = window.fragments.map(frag =>
+                frag.filter(idx => !fragment1.includes(idx) && !fragment2.includes(idx))
+            ).filter(frag => frag.length > 0);
+
+            // Add new fragments
+            window.fragments.push(fragment1);
+            window.fragments.push(fragment2);
+
+            // Update UI
+            const fragmentList = document.getElementById('fragmentList');
+            if (fragmentList && typeof window.updateFragmentList === 'function') {
+                window.updateFragmentList(fragmentList);
+            }
+            if (typeof window.updateEditingContent === 'function') {
+                window.updateEditingContent();
+            }
+
+            // Show create fragment button
+            const createFragmentBtn = document.getElementById('createFragment');
+            if (createFragmentBtn) {
+                createFragmentBtn.style.display = 'block';
+            }
+
+            if (typeof window.render === 'function') {
+                window.render();
+            }
+
+            return {
+                success: true,
+                message: `Split molecule into 2 fragments: [${fragment1.join(',')}] (${fragment1.length} atoms) and [${fragment2.join(',')}] (${fragment2.length} atoms)`,
+                fragment1,
+                fragment2
+            };
         }
-        
-        return { 
-            success: true, 
-            message: `Split molecule into 2 fragments: [${fragment1.join(',')}] (${fragment1.length} atoms) and [${fragment2.join(',')}] (${fragment2.length} atoms)`,
-            fragment1,
-            fragment2
-        };
-    }
-},
+    },
 
     change_atom_element: {
         execute: (params) => {
@@ -593,49 +593,49 @@ const FUNCTIONS = {
     rotational_scan: {
         execute: (params) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
-            
+
             const { axisAtom1, axisAtom2, atomsToMove, increment } = params;
             const molecule = window.main.molecule;
             const stretch = molecule.stretch || 4;
-            
+
             // Validate
             const atom1 = molecule.atoms[axisAtom1];
             const atom2 = molecule.atoms[axisAtom2];
             if (!atom1 || !atom2) return { success: false, message: "Invalid axis atoms" };
             if (!atomsToMove || atomsToMove.length === 0) return { success: false, message: "No atoms to rotate" };
             if (!increment || increment <= 0) return { success: false, message: "Increment must be positive" };
-            
+
             const steps = Math.floor(360 / increment);
             const frames = [];
-            
+
             // Get all atom data for XYZ generation
             const allAtoms = molecule.atoms;
-            
+
             // Store original positions of atoms to move
             const originalPositions = {};
             atomsToMove.forEach(idx => {
                 const atom = allAtoms[idx];
                 if (atom) originalPositions[idx] = atom.position.clone();
             });
-            
+
             // Axis setup
             const pos1 = atom1.position.clone();
             const pos2 = atom2.position.clone();
             const axisDirection = new window.THREE.Vector3().subVectors(pos2, pos1).normalize();
             const axisPoint = pos1.clone();
-            
+
             // Generate frames
             for (let step = 0; step < steps; step++) {
                 const angle = step * increment;
                 const angleRadians = angle * Math.PI / 180;
                 const rotationMatrix = new window.THREE.Matrix4().makeRotationAxis(axisDirection, angleRadians);
-                
+
                 // Build XYZ for this frame
                 let xyz = `${allAtoms.length}\nRotational scan angle=${angle}\n`;
-                
+
                 allAtoms.forEach((atom, idx) => {
                     let x, y, z;
-                    
+
                     if (atomsToMove.includes(idx)) {
                         // Rotate this atom
                         const basePos = originalPositions[idx].clone();
@@ -651,16 +651,16 @@ const FUNCTIONS = {
                         y = atom.position.y / stretch;
                         z = atom.position.z / stretch;
                     }
-                    
+
                     xyz += `${atom.type}  ${x.toFixed(6)}  ${y.toFixed(6)}  ${z.toFixed(6)}\n`;
                 });
-                
+
                 frames.push(xyz);
             }
-            
+
             // Combine all frames into multi-frame XYZ
             const combinedXYZ = frames.join('');
-            
+
             // Parse into xyzFrames format for the player
             const parsedFrames = [];
             frames.forEach((frameXYZ, idx) => {
@@ -668,7 +668,7 @@ const FUNCTIONS = {
                 const numAtoms = parseInt(lines[0]);
                 const comment = lines[1];
                 const atomData = [];
-                
+
                 for (let i = 2; i < 2 + numAtoms; i++) {
                     const parts = lines[i].trim().split(/\s+/);
                     atomData.push({
@@ -678,13 +678,13 @@ const FUNCTIONS = {
                         z: parseFloat(parts[3])
                     });
                 }
-                
+
                 parsedFrames.push({ atomData, numAtoms, comment });
             });
-            
+
             // Set up frame player
             window.xyzFrames = parsedFrames;
-            
+
             // Show frame slider
             const frameSliderContainer = document.getElementById('frameSliderContainer');
             if (frameSliderContainer) {
@@ -699,15 +699,15 @@ const FUNCTIONS = {
                     label.textContent = `Frame 1 / ${parsedFrames.length}`;
                 }
             }
-            
-            return { 
-                success: true, 
-                message: `Generated ${steps} frames (0° to ${(steps-1) * increment}° in ${increment}° increments). Use the frame slider to play.`,
+
+            return {
+                success: true,
+                message: `Generated ${steps} frames (0° to ${(steps - 1) * increment}° in ${increment}° increments). Use the frame slider to play.`,
                 frameCount: steps,
                 xyzContent: combinedXYZ
             };
         }
-},
+    },
 
     toggle_labels: {
         execute: (params) => {
