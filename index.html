@@ -1474,7 +1474,6 @@
                 document.getElementById('frameLabel').textContent =
                     `Frame ${frameIndex + 1} / ${window.xyzFrames.length}`;
             }
-            window.resetCamera()
         });
 
         // Sync slider and number input
@@ -1514,6 +1513,9 @@
                 icon.className = 'fa-solid fa-play';
             } else {
                 icon.className = 'fa-solid fa-pause';
+                slider.value = 0;
+                slider.dispatchEvent(new Event('input'));
+                setTimeout(() => window.resetCamera(), 50);
                 const speed = parseInt(document.getElementById('frameSpeed').value);
                 frameInterval = setInterval(() => {
                     let next = parseInt(slider.value) + 1;
