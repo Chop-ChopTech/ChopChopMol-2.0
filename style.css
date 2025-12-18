@@ -1669,12 +1669,12 @@ input[type="range"]:focus {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #009dff, #af4dff, #ffffff);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #ffffff, #0095ff, #8400ff);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 /* ============ STRIPE PREMIUM STYLES ============ */
