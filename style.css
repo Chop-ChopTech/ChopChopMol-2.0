@@ -522,12 +522,7 @@ body {
 
 }
 
-/* 
-#analysisResponseContainer.on {
-    top: 1500px;
-    pointer-events: none;
 
-} */
 #analysisResponseContainer.on {
     opacity: 1;
     pointer-events: all !important
