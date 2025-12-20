@@ -3546,3 +3546,17 @@ input[type="range"]:focus {
 .panel-collapse-toggle i {
     transition: transform 0.3s ease;
 }
+
+.cloud-list.drag-over {
+    background: rgba(0, 200, 100, 0.1);
+    border: 2px dashed rgba(0, 200, 100, 0.5);
+    border-radius: 8px;
+}
+
+.file-item.dragging {
+    opacity: 0.5;
+}
+
+.file-item {
+    cursor: grab;
+}

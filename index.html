@@ -1185,12 +1185,14 @@
         window.addEventListener('dragover', (event) => {
             event.preventDefault(); // Prevent default to allow drop
             if (event.dataTransfer.types.includes('application/json')) return;
+            if (event.dataTransfer.types.includes('text/plain')) return;
             dropZone.classList.add('dragover');
         });
 
         window.addEventListener('dragenter', (event) => {
             event.preventDefault();
             if (event.dataTransfer.types.includes('application/json')) return;
+            if (event.dataTransfer.types.includes('text/plain')) return;
             dropZone.classList.add('dragover');
         });
 

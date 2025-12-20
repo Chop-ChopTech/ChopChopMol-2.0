@@ -70,6 +70,7 @@ class FileExplorer {
 
         // Setup drag-drop for local folder
         this.setupCloudDragDrop();
+        this.setupLocalToCloudDrop();
 
         // Try to restore previous folder on load
         this.tryRestorePreviousFolder();
@@ -101,6 +102,56 @@ class FileExplorer {
                 const mol = JSON.parse(molData);
                 await this.importAsXYZ(mol);
             }
+        });
+    }
+
+    setupLocalToCloudDrop() {
+        const cloudList = document.getElementById('cloudList');
+
+        cloudList.addEventListener('dragover', (e) => {
+            if (e.dataTransfer.types.includes('text/plain')) {
+                e.preventDefault();
+                cloudList.classList.add('drag-over');
+            }
+        });
+
+        cloudList.addEventListener('dragleave', () => {
+            cloudList.classList.remove('drag-over');
+        });
+
+        cloudList.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            cloudList.classList.remove('drag-over');
+
+            const filePath = e.dataTransfer.getData('text/plain');
+            if (!filePath || !this.fileHandles.has(filePath)) return;
+
+            const handle = this.fileHandles.get(filePath);
+            const file = await handle.getFile();
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (!MOLECULE_EXTENSIONS.includes(ext)) {
+                alert('Only molecule files can be uploaded to cloud');
+                return;
+            }
+
+            // Load and save to cloud
+            const text = await file.text();
+            const name = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+
+            // Parse and load the molecule first
+            await window.main?.loader?.handleFile({ target: { files: [file] } }, false);
+
+            // Wait a tick for molecule to load, then save
+            setTimeout(async () => {
+                if (window.main?.data) {
+                    const saved = await window.saveMolecule(name);
+                    if (saved) {
+                        this.loadCloudMolecules();
+                        window.showSaveNotification?.(`Uploaded: ${name}`);
+                    }
+                }
+            }, 100);
         });
     }
 
@@ -507,6 +558,18 @@ class FileExplorer {
 
                 fileEl.addEventListener('click', () => this.openFile(fullPath));
                 fileEl.addEventListener('contextmenu', (e) => this.showContextMenu(e, fullPath));
+
+                // Make local files draggable to cloud
+                fileEl.draggable = true;
+                fileEl.addEventListener('dragstart', async (e) => {
+                    fileEl.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', fullPath);
+                    e.dataTransfer.effectAllowed = 'copy';
+                });
+                fileEl.addEventListener('dragend', () => {
+                    fileEl.classList.remove('dragging');
+                });
+
                 container.appendChild(fileEl);
             }
         }
