@@ -2235,22 +2235,29 @@ input[type="range"]:focus {
 .ai-model-select {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+    border-radius: 10px;
     color: #fff;
     padding: 4px 8px;
     font-size: 12px;
     cursor: pointer;
+    width: 100%;
 }
 
 .ai-model-select:hover {
     background: rgba(255, 255, 255, 0.15);
 }
 
+#bottom-options {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
 .ai-chat-panel {
     position: fixed;
-    left: -400px;
+    left: -220px;
     top: 0;
-    width: 280px;
+    width: 220px;
     height: 100vh;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(30, 20, 50, 0.98));
     backdrop-filter: blur(20px);
@@ -2261,6 +2268,7 @@ input[type="range"]:focus {
     transition: all 0.3s ease !important;
     box-shadow: -5px 0 30px rgba(0, 0, 0, 0.5);
     font-family: 'Rubik', sans-serif;
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .ai-chat-panel.open {
@@ -2470,7 +2478,7 @@ input[type="range"]:focus {
     box-sizing: border-box;
     padding: 12px 16px;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
+    border-radius: 10px;
     background: rgba(255, 255, 255, 0.05);
     color: white;
     font-size: 14px;
@@ -2712,7 +2720,7 @@ input[type="range"]:focus {
     position: fixed;
     right: 0;
     top: 0;
-    width: 280px;
+    width: 205px;
     height: 100vh;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(10, 15, 30, 0.98) 100%);
     border-left: 1px solid rgba(255, 255, 255, 0.1);
@@ -3484,4 +3492,52 @@ input[type="range"]:focus {
     text-align: center;
     padding: 40px;
     color: rgba(255, 255, 255, 0.5);
+}
+
+/* Panel Collapse Toggle Buttons */
+.panel-collapse-toggle {
+    position: absolute;
+    top: 100%;
+    transform: translateY(-100%);
+    width: 20px;
+    height: 50px;
+    background-color: #002403;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10003;
+    transition: all 0.2s;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.panel-collapse-toggle:hover {
+    background: rgba(102, 126, 234, 0.3);
+    color: #fff;
+}
+
+/* AI Panel toggle - on right edge, arrow points left when expanded */
+.ai-chat-panel .panel-collapse-toggle {
+    right: -20px;
+    border-radius: 0 6px 6px 0;
+    border-left: none;
+}
+
+/* File Explorer toggle - on left edge, arrow points right when expanded */
+.file-explorer-panel .panel-collapse-toggle {
+    left: -20px;
+    border-radius: 6px 0 0 6px;
+    border-right: none;
+}
+
+/* Arrow rotation for collapsed state */
+.panel-collapse-toggle.collapsed i {
+    transform: rotate(180deg);
+}
+
+.panel-collapse-toggle i {
+    transition: transform 0.3s ease;
 }

@@ -1531,6 +1531,9 @@
     <!-- AI Chat Panel -->
     <div id="fileExplorerPanel" class="file-explorer-panel open">
         <div class="panel-resizer panel-resizer-horizontal" id="explorerResizer"></div>
+        <button class="panel-collapse-toggle" id="explorerCollapseToggle" title="Collapse panel">
+            <i class="fas fa-chevron-right"></i>
+        </button>
         <div class="file-explorer-header">
             <select id="fileSortSelect" class="file-explorer-title" title="Sort files">
                 <option value="alpha">A-Z</option>
@@ -1589,13 +1592,11 @@
     </div>
     <div id="aiChatPanel" class="ai-chat-panel open">
         <div class="panel-resizer panel-resizer-horizontal" id="aiPanelResizer"></div>
+        <button class="panel-collapse-toggle" id="aiCollapseToggle" title="Collapse panel">
+            <i class="fas fa-chevron-left"></i>
+        </button>
         <div class="ai-chat-header">
-            <select id="aiModelSelect" class="ai-model-select" title="Select AI Model">
-                <option value="gpt-5-mini">GPT-5 Mini</option>
-                <option value="gpt-5-nano">GPT-5 Nano</option>
-                <option value="gpt-5.1">GPT-5.1</option>
-                <option value="gpt-5.1-mini">GPT-5.1 Mini</option>
-            </select>
+
             <div class="ai-header-buttons">
                 <button id="aiClearBtn" class="ai-header-btn" title="Clear chat">
                     <i class="fas fa-trash"></i>
@@ -1617,7 +1618,16 @@
 
         <div class="ai-chat-input-area">
             <textarea id="aiChatInput" placeholder="Ask me anything" rows="3"></textarea>
-            <button id="aiSendBtn"><i class="fas fa-paper-plane"></i></button>
+            <div id="bottom-options">
+                <select id="aiModelSelect" class="ai-model-select" title="Select AI Model">
+                    <option value="gpt-5-mini">GPT-5 Mini</option>
+                    <option value="gpt-5-nano">GPT-5 Nano</option>
+                    <option value="gpt-5.1">GPT-5.1</option>
+                    <option value="gpt-5.1-mini">GPT-5.1 Mini</option>
+                </select>
+                <button id="aiSendBtn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+
         </div>
     </div>
 
@@ -1863,7 +1873,7 @@
                 function resizeAI(e) {
                     aiPanel.classList.add('resizing');
                     const diff = e.clientX - startX;
-                    const newWidth = Math.max(280, Math.min(600, startWidth + diff));
+                    const newWidth = Math.max(220, Math.min(600, startWidth + diff));
                     aiPanel.style.width = newWidth + 'px';
                     window.updateRendererSize?.();
                 }
@@ -1944,8 +1954,30 @@
                 }
             }
         })();
+        // Panel Collapse Toggles
+        (function () {
+            const aiPanel = document.getElementById('aiChatPanel');
+            const aiToggle = document.getElementById('aiCollapseToggle');
+            const explorerPanel = document.getElementById('fileExplorerPanel');
+            const explorerToggle = document.getElementById('explorerCollapseToggle');
+
+            // AI Panel collapse toggle (LEFT side panel)
+            aiToggle?.addEventListener('click', () => {
+                aiPanel.classList.toggle('open');
+                aiToggle.classList.toggle('collapsed', !aiPanel.classList.contains('open'));
+                document.getElementById('aiToggleBtn')?.classList.toggle('active', aiPanel.classList.contains('open'));
+                window.updateRendererSize?.();
+            });
+
+            // File Explorer collapse toggle (RIGHT side panel)
+            explorerToggle?.addEventListener('click', () => {
+                explorerPanel.classList.toggle('open');
+                explorerToggle.classList.toggle('collapsed', !explorerPanel.classList.contains('open'));
+                window.updateRendererSize?.();
+            });
+        })();
     </script>
-    </script>
+
     <pre id="output"></pre>
     <script src="stripe.js"></script>
 
