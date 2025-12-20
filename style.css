@@ -3412,16 +3412,30 @@ input[type="range"]:focus {
 .cloud-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
+    padding: 3px 16px;
     cursor: grab;
     transition: background 0.15s;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cloud-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.cloud-item.dragging {
+    opacity: 0.5;
+}
+
+.cloud-item>i:first-child {
+    margin-right: 8px;
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+    color: #00bbff;
 }
 
 .cloud-item-name {
     flex: 1;
-    color: #fff;
+    color: rgba(255, 255, 255, 0.8);
     font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
@@ -3433,16 +3447,17 @@ input[type="range"]:focus {
     color: #46a9ff;
 }
 
-.cloud-item-date {
-    color: rgba(255, 255, 255, 0.35);
-    font-size: 10px;
-    flex-shrink: 0;
-}
-
 .cloud-item-actions {
     display: flex;
     gap: 2px;
     flex-shrink: 0;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.cloud-item:hover .cloud-item-actions {
+    opacity: 1;
+    visibility: visible;
 }
 
 .cloud-item-actions button {
@@ -3465,14 +3480,23 @@ input[type="range"]:focus {
     color: #ff6b6b;
 }
 
+.cloud-item-actions button {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 4px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+}
 
 .cloud-item-actions button:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
     color: #fff;
 }
 
 .cloud-item-actions .delete-btn:hover {
-    background: rgba(255, 80, 80, 0.3);
     color: #ff6b6b;
 }
 

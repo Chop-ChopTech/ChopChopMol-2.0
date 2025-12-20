@@ -873,8 +873,8 @@ class FileExplorer {
             item.className = 'cloud-item';
             item.draggable = true;  // ADD THIS
             item.innerHTML = `
-                <div class="cloud-item-name">${mol.name}</div>
-                <span class="cloud-item-date">${date.toLocaleDateString()}</span>
+                <i class="fas fa-atom file-mol"></i>
+                <span class="cloud-item-name">${mol.name}</span>
                 <div class="cloud-item-actions">
                     <button class="import-btn" title="Download as XYZ"><i class="fas fa-download"></i></button>
                     <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
