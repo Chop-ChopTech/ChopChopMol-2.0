@@ -33,7 +33,6 @@ class FileExplorer {
             this.refresh();
             this.loadCloudMolecules();
         });
-        document.getElementById('closeExplorerBtn')?.addEventListener('click', () => this.close());
         document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
         document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
         document.getElementById('saveLocalBtn')?.addEventListener('click', () => this.saveToLocal());

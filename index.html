@@ -1522,10 +1522,7 @@
         <!-- Global Toolbar -->
         <div class="file-explorer-header">
             <div class="explorer-toolbar">
-                <button id="openFolderBtn" title="Open Folder"><i class="fas fa-folder-open"></i></button>
-                <button id="cloudSaveBtn" title="Save to Cloud"><i class="fas fa-cloud-upload-alt"></i></button>
-                <button id="saveLocalBtn" title="Save to Local Folder" disabled><i class="fas fa-save"></i></button>
-                <button id="refreshFolderBtn" title="Refresh" disabled><i class="fas fa-sync-alt"></i></button>
+
             </div>
             <div class="explorer-header-right">
                 <select id="fileSortSelect" class="file-explorer-title" title="Sort files">
@@ -1533,7 +1530,6 @@
                     <option value="date">Date</option>
                     <option value="ext">Extension</option>
                 </select>
-                <button id="closeExplorerBtn" title="Close"><i class="fas fa-times"></i></button>
             </div>
         </div>
 
@@ -1545,8 +1541,12 @@
 
         <!-- Cloud Section -->
         <div class="explorer-section cloud-section">
-            <div class="section-header">
+            <div class="section-header" style="gap: 6px; display: flex; flex-direction: row; align-items: center;">
                 <span><i class="fas fa-cloud"></i> Cloud</span>
+                <button id="cloudSaveBtn" class="local-toolbar-button" title="Save to Cloud"><i
+                        class="fas fa-cloud-upload-alt"></i></button>
+                <button id="refreshFolderBtn" class="local-toolbar-button" title="Refresh" disabled><i
+                        class="fas fa-sync-alt"></i></button>
             </div>
             <div id="cloudList" class="cloud-list"></div>
         </div>
@@ -1554,9 +1554,14 @@
         <div class="explorer-divider explorer-divider-resizer" id="explorerDivider"></div>
 
         <!-- Local Section -->
-        <div class="explorer-section local-section">
-            <div class="section-header">
+        <div class="explorer-section local-section ">
+            <div class="section-header " style="gap: 6px; display: flex; flex-direction: row; align-items: center;">
                 <span><i class="fas fa-folder"></i> Local</span>
+                <button id="openFolderBtn" class="local-toolbar-button" title="Open Folder"><i
+                        class="fas fa-folder-open"></i></button>
+                <button id="saveLocalBtn" class="local-toolbar-button" title="Save to Local Folder" disabled><i
+                        class="fas fa-save"></i></button>
+
             </div>
             <div id="fileTree" class="file-tree">
                 <div class="file-tree-empty">
