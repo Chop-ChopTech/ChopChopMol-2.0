@@ -3501,7 +3501,7 @@ input[type="range"]:focus {
     transform: translateY(-100%);
     width: 20px;
     height: 50px;
-    background-color: #002403;
+    background-color: #8a1500;
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: rgba(255, 255, 255, 0.7);
     cursor: pointer;

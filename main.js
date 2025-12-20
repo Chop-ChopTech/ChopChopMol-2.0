@@ -4240,6 +4240,9 @@ function removeBondLengthLabel(index) {
     }
 }
 
+window.bondLengthLabels = bondLengthLabels;
+window.removeBondLengthLabel = removeBondLengthLabel;
+
 function clearAllBondLengthLabels() {
     bondLengthLabels.forEach(labelInfo => {
         // Remove label from DOM
@@ -4958,6 +4961,7 @@ window.render = render;
 window.initializeRotationState = initializeRotationState;
 window.updateMoleculeVisualization = updateMoleculeVisualization;
 window.createInfoLabel = createInfoLabel;
+window.removeBondLengthLabel = removeBondLengthLabel;
 window.clearAllBondLengthLabels = clearAllBondLengthLabels;
 window.calculateBondLength = calculateBondLength;
 window.calculateAngle = calculateAngle;
@@ -5006,5 +5010,11 @@ Object.defineProperty(window, 'fragments', {
     set: function (val) { fragments = val; },
     configurable: true
 });
+Object.defineProperty(window, 'bondLengthLabels', {
+    get: function () { return bondLengthLabels; },
+    set: function (val) { bondLengthLabels = val; },
+    configurable: true
+});
+
 
 animate();

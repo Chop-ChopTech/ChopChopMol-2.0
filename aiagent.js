@@ -810,6 +810,64 @@ const FUNCTIONS = {
         }
     },
 
+    show_all_bond_lengths: {
+        execute: () => {
+            if (!window.main?.molecule?.bonds?.length) return { success: false, message: "No bonds in molecule" };
+
+            if (typeof window.clearAllBondLengthLabels === 'function') {
+                window.clearAllBondLengthLabels();
+            }
+
+            let count = 0;
+            window.main.molecule.bonds.forEach(bond => {
+                const idx1 = window.main.molecule.atoms.indexOf(bond.atom1);
+                const idx2 = window.main.molecule.atoms.indexOf(bond.atom2);
+                if (idx1 !== -1 && idx2 !== -1 && typeof window.createInfoLabel === 'function') {
+                    window.createInfoLabel(idx1, idx2);
+                    count++;
+                }
+            });
+
+            if (typeof window.render === 'function') window.render();
+            return { success: true, message: `Showing ${count} bond length labels` };
+        }
+    },
+
+    remove_bond_label: {
+        execute: (params) => {
+            if (!window.bondLengthLabels?.length) return { success: false, message: "No labels to remove" };
+
+            const { atom1, atom2, all } = params;
+
+            if (all) {
+                if (typeof window.clearAllBondLengthLabels === 'function') {
+                    window.clearAllBondLengthLabels();
+                    return { success: true, message: "All bond labels removed" };
+                }
+                return { success: false, message: "Clear function not available" };
+            }
+
+            if (atom1 === undefined || atom2 === undefined) {
+                return { success: false, message: "Specify atom1 and atom2, or use all:true" };
+            }
+
+            const idx = window.bondLengthLabels.findIndex(label =>
+                !label.isAngle && !label.isDihedral &&
+                ((label.atom1Index === atom1 && label.atom2Index === atom2) ||
+                    (label.atom1Index === atom2 && label.atom2Index === atom1))
+            );
+
+            if (idx === -1) return { success: false, message: `No label between atoms ${atom1} and ${atom2}` };
+
+            if (typeof window.removeBondLengthLabel === 'function') {
+                window.removeBondLengthLabel(idx);
+                if (typeof window.render === 'function') window.render();
+                return { success: true, message: `Removed label between atoms ${atom1} and ${atom2}` };
+            }
+            return { success: false, message: "Remove function not available" };
+        }
+    },
+
     save_image: {
         execute: () => {
             const btn = document.getElementById('saveImagePNG');
@@ -951,7 +1009,8 @@ function getMoleculeState() {
         fragments: window.fragments || [],
         hasAxis: !!window.rotationAxis,
         axisAtoms: window.axisAtoms || [],
-        hasRibbon: !!window.main?.data?.ribbonData
+        hasRibbon: !!window.main?.data?.ribbonData,
+        bondLabels: window.bondLengthLabels?.filter(l => !l.isAngle && !l.isDihedral).map(l => [l.atom1Index, l.atom2Index]) || []
     };
 }
 

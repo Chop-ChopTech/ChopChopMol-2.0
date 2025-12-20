@@ -628,25 +628,27 @@
                 </div>
             </div>
             <button class="dropdown-icon" id="toggle-ribbon" onclick="window.toggleRibbon()" title="Toggle Ribbon View"
-                style="border: none;">
+                style="border: none; display: none;">
                 <i class="fa-solid fa-dna"></i>
             </button>
-            <button class="dropdown-icon" id="toggleFileExplorer" title="File Explorer" style="border: none;">
-                <i class="fas fa-folder-tree"></i>
-            </button>
-            <button class="dropdown-icon" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
-            <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"><i
-                    class="fas fa-ruler"></i></button>
             <button class="dropdown-icon" id="reset-camera" title="Reset Camera"
                 style="border: none; margin-right: 10px;" onclick="window.resetCamera()"><i
                     class="fa-solid fa-arrows-to-eye"></i></button>
-            <!--  -->
-            <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant" style="border: none;">
+            <button class="dropdown-icon" id="toggleFileExplorer" title="File Explorer"
+                style="border: none; display: none;">
+                <i class="fas fa-folder-tree"></i>
+            </button>
+            <button class="dropdown-icon" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
+            <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"
+                style="display: none;"><i class="fas fa-ruler"></i></button>
+
+
+            <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant" style="border: none; display: none;">
                 <i class="fa-solid fa-comment-dots"></i>
             </button>
-            <div class="dropdown">
+            <div class="dropdown" style="display: none;">
                 <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
-                <div class="dropdown-content shine">
+                <div class="dropdown-content shine" style="display: none;">
                     <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
                     <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255); "><i
                             class="fas fa-file-download"></i> Save XYZ</button>
