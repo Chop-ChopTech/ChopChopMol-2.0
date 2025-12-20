@@ -208,6 +208,32 @@
             }
         }
 
+        async function recalculateStorage() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            try {
+                const moleculesRef = collection(db, 'users', user.uid, 'molecules');
+                const snapshot = await getDocs(moleculesRef);
+
+                let totalSize = 0;
+                snapshot.forEach(doc => {
+                    totalSize += doc.data().size || 0;
+                });
+
+                await setDoc(doc(db, 'users', user.uid), {
+                    storageUsed: totalSize
+                }, { merge: true });
+
+                updateStorageIndicator();
+                console.log('Storage recalculated:', totalSize, 'MB');
+            } catch (error) {
+                console.error('Error recalculating storage:', error);
+            }
+        }
+
+        window.recalculateStorage = recalculateStorage;
+
         async function updateStorageIndicator() {
             const user = auth.currentUser;
             if (!user) return;
@@ -257,8 +283,7 @@
                     });
                 }
 
-                bgBar.style.width = percentage >= 1 ? `${percentage}%` : '0';
-                bgBar.style.opacity = percentage >= 1 ? '1' : '0';
+                bgBar.style.width = `${percentage}%`;
                 bgBar.style.background = percentage > 90
                     ? 'rgba(255, 152, 0, 0.25)'
                     : 'rgba(76, 175, 80, 0.2)';
