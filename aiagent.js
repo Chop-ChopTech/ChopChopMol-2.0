@@ -675,6 +675,85 @@ const FUNCTIONS = {
             };
         }
     },
+    translation_scan: {
+        execute: (params) => {
+            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
+
+            const { axisAtom1, axisAtom2, atomsToMove, totalDistance = 3, increment = 0.2 } = params;
+            const molecule = window.main.molecule;
+            const stretch = molecule.stretch || 4;
+            const offset = molecule.offset || { x: 0, y: 0, z: 0 };
+
+            const atom1 = molecule.atoms[axisAtom1];
+            const atom2 = molecule.atoms[axisAtom2];
+            if (!atom1 || !atom2) return { success: false, message: "Invalid axis atoms" };
+            if (!atomsToMove || atomsToMove.length === 0) return { success: false, message: "No atoms to translate" };
+            if (increment <= 0) return { success: false, message: "Increment must be positive" };
+
+            const steps = Math.floor(totalDistance / increment) + 1;
+            const allAtoms = molecule.atoms;
+
+            const originalPositions = {};
+            atomsToMove.forEach(idx => {
+                const atom = allAtoms[idx];
+                if (atom) originalPositions[idx] = atom.position.clone();
+            });
+
+            const pos1 = atom1.position.clone();
+            const pos2 = atom2.position.clone();
+            const axisDirection = new window.THREE.Vector3().subVectors(pos2, pos1).normalize();
+
+            const parsedFrames = [];
+
+            for (let step = 0; step < steps; step++) {
+                const dist = step * increment;
+                const translationVec = axisDirection.clone().multiplyScalar(dist * stretch);
+
+                const atomData = [];
+
+                allAtoms.forEach((atom, idx) => {
+                    let x, y, z;
+
+                    if (atomsToMove.includes(idx)) {
+                        const basePos = originalPositions[idx].clone();
+                        basePos.add(translationVec);
+                        x = (basePos.x + offset.x) / stretch;
+                        y = (basePos.y + offset.y) / stretch;
+                        z = (basePos.z + offset.z) / stretch;
+                    } else {
+                        x = (atom.position.x + offset.x) / stretch;
+                        y = (atom.position.y + offset.y) / stretch;
+                        z = (atom.position.z + offset.z) / stretch;
+                    }
+
+                    atomData.push({ element: atom.type, x, y, z });
+                });
+
+                parsedFrames.push({ atomData, numAtoms: atomData.length, comment: `dist=${dist.toFixed(2)}` });
+            }
+
+            window.xyzFrames = parsedFrames;
+
+            const frameSliderContainer = document.getElementById('frameSliderContainer');
+            if (frameSliderContainer) {
+                frameSliderContainer.style.display = 'flex';
+                const slider = document.getElementById('frameSlider');
+                const label = document.getElementById('frameLabel');
+                if (slider) {
+                    slider.max = parsedFrames.length - 1;
+                    slider.value = 0;
+                }
+                if (label) {
+                    label.textContent = `Frame 1 / ${parsedFrames.length}`;
+                }
+            }
+
+            return {
+                success: true,
+                message: `Generated ${steps} frames (0 to ${totalDistance}Å in ${increment}Å steps). Use frame slider to play.`
+            };
+        }
+    },
 
     toggle_labels: {
         execute: (params) => {
