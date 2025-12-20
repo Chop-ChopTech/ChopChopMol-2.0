@@ -43,9 +43,36 @@ class FileExplorer {
         });
 
         // Cloud save
-        document.getElementById('cloudSaveBtn')?.addEventListener('click', () => this.saveToCloud());
-        document.getElementById('cloudSaveInput')?.addEventListener('keypress', (e) => {
+        const cloudInput = document.getElementById('cloudSaveInput');
+        const cloudBtn = document.getElementById('cloudSaveBtn');
+
+        cloudBtn?.addEventListener('click', () => {
+            if (cloudInput.classList.contains('visible')) {
+                this.saveToCloud();
+            } else {
+                cloudInput.classList.add('visible');
+                cloudInput.focus();
+            }
+        });
+
+        cloudInput?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.saveToCloud();
+        });
+
+        cloudInput?.addEventListener('blur', () => {
+            // Hide after a short delay (allows click on save button)
+            setTimeout(() => {
+                if (!cloudInput.value.trim()) {
+                    cloudInput.classList.remove('visible');
+                }
+            }, 150);
+        });
+
+        cloudInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                cloudInput.value = '';
+                cloudInput.classList.remove('visible');
+            }
         });
 
         // Track unsaved changes
@@ -863,6 +890,7 @@ class FileExplorer {
         const saved = await window.saveMolecule(name);
         if (saved) {
             input.value = '';
+            input.classList.remove('visible');
             this.loadCloudMolecules();
         }
     }

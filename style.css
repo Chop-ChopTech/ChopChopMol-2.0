@@ -2803,7 +2803,7 @@ input[type="range"]:focus {
     color: #fff;
     font-size: 12px;
     outline: none;
-    min-width: 0;
+    width: 100%;
 }
 
 #fileSearchInput:focus {
@@ -3490,6 +3490,67 @@ input[type="range"]:focus {
     text-align: center;
 }
 
+.explorer-search-bar {
+    display: flex;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.explorer-search-bar input {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 6px 10px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    transition: all 0.25s ease;
+}
+
+.explorer-search-bar input:focus {
+    border-color: rgba(0, 136, 255, 0.5);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.explorer-search-bar input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+#fileSearchInput {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    transition: all 0.25s ease;
+}
+
+#fileSearchInput.sharing {
+    flex: 1;
+}
+
+#cloudSaveInput {
+    display: none;
+}
+
+#cloudSaveInput.visible {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+}
+
+#cloudSaveInput.visible:focus {
+    border-color: rgba(0, 136, 255, 0.5);
+    background: rgba(255, 255, 255, 0.12);
+}
+
 .cloud-empty i {
     font-size: 36px;
     opacity: 0.3;
@@ -3580,9 +3641,6 @@ input[type="range"]:focus {
     flex: 1.2;
 }
 
-.explorer-search-bar #fileSearchInput {
-    flex: 1;
-}
 
 /* Panel Collapse Toggle Buttons */
 .panel-collapse-toggle {
