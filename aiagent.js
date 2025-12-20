@@ -2,7 +2,8 @@
 
 const AI_CONFIG = {
     backendUrl: 'https://chopchopmol-ai-backend.onrender.com',
-    sessionId: localStorage.getItem('chopchop_ai_session') || crypto.randomUUID()
+    sessionId: localStorage.getItem('chopchop_ai_session') || crypto.randomUUID(),
+    model: localStorage.getItem('chopchop_ai_model') || 'gpt-5-mini'
 };
 // Save immediately if new
 if (!localStorage.getItem('chopchop_ai_session')) {
@@ -967,7 +968,8 @@ async function sendToAI(userMessage, onChunk) {
             const payload = {
                 sessionId,
                 message: userMessage,
-                state
+                state,
+                model: AI_CONFIG.model
             };
 
             if (assistantMessage) {
@@ -1137,5 +1139,7 @@ window.AIAgent = {
     // Keep these for backwards compatibility but they're not needed anymore
     setApiKey: () => console.log('API key is now stored on the backend'),
     getApiKey: () => '',
-    hasApiKey: () => true // Always true since backend handles it
+    hasApiKey: () => true, // Always true since backend handles it
+    setModel: (m) => { AI_CONFIG.model = m; localStorage.setItem('chopchop_ai_model', m); },
+    getModel: () => AI_CONFIG.model
 };

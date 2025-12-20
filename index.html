@@ -611,10 +611,10 @@
         <input id="compare" type="file" accept=".xyz, .mol, .pdb, .cif" style="display: none;">
         <div id="toolbar-background" class="shine">
             <div class="dropdown">
-                <span class="dropdown-icon" title="Upload file"><i class="fa-solid fa-upload"></i>
+                <span class="dropdown-icon" title="Upload file"><i class="fa-solid fa-magnifying-glass"></i>
                 </span>
-                <div class="dropdown-content shine" style="left: 50%;">
-                    <button class="fancy-button" style="width: 140px; height: 31px; border-radius: 30px;"
+                <div class="dropdown-content" style="left: 50%; background-color: transparent;">
+                    <button class="fancy-button" style="width: 140px; height: 31px; border-radius: 30px; display: none;"
                         id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
                     <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
                         JSON</button>
@@ -1589,7 +1589,12 @@
     <div id="aiChatPanel" class="ai-chat-panel open">
         <div class="panel-resizer panel-resizer-horizontal" id="aiPanelResizer"></div>
         <div class="ai-chat-header">
-            <span><i class="fas fa-robot"></i> AI Assistant</span>
+            <select id="aiModelSelect" class="ai-model-select" title="Select AI Model">
+                <option value="gpt-5-mini">GPT-5 Mini</option>
+                <option value="gpt-5-nano">GPT-5 Nano</option>
+                <option value="gpt-5.1">GPT-5.1</option>
+                <option value="gpt-5.1-mini">GPT-5.1 Mini</option>
+            </select>
             <div class="ai-header-buttons">
                 <button id="aiClearBtn" class="ai-header-btn" title="Clear chat">
                     <i class="fas fa-trash"></i>
@@ -1647,7 +1652,11 @@
             });
             const sendBtn = document.getElementById('aiSendBtn');
             const messagesContainer = document.getElementById('aiChatMessages');
-
+            const modelSelect = document.getElementById('aiModelSelect');
+            modelSelect.value = window.AIAgent?.getModel() || 'gpt-5-mini';
+            modelSelect.addEventListener('change', () => {
+                window.AIAgent?.setModel(modelSelect.value);
+            });
 
             // Toggle panel
             toggleBtn.addEventListener('click', () => {
