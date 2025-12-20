@@ -1518,38 +1518,45 @@
         <button class="panel-collapse-toggle" id="explorerCollapseToggle" title="Collapse panel">
             <i class="fas fa-chevron-right"></i>
         </button>
+
+        <!-- Global Toolbar -->
         <div class="file-explorer-header">
-            <select id="fileSortSelect" class="file-explorer-title" title="Sort files">
-                <option value="alpha">A-Z</option>
-                <option value="date">Date</option>
-                <option value="ext">Extension</option>
-            </select>
-            <div class="file-explorer-actions">
+            <div class="explorer-toolbar">
+                <button id="openFolderBtn" title="Open Folder"><i class="fas fa-folder-open"></i></button>
+                <button id="cloudSaveBtn" title="Save to Cloud"><i class="fas fa-cloud-upload-alt"></i></button>
+                <button id="saveLocalBtn" title="Save to Folder" disabled><i class="fas fa-save"></i></button>
+                <button id="refreshFolderBtn" title="Refresh" disabled><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div class="explorer-header-right">
+                <select id="fileSortSelect" class="file-explorer-title" title="Sort files">
+                    <option value="alpha">A-Z</option>
+                    <option value="date">Date</option>
+                    <option value="ext">Extension</option>
+                </select>
                 <button id="closeExplorerBtn" title="Close"><i class="fas fa-times"></i></button>
             </div>
         </div>
+
+        <!-- Search Bar -->
+        <div class="explorer-search-bar">
+            <input type="text" id="cloudSaveInput" placeholder="Save as..." class="cloud-input">
+            <input type="text" id="fileSearchInput" autocomplete="new-password" placeholder="Search files...">
+        </div>
+
+        <!-- Cloud Section -->
         <div class="explorer-section cloud-section">
             <div class="section-header">
                 <span><i class="fas fa-cloud"></i> Cloud</span>
             </div>
-            <div class="cloud-save-section">
-                <input type="text" id="cloudSaveInput" placeholder="Molecule name..." class="cloud-input">
-                <button id="cloudSaveBtn" title="Save to Cloud"><i class="fas fa-cloud-upload-alt"></i></button>
-            </div>
             <div id="cloudList" class="cloud-list"></div>
         </div>
+
         <div class="explorer-divider explorer-divider-resizer" id="explorerDivider"></div>
+
+        <!-- Local Section -->
         <div class="explorer-section local-section">
             <div class="section-header">
                 <span><i class="fas fa-folder"></i> Local</span>
-            </div>
-            <div class="local-actions">
-                <button id="openFolderBtn" title="Open Folder"><i class="fas fa-folder-open"></i></button>
-                <button id="saveLocalBtn" title="Save to Folder" disabled><i class="fas fa-save"></i></button>
-                <button id="newFileBtn" title="New File" disabled><i class="fas fa-file-plus"></i></button>
-                <button id="refreshFolderBtn" title="Refresh" disabled><i class="fas fa-sync-alt"></i></button>
-                <input type="text" id="fileSearchInput" autocomplete="new-password" placeholder="Search files..."
-                    disabled>
             </div>
             <div id="fileTree" class="file-tree">
                 <div class="file-tree-empty">

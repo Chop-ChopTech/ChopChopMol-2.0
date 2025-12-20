@@ -28,9 +28,11 @@ class FileExplorer {
         document.getElementById('toggleFileExplorer')?.addEventListener('click', () => this.toggle());
         document.getElementById('openFolderBtn')?.addEventListener('click', () => this.openFolder());
         document.getElementById('openFolderPrompt')?.addEventListener('click', () => this.openFolder());
-        document.getElementById('newFileBtn')?.addEventListener('click', () => this.promptNewFile());
         document.getElementById('refreshFolderBtn')?.addEventListener('click', () => this.refresh());
-        document.getElementById('fileSortSelect')?.addEventListener('change', () => this.refresh());
+        document.getElementById('fileSortSelect')?.addEventListener('change', () => {
+            this.refresh();
+            this.loadCloudMolecules();
+        });
         document.getElementById('closeExplorerBtn')?.addEventListener('click', () => this.close());
         document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
         document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
@@ -380,16 +382,23 @@ class FileExplorer {
         }, 0);
     }
     filterFiles(query) {
-        const items = this.fileTree.querySelectorAll('.file-item, .folder-item');
+        // Filter LOCAL files
+        const localItems = this.fileTree.querySelectorAll('.file-item, .folder-item');
+
+        // Filter CLOUD items
+        const cloudItems = document.querySelectorAll('#cloudList .cloud-item');
 
         if (!query) {
-            // Show all
-            items.forEach(item => item.classList.remove('hidden'));
+            // Show all local
+            localItems.forEach(item => item.classList.remove('hidden'));
             this.fileTree.querySelectorAll('.folder-contents').forEach(fc => fc.classList.remove('hidden'));
+            // Show all cloud
+            cloudItems.forEach(item => item.classList.remove('hidden'));
             return;
         }
 
-        items.forEach(item => {
+        // Filter local items
+        localItems.forEach(item => {
             const name = item.querySelector('span')?.textContent?.toLowerCase() || '';
             const matches = name.includes(query);
             item.classList.toggle('hidden', !matches);
@@ -416,6 +425,13 @@ class FileExplorer {
                 }
                 parent = parent.parentElement;
             }
+        });
+
+        // Filter cloud items
+        cloudItems.forEach(item => {
+            const name = item.querySelector('.cloud-item-name')?.textContent?.toLowerCase() || '';
+            const matches = name.includes(query);
+            item.classList.toggle('hidden', !matches);
         });
     }
 
@@ -448,7 +464,6 @@ class FileExplorer {
             // Save handle to IndexedDB for next session
             await this.saveDirectoryHandle(this.directoryHandle);
 
-            document.getElementById('newFileBtn').disabled = false;
             document.getElementById('fileSearchInput').disabled = false;
             document.getElementById('refreshFolderBtn').disabled = false;
             document.getElementById('saveLocalBtn').disabled = false;
@@ -801,7 +816,6 @@ class FileExplorer {
 
             if (permission === 'granted') {
                 this.directoryHandle = handle;
-                document.getElementById('newFileBtn').disabled = false;
                 document.getElementById('fileSearchInput').disabled = false;
                 document.getElementById('refreshFolderBtn').disabled = false;
                 document.getElementById('saveLocalBtn').disabled = false;
@@ -829,7 +843,6 @@ class FileExplorer {
                 const permission = await handle.requestPermission({ mode: 'readwrite' });
                 if (permission === 'granted') {
                     this.directoryHandle = handle;
-                    document.getElementById('newFileBtn').disabled = false;
                     document.getElementById('refreshFolderBtn').disabled = false;
                     document.getElementById('saveLocalBtn').disabled = false;
                     await this.refresh();
@@ -866,22 +879,39 @@ class FileExplorer {
             return;
         }
 
+        // Sort based on dropdown selection
+        const sortMode = document.getElementById('fileSortSelect')?.value || 'alpha';
+
+        molecules.sort((a, b) => {
+            if (sortMode === 'date') {
+                const dateA = a.timestamp?.toDate?.() || new Date(0);
+                const dateB = b.timestamp?.toDate?.() || new Date(0);
+                return dateB - dateA; // newest first
+            } else if (sortMode === 'ext') {
+                // Cloud molecules don't have extensions, fall back to alpha
+                return (a.name || '').localeCompare(b.name || '');
+            } else {
+                // alpha
+                return (a.name || '').localeCompare(b.name || '');
+            }
+        });
+
         list.innerHTML = '';
         molecules.forEach(mol => {
             const date = mol.timestamp?.toDate?.() || new Date();
             const item = document.createElement('div');
             item.className = 'cloud-item';
-            item.draggable = true;  // ADD THIS
+            item.draggable = true;
             item.innerHTML = `
-                <i class="fas fa-atom file-mol"></i>
-                <span class="cloud-item-name">${mol.name}</span>
-                <div class="cloud-item-actions">
-                    <button class="import-btn" title="Download as XYZ"><i class="fas fa-download"></i></button>
-                    <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
-                </div>
-            `;
+            <i class="fas fa-atom file-mol"></i>
+            <span class="cloud-item-name">${mol.name}</span>
+            <div class="cloud-item-actions">
+                <button class="import-btn" title="Download as XYZ"><i class="fas fa-download"></i></button>
+                <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
 
-            // ADD drag events
+            // Drag events
             item.addEventListener('dragstart', (e) => {
                 item.classList.add('dragging');
                 e.dataTransfer.setData('application/json', JSON.stringify(mol));

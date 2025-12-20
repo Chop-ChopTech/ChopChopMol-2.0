@@ -3332,22 +3332,7 @@ input[type="range"]:focus {
     border-radius: 8px;
 }
 
-.local-actions {
-    display: flex;
-    gap: 4px;
-    padding: 8px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
 
-.local-actions button {
-    background: transparent;
-    border: none;
-    color: rgba(255, 255, 255, 0.6);
-    cursor: pointer;
-    padding: 6px 8px;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
 
 .local-actions button:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.1);
@@ -3360,11 +3345,12 @@ input[type="range"]:focus {
 }
 
 /* Cloud Tab */
-.cloud-save-section {
-    display: flex;
-    gap: 8px;
-    padding: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+.file-item.hidden,
+.folder-item.hidden,
+.folder-contents.hidden,
+.cloud-item.hidden {
+    display: none !important;
 }
 
 .cloud-input {
@@ -3382,15 +3368,7 @@ input[type="range"]:focus {
     border-color: rgba(0, 136, 255, 0.5);
 }
 
-.cloud-save-section button {
-    background: linear-gradient(135deg, #46a9ff, #343eff);
-    border: none;
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: opacity 0.2s;
-}
+
 
 .cloud-save-section button:hover {
     opacity: 0.8;
@@ -3521,6 +3499,89 @@ input[type="range"]:focus {
     text-align: center;
     padding: 40px;
     color: rgba(255, 255, 255, 0.5);
+}
+
+/* Global Explorer Toolbar */
+.explorer-toolbar {
+    display: flex;
+    gap: 6px;
+}
+
+.explorer-toolbar button {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    padding: 8px 10px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-size: 12px;
+}
+
+.explorer-toolbar button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.explorer-toolbar button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.explorer-header-right {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+/* Updated header layout */
+.file-explorer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.3);
+    gap: 8px;
+}
+
+/* Search bar row */
+.explorer-search-bar {
+    display: flex;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.explorer-search-bar input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 6px 10px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    min-width: 0;
+}
+
+.explorer-search-bar input:focus {
+    border-color: rgba(0, 136, 255, 0.5);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.explorer-search-bar input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.explorer-search-bar #cloudSaveInput {
+    flex: 1.2;
+}
+
+.explorer-search-bar #fileSearchInput {
+    flex: 1;
 }
 
 /* Panel Collapse Toggle Buttons */
