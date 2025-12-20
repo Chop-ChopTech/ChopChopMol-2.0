@@ -2335,6 +2335,7 @@ input[type="range"]:focus {
     line-height: 1.5;
     word-wrap: break-word;
     pointer-events: all !important;
+    user-select: text;
 }
 
 .ai-message.user .ai-message-content {
