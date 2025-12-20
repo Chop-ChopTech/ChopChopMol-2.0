@@ -2487,7 +2487,7 @@ input[type="range"]:focus {
     transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
     resize: none;
     min-height: 24px;
-    max-height: 120px;
+    max-height: 220px;
     overflow-y: auto;
     line-height: 1.4;
 }
@@ -2526,7 +2526,7 @@ input[type="range"]:focus {
     height: 36px;
     border: none;
     border-radius: 50%;
-    background: linear-gradient(135deg, #c96442, #b8860b);
+    background-color: rgba(60, 71, 119, 0.5);
     color: white;
     cursor: pointer;
     display: flex;
