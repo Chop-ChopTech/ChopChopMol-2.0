@@ -199,7 +199,6 @@
                     storageUsed: currentUsage + dataSize
                 }, { merge: true });
 
-                showSaveNotification('Molecule saved successfully!');
                 updateStorageIndicator();
                 return true;
             } catch (error) {
@@ -332,7 +331,6 @@
             );
             window.resetCamera()
 
-            showSaveNotification(`Loaded: ${moleculeData.name}`);
         }
 
         async function deleteMolecule(moleculeId) {
