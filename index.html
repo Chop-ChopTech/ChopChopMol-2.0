@@ -255,7 +255,7 @@
                     <div style="width: 100px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden;">
                         <div style="width: ${percentage}%; height: 100%; background: ${percentage > 90 ? 'linear-gradient(90deg, #ff9800, #ff5722)' : 'linear-gradient(90deg, #4CAF50, #8BC34A)'}; transition: width 0.3s;"></div>
                     </div>
-                    <span>${used.toFixed(2)} / ${limit < 1000 ? limit + 'MB' : (limit / 1000) + 'GB'}</span>
+                    
                 `;
 
                 // Add warning animation if near limit
@@ -1597,16 +1597,17 @@
         <button class="panel-collapse-toggle" id="aiCollapseToggle" title="Collapse panel">
             <i class="fas fa-chevron-left"></i>
         </button>
-        <div class="ai-chat-header">
+        <div class="ai-chat-header" style="display: none;">
 
             <div class="ai-header-buttons">
-                <button id="aiClearBtn" class="ai-header-btn" title="Clear chat">
+                <button id="aiClearBtn" class="ai-header-btn" title="Clear chat" style="display: none;">
                     <i class="fas fa-trash"></i>
                 </button>
-                <button id="aiSettingsBtn" style="display: none;" class="ai-header-btn" title="API Settings">
+                <button id="aiSettingsBtn" style="display: none;" class="ai-header-btn" title="API Settings"
+                    style="display: none;">
                     <i class="fas fa-cog"></i>
                 </button>
-                <button id="aiCloseBtn" class="ai-header-btn" title="Close">
+                <button id="aiCloseBtn" class="ai-header-btn" title="Close" style="display: none;">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
