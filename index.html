@@ -229,60 +229,42 @@
                     storageInfo.style.color = percentage > 90 ? '#ff9800' : '#4CAF50';
                 }
 
-                // Create or update floating storage indicator
-                let floatingIndicator = document.getElementById('floatingStorageIndicator');
-                if (!floatingIndicator) {
-                    floatingIndicator = document.createElement('div');
-                    floatingIndicator.id = 'floatingStorageIndicator';
-                    floatingIndicator.style.cssText = `
-                        position: fixed;
-                        top: 15px;
-                        left: 60px;
-                        color: white;
-                        padding: 10px 15px;
-                        border-radius: 8px;
-                        font-size: 12px;
-                        z-index: 1000;
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                    `;
-                    document.body.appendChild(floatingIndicator);
+                // Find the cloud section header and add indicator there
+                const cloudHeader = document.querySelector('.cloud-section .section-header');
+                if (!cloudHeader) return;
+
+                let storageIndicator = document.getElementById('cloudStorageIndicator');
+                if (!storageIndicator) {
+                    storageIndicator = document.createElement('div');
+                    storageIndicator.id = 'cloudStorageIndicator';
+                    storageIndicator.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-left: auto;
+                width: auto;
+            `;
+                    cloudHeader.style.display = 'flex';
+                    cloudHeader.style.alignItems = 'center';
+                    cloudHeader.appendChild(storageIndicator);
                 }
 
-                // Update floating indicator content
-                floatingIndicator.innerHTML = `
-                    <div style="width: 100px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden;">
-                        <div style="width: ${percentage}%; height: 100%; background: ${percentage > 90 ? 'linear-gradient(90deg, #ff9800, #ff5722)' : 'linear-gradient(90deg, #4CAF50, #8BC34A)'}; transition: width 0.3s;"></div>
-                    </div>
-                    
-                `;
+                // Update indicator content
+                storageIndicator.innerHTML = `
+            <div style="width: 60px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
+                <div style="width: ${percentage}%; height: 100%; background: ${percentage > 90 ? '#ff9800' : '#4CAF50'}; transition: width 0.3s;"></div>
+            </div>
+            <span style="font-size: 10px; color: rgba(255,255,255,0.6);">${used.toFixed(1)}/${limit}MB</span>
+        `;
 
-                // Add warning animation if near limit
-                if (percentage > 90 && !isPremium) {
-                    floatingIndicator.style.animation = 'pulse 2s infinite';
-
-                    // Add CSS for pulse animation if not exists
-                    if (!document.getElementById('storageAnimations')) {
-                        const style = document.createElement('style');
-                        style.id = 'storageAnimations';
-                        style.textContent = `
-                            @keyframes pulse {
-                                0%, 100% { opacity: 1; }
-                                50% { opacity: 0.7; }
-                            }
-                        `;
-                        document.head.appendChild(style);
-                    }
-                } else {
-                    floatingIndicator.style.animation = '';
-                }
+                // Remove old floating indicator if it exists
+                const oldFloating = document.getElementById('floatingStorageIndicator');
+                if (oldFloating) oldFloating.remove();
 
             } catch (error) {
                 console.error('Error updating storage indicator:', error);
             }
         }
-
         async function checkStorageLimit(dataSize) {
             const user = auth.currentUser;
             if (!user) return false;
