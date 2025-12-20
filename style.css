@@ -2762,6 +2762,7 @@ input[type="range"]:focus {
     padding: 4px 8px;
     cursor: pointer;
     outline: none;
+    width: 100%;
 }
 
 .file-explorer-title option {
@@ -3605,6 +3606,7 @@ input[type="range"]:focus {
     display: flex;
     gap: 4px;
     align-items: center;
+    width: 100%;
 }
 
 /* Updated header layout */
