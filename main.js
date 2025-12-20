@@ -609,11 +609,7 @@ function worldToScreen(worldPos, camera) {
     vector.copy(worldPos);
     vector.project(camera);
 
-    const panel = document.getElementById('aiChatPanel');
-    const panelWidth = panel && panel.classList.contains('open') ? 380 : 0;
-    const viewportWidth = window.innerWidth - panelWidth;
-
-    const x = (vector.x * 0.5 + 0.5) * viewportWidth + panelWidth;
+    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
     const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
 
     return { x, y };
@@ -4637,9 +4633,8 @@ function render() {
 }
 
 function updateRendererSize() {
-    const panel = document.getElementById('aiChatPanel');
-    const panelWidth = panel && panel.classList.contains('open') ? 380 : 0;
-    const width = window.innerWidth - panelWidth;
+    // Just use full window size, ignore AI panel
+    const width = window.innerWidth;
     const height = window.innerHeight;
 
     camera.aspect = width / height;
@@ -4656,7 +4651,7 @@ function updateRendererSize() {
     }
 
     renderer.setSize(width, height);
-    renderer.domElement.style.marginLeft = panelWidth + 'px';
+    renderer.domElement.style.marginLeft = '0px';  // No offset
     render();
 }
 window.addEventListener('resize', updateRendererSize);
