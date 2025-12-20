@@ -1603,17 +1603,9 @@
             </div>
         </div>
 
-        <div class="ai-quick-actions">
-            <button class="ai-quick-btn" data-prompt="What can you do?">Help</button>
-            <button class="ai-quick-btn" data-prompt="Reset the camera view">Reset view</button>
-            <button class="ai-quick-btn" data-prompt="Toggle atom labels">Labels</button>
-            <button class="ai-quick-btn" data-prompt="Tell me about this molecule">Info</button>
-        </div>
 
         <div id="aiChatMessages" class="ai-chat-messages">
             <div class="ai-welcome">
-                <h4>AI Assistant</h4>
-                <p>I can help you rotate, translate, select atoms, change styles, and more!</p>
             </div>
         </div>
 
@@ -1655,7 +1647,7 @@
             });
             const sendBtn = document.getElementById('aiSendBtn');
             const messagesContainer = document.getElementById('aiChatMessages');
-            const quickBtns = document.querySelectorAll('.ai-quick-btn');
+
 
             // Toggle panel
             toggleBtn.addEventListener('click', () => {
@@ -1677,9 +1669,6 @@
             clearBtn.addEventListener('click', () => {
                 messagesContainer.innerHTML = `
                     <div class="ai-welcome">
-                        <i class="fas fa-robot"></i>
-                        <h4>Molecular AI Assistant</h4>
-                        <p>I can help you rotate, translate, select atoms, change styles, and more. Try asking me to do something!</p>
                     </div>
                 `;
                 if (window.AIAgent) window.AIAgent.clearHistory();
@@ -1711,16 +1700,6 @@
                 }
             });
 
-            // Quick action buttons
-            quickBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const prompt = btn.dataset.prompt;
-                    if (prompt) {
-                        chatInput.value = prompt;
-                        handleSend();
-                    }
-                });
-            });
 
             // Send message
             async function handleSend() {
