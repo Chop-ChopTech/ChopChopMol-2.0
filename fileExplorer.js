@@ -105,6 +105,7 @@ class FileExplorer {
             }
         });
         document.getElementById('createFolderBtn')?.addEventListener('click', () => this.createFolder());
+        document.getElementById('createCloudFolderBtn')?.addEventListener('click', () => this.createCloudFolder());
         // Setup drag-drop for local folder
         this.setupCloudDragDrop();
         this.setupLocalToCloudDrop();
@@ -215,20 +216,43 @@ class FileExplorer {
         const cloudList = document.getElementById('cloudList');
 
         cloudList.addEventListener('dragover', (e) => {
-            if (e.dataTransfer.types.includes('text/plain')) {
+            // Allow drops from local files (text/plain) or cloud molecules (application/json)
+            if (e.dataTransfer.types.includes('text/plain') || e.dataTransfer.types.includes('application/json')) {
                 e.preventDefault();
                 cloudList.classList.add('drag-over');
             }
         });
 
-        cloudList.addEventListener('dragleave', () => {
-            cloudList.classList.remove('drag-over');
+        cloudList.addEventListener('dragleave', (e) => {
+            // Only remove drag-over if leaving the cloudList itself
+            if (!cloudList.contains(e.relatedTarget)) {
+                cloudList.classList.remove('drag-over');
+            }
         });
 
         cloudList.addEventListener('drop', async (e) => {
             e.preventDefault();
             cloudList.classList.remove('drag-over');
 
+            // Handle cloud molecule drop (move to root)
+            const molData = e.dataTransfer.getData('application/json');
+            if (molData) {
+                try {
+                    const mol = JSON.parse(molData);
+                    if (mol.id && window.moveMoleculeToFolder) {
+                        const moved = await window.moveMoleculeToFolder(mol.id, null); // null = move to root
+                        if (moved) {
+                            this.loadCloudMolecules();
+                            window.showSaveNotification?.(`Moved ${mol.name} to root`);
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error moving molecule to root:', err);
+                }
+                return;
+            }
+
+            // Handle local file drop (upload to cloud)
             const filePath = e.dataTransfer.getData('text/plain');
             if (!filePath || !this.fileHandles.has(filePath)) return;
 
@@ -490,8 +514,9 @@ class FileExplorer {
         // Filter LOCAL files
         const localItems = this.fileTree.querySelectorAll('.file-item, .folder-item');
 
-        // Filter CLOUD items
+        // Filter CLOUD items and folders
         const cloudItems = document.querySelectorAll('#cloudList .cloud-item');
+        const cloudFolders = document.querySelectorAll('#cloudList .cloud-folder-item');
 
         if (!query) {
             // Show all local
@@ -499,6 +524,13 @@ class FileExplorer {
             this.fileTree.querySelectorAll('.folder-contents').forEach(fc => fc.classList.remove('hidden'));
             // Show all cloud
             cloudItems.forEach(item => item.classList.remove('hidden'));
+            cloudFolders.forEach(item => item.classList.remove('hidden'));
+            document.querySelectorAll('#cloudList .cloud-folder-contents').forEach(fc => {
+                // Keep expanded state but show if parent is visible
+                if (fc.previousElementSibling?.classList.contains('expanded')) {
+                    fc.classList.remove('hidden');
+                }
+            });
             return;
         }
 
@@ -532,11 +564,44 @@ class FileExplorer {
             }
         });
 
+        // Filter cloud folders
+        cloudFolders.forEach(item => {
+            const name = item.querySelector('span')?.textContent?.toLowerCase() || '';
+            const matches = name.includes(query);
+            item.classList.toggle('hidden', !matches);
+
+            // If it's a matching folder, show its contents
+            if (matches) {
+                const contents = item.nextElementSibling;
+                if (contents?.classList.contains('cloud-folder-contents')) {
+                    contents.classList.remove('hidden');
+                    item.classList.add('expanded');
+                    contents.querySelectorAll('.cloud-item').forEach(child => child.classList.remove('hidden'));
+                }
+            }
+        });
+
         // Filter cloud items
         cloudItems.forEach(item => {
             const name = item.querySelector('.cloud-item-name')?.textContent?.toLowerCase() || '';
             const matches = name.includes(query);
             item.classList.toggle('hidden', !matches);
+
+            // Show parent folder if this item matches
+            if (matches) {
+                let parent = item.parentElement;
+                while (parent && parent.id !== 'cloudList') {
+                    if (parent.classList.contains('cloud-folder-contents')) {
+                        parent.classList.remove('hidden');
+                        const folderItem = parent.previousElementSibling;
+                        if (folderItem?.classList.contains('cloud-folder-item')) {
+                            folderItem.classList.remove('hidden');
+                            folderItem.classList.add('expanded');
+                        }
+                    }
+                    parent = parent.parentElement;
+                }
+            }
         });
     }
 
@@ -638,6 +703,53 @@ class FileExplorer {
 
         // Insert at top of file tree
         this.fileTree.prepend(inputWrapper);
+        input.focus();
+    }
+
+    async createCloudFolder() {
+        // Check if user is signed in
+        if (!window.auth?.currentUser) {
+            alert('Please sign in to create folders');
+            return;
+        }
+
+        const cloudList = document.getElementById('cloudList');
+        if (!cloudList) return;
+
+        // Remove any existing input
+        cloudList.querySelector('.folder-name-input')?.remove();
+
+        // Create input element (same style as local)
+        const inputWrapper = document.createElement('div');
+        inputWrapper.className = 'folder-name-input';
+        inputWrapper.innerHTML = `
+        <input type="text" placeholder="Folder name..." autofocus>
+    `;
+
+        const input = inputWrapper.querySelector('input');
+
+        const confirm = async () => {
+            const name = input.value.trim();
+            if (name && window.createCloudFolder) {
+                const folderId = await window.createCloudFolder(name);
+                if (folderId) {
+                    await this.loadCloudMolecules();
+                }
+            }
+            inputWrapper.remove();
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') confirm();
+            if (e.key === 'Escape') inputWrapper.remove();
+        });
+
+        input.addEventListener('blur', () => {
+            setTimeout(() => inputWrapper.remove(), 100);
+        });
+
+        // Insert at top of cloud list
+        cloudList.prepend(inputWrapper);
         input.focus();
     }
 
@@ -1102,9 +1214,12 @@ class FileExplorer {
         const list = document.getElementById('cloudList');
         list.innerHTML = '<div class="cloud-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
-        const molecules = await window.loadMoleculesList();
+        const [molecules, folders] = await Promise.all([
+            window.loadMoleculesList?.() || [],
+            window.loadFoldersList?.() || []
+        ]);
 
-        if (!molecules.length) {
+        if (!molecules.length && !folders.length) {
             list.innerHTML = '<div class="cloud-empty"><i class="fas fa-cloud"></i><p>No saved molecules</p></div>';
             return;
         }
@@ -1112,27 +1227,147 @@ class FileExplorer {
         // Sort based on cloud sort mode
         const sortMode = this.cloudSortMode || 'alpha';
 
-        molecules.sort((a, b) => {
+        // Organize molecules by folder
+        const moleculesByFolder = new Map();
+        const rootMolecules = [];
+
+        molecules.forEach(mol => {
+            const folderId = mol.folderId || null;
+            if (folderId) {
+                if (!moleculesByFolder.has(folderId)) {
+                    moleculesByFolder.set(folderId, []);
+                }
+                moleculesByFolder.get(folderId).push(mol);
+            } else {
+                rootMolecules.push(mol);
+            }
+        });
+
+        // Sort molecules
+        const sortMolecules = (mols) => {
+            return mols.sort((a, b) => {
+                if (sortMode === 'date') {
+                    const dateA = a.timestamp?.toDate?.() || new Date(0);
+                    const dateB = b.timestamp?.toDate?.() || new Date(0);
+                    return dateB - dateA; // newest first
+                } else if (sortMode === 'ext') {
+                    return (a.name || '').localeCompare(b.name || '');
+                } else {
+                    return (a.name || '').localeCompare(b.name || '');
+                }
+            });
+        };
+
+        // Sort folders
+        folders.sort((a, b) => {
             if (sortMode === 'date') {
                 const dateA = a.timestamp?.toDate?.() || new Date(0);
                 const dateB = b.timestamp?.toDate?.() || new Date(0);
-                return dateB - dateA; // newest first
-            } else if (sortMode === 'ext') {
-                // Cloud molecules don't have extensions, fall back to alpha
-                return (a.name || '').localeCompare(b.name || '');
+                return dateB - dateA;
             } else {
-                // alpha
                 return (a.name || '').localeCompare(b.name || '');
             }
         });
 
         list.innerHTML = '';
-        molecules.forEach(mol => {
-            const date = mol.timestamp?.toDate?.() || new Date();
-            const item = document.createElement('div');
-            item.className = 'cloud-item';
-            item.draggable = true;
-            item.innerHTML = `
+
+        // Render folders first
+        folders.forEach(folder => {
+            const folderMolecules = sortMolecules(moleculesByFolder.get(folder.id) || []);
+            if (folderMolecules.length === 0 && !folder.parentFolderId) {
+                // Skip empty root folders for now, or show them
+                // Actually, let's show all folders
+            }
+
+            const folderEl = document.createElement('div');
+            folderEl.className = 'folder-item cloud-folder-item';
+            folderEl.dataset.folderId = folder.id;
+            folderEl.innerHTML = `
+                <i class="fas fa-chevron-right chevron"></i>
+                <span>${folder.name}</span>
+                <div class="cloud-item-actions" style="margin-left: auto;">
+                    <button class="delete-folder-btn" title="Delete Folder"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+
+            const contentsEl = document.createElement('div');
+            contentsEl.className = 'folder-contents cloud-folder-contents';
+
+            // Make folder a drop target for cloud molecules
+            folderEl.addEventListener('dragover', (e) => {
+                if (e.dataTransfer.types.includes('application/json')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    folderEl.classList.add('drop-target');
+                }
+            });
+
+            folderEl.addEventListener('dragleave', (e) => {
+                if (!folderEl.contains(e.relatedTarget)) {
+                    folderEl.classList.remove('drop-target');
+                }
+            });
+
+            folderEl.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                folderEl.classList.remove('drop-target');
+
+                // Check if it's a cloud molecule being dragged
+                const molData = e.dataTransfer.getData('application/json');
+                if (molData) {
+                    try {
+                        const mol = JSON.parse(molData);
+                        if (mol.id && window.moveMoleculeToFolder) {
+                            const moved = await window.moveMoleculeToFolder(mol.id, folder.id);
+                            if (moved) {
+                                this.loadCloudMolecules();
+                                window.showSaveNotification?.(`Moved ${mol.name} to ${folder.name}`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error moving molecule to folder:', err);
+                    }
+                }
+            });
+
+            // Toggle expand/collapse
+            folderEl.addEventListener('click', async (e) => {
+                if (e.target.closest('.delete-folder-btn')) return;
+                e.stopPropagation();
+                folderEl.classList.toggle('expanded');
+
+                if (folderEl.classList.contains('expanded') && contentsEl.children.length === 0) {
+                    // Render molecules in this folder
+                    folderMolecules.forEach(mol => {
+                        contentsEl.appendChild(this.createCloudItem(mol));
+                    });
+                }
+            });
+
+            // Delete folder button
+            folderEl.querySelector('.delete-folder-btn').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (await window.deleteCloudFolder?.(folder.id)) {
+                    this.loadCloudMolecules();
+                }
+            });
+
+            list.appendChild(folderEl);
+            list.appendChild(contentsEl);
+        });
+
+        // Render root molecules
+        sortMolecules(rootMolecules).forEach(mol => {
+            list.appendChild(this.createCloudItem(mol));
+        });
+    }
+
+    createCloudItem(mol) {
+        const item = document.createElement('div');
+        item.className = 'cloud-item';
+        item.draggable = true;
+        item.innerHTML = `
             <i class="fas fa-atom file-mol"></i>
             <span class="cloud-item-name">${mol.name}</span>
             <div class="cloud-item-actions">
@@ -1141,40 +1376,39 @@ class FileExplorer {
             </div>
         `;
 
-            // Drag events
-            item.addEventListener('dragstart', (e) => {
-                item.classList.add('dragging');
-                e.dataTransfer.setData('application/json', JSON.stringify(mol));
-                e.dataTransfer.effectAllowed = 'copy';
-            });
-
-            item.addEventListener('dragend', () => {
-                item.classList.remove('dragging');
-            });
-
-            item.querySelector('.cloud-item-name').addEventListener('click', () => {
-                // Highlight this cloud item
-                document.querySelectorAll('.file-item.active, .cloud-item.active').forEach(el => el.classList.remove('active'));
-                item.classList.add('active');
-
-                window.resetIsolationState?.();
-                window.resetIsolationState?.();
-                window.loadMolecule(mol);
-                if (mol.data?.fragments) window.fragments = mol.data.fragments.map(f => f.atoms);
-            });
-
-            item.querySelector('.import-btn')?.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.importAsXYZ(mol);
-            });
-
-            item.querySelector('.delete-btn').addEventListener('click', async (e) => {
-                e.stopPropagation();
-                if (await window.deleteMolecule(mol.id)) this.loadCloudMolecules();
-            });
-
-            list.appendChild(item);
+        // Drag events
+        item.addEventListener('dragstart', (e) => {
+            item.classList.add('dragging');
+            e.dataTransfer.setData('application/json', JSON.stringify(mol));
+            e.dataTransfer.effectAllowed = 'copy';
         });
+
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+        });
+
+        item.querySelector('.cloud-item-name').addEventListener('click', () => {
+            // Highlight this cloud item
+            document.querySelectorAll('.file-item.active, .cloud-item.active').forEach(el => el.classList.remove('active'));
+            item.classList.add('active');
+
+            window.resetIsolationState?.();
+            window.resetIsolationState?.();
+            window.loadMolecule(mol);
+            if (mol.data?.fragments) window.fragments = mol.data.fragments.map(f => f.atoms);
+        });
+
+        item.querySelector('.import-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.importAsXYZ(mol);
+        });
+
+        item.querySelector('.delete-btn').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (await window.deleteMolecule(mol.id)) this.loadCloudMolecules();
+        });
+
+        return item;
     }
 
     async importAsXYZ(mol) {

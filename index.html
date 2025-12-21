@@ -440,10 +440,118 @@
             }, 2000);
         }
 
+        async function createCloudFolder(folderName, parentFolderId = null) {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('Please sign in to create folders');
+                return null;
+            }
+
+            if (!folderName || !folderName.trim()) {
+                return null;
+            }
+
+            try {
+                const foldersRef = collection(db, 'users', user.uid, 'folders');
+                const folderData = {
+                    name: folderName.trim(),
+                    timestamp: serverTimestamp()
+                };
+
+                if (parentFolderId) {
+                    folderData.parentFolderId = parentFolderId;
+                }
+
+                const folderRef = await addDoc(foldersRef, folderData);
+                return folderRef.id;
+            } catch (error) {
+                console.error('Error creating folder:', error);
+                alert('Error creating folder: ' + error.message);
+                return null;
+            }
+        }
+
+        async function loadFoldersList() {
+            const user = auth.currentUser;
+            if (!user) {
+                return [];
+            }
+
+            try {
+                const foldersRef = collection(db, 'users', user.uid, 'folders');
+                const q = query(foldersRef, orderBy('timestamp', 'desc'));
+                const snapshot = await getDocs(q);
+
+                const folders = [];
+                snapshot.forEach((doc) => {
+                    folders.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                return folders;
+            } catch (error) {
+                console.error('Error loading folders:', error);
+                return [];
+            }
+        }
+
+        async function deleteCloudFolder(folderId) {
+            const user = auth.currentUser;
+            if (!user) return false;
+
+            if (!confirm('Delete this folder? Molecules in this folder will not be deleted, but will be moved to the root.')) return false;
+
+            try {
+                // Move all molecules in this folder to root (remove folderId)
+                const moleculesRef = collection(db, 'users', user.uid, 'molecules');
+                const q = query(moleculesRef, where('folderId', '==', folderId));
+                const snapshot = await getDocs(q);
+
+                const batch = writeBatch(db);
+                snapshot.forEach((molDoc) => {
+                    const molRef = doc(db, 'users', user.uid, 'molecules', molDoc.id);
+                    batch.update(molRef, { folderId: deleteField() });
+                });
+                await batch.commit();
+
+                // Delete the folder
+                await deleteDoc(doc(db, 'users', user.uid, 'folders', folderId));
+                return true;
+            } catch (error) {
+                console.error('Error deleting folder:', error);
+                return false;
+            }
+        }
+
         window.saveMolecule = saveMolecule;
         window.loadMoleculesList = loadMoleculesList;
         window.loadMolecule = loadMolecule;
         window.deleteMolecule = deleteMolecule;
+        window.createCloudFolder = createCloudFolder;
+        window.loadFoldersList = loadFoldersList;
+        async function moveMoleculeToFolder(moleculeId, folderId) {
+            const user = auth.currentUser;
+            if (!user) return false;
+
+            try {
+                const molRef = doc(db, 'users', user.uid, 'molecules', moleculeId);
+                if (folderId) {
+                    await setDoc(molRef, { folderId: folderId }, { merge: true });
+                } else {
+                    // Move to root by removing folderId
+                    await setDoc(molRef, { folderId: deleteField() }, { merge: true });
+                }
+                return true;
+            } catch (error) {
+                console.error('Error moving molecule to folder:', error);
+                return false;
+            }
+        }
+
+        window.deleteCloudFolder = deleteCloudFolder;
+        window.moveMoleculeToFolder = moveMoleculeToFolder;
         window.currentUser = null;
 
 
@@ -1611,6 +1719,8 @@
                 </div>
                 <button id="cloudRefreshBtn" class="local-toolbar-button" title="Refresh Cloud"><i
                         class="fas fa-sync-alt"></i></button>
+                <button id="createCloudFolderBtn" class="local-toolbar-button" title="Create Folder"><i
+                        class="fas fa-folder-plus"></i></button>
                 <button id="cloudSaveBtn" class="local-toolbar-button" title="Save to Cloud"><i
                         class="fas fa-save"></i></button>
             </div>

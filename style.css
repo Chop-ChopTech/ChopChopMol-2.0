@@ -3330,7 +3330,9 @@ input[type="range"]:focus {
 .file-item.hidden,
 .folder-item.hidden,
 .folder-contents.hidden,
-.cloud-item.hidden {
+.cloud-item.hidden,
+.cloud-folder-item.hidden,
+.cloud-folder-contents.hidden {
     display: none !important;
 }
 
@@ -3470,6 +3472,66 @@ input[type="range"]:focus {
     gap: 8px;
     padding: 40px 20px;
     text-align: center;
+}
+
+/* Cloud folder styles - reuse local folder styles */
+.cloud-folder-item {
+    display: flex;
+    align-items: center;
+    padding: 1px 16px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    transition: background 0.15s;
+    user-select: none;
+}
+
+.cloud-folder-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.cloud-folder-contents {
+    display: none;
+    padding-left: 16px;
+}
+
+.cloud-folder-item.expanded+.cloud-folder-contents {
+    display: block;
+}
+
+.cloud-folder-item .chevron {
+    margin-right: 4px;
+    transition: transform 0.2s;
+    font-size: 11px;
+}
+
+.cloud-folder-item.expanded .chevron {
+    transform: rotate(90deg);
+}
+
+.cloud-folder-item .folder-icon {
+    color: #f0c36d;
+    margin-right: 8px;
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+}
+
+.cloud-folder-item .cloud-item-actions {
+    margin-left: auto;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.cloud-folder-item:hover .cloud-item-actions {
+    opacity: 1;
+    visibility: visible;
+}
+
+.cloud-folder-item.drop-target {
+    background: rgba(0, 136, 255, 0.2);
+    outline: 2px dashed rgba(0, 136, 255, 0.6);
+    outline-offset: -2px;
 }
 
 .explorer-search-bar {
