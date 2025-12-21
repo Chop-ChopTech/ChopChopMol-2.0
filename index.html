@@ -454,19 +454,14 @@
 
             if (user) {
                 // User is signed in
+
                 signInButton.style.display = 'none';
                 signOutButton.style.display = 'block';
                 userStatus.innerHTML = `<span id="storageInfo" style="font-size: 12px; margin-left: 10px;"></span>`;
                 userStatus.style.display = 'none';
                 document.getElementById('cloudSignInWarning').style.display = 'none';
 
-                const dropdownIcon = document.querySelector('#settings .dropdown-icon');
-                const userInitials = getUserInitials(user.displayName);
 
-                dropdownIcon.innerHTML = `<div class="user-initials">${userInitials}</div>`;
-                dropdownIcon.classList.add('signed-in');
-
-                dropdownIcon.title = `Signed in as ${user.displayName}`;
 
                 const makeDefaultBtn = document.getElementById('makeDefaultButton');
                 if (makeDefaultBtn) {
@@ -519,7 +514,8 @@
                         window.loadStylePreferences(user.uid, window.renderer);
                     }, delay);
                 }
-
+                // After setting up the user state, call:
+                updateAccountIcon(user);
                 console.log('Current user email:', window.currentUserEmail);
 
             } else {
@@ -569,7 +565,8 @@
                         window.resetToDefaults();
                     }, 100);
                 }
-
+                // After sign out:
+                updateAccountIcon(null);
                 console.log('User signed out');
             }
         });
@@ -634,6 +631,38 @@
                 window.open('https://checkout.chopchopmol.com/b/fZu00k2n6eja9aa4V67Re06', '_blank');
             }
         }
+
+        function toggleSubmenu(submenuId) {
+            const submenu = document.getElementById(submenuId);
+            const parent = submenu.closest('.settings-submenu');
+
+            // Close other submenus
+            document.querySelectorAll('.submenu-content.open').forEach(el => {
+                if (el.id !== submenuId) {
+                    el.classList.remove('open');
+                    el.closest('.settings-submenu').classList.remove('open');
+                }
+            });
+
+            // Toggle this submenu
+            submenu.classList.toggle('open');
+            parent.classList.toggle('open');
+        }
+
+        // Update account icon when signed in (modify your existing auth state handler)
+        function updateAccountIcon(user) {
+            const accountIcon = document.getElementById('accountIcon');
+            const accountLabel = document.getElementById('accountLabel');
+
+            if (user) {
+                const initials = getUserInitials(user.displayName);
+                accountIcon.innerHTML = `<div class="user-initials">${initials}</div>`;
+                accountLabel.textContent = user.displayName?.split(' ')[0] || 'Account';
+            } else {
+                accountIcon.innerHTML = '<i class="fa-solid fa-user"></i>';
+                accountLabel.textContent = 'Account';
+            }
+        }
     </script>
     <div id="buttons">
         <input type="file" id="fileInput" accept=".pdb,.mol,.sdf,.xyz,.cif,.mmcif,.mol2,.pqr,.gro,.cml"
@@ -667,7 +696,8 @@
                 style="border: none; display: none;">
                 <i class="fas fa-folder-tree"></i>
             </button>
-            <button class="dropdown-icon dropdown" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
+            <button class="dropdown-icon dropdown" id="switchMode" style="display: none;"><i
+                    class="fa-solid fa-wand-sparkles"></i></button>
             <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"
                 style="display: none;"><i class="fas fa-ruler"></i></button>
 
@@ -684,30 +714,90 @@
 
                 </div>
             </div>
-            <div class="dropdown" id="settings">
-                <span class="dropdown-icon"><i class="fa-solid fa-circle-user"></i></span>
-                <div class="dropdown-content shine ">
+            <div class="dropdown" id="settingsGear">
+                <span class="dropdown-icon"><i class="fa-solid fa-gear"></i></span>
+                <div class="dropdown-content shine" style="min-width: 200px;">
 
-                    <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
-                        Google</button>
-                    <button class="fancy-button" id="signOutButton" style="display: none;"><i
-                            class="fas fa-sign-out-alt"></i> Sign
-                        Out</button>
-                    <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
-                        onclick="showPremiumModal()">
-                        Subscription
-                    </button>
+                    <!-- Style Settings Sub-dropdown -->
+                    <div class="settings-submenu">
+                        <div class="submenu-header" onclick="toggleSubmenu('styleSubmenu')">
+                            <i class="fa-solid fa-palette"></i> Style Settings
+                            <i class="fa-solid fa-chevron-down submenu-arrow"></i>
+                        </div>
+                        <div class="submenu-content" id="styleSubmenu">
+                            <div class="compact-style-row">
+                                <label>Roughness</label>
+                                <input type="range" id="style1" min="0" max="1" step="0.01" value="0.17">
+                            </div>
+                            <div class="compact-style-row">
+                                <label>Metalness</label>
+                                <input type="range" id="style2" min="0" max="1" step="0.01" value="0.3">
+                            </div>
+                            <div class="compact-style-row">
+                                <label>Opacity</label>
+                                <input type="range" id="style3" min="0" max="1" step="0.01" value="1">
+                            </div>
+                            <div class="compact-style-row">
+                                <label>Bonds</label>
+                                <input type="range" id="style4">
+                            </div>
+                            <div class="compact-style-row">
+                                <label>Atom Size</label>
+                                <input type="range" id="style5" min="0.1" max="2" step="0.01">
+                            </div>
+                            <div class="compact-style-row">
+                                <label>Resolution</label>
+                                <input type="range" id="style6" min="1" max="64" step="1">
+                            </div>
+                            <div class="compact-style-row">
+                                <label>Background</label>
+                                <input type="color" id="style8" value="#01101f">
+                            </div>
+                            <div class="compact-style-row checkbox-row">
+                                <label><input type="checkbox" id="toggleStyleChanges"> Styled Mode</label>
+                            </div>
+                            <div class="compact-style-row checkbox-row">
+                                <label><input type="checkbox" id="style7"> Antialiasing</label>
+                            </div>
+                            <div class="compact-style-row checkbox-row">
+                                <label><input type="checkbox" id="toggleLabels"> Atom Labels</label>
+                            </div>
+                            <div class="compact-style-row checkbox-row">
+                                <label><input type="checkbox" id="toggleOrtho"> Ortho Camera</label>
+                            </div>
+                            <button id="labelModeBtn" class="fancy-button compact-btn"
+                                style="background-color: #38bd3c;">Mode: Elements</button>
+                            <button id="makeDefaultButton" class="fancy-button compact-btn"
+                                style="display: none; background-color: #0073ff;">Save
+                                as
+                                Default</button>
+                        </div>
+                    </div>
 
-                    <button class="donate-btn fancy-button" onclick="openDonateModal()">
-                        <i class="fas fa-heart"></i>
-                        Donation
-                    </button>
+                    <!-- Account Sub-dropdown -->
+                    <div class="settings-submenu">
+                        <div class="submenu-header" onclick="toggleSubmenu('accountSubmenu')">
+                            <span id="accountIcon"><i class="fa-solid fa-user"></i></span>
+                            <span id="accountLabel">Account</span>
+                            <i class="fa-solid fa-chevron-down submenu-arrow"></i>
+                        </div>
+                        <div class="submenu-content" id="accountSubmenu">
+                            <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign
+                                In</button>
+                            <button class="fancy-button" id="signOutButton" style="display: none;"><i
+                                    class="fas fa-sign-out-alt"></i> Sign Out</button>
+                            <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
+                                onclick="showPremiumModal()">Subscription</button>
+                            <button class="donate-btn fancy-button" onclick="openDonateModal()"><i
+                                    class="fas fa-heart"></i>
+                                Donation</button>
+                        </div>
+                    </div>
+
                     <button onclick="window.location.href='https://chopchopmol.com'" class="fancy-button"
-                        style="background-color: #006dea;">
-                        Help guide
+                        style="background-color: #006dea; margin-top: 10px;">
+                        <i class="fas fa-question-circle"></i> Tutorial
                     </button>
-
-
                 </div>
             </div>
         </div>
@@ -717,81 +807,6 @@
     <div id="selectionBox"></div>
     <!-- Add this below #buttons to show user info -->
     <div id="userStatus" style="color: white;"></div>
-    <div id="styleSelector" class="on" style="border-radius: 30px; width: 300px;">
-        <div class="switch-container">
-            <span class="switch-label">Toggle Style Changes</span>
-            <label class="switch">
-                <input type="checkbox" id="toggleStyleChanges">
-                <span class="slider"></span>
-            </label>
-            <br>
-        </div>
-
-        <br>
-
-        <label for="style1">Roughness</label>
-        <input type="range" id="style1" min="0" max="1" step="0.01" , value="0.17">
-
-        <label for="style2">Metalness</label>
-        <input type="range" id="style2" min="0" max="1" step="0.01" value="0.3">
-
-        <label for="style3">Opacity</label>
-        <input type="range" id="style3" min="0" max="1" step="0.01" value="1">
-
-        <label for="style4">Bonds</label>
-        <input type="range" id="style4">
-
-        <label for="style5">Atom Size</label>
-        <input type="range" id="style5" min="0.1" max="2" step="0.01">
-
-        <label for="style6">Resolution</label>
-        <input type="range" id="style6" min="1" max="64" step="1">
-
-        <label for="style8">Background Color</label>
-        <input type="color" id="style8" value="#ff0000">
-
-        <div>
-            <input type="checkbox" id="style7">
-            <span>Toggle Antialising</span>
-        </div>
-        <div>
-            <input type="checkbox" id="toggleLabels">
-            <span>Toggle Atom labels</span>
-        </div>
-        <div>
-            <input type="checkbox" id="toggleOrtho">
-            <span>Orthographic Camera</span>
-        </div>
-        <div style="margin-top: 10px;">
-            <button id="labelModeBtn" class="fancy-button"
-                style="padding: 5px 10px; font-size: 12px; background-color: #ea8100;">
-                Mode: Elements
-            </button>
-        </div>
-        <button class="fancy-button glass" id="makeDefaultButton" style="
-            margin-top: 20px;
-            width: 100%;
-            height: 35px;
-            border-radius: 30px;
-            padding: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 1px 1px 3px rgba(255, 255, 255, 0.795), inset -3px -3px 6px rgba(255, 255, 255, 0.285);
-            background: linear-gradient(135deg, #667eea57 0%, #764ba26b 100%);
-            display: none;">
-            <i class="fas fa-save"></i> Make Default
-        </button>
-        <button class="fancy-button glass" id="resetToDefaultButton" style="
-            margin-top: 20px;
-            width: 100%;
-            height: 35px;
-            border-radius: 30px;
-            padding: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 1px 1px 3px rgba(255, 255, 255, 0.795), inset -3px -3px 6px rgba(255, 255, 255, 0.285);
-            background: linear-gradient(135deg, #eaac6657 0%, #d950506b 100%);
-            ">
-            <i class="fa-solid fa-arrow-rotate-left"></i> Reset to Default
-        </button>
-
-    </div>
     <div id="dragFile">
         <h3>Drag and drop a file here .xyz, .mol, or .pdb to be loaded</h3>
     </div>

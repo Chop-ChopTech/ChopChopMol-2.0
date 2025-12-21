@@ -3243,7 +3243,7 @@ input[type="range"]:focus {
     letter-spacing: 0.5px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(0, 0, 0, 0.2);
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .explorer-divider {
@@ -3723,4 +3723,119 @@ input[type="range"]:focus {
     50% {
         transform: scale(1.1);
     }
+}
+
+/* Settings Gear Submenu Styles */
+.settings-submenu {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.submenu-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+    color: white;
+    font-size: 13px;
+}
+
+.submenu-header:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.submenu-arrow {
+    margin-left: auto;
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+.submenu-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 8px;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+
+.submenu-content.open {
+    max-height: 500px;
+    padding: 8px;
+}
+
+.settings-submenu.open .submenu-arrow {
+    transform: rotate(180deg);
+}
+
+/* Compact style controls */
+.compact-style-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 6px 0;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.compact-style-row label {
+    flex: 0 0 70px;
+    font-size: 11px;
+}
+
+.compact-style-row input[type="range"] {
+    flex: 1;
+    height: 4px;
+    max-width: 100px;
+}
+
+.compact-style-row input[type="color"] {
+    width: 30px;
+    height: 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.compact-style-row.checkbox-row {
+    justify-content: flex-start;
+}
+
+.compact-style-row.checkbox-row label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.compact-style-row.checkbox-row input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+}
+
+.compact-btn {
+    width: 100%;
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    margin: 4px 0 !important;
+}
+
+/* Account icon with initials */
+#accountIcon .user-initials {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    top: 0;
+}
+
+#settingsGear .dropdown-content {
+    min-width: 220px;
+    padding: 10px;
 }
