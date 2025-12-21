@@ -209,16 +209,6 @@ body {
 }
 
 
-#switchMode {
-    color: #ffffff;
-    padding: 8px 11px;
-    border: none;
-    cursor: pointer;
-    border-radius: 5px;
-    z-index: 999;
-}
-
-
 #showAllBondLengths {
     color: #ffffff;
     padding: 4px 11px;
@@ -714,6 +704,15 @@ body {
 
 }
 
+#switchMode {
+    color: #ffffff;
+    padding: 8px 11px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    z-index: 999;
+}
+
 .shine {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 3px 3px 5px rgba(145, 145, 145, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.171);
 }
@@ -874,8 +873,9 @@ input[type="range"]:focus {
     border: none;
     border-radius: 12px;
     padding: 12px;
-    opacity: 0;
+    opacity: 1;
     pointer-events: none;
+    user-select: none;
     transform: translateY(-10px);
     transition: all 0.25s ease;
     z-index: 9999;
@@ -887,6 +887,7 @@ input[type="range"]:focus {
 .db-search-panel.active {
     opacity: 1;
     pointer-events: all;
+    user-select: all;
     transform: translateY(0);
 }
 
@@ -1038,7 +1039,7 @@ input[type="range"]:focus {
 .dropdown {
     position: relative;
     display: inline-block;
-    margin-right: 10px;
+
     background: none !important;
 }
 
@@ -1049,12 +1050,10 @@ input[type="range"]:focus {
     padding: 7px;
     background-color: #00000000;
     border-radius: 5px;
-    display: inline-flex;
     align-items: center;
     justify-content: center;
     color: #ffffff;
     transition: all 0.3s ease;
-    /* Smooth transition for background */
 }
 
 /* Show dropdown when active class is present */
@@ -1237,25 +1236,6 @@ input[type="range"]:focus {
 
 /* Enhanced user initials styling - add this to your style.css */
 
-/* User initials container */
-.user-initials {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 50%;
-    font-weight: bold;
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-    font-family: 'Rubik', sans-serif;
-}
 
 /* Signed-in state for dropdown icon - prevents rainbow effect */
 
@@ -1390,11 +1370,6 @@ input[type="range"]:focus {
     display: block;
 }
 
-.dropdown-icon.signed-in {
-    background: transparent !important;
-    padding: 6px !important;
-}
-
 
 
 /* Hover effect for user initials - replaces the rainbow effect */
@@ -1439,14 +1414,6 @@ input[type="range"]:focus {
     background: linear-gradient(135deg, #FF9800 0%, #FF5722 100%);
 }
 
-/* Ensure the settings dropdown positioning remains correct */
-#settings .dropdown-icon {
-    min-width: 44px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 
 @keyframes rainbow {
     0% {
@@ -1519,13 +1486,6 @@ input[type="range"]:focus {
     background-color: #0056b3;
 }
 
-#settings {
-    position: absolute;
-    top: 5px;
-    left: 10px;
-}
-
-
 
 
 @keyframes slideIn {
@@ -1585,28 +1545,26 @@ input[type="range"]:focus {
 
 /* User initials styling */
 .user-initials {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    top: -4px;
     width: 32px;
     height: 32px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3995ff 0%, #4300bf 100%);
     color: white;
     border-radius: 50%;
     font-weight: bold;
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
     transition: all 0.3s ease;
 }
 
 /* Signed-in state for dropdown icon */
-.dropdown-icon.signed-in {
-    background: transparent !important;
-    padding: 6px !important;
-}
 
 /* Override the rainbow hover effect for signed-in users */
 .dropdown:hover .dropdown-icon.signed-in {
@@ -1627,9 +1585,7 @@ input[type="range"]:focus {
     animation: fadeInScale 0.5s ease-out;
 }
 
-#settings.dropdown-icon {
-    margin: 20px !important;
-}
+
 
 @keyframes fadeInScale {
     0% {
@@ -1956,30 +1912,6 @@ input[type="range"]:focus {
     box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
 }
 
-/* User initials in dropdown */
-.user-initials {
-    background: linear-gradient(135deg, #3051e7 0%, #6a32a1 100%);
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: bold;
-    color: white;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
-
-}
-
-#settings .dropdown-icon.signed-in {
-    font-size: 35px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 
 /* Trial notification styles */
 .limit-notification.trial-warning {

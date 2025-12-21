@@ -660,14 +660,13 @@
                 style="border: none; display: none;">
                 <i class="fa-solid fa-dna"></i>
             </button>
-            <button class="dropdown-icon" id="reset-camera" title="Reset Camera"
-                style="border: none; margin-right: 10px;" onclick="window.resetCamera()"><i
-                    class="fa-solid fa-arrows-to-eye"></i></button>
+            <button class="dropdown-icon" id="reset-camera" title="Reset Camera" style="border: none;"
+                onclick="window.resetCamera()"><i class="fa-solid fa-arrows-to-eye"></i></button>
             <button class="dropdown-icon" id="toggleFileExplorer" title="File Explorer"
                 style="border: none; display: none;">
                 <i class="fas fa-folder-tree"></i>
             </button>
-            <button class="dropdown-icon" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
+            <button class="dropdown-icon dropdown" id="switchMode"><i class="fa-solid fa-wand-sparkles"></i></button>
             <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"
                 style="display: none;"><i class="fas fa-ruler"></i></button>
 
@@ -684,35 +683,35 @@
 
                 </div>
             </div>
+            <div class="dropdown" id="settings">
+                <span class="dropdown-icon"><i class="fa-solid fa-circle-user"></i></span>
+                <div class="dropdown-content shine ">
 
-        </div>
+                    <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
+                        Google</button>
+                    <button class="fancy-button" id="signOutButton" style="display: none;"><i
+                            class="fas fa-sign-out-alt"></i> Sign
+                        Out</button>
+                    <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
+                        onclick="showPremiumModal()">
+                        Subscription
+                    </button>
 
-        <div class="dropdown" id="settings">
-            <span class="dropdown-icon" style="font-size: 35px;"><i class="fa-solid fa-circle-user"></i></span>
-            <div class="dropdown-content shine "
-                style="left: 100px; align-items: center; justify-content: center; display: flex; flex-direction: column; ">
-
-                <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign In with
-                    Google</button>
-                <button class="fancy-button" id="signOutButton" style="display: none;"><i
-                        class="fas fa-sign-out-alt"></i> Sign Out</button>
-                <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
-                    onclick="showPremiumModal()">
-                    Subscription
-                </button>
-
-                <button class="donate-btn fancy-button" onclick="openDonateModal()">
-                    <i class="fas fa-heart"></i>
-                    Donation
-                </button>
-                <button onclick="window.location.href='https://chopchopmol.com'" class="fancy-button"
-                    style="background-color: #006dea;">
-                    Help guide
-                </button>
+                    <button class="donate-btn fancy-button" onclick="openDonateModal()">
+                        <i class="fas fa-heart"></i>
+                        Donation
+                    </button>
+                    <button onclick="window.location.href='https://chopchopmol.com'" class="fancy-button"
+                        style="background-color: #006dea;">
+                        Help guide
+                    </button>
 
 
+                </div>
             </div>
         </div>
+
+
     </div>
     <div id="selectionBox"></div>
     <!-- Add this below #buttons to show user info -->
