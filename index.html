@@ -1583,14 +1583,6 @@
             <i class="fas fa-chevron-right"></i>
         </button>
 
-        <!-- Global Toolbar -->
-        <div class="file-explorer-header" style="display: flex; flex-direction: row;">
-            <div class="explorer-header-right">
-            </div>
-            <button id="refreshFolderBtn" class="local-toolbar-button" title="Refresh" disabled><i
-                    class="fas fa-sync-alt"></i></button>
-        </div>
-
         <!-- Search Bar -->
         <div class="explorer-search-bar">
             <input type="text" id="cloudSaveInput" placeholder="Save as..." class="cloud-input">
@@ -1610,13 +1602,15 @@
                 style=" display: flex; flex-direction: row; padding: 6px; gap: 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
                 <div class="filter-dropdown-wrapper">
                     <button id="cloudSortFilterBtn" class="local-toolbar-button filter-btn" title="Sort cloud files"><i
-                            class="fas fa-filter"></i></button>
+                            class="fa-solid fa-shuffle"></i></button>
                     <div id="cloudSortDropdown" class="filter-dropdown">
                         <div class="filter-dropdown-item" data-sort="alpha">Sort By Name</div>
                         <div class="filter-dropdown-item" data-sort="ext">Sort By Extension</div>
                         <div class="filter-dropdown-item" data-sort="date">Sort By Date</div>
                     </div>
                 </div>
+                <button id="cloudRefreshBtn" class="local-toolbar-button" title="Refresh Cloud"><i
+                        class="fas fa-sync-alt"></i></button>
                 <button id="cloudSaveBtn" class="local-toolbar-button" title="Save to Cloud"><i
                         class="fas fa-save"></i></button>
             </div>
@@ -1637,13 +1631,15 @@
                 style=" display: flex; flex-direction: row; padding: 6px; gap: 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
                 <div class="filter-dropdown-wrapper">
                     <button id="localSortFilterBtn" class="local-toolbar-button filter-btn" title="Sort local files"><i
-                            class="fas fa-filter"></i></button>
+                            class="fa-solid fa-shuffle"></i></button>
                     <div id="localSortDropdown" class="filter-dropdown">
                         <div class="filter-dropdown-item" data-sort="alpha">Sort By Name</div>
                         <div class="filter-dropdown-item" data-sort="ext">Sort By Extension</div>
                         <div class="filter-dropdown-item" data-sort="date">Sort By Date</div>
                     </div>
                 </div>
+                <button id="refreshFolderBtn" class="local-toolbar-button" title="Refresh Local" disabled><i
+                        class="fas fa-sync-alt"></i></button>
                 <button id="openFolderBtn" class="local-toolbar-button" title="Open Folder"><i
                         class="fas fa-folder-open"></i></button>
                 <button id="createFolderBtn" class="local-toolbar-button" title="Create Folder" disabled><i

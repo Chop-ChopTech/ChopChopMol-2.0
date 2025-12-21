@@ -31,6 +31,7 @@ class FileExplorer {
         document.getElementById('openFolderBtn')?.addEventListener('click', () => this.openFolder());
         document.getElementById('openFolderPrompt')?.addEventListener('click', () => this.openFolder());
         document.getElementById('refreshFolderBtn')?.addEventListener('click', () => this.refresh());
+        document.getElementById('cloudRefreshBtn')?.addEventListener('click', () => this.loadCloudMolecules());
 
         // Setup filter dropdowns for local and cloud sorting
         this.setupFilterDropdown('localSortFilterBtn', 'localSortDropdown', 'localSortMode');
