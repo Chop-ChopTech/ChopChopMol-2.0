@@ -496,7 +496,7 @@ class FileExplorer {
             await this.saveDirectoryHandle(this.directoryHandle);
             // Update local header with folder name
             document.querySelector('.local-section .section-header span').innerHTML =
-                `<i class="fa-solid fa-laptop"></i> ${this.directoryHandle.name}`;
+                `${this.directoryHandle.name}`;
 
             document.getElementById('fileSearchInput').disabled = false;
             document.getElementById('refreshFolderBtn').disabled = false;
@@ -569,7 +569,7 @@ class FileExplorer {
                 folderEl.className = 'folder-item';
                 folderEl.innerHTML = `
                     <i class="fas fa-chevron-right chevron"></i>
-                    <i class="fa-solid fa-laptop"></i>
+                    
                     <span>${entry.name}</span>
                 `;
 
@@ -884,7 +884,7 @@ class FileExplorer {
                 if (permission === 'granted') {
                     this.directoryHandle = handle;
                     document.querySelector('.local-section .section-header span').innerHTML =
-                        `<i class="fa-solid fa-laptop"></i> ${this.directoryHandle.name}`;
+                        `${this.directoryHandle.name}`;
                     document.getElementById('refreshFolderBtn').disabled = false;
                     document.getElementById('saveLocalBtn').disabled = false;
                     await this.refresh();
