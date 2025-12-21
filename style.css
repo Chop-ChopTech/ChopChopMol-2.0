@@ -2754,10 +2754,9 @@ input[type="range"]:focus {
     color: #fff;
     font-weight: 600;
     font-size: 13px;
-    text-transform: uppercase;
     letter-spacing: 0.5px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: none;
+    border: none;
     border-radius: 4px;
     padding: 4px 8px;
     cursor: pointer;
@@ -2797,8 +2796,8 @@ input[type="range"]:focus {
 
 #fileSearchInput {
     flex: 1;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    border: none;
     border-radius: 4px;
     padding: 6px 10px;
     color: #fff;
@@ -2809,7 +2808,6 @@ input[type="range"]:focus {
 
 #fileSearchInput:focus {
     border-color: rgba(0, 136, 255, 0.5);
-    background: rgba(255, 255, 255, 0.12);
 }
 
 #fileSearchInput::placeholder {
@@ -3612,6 +3610,7 @@ input[type="range"]:focus {
 /* Updated header layout */
 .file-explorer-header {
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
     align-items: center;
     padding: 8px 10px;

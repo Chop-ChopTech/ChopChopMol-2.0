@@ -1568,7 +1568,7 @@
         </button>
 
         <!-- Global Toolbar -->
-        <div class="file-explorer-header">
+        <div class="file-explorer-header" style="display: flex; flex-direction: row;">
             <div class="explorer-header-right">
                 <select id="fileSortSelect" class="file-explorer-title" title="Sort files">
                     <option value="alpha">Name</option>
@@ -1576,6 +1576,8 @@
                     <option value="date">Date</option>
                 </select>
             </div>
+            <button id="refreshFolderBtn" class="local-toolbar-button" title="Refresh" disabled><i
+                    class="fas fa-sync-alt"></i></button>
         </div>
 
         <!-- Search Bar -->
@@ -1587,11 +1589,10 @@
         <!-- Cloud Section -->
         <div class="explorer-section cloud-section">
             <div class="section-header" style="gap: 6px; display: flex; flex-direction: row; align-items: center;">
-                <span><i class="fas fa-cloud"></i> Cloud</span>
+                <span style="font-weight: bold"><i class="fas fa-cloud"></i> Cloud</span>
                 <button id="cloudSaveBtn" class="local-toolbar-button" title="Save to Cloud"><i
                         class="fas fa-cloud-upload-alt"></i></button>
-                <button id="refreshFolderBtn" class="local-toolbar-button" title="Refresh" disabled><i
-                        class="fas fa-sync-alt"></i></button>
+
             </div>
             <div id="cloudList" class="cloud-list"></div>
         </div>
@@ -1601,7 +1602,7 @@
         <!-- Local Section -->
         <div class="explorer-section local-section ">
             <div class="section-header " style="gap: 6px; display: flex; flex-direction: row; align-items: center;">
-                <span><i class="fas fa-folder"></i> Local</span>
+                <span style="font-weight: bold"><i class="fa-solid fa-laptop"></i> Local</span>
                 <button id="openFolderBtn" class="local-toolbar-button" title="Open Folder"><i
                         class="fas fa-folder-open"></i></button>
                 <button id="saveLocalBtn" class="local-toolbar-button" title="Save to Local Folder" disabled><i
