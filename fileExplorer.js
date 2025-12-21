@@ -525,7 +525,7 @@ class FileExplorer {
 
         // Update local header with folder name
         document.querySelector('.local-section .section-header span').innerHTML =
-            `<i class="fa-solid fa-laptop"></i> ${this.directoryHandle.name}`;
+            `<i class="fa-solid fa-laptop"></i> LOCAL:   ${this.directoryHandle.name}`;
 
         this.fileHandles.clear();
         this.fileTree.innerHTML = '';
@@ -631,7 +631,11 @@ class FileExplorer {
                     e.stopPropagation();
                     folderEl.classList.add('drop-target');
                 });
-                folderEl.addEventListener('dragleave', () => folderEl.classList.remove('drop-target'));
+                folderEl.addEventListener('dragleave', (e) => {
+                    if (!folderEl.contains(e.relatedTarget)) {
+                        folderEl.classList.remove('drop-target');
+                    }
+                });
                 folderEl.addEventListener('drop', async (e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -690,6 +694,9 @@ class FileExplorer {
                 });
                 fileEl.addEventListener('dragend', () => {
                     fileEl.classList.remove('dragging');
+                    document.querySelectorAll('.drop-target, .drag-over').forEach(el => {
+                        el.classList.remove('drop-target', 'drag-over');
+                    });
                 });
 
                 container.appendChild(fileEl);
@@ -723,6 +730,9 @@ class FileExplorer {
             const parentHandle = srcParentPath ? await this.getDirectoryHandle(srcParentPath) : this.directoryHandle;
             await parentHandle.removeEntry(file.name);
 
+            document.querySelectorAll('.drop-target, .drag-over').forEach(el => {
+                el.classList.remove('drop-target', 'drag-over');
+            });
             await this.refresh();
         } catch (err) {
             alert('Error moving file: ' + err.message);
@@ -965,7 +975,7 @@ class FileExplorer {
             if (permission === 'granted') {
                 this.directoryHandle = handle;
                 document.querySelector('.local-section .section-header span').innerHTML =
-                    `<i class="fa-solid fa-laptop"></i> ${this.directoryHandle.name}`;
+                    `<i class="fa-solid fa-laptop"></i> LOCAL:    ${this.directoryHandle.name}`;
                 document.getElementById('fileSearchInput').disabled = false;
                 document.getElementById('refreshFolderBtn').disabled = false;
                 document.getElementById('saveLocalBtn').disabled = false;
@@ -982,7 +992,7 @@ class FileExplorer {
     showReconnectPrompt(handle) {
         this.fileTree.innerHTML = `
             <div class="file-tree-empty">
-                <i class="fa-solid fa-laptop"></i>
+                <i class="fa-solid fa-laptop"></i>LOCAL:  
                 <p>Previous: ${handle.name}</p>
                 <button id="reconnectFolderBtn" class="fancy-button" style="background-color: #00aa55;">Reconnect</button>
                 <button id="openNewFolderBtn" class="fancy-button" style="background-color: #006dea; margin-top: 8px;">Open Different</button>
