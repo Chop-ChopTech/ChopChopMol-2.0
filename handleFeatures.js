@@ -142,6 +142,11 @@ export function disableAtomInteraction(renderer) {
 
     // Override keyboard events for editing
     const restrictedKeyHandler = function (event) {
+        // Skip if typing in input fields
+        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable) {
+            return;
+        }
+
         if (!isUserSignedIn) {
             // Block editing keys silently - no prompts
             if (event.key === 'Shift' || event.key === 'Meta' || event.key === 'Control' ||
