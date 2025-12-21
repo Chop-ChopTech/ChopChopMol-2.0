@@ -101,6 +101,7 @@ class FileExplorer {
                 document.querySelectorAll('.file-item.active, .cloud-item.active').forEach(el => el.classList.remove('active'));
             }
         });
+        document.getElementById('createFolderBtn')?.addEventListener('click', () => this.createFolder());
         // Setup drag-drop for local folder
         this.setupCloudDragDrop();
         this.setupLocalToCloudDrop();
@@ -501,6 +502,7 @@ class FileExplorer {
             document.getElementById('fileSearchInput').disabled = false;
             document.getElementById('refreshFolderBtn').disabled = false;
             document.getElementById('saveLocalBtn').disabled = false;
+            document.getElementById('createFolderBtn').disabled = false;
             await this.refresh();
         } catch (err) {
             if (err.name !== 'AbortError') {
@@ -521,6 +523,20 @@ class FileExplorer {
         this.fileTree.innerHTML = '';
 
         await this.buildTree(this.directoryHandle, this.fileTree, '');
+    }
+
+    async createFolder() {
+        if (!this.directoryHandle) return;
+
+        const name = prompt('Folder name:');
+        if (!name || !name.trim()) return;
+
+        try {
+            await this.directoryHandle.getDirectoryHandle(name.trim(), { create: true });
+            await this.refresh();
+        } catch (err) {
+            alert('Error creating folder: ' + err.message);
+        }
     }
 
     async buildTree(dirHandle, container, path) {
@@ -564,14 +580,30 @@ class FileExplorer {
             const fullPath = path ? `${path}/${entry.name}` : entry.name;
 
             if (entry.kind === 'directory') {
-                // Create folder element
                 const folderEl = document.createElement('div');
                 folderEl.className = 'folder-item';
+                folderEl.dataset.path = fullPath;
                 folderEl.innerHTML = `
                     <i class="fas fa-chevron-right chevron"></i>
-                    
                     <span>${entry.name}</span>
                 `;
+
+                // Make folder a drop target
+                folderEl.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    folderEl.classList.add('drop-target');
+                });
+                folderEl.addEventListener('dragleave', () => folderEl.classList.remove('drop-target'));
+                folderEl.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    folderEl.classList.remove('drop-target');
+                    const srcPath = e.dataTransfer.getData('text/plain');
+                    if (srcPath && this.fileHandles.has(srcPath)) {
+                        await this.moveFileToFolder(srcPath, entry);
+                    }
+                });
 
                 const contentsEl = document.createElement('div');
                 contentsEl.className = 'folder-contents';
@@ -626,6 +658,37 @@ class FileExplorer {
                 container.appendChild(fileEl);
             }
         }
+    }
+
+    async moveFileToFolder(srcPath, targetDirHandle) {
+        const srcHandle = this.fileHandles.get(srcPath);
+        if (!srcHandle) return;
+
+        try {
+            const file = await srcHandle.getFile();
+            const newHandle = await targetDirHandle.getFileHandle(file.name, { create: true });
+            const writable = await newHandle.createWritable();
+            await writable.write(await file.arrayBuffer());
+            await writable.close();
+
+            // Delete original
+            const parentPath = srcPath.includes('/') ? srcPath.substring(0, srcPath.lastIndexOf('/')) : '';
+            const parentHandle = parentPath ? await this.getDirectoryHandle(parentPath) : this.directoryHandle;
+            await parentHandle.removeEntry(file.name);
+
+            await this.refresh();
+        } catch (err) {
+            alert('Error moving file: ' + err.message);
+        }
+    }
+
+    async getDirectoryHandle(path) {
+        const parts = path.split('/');
+        let handle = this.directoryHandle;
+        for (const part of parts) {
+            handle = await handle.getDirectoryHandle(part);
+        }
+        return handle;
     }
 
     getFileIcon(ext) {
@@ -859,6 +922,7 @@ class FileExplorer {
                 document.getElementById('fileSearchInput').disabled = false;
                 document.getElementById('refreshFolderBtn').disabled = false;
                 document.getElementById('saveLocalBtn').disabled = false;
+                document.getElementById('createFolderBtn').disabled = false;
                 await this.refresh();
             } else {
                 this.showReconnectPrompt(handle);
@@ -887,6 +951,7 @@ class FileExplorer {
                         `${this.directoryHandle.name}`;
                     document.getElementById('refreshFolderBtn').disabled = false;
                     document.getElementById('saveLocalBtn').disabled = false;
+                    document.getElementById('createFolderBtn').disabled = false;
                     await this.refresh();
                 }
             } catch (err) {

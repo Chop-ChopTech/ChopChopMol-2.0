@@ -2870,6 +2870,12 @@ input[type="range"]:focus {
     background: rgba(255, 255, 255, 0.05);
 }
 
+.folder-item.drop-target {
+    background: rgba(0, 136, 255, 0.2);
+    outline: 2px dashed rgba(0, 136, 255, 0.6);
+    outline-offset: -2px;
+}
+
 .file-item.active,
 .cloud-item.active {
     background: rgba(0, 136, 255, 0.2);
