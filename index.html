@@ -1967,23 +1967,26 @@
             }
 
             // Cloud/Local divider resizer
+            // Cloud/Local divider resizer
             const divider = document.getElementById('explorerDivider');
             const cloudSection = document.querySelector('.cloud-section');
             const localSection = document.querySelector('.local-section');
 
             if (divider && cloudSection && localSection) {
-                let startY, startCloudHeight;
+                let startY, startCloudHeight, didDrag;
 
                 divider.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     startY = e.clientY;
                     startCloudHeight = cloudSection.offsetHeight;
+                    didDrag = false;
                     divider.classList.add('active');
                     document.addEventListener('mousemove', resizeSections);
                     document.addEventListener('mouseup', stopResizeSections);
                 });
 
                 function resizeSections(e) {
+                    didDrag = true;
                     cloudSection.classList.add('resizing');
                     localSection.classList.add('resizing');
                     const diff = e.clientY - startY;
@@ -1999,6 +2002,12 @@
                     divider.classList.remove('active');
                     document.removeEventListener('mousemove', resizeSections);
                     document.removeEventListener('mouseup', stopResizeSections);
+
+                    // Click without drag = collapse to minimum
+                    if (!didDrag) {
+                        cloudSection.style.height = '80px';
+                        cloudSection.style.flex = 'none';
+                    }
                 }
             }
         })();
