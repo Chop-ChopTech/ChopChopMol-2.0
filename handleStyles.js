@@ -207,9 +207,10 @@ export function showNotification(message, type) {
     notification.id = 'styleNotification';
     notification.textContent = message;
     notification.style.cssText = `
-        position: fixed;
-        bottom: 50px;
-        right: 20px;
+        position: absolute;
+        top: 90px;
+        left: 50%;
+        transform: translate(-50%, -50%);
         padding: 15px 25px;
         border-radius: 16px;
         color: white;
@@ -227,7 +228,6 @@ export function showNotification(message, type) {
     // Auto remove after 3 seconds
     setTimeout(() => {
         notification.style.opacity = '0';
-        notification.style.transform = 'scale(1.2)';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
