@@ -3754,3 +3754,38 @@ input[type="range"]:focus {
 .file-item {
     cursor: grab;
 }
+
+/* Mic Button */
+.ai-mic-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.ai-mic-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.ai-mic-btn.recording {
+    background: rgba(239, 68, 68, 0.6);
+    color: white;
+    animation: pulse-mic 1s infinite;
+}
+
+@keyframes pulse-mic {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+}

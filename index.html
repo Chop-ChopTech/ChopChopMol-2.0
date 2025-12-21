@@ -17,6 +17,7 @@
     <link rel="icon" href="molicon.png">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7912318580869252"
         crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/bundle.min.js"></script>
 </head>
 
 <body>
@@ -1671,11 +1672,15 @@
 
         <div class="ai-chat-input-area">
             <textarea id="aiChatInput" placeholder="Ask me anything" rows="3"></textarea>
+
             <div id="bottom-options">
                 <select id="aiModelSelect" class="ai-model-select" title="Select AI Model">
                     <option value="gpt-5-mini">GPT-5 Mini</option>
                 </select>
                 <button id="aiSendBtn"><i class="fas fa-paper-plane"></i></button>
+                <button id="aiMicBtn" class="ai-mic-btn" title="Voice input">
+                    <i class="fas fa-microphone"></i>
+                </button>
             </div>
 
         </div>
@@ -1899,6 +1904,134 @@
             // Check if API key exists on load
             if (window.AIAgent?.hasApiKey()) {
                 console.log('AI Agent: API key loaded from storage');
+            }
+
+            // Voice input with auto-stop on silence
+            const micBtn = document.getElementById('aiMicBtn');
+            let mediaRecorder = null;
+            let audioChunks = [];
+            let audioContext = null;
+            let analyser = null;
+            let silenceStart = null;
+            const SILENCE_THRESHOLD = 15; // Volume level considered "silence" (0-255)
+            const SILENCE_DURATION = 1500; // ms of silence before auto-stop
+
+            micBtn.addEventListener('click', async () => {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    // Full stop - user clicked to turn off
+                    mediaRecorder.stop();
+                    micBtn.classList.remove('recording');
+                    micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                    if (audioContext) { audioContext.close(); audioContext = null; }
+                    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+                    return;
+                }
+
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                    // Set up audio analysis for silence detection
+                    audioContext = new AudioContext();
+                    analyser = audioContext.createAnalyser();
+                    const source = audioContext.createMediaStreamSource(stream);
+                    source.connect(analyser);
+                    analyser.fftSize = 256;
+
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                    audioChunks = [];
+                    silenceStart = null;
+
+                    mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => handleRecordingStop(stream);
+
+                    mediaRecorder.start();
+                    micBtn.classList.add('recording');
+                    micBtn.innerHTML = '<i class="fas fa-stop"></i>';
+
+                    // Start monitoring for silence
+                    checkSilence();
+
+                } catch (err) {
+                    console.error('Mic access denied:', err);
+                    alert('Microphone access is required for voice input');
+                }
+            });
+
+            function checkSilence() {
+                if (!analyser || !mediaRecorder || mediaRecorder.state !== 'recording') return;
+
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
+
+                // Get average volume
+                const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+                if (average < SILENCE_THRESHOLD) {
+                    if (!silenceStart) silenceStart = Date.now();
+                    else if (Date.now() - silenceStart > SILENCE_DURATION) {
+                        stopRecording();
+                        return;
+                    }
+                } else {
+                    silenceStart = null; // Reset on sound
+                }
+
+                requestAnimationFrame(checkSilence);
+            }
+
+            function stopRecording() {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+            }
+
+            async function handleRecordingStop(stream) {
+                stream.getTracks().forEach(t => t.stop());
+
+                if (audioChunks.length === 0) return;
+
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+
+                chatInput.placeholder = 'Transcribing...';
+                chatInput.disabled = true;
+
+                const formData = new FormData();
+                formData.append('audio', blob, 'recording.webm');
+
+                try {
+                    const res = await fetch('https://chopchopmol-ai-backend.onrender.com/ai/transcribe', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    if (data.text && data.text.trim()) {
+                        chatInput.value = data.text;
+                        // Auto-send to AI
+                        handleSend();
+                    } else if (data.error) {
+                        console.error('Transcription error:', data.error);
+                    }
+                } catch (err) {
+                    console.error('Failed to transcribe:', err);
+                } finally {
+                    chatInput.placeholder = 'Ask me anything';
+                    chatInput.disabled = false;
+                    // Restart recording for follow-up
+                    if (micStream && micStream.active) {
+                        audioChunks = [];
+                        silenceStart = null;
+                        mediaRecorder = new MediaRecorder(micStream, { mimeType: 'audio/webm' });
+                        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                        mediaRecorder.onstop = () => handleRecordingStop(micStream);
+                        mediaRecorder.start();
+                        checkSilence();
+                    }
+                }
+
             }
         })();
 
