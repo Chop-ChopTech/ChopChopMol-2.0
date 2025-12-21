@@ -496,7 +496,7 @@ class FileExplorer {
             await this.saveDirectoryHandle(this.directoryHandle);
             // Update local header with folder name
             document.querySelector('.local-section .section-header span').innerHTML =
-                `<i class="fas fa-folder"></i> ${this.directoryHandle.name}`;
+                `<i class="fa-solid fa-laptop"></i> ${this.directoryHandle.name}`;
 
             document.getElementById('fileSearchInput').disabled = false;
             document.getElementById('refreshFolderBtn').disabled = false;
@@ -515,7 +515,7 @@ class FileExplorer {
 
         // Update local header with folder name
         document.querySelector('.local-section .section-header span').innerHTML =
-            `<i class="fas fa-folder"></i> ${this.directoryHandle.name}`;
+            `<i class="fa-solid fa-laptop"></i> ${this.directoryHandle.name}`;
 
         this.fileHandles.clear();
         this.fileTree.innerHTML = '';
@@ -569,7 +569,7 @@ class FileExplorer {
                 folderEl.className = 'folder-item';
                 folderEl.innerHTML = `
                     <i class="fas fa-chevron-right chevron"></i>
-                    <i class="fas fa-folder folder-icon"></i>
+                    <i class="fa-solid fa-laptop"></i>
                     <span>${entry.name}</span>
                 `;
 
@@ -855,7 +855,7 @@ class FileExplorer {
             if (permission === 'granted') {
                 this.directoryHandle = handle;
                 document.querySelector('.local-section .section-header span').innerHTML =
-                    `<i class="fas fa-folder"></i> ${this.directoryHandle.name}`;
+                    `<i class="fa-solid fa-laptop"></i> ${this.directoryHandle.name}`;
                 document.getElementById('fileSearchInput').disabled = false;
                 document.getElementById('refreshFolderBtn').disabled = false;
                 document.getElementById('saveLocalBtn').disabled = false;
@@ -871,7 +871,7 @@ class FileExplorer {
     showReconnectPrompt(handle) {
         this.fileTree.innerHTML = `
             <div class="file-tree-empty">
-                <i class="fas fa-folder"></i>
+                <i class="fa-solid fa-laptop"></i>
                 <p>Previous: ${handle.name}</p>
                 <button id="reconnectFolderBtn" class="fancy-button" style="background-color: #00aa55;">Reconnect</button>
                 <button id="openNewFolderBtn" class="fancy-button" style="background-color: #006dea; margin-top: 8px;">Open Different</button>
@@ -884,7 +884,7 @@ class FileExplorer {
                 if (permission === 'granted') {
                     this.directoryHandle = handle;
                     document.querySelector('.local-section .section-header span').innerHTML =
-                        `<i class="fas fa-folder"></i> ${this.directoryHandle.name}`;
+                        `<i class="fa-solid fa-laptop"></i> ${this.directoryHandle.name}`;
                     document.getElementById('refreshFolderBtn').disabled = false;
                     document.getElementById('saveLocalBtn').disabled = false;
                     await this.refresh();
