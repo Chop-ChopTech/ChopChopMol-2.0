@@ -341,7 +341,6 @@
         async function loadMoleculesList() {
             const user = auth.currentUser;
             if (!user) {
-                alert('Please sign in to load molecules');
                 return [];
             }
 
@@ -459,6 +458,7 @@
                 signOutButton.style.display = 'block';
                 userStatus.innerHTML = `<span id="storageInfo" style="font-size: 12px; margin-left: 10px;"></span>`;
                 userStatus.style.display = 'none';
+                document.getElementById('cloudSignInWarning').style.display = 'none';
 
                 const dropdownIcon = document.querySelector('#settings .dropdown-icon');
                 const userInitials = getUserInitials(user.displayName);
@@ -539,6 +539,7 @@
                 if (makeDefaultBtn) {
                     makeDefaultBtn.style.display = 'none';
                 }
+                document.getElementById('cloudSignInWarning').style.display = 'inline';
 
                 document.querySelectorAll('[data-tool]').forEach(tool => {
                     if (tool.dataset.tool !== 'view') { // Keep view tool unlocked
@@ -1587,9 +1588,14 @@
         </div>
 
         <!-- Cloud Section -->
+        <!-- Cloud Section -->
         <div class="explorer-section cloud-section">
             <div class="section-header" style="gap: 6px; display: flex; flex-direction: row; align-items: center; ">
-                <span style="font-weight: bold"><i class="fas fa-cloud"></i> Cloud</span>
+                <span style="font-weight: bold"><i class="fas fa-cloud"></i> CLOUD</span>
+                <span id="cloudSignInWarning"
+                    style="color: #ff4444; font-size: 10px; font-weight: bold; margin-left: auto; display: none;">SIGN
+                    IN TO USE
+                    CLOUD STORAGE</span>
             </div>
             <div class="explorer-section"
                 style=" display: flex; flex-direction: row; padding: 6px; gap: 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">

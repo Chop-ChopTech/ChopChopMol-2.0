@@ -2657,7 +2657,7 @@ input[type="range"]:focus {
     position: fixed;
     right: 0;
     top: 0;
-    width: 240px;
+    width: 270px;
     height: 100vh;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(10, 15, 30, 0.98) 100%);
     border-left: 1px solid rgba(255, 255, 255, 0.1);
