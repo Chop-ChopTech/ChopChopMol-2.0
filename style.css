@@ -3338,6 +3338,7 @@ input[type="range"]:focus {
     background: rgba(0, 136, 255, 0.1);
     border: 2px dashed rgba(0, 136, 255, 0.5);
     border-radius: 8px;
+    min-height: 50px;
 }
 
 
@@ -3350,6 +3351,35 @@ input[type="range"]:focus {
 .local-actions button:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+.folder-name-input {
+    display: flex;
+    align-items: center;
+    padding: 6px 16px;
+    gap: 8px;
+}
+
+.folder-name-input i {
+    color: #f0c36d;
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+}
+
+.folder-name-input input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(0, 136, 255, 0.5);
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+}
+
+.folder-name-input input:focus {
+    border-color: rgba(0, 136, 255, 0.8);
 }
 
 /* Cloud Tab */

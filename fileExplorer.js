@@ -118,8 +118,8 @@ class FileExplorer {
             fileTree.classList.add('drag-over');
         });
 
-        fileTree.addEventListener('dragleave', () => {
-            fileTree.classList.remove('drag-over');
+        fileTree.addEventListener('dragleave', (e) => {
+            if (e.target === fileTree) fileTree.classList.remove('drag-over');
         });
 
         fileTree.addEventListener('drop', async (e) => {
@@ -131,10 +131,18 @@ class FileExplorer {
                 return;
             }
 
+            // Handle cloud molecule drops
             const molData = e.dataTransfer.getData('application/json');
             if (molData) {
                 const mol = JSON.parse(molData);
                 await this.importAsXYZ(mol);
+                return;
+            }
+
+            // Handle local file moves to root
+            const srcPath = e.dataTransfer.getData('text/plain');
+            if (srcPath && this.fileHandles.has(srcPath) && srcPath.includes('/')) {
+                await this.moveFileToFolder(srcPath, this.directoryHandle);
             }
         });
     }
@@ -528,15 +536,44 @@ class FileExplorer {
     async createFolder() {
         if (!this.directoryHandle) return;
 
-        const name = prompt('Folder name:');
-        if (!name || !name.trim()) return;
+        // Remove any existing input
+        document.querySelector('.folder-name-input')?.remove();
 
-        try {
-            await this.directoryHandle.getDirectoryHandle(name.trim(), { create: true });
-            await this.refresh();
-        } catch (err) {
-            alert('Error creating folder: ' + err.message);
-        }
+        // Create input element
+        const inputWrapper = document.createElement('div');
+        inputWrapper.className = 'folder-name-input';
+        inputWrapper.innerHTML = `
+        <i class="fas fa-folder folder-icon"></i>
+        <input type="text" placeholder="Folder name..." autofocus>
+    `;
+
+        const input = inputWrapper.querySelector('input');
+
+        const confirm = async () => {
+            const name = input.value.trim();
+            if (name) {
+                try {
+                    await this.directoryHandle.getDirectoryHandle(name, { create: true });
+                    await this.refresh();
+                } catch (err) {
+                    alert('Error creating folder: ' + err.message);
+                }
+            }
+            inputWrapper.remove();
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') confirm();
+            if (e.key === 'Escape') inputWrapper.remove();
+        });
+
+        input.addEventListener('blur', () => {
+            setTimeout(() => inputWrapper.remove(), 100);
+        });
+
+        // Insert at top of file tree
+        this.fileTree.prepend(inputWrapper);
+        input.focus();
     }
 
     async buildTree(dirHandle, container, path) {
@@ -664,6 +701,17 @@ class FileExplorer {
         const srcHandle = this.fileHandles.get(srcPath);
         if (!srcHandle) return;
 
+        const fileName = srcPath.includes('/') ? srcPath.split('/').pop() : srcPath;
+        const srcParentPath = srcPath.includes('/') ? srcPath.substring(0, srcPath.lastIndexOf('/')) : '';
+
+        // Get target folder name for comparison
+        const targetName = targetDirHandle === this.directoryHandle ? '' : targetDirHandle.name;
+
+        // Don't move if already in target folder
+        if (srcParentPath === targetName || (srcParentPath === '' && targetDirHandle === this.directoryHandle)) {
+            return;
+        }
+
         try {
             const file = await srcHandle.getFile();
             const newHandle = await targetDirHandle.getFileHandle(file.name, { create: true });
@@ -672,8 +720,7 @@ class FileExplorer {
             await writable.close();
 
             // Delete original
-            const parentPath = srcPath.includes('/') ? srcPath.substring(0, srcPath.lastIndexOf('/')) : '';
-            const parentHandle = parentPath ? await this.getDirectoryHandle(parentPath) : this.directoryHandle;
+            const parentHandle = srcParentPath ? await this.getDirectoryHandle(srcParentPath) : this.directoryHandle;
             await parentHandle.removeEntry(file.name);
 
             await this.refresh();
