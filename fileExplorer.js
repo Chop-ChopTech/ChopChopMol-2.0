@@ -224,8 +224,9 @@ class FileExplorer {
         <button id="localSaveCancel" title="Cancel"><i class="fas fa-times"></i></button>
     `;
 
-        const localActions = document.querySelector('.local-actions');
-        localActions.insertAdjacentElement('afterend', dialog);
+        const localSection = document.querySelector('.local-section');
+        const sectionHeader = localSection.querySelector('.section-header');
+        sectionHeader.insertAdjacentElement('afterend', dialog);
 
         const input = document.getElementById('localSaveInput');
         const extSelect = document.getElementById('localSaveExt');
