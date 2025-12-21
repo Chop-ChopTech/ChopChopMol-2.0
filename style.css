@@ -2657,7 +2657,7 @@ input[type="range"]:focus {
     position: fixed;
     right: 0;
     top: 0;
-    width: 270px;
+    width: 244px;
     height: 100vh;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(10, 15, 30, 0.98) 100%);
     border-left: 1px solid rgba(255, 255, 255, 0.1);
@@ -2795,6 +2795,7 @@ input[type="range"]:focus {
     font-size: 13px;
     transition: background 0.15s;
     user-select: none;
+    font-size: 12px;
 }
 
 .file-item:hover,
@@ -2928,7 +2929,7 @@ input[type="range"]:focus {
 .folder-item .chevron {
     margin-right: 4px;
     transition: transform 0.2s;
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .folder-item.expanded .chevron {
@@ -3242,6 +3243,7 @@ input[type="range"]:focus {
     letter-spacing: 0.5px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(0, 0, 0, 0.2);
+    font-size: 13px;
 }
 
 .explorer-divider {
@@ -3360,7 +3362,7 @@ input[type="range"]:focus {
 .cloud-item {
     display: flex;
     align-items: center;
-    padding: 3px 16px;
+    padding: 2px 16px;
     cursor: grab;
     transition: background 0.15s;
 }
@@ -3389,6 +3391,7 @@ input[type="range"]:focus {
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: pointer;
+    font-size: 12px;
 }
 
 .cloud-item-name:hover {
