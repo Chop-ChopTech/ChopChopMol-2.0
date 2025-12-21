@@ -1991,7 +1991,7 @@
                     localSection.classList.add('resizing');
                     const diff = e.clientY - startY;
                     const parentHeight = cloudSection.parentElement.offsetHeight;
-                    const newHeight = Math.max(80, Math.min(parentHeight - 150, startCloudHeight + diff));
+                    const newHeight = Math.max(28, Math.min(parentHeight - 150, startCloudHeight + diff));
                     cloudSection.style.height = newHeight + 'px';
                     cloudSection.style.flex = 'none';
                 }
@@ -2003,9 +2003,10 @@
                     document.removeEventListener('mousemove', resizeSections);
                     document.removeEventListener('mouseup', stopResizeSections);
 
-                    // Click without drag = collapse to minimum
+                    // Click without drag = collapse to just header
                     if (!didDrag) {
-                        cloudSection.style.height = '80px';
+                        const header = cloudSection.querySelector('.section-header');
+                        cloudSection.style.height = (header.offsetHeight - 4) + 'px';
                         cloudSection.style.flex = 'none';
                     }
                 }

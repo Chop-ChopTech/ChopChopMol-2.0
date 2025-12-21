@@ -3112,10 +3112,13 @@ input[type="range"]:focus {
 
 .cloud-section {
     flex: 0 0 auto;
-    min-height: 80px;
-    overflow: hidden;
+    overflow: auto;
     display: flex;
     flex-direction: column;
+}
+
+.cloud-section>* {
+    flex-shrink: 0;
 }
 
 .local-section {
