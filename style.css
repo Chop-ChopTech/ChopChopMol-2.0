@@ -3237,15 +3237,18 @@ input[type="range"]:focus {
 .section-header {
     padding: 8px 12px;
     color: rgba(255, 255, 255, 0.6);
-    font-size: 11px;
     letter-spacing: 0.5px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(0, 0, 0, 0.2);
     font-size: 12px;
 }
 
+#cloudSectionHeader {
+    border-top: 1px solid rgba(122, 204, 255, 0.519);
+}
+
 .explorer-divider {
-    height: 1px;
+    height: 2px;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
     margin: 4px 0;
 }
