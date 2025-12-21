@@ -95,7 +95,12 @@ class FileExplorer {
                 if (window.loadMoleculesList) this.loadCloudMolecules();
             }, { once: true });
         }
-
+        // Clear highlights when clicking outside file explorer items
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.file-item') && !e.target.closest('.cloud-item')) {
+                document.querySelectorAll('.file-item.active, .cloud-item.active').forEach(el => el.classList.remove('active'));
+            }
+        });
         // Setup drag-drop for local folder
         this.setupCloudDragDrop();
         this.setupLocalToCloudDrop();
@@ -961,6 +966,11 @@ class FileExplorer {
             });
 
             item.querySelector('.cloud-item-name').addEventListener('click', () => {
+                // Highlight this cloud item
+                document.querySelectorAll('.file-item.active, .cloud-item.active').forEach(el => el.classList.remove('active'));
+                item.classList.add('active');
+
+                window.resetIsolationState?.();
                 window.resetIsolationState?.();
                 window.loadMolecule(mol);
                 if (mol.data?.fragments) window.fragments = mol.data.fragments.map(f => f.atoms);

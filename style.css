@@ -2870,7 +2870,8 @@ input[type="range"]:focus {
     background: rgba(255, 255, 255, 0.05);
 }
 
-.file-item.active {
+.file-item.active,
+.cloud-item.active {
     background: rgba(0, 136, 255, 0.2);
     color: #fff;
 }
