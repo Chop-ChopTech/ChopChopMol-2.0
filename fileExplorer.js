@@ -489,6 +489,9 @@ class FileExplorer {
 
             // Save handle to IndexedDB for next session
             await this.saveDirectoryHandle(this.directoryHandle);
+            // Update local header with folder name
+            document.querySelector('.local-section .section-header span').innerHTML =
+                `<i class="fas fa-folder"></i> ${this.directoryHandle.name}`;
 
             document.getElementById('fileSearchInput').disabled = false;
             document.getElementById('refreshFolderBtn').disabled = false;
@@ -504,6 +507,10 @@ class FileExplorer {
 
     async refresh() {
         if (!this.directoryHandle) return;
+
+        // Update local header with folder name
+        document.querySelector('.local-section .section-header span').innerHTML =
+            `<i class="fas fa-folder"></i> ${this.directoryHandle.name}`;
 
         this.fileHandles.clear();
         this.fileTree.innerHTML = '';
@@ -842,6 +849,8 @@ class FileExplorer {
 
             if (permission === 'granted') {
                 this.directoryHandle = handle;
+                document.querySelector('.local-section .section-header span').innerHTML =
+                    `<i class="fas fa-folder"></i> ${this.directoryHandle.name}`;
                 document.getElementById('fileSearchInput').disabled = false;
                 document.getElementById('refreshFolderBtn').disabled = false;
                 document.getElementById('saveLocalBtn').disabled = false;
@@ -869,6 +878,8 @@ class FileExplorer {
                 const permission = await handle.requestPermission({ mode: 'readwrite' });
                 if (permission === 'granted') {
                     this.directoryHandle = handle;
+                    document.querySelector('.local-section .section-header span').innerHTML =
+                        `<i class="fas fa-folder"></i> ${this.directoryHandle.name}`;
                     document.getElementById('refreshFolderBtn').disabled = false;
                     document.getElementById('saveLocalBtn').disabled = false;
                     await this.refresh();
