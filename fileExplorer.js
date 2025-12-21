@@ -11,6 +11,8 @@ class FileExplorer {
         this.unsavedChanges = false;
         this.dbName = 'ChopChopMolDB';
         this.storeName = 'directoryHandles';
+        this.localSortMode = 'alpha';
+        this.cloudSortMode = 'alpha';
 
         this.init();
     }
@@ -29,10 +31,10 @@ class FileExplorer {
         document.getElementById('openFolderBtn')?.addEventListener('click', () => this.openFolder());
         document.getElementById('openFolderPrompt')?.addEventListener('click', () => this.openFolder());
         document.getElementById('refreshFolderBtn')?.addEventListener('click', () => this.refresh());
-        document.getElementById('fileSortSelect')?.addEventListener('change', () => {
-            this.refresh();
-            this.loadCloudMolecules();
-        });
+
+        // Setup filter dropdowns for local and cloud sorting
+        this.setupFilterDropdown('localSortFilterBtn', 'localSortDropdown', 'localSortMode');
+        this.setupFilterDropdown('cloudSortFilterBtn', 'cloudSortDropdown', 'cloudSortMode');
         document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
         document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
         document.getElementById('saveLocalBtn')?.addEventListener('click', () => this.saveToLocal());
@@ -108,6 +110,67 @@ class FileExplorer {
 
         // Try to restore previous folder on load
         this.tryRestorePreviousFolder();
+    }
+
+    setupFilterDropdown(buttonId, dropdownId, sortModeProperty) {
+        const button = document.getElementById(buttonId);
+        const dropdown = document.getElementById(dropdownId);
+
+        if (!button || !dropdown) return;
+
+        // Toggle dropdown on button click
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isShowing = dropdown.classList.contains('show');
+
+            // Close all dropdowns first
+            document.querySelectorAll('.filter-dropdown').forEach(dd => dd.classList.remove('show'));
+
+            // Toggle this dropdown (open if it wasn't showing)
+            if (!isShowing) {
+                dropdown.classList.add('show');
+            }
+        });
+
+        // Handle dropdown item clicks
+        dropdown.querySelectorAll('.filter-dropdown-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const sortMode = item.dataset.sort;
+
+                // Update sort mode
+                this[sortModeProperty] = sortMode;
+
+                // Update active state
+                dropdown.querySelectorAll('.filter-dropdown-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                // Close dropdown
+                dropdown.classList.remove('show');
+
+                // Refresh appropriate list
+                if (sortModeProperty === 'localSortMode') {
+                    this.refresh();
+                } else {
+                    this.loadCloudMolecules();
+                }
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target) && e.target !== button) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // Set initial active state
+        const initialMode = this[sortModeProperty] || 'alpha';
+        dropdown.querySelectorAll('.filter-dropdown-item').forEach(item => {
+            if (item.dataset.sort === initialMode) {
+                item.classList.add('active');
+            }
+        });
     }
     setupCloudDragDrop() {
         const fileTree = document.getElementById('fileTree');
@@ -584,8 +647,8 @@ class FileExplorer {
             entries.push(entry);
         }
 
-        // Sort based on dropdown selection
-        const sortMode = document.getElementById('fileSortSelect')?.value || 'alpha';
+        // Sort based on local sort mode
+        const sortMode = this.localSortMode || 'alpha';
 
         // Get file dates if sorting by date
         if (sortMode === 'date') {
@@ -1045,8 +1108,8 @@ class FileExplorer {
             return;
         }
 
-        // Sort based on dropdown selection
-        const sortMode = document.getElementById('fileSortSelect')?.value || 'alpha';
+        // Sort based on cloud sort mode
+        const sortMode = this.cloudSortMode || 'alpha';
 
         molecules.sort((a, b) => {
             if (sortMode === 'date') {
