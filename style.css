@@ -2213,9 +2213,10 @@ input[type="range"]:focus {
 /* Header */
 .ai-chat-header {
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
+    padding: 2px 2px;
     background-color: #00244e;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     color: white;
@@ -2230,10 +2231,16 @@ input[type="range"]:focus {
 .ai-header-buttons {
     display: flex;
     gap: 5px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    width: 100%;
 }
 
 .ai-header-btn {
-    background: rgba(255, 255, 255, 0.1);
+    background: none;
     border: none;
     color: rgba(255, 255, 255, 0.7);
     cursor: pointer;
@@ -2242,8 +2249,9 @@ input[type="range"]:focus {
     border-radius: 8px;
     transition: all 0.2s;
     align-items: center;
-    text-align: center;
+    text-align: left;
     line-height: 1;
+    width: 100px;
 }
 
 .ai-header-btn i {
