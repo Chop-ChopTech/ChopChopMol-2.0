@@ -1588,14 +1588,17 @@
 
         <!-- Cloud Section -->
         <div class="explorer-section cloud-section">
-            <div class="section-header" style="gap: 6px; display: flex; flex-direction: row; align-items: center;">
+            <div class="section-header" style="gap: 6px; display: flex; flex-direction: row; align-items: center; ">
                 <span style="font-weight: bold"><i class="fas fa-cloud"></i> Cloud</span>
+            </div>
+            <div class="explorer-section"
+                style=" display: flex; flex-direction: row; padding: 6px; gap: 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
                 <button id="cloudSaveBtn" class="local-toolbar-button" title="Save to Cloud"><i
-                        class="fas fa-cloud-upload-alt"></i></button>
-
+                        class="fas fa-save"></i></button>
             </div>
             <div id="cloudList" class="cloud-list"></div>
         </div>
+
 
         <div class="explorer-divider explorer-divider-resizer" id="explorerDivider"></div>
 
@@ -1603,12 +1606,17 @@
         <div class="explorer-section local-section ">
             <div class="section-header " style="gap: 6px; display: flex; flex-direction: row; align-items: center;">
                 <span style="font-weight: bold"><i class="fa-solid fa-laptop"></i> Local</span>
+
+
+            </div>
+            <div class="explorer-section"
+                style=" display: flex; flex-direction: row; padding: 6px; gap: 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
                 <button id="openFolderBtn" class="local-toolbar-button" title="Open Folder"><i
                         class="fas fa-folder-open"></i></button>
                 <button id="saveLocalBtn" class="local-toolbar-button" title="Save to Local Folder" disabled><i
                         class="fas fa-save"></i></button>
-
             </div>
+
             <div id="fileTree" class="file-tree">
                 <div class="file-tree-empty">
                     <i class="fas fa-folder-open"></i>
