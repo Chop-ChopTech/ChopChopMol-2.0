@@ -1020,6 +1020,8 @@ async function sendToAI(userMessage, onChunk) {
     let sessionId = AI_CONFIG.sessionId;
     let assistantMessage = null;
     let fullContent = "";
+    const startTime = performance.now();
+    let firstTokenTime = null;
 
     try {
         const MAX_ITERATIONS = 5;
@@ -1072,6 +1074,10 @@ async function sendToAI(userMessage, onChunk) {
                         const data = JSON.parse(line.slice(6));
 
                         if (data.type === 'text') {
+                            if (!firstTokenTime) {
+                                firstTokenTime = performance.now();
+                                console.log(`⚡ TTFT: ${(firstTokenTime - startTime).toFixed(0)}ms`);
+                            }
                             iterationContent += data.content;
                             fullContent += data.content;
                             if (onChunk) onChunk(data.content);
@@ -1087,6 +1093,7 @@ async function sendToAI(userMessage, onChunk) {
                                 AI_CONFIG.sessionId = data.sessionId;
                                 localStorage.setItem('chopchop_ai_session', data.sessionId);
                             }
+                            console.log(`✅ Total: ${(performance.now() - startTime).toFixed(0)}ms`);
                             return { content: fullContent, actions: executed };
                         } else if (data.type === 'error') {
                             return { error: data.error };
