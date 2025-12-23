@@ -21,7 +21,6 @@ export default class FileHandler {
                 const fileType = findFileType(file);
 
                 // Store raw file content for cloud saving
-                window.currentFileContent = text;
                 window.currentFileFormat = fileType;
                 let parsedData = null;
 

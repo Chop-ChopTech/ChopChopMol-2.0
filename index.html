@@ -166,18 +166,13 @@
                 return;
             }
 
-            // Get raw file content or generate XYZ
-            let fileContent = window.currentFileContent || null;
-            let fileFormat = window.currentFileFormat || null;
+            // Get format and generate fresh content from current atoms
+            const fileFormat = window.currentFileFormat || 'xyz';
+            const fileContent = window.exportToFormat(fileFormat, moleculeName);
 
             if (!fileContent) {
-                // Generate XYZ from current atom data
-                const atoms = window.main.data.atomData;
-                fileContent = `${atoms.length}\n${moleculeName}\n`;
-                atoms.forEach(a => {
-                    fileContent += `${a.element}  ${a.x.toFixed(6)}  ${a.y.toFixed(6)}  ${a.z.toFixed(6)}\n`;
-                });
-                fileFormat = 'xyz';
+                alert('Error generating molecule file');
+                return;
             }
 
             // Calculate size in MB
@@ -212,7 +207,7 @@
                     finalName = `${baseName}(${maxNum})`;
                 }
 
-                // Save molecule with raw file content
+                // Save molecule with regenerated file content
                 await addDoc(moleculesRef, {
                     name: finalName,
                     fileContent: fileContent,

@@ -1394,6 +1394,37 @@ input[type="range"]:focus {
 
 /* Enhanced user initials styling - add this to your style.css */
 
+.file-pdb {
+    color: #4CAF50;
+}
+
+.file-xyz {
+    color: #2196F3;
+}
+
+.file-mol {
+    color: #FF9800;
+}
+
+.file-mol2 {
+    color: #E91E63;
+}
+
+.file-cif {
+    color: #9C27B0;
+}
+
+.file-cml {
+    color: #00BCD4;
+}
+
+.file-gro {
+    color: #8BC34A;
+}
+
+.file-pqr {
+    color: #FFC107;
+}
 
 /* Signed-in state for dropdown icon - prevents rainbow effect */
 

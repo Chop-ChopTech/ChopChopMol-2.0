@@ -331,7 +331,7 @@ class FileExplorer {
             const mol = item._molData;
             if (!mol || !ids.includes(mol.id)) continue;
 
-            await this.importAsXYZ(mol);
+            await this.importToLocal(mol);
             downloaded++;
         }
 
@@ -427,7 +427,7 @@ class FileExplorer {
             const molData = e.dataTransfer.getData('application/json');
             if (molData) {
                 const mol = JSON.parse(molData);
-                await this.importAsXYZ(mol);
+                await this.importToLocal(mol);
                 return;
             }
 
@@ -1675,14 +1675,15 @@ class FileExplorer {
         item.draggable = true;
         item._molData = mol; // Store reference for multi-select
 
+        const iconClass = this.getCloudFileIcon(mol.fileFormat);
         item.innerHTML = `
-        <i class="fas fa-atom file-mol"></i>
-        <span class="cloud-item-name">${mol.name}</span>
-        <div class="cloud-item-actions">
-            <button class="import-btn" title="Download as XYZ"><i class="fas fa-download"></i></button>
-            <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
-        </div>
-    `;
+            <i class="${iconClass}"></i>
+            <span class="cloud-item-name">${mol.name}</span>
+            <div class="cloud-item-actions">
+                <button class="import-btn" title="Download"><i class="fas fa-download"></i></button>
+                <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
 
         // Drag events - handle multi-drag
         item.addEventListener('dragstart', (e) => {
@@ -1729,7 +1730,12 @@ class FileExplorer {
 
                 window.resetIsolationState?.();
                 window.loadMolecule(mol);
-                if (mol.data?.fragments) window.fragments = mol.data.fragments.map(f => f.atoms);
+                // Handle fragments for both old and new format
+                if (mol.fragments) {
+                    window.fragments = mol.fragments.map(f => f.atoms);
+                } else if (mol.data?.fragments) {
+                    window.fragments = mol.data.fragments.map(f => f.atoms);
+                }
             }
         });
 
@@ -1738,7 +1744,7 @@ class FileExplorer {
             if (this.selectedCloudItems.size > 1 && this.selectedCloudItems.has(mol.id)) {
                 this.downloadSelectedCloudToLocal();
             } else {
-                this.importAsXYZ(mol);
+                this.importToLocal(mol);
             }
         });
 
@@ -1754,21 +1760,48 @@ class FileExplorer {
         return item;
     }
 
-    async importAsXYZ(mol) {
+    getCloudFileIcon(format) {
+        switch (format) {
+            // case 'pdb': return 'fas fa-dna file-pdb';
+            // case 'xyz': return 'fas fa-atom file-xyz';
+            // case 'mol': case 'sdf': return 'fas fa-cube file-mol';
+            // case 'mol2': return 'fas fa-cubes file-mol2';
+            // case 'cif': return 'fas fa-th file-cif';
+            // case 'cml': return 'fas fa-code file-cml';
+            // case 'gro': return 'fas fa-box file-gro';
+            // case 'pqr': return 'fas fa-bolt file-pqr';
+            default: return 'fas fa-atom file-mol'; // fallback for old format molecules
+        }
+    }
+
+    async importToLocal(mol) {
         if (!this.directoryHandle) return alert('Open a local folder first');
-        if (!mol.data?.molecule?.atomData) return alert('Invalid molecule data');
 
-        const atoms = mol.data.molecule.atomData;
-        let xyz = `${atoms.length}\n${mol.name}\n`;
-        atoms.forEach(a => {
-            xyz += `${a.element}  ${a.x.toFixed(6)}  ${a.y.toFixed(6)}  ${a.z.toFixed(6)}\n`;
-        });
+        let fileContent, filename;
 
-        const filename = mol.name.replace(/[^a-zA-Z0-9]/g, '_') + '.xyz';
+        // New format - has raw file content
+        if (mol.fileContent && mol.fileFormat) {
+            fileContent = mol.fileContent;
+            const ext = mol.fileFormat;
+            filename = mol.name.replace(/[^a-zA-Z0-9_-]/g, '_') + '.' + ext;
+        }
+        // Old format - has parsed JSON data, convert to XYZ
+        else if (mol.data?.molecule?.atomData) {
+            const atoms = mol.data.molecule.atomData;
+            fileContent = `${atoms.length}\n${mol.name}\n`;
+            atoms.forEach(a => {
+                fileContent += `${a.element}  ${a.x.toFixed(6)}  ${a.y.toFixed(6)}  ${a.z.toFixed(6)}\n`;
+            });
+            filename = mol.name.replace(/[^a-zA-Z0-9_-]/g, '_') + '.xyz';
+        }
+        else {
+            return alert('Invalid molecule data');
+        }
+
         try {
             const fileHandle = await this.directoryHandle.getFileHandle(filename, { create: true });
             const writable = await fileHandle.createWritable();
-            await writable.write(xyz);
+            await writable.write(fileContent);
             await writable.close();
             this.refresh();
             window.showSaveNotification?.(`Imported: ${filename}`);

@@ -5056,6 +5056,164 @@ window.calculateAngle = calculateAngle;
 window.updateFragmentList = updateFragmentList;
 window.updateEditingContent = updateEditingContent;
 
+window.exportToXYZ = function (name = 'molecule') {
+    const atoms = window.main?.data?.atomData;
+    if (!atoms?.length) return null;
+
+    let content = `${atoms.length}\n${name}\n`;
+    atoms.forEach(a => {
+        content += `${a.element.padEnd(4)} ${a.x.toFixed(6).padStart(12)} ${a.y.toFixed(6).padStart(12)} ${a.z.toFixed(6).padStart(12)}\n`;
+    });
+    return content;
+};
+
+window.exportToPDB = function () {
+    const atoms = window.main?.data?.atomData;
+    if (!atoms?.length) return null;
+
+    // Calculate bonds
+    const bonds = new Map(); // atom index -> array of bonded atom indices
+    const covalentRadii = {
+        'H': 0.31, 'C': 0.76, 'N': 0.71, 'O': 0.66, 'F': 0.57, 'P': 1.07, 'S': 1.05,
+        'Cl': 1.02, 'Br': 1.20, 'I': 1.39, 'B': 0.84, 'Si': 1.11, 'Se': 1.20,
+        'default': 0.77
+    };
+
+    const getRadius = (el) => covalentRadii[el] || covalentRadii['default'];
+
+    for (let i = 0; i < atoms.length; i++) {
+        bonds.set(i + 1, []);
+        for (let j = i + 1; j < atoms.length; j++) {
+            const a1 = atoms[i], a2 = atoms[j];
+            const dx = a1.x - a2.x, dy = a1.y - a2.y, dz = a1.z - a2.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            const maxBondDist = (getRadius(a1.element) + getRadius(a2.element)) * 1.3;
+
+            if (dist <= maxBondDist && dist > 0.4) {
+                bonds.get(i + 1).push(j + 1);
+                if (!bonds.has(j + 1)) bonds.set(j + 1, []);
+                bonds.get(j + 1).push(i + 1);
+            }
+        }
+    }
+
+    let content = '';
+
+    // ATOM records
+    atoms.forEach((a, i) => {
+        const serial = (i + 1).toString().padStart(5);
+        const name = a.element.padStart(2).padEnd(4);
+        const resName = 'MOL';
+        const chainId = 'A';
+        const resSeq = '1'.padStart(4);
+        const x = a.x.toFixed(3).padStart(8);
+        const y = a.y.toFixed(3).padStart(8);
+        const z = a.z.toFixed(3).padStart(8);
+        const occupancy = '1.00'.padStart(6);
+        const tempFactor = '0.00'.padStart(6);
+        const element = a.element.padStart(2);
+
+        content += `HETATM${serial} ${name} ${resName} ${chainId}${resSeq}    ${x}${y}${z}${occupancy}${tempFactor}          ${element}\n`;
+    });
+
+    // CONECT records
+    bonds.forEach((connected, atomNum) => {
+        if (connected.length > 0) {
+            let conect = `CONECT${atomNum.toString().padStart(5)}`;
+            connected.forEach(c => {
+                conect += c.toString().padStart(5);
+            });
+            content += conect + '\n';
+        }
+    });
+
+    content += 'END\n';
+    return content;
+};
+
+window.exportToSDF = function (name = 'molecule') {
+    const atoms = window.main?.data?.atomData;
+    if (!atoms?.length) return null;
+
+    // Calculate bonds based on covalent radii
+    const bonds = [];
+    const covalentRadii = {
+        'H': 0.31, 'C': 0.76, 'N': 0.71, 'O': 0.66, 'F': 0.57, 'P': 1.07, 'S': 1.05,
+        'Cl': 1.02, 'Br': 1.20, 'I': 1.39, 'B': 0.84, 'Si': 1.11, 'Se': 1.20,
+        'default': 0.77
+    };
+
+    const getRadius = (el) => covalentRadii[el] || covalentRadii['default'];
+
+    for (let i = 0; i < atoms.length; i++) {
+        for (let j = i + 1; j < atoms.length; j++) {
+            const a1 = atoms[i], a2 = atoms[j];
+            const dx = a1.x - a2.x, dy = a1.y - a2.y, dz = a1.z - a2.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            const maxBondDist = (getRadius(a1.element) + getRadius(a2.element)) * 1.3;
+
+            if (dist <= maxBondDist && dist > 0.4) {
+                bonds.push({ i: i + 1, j: j + 1, order: 1 });
+            }
+        }
+    }
+
+    const numAtoms = atoms.length.toString().padStart(3);
+    const numBonds = bonds.length.toString().padStart(3);
+
+    let content = `${name}\n`;
+    content += `  ChopChopMol\n\n`;
+    content += `${numAtoms}${numBonds}  0  0  0  0  0  0  0  0999 V2000\n`;
+
+    // Atom block
+    atoms.forEach(a => {
+        const x = a.x.toFixed(4).padStart(10);
+        const y = a.y.toFixed(4).padStart(10);
+        const z = a.z.toFixed(4).padStart(10);
+        const element = ` ${a.element.padEnd(3)}`;
+        content += `${x}${y}${z}${element} 0  0  0  0  0  0  0  0  0  0  0  0\n`;
+    });
+
+    // Bond block
+    bonds.forEach(b => {
+        const i = b.i.toString().padStart(3);
+        const j = b.j.toString().padStart(3);
+        const order = b.order.toString().padStart(3);
+        content += `${i}${j}${order}  0  0  0  0\n`;
+    });
+
+    content += 'M  END\n';
+    return content;
+};
+
+window.exportToMol2 = function (name = 'molecule') {
+    const atoms = window.main?.data?.atomData;
+    if (!atoms?.length) return null;
+
+    let content = `@<TRIPOS>MOLECULE\n${name}\n${atoms.length} 0 0 0 0\nSMALL\nNO_CHARGES\n\n@<TRIPOS>ATOM\n`;
+
+    atoms.forEach((a, i) => {
+        const id = (i + 1).toString().padStart(7);
+        const name = `${a.element}${i + 1}`.padEnd(8);
+        const x = a.x.toFixed(4).padStart(10);
+        const y = a.y.toFixed(4).padStart(10);
+        const z = a.z.toFixed(4).padStart(10);
+        const type = a.element.padEnd(6);
+        content += `${id} ${name}${x}${y}${z} ${type}    1 MOL         0.0000\n`;
+    });
+
+    return content;
+};
+
+window.exportToFormat = function (format, name = 'molecule') {
+    switch (format) {
+        case 'pdb': return window.exportToPDB();
+        case 'mol': case 'sdf': return window.exportToSDF(name);
+        case 'mol2': return window.exportToMol2(name);
+        case 'xyz': default: return window.exportToXYZ(name);
+    }
+};
+
 // Export variables using defineProperty to keep in sync
 Object.defineProperty(window, 'atomsSelected', {
     get: function () { return atomsSelected; },
