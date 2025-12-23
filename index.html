@@ -175,11 +175,35 @@
             }
 
             try {
+                // Check for duplicate names and generate unique name
+                const moleculesRef = collection(db, 'users', user.uid, 'molecules');
+                const snapshot = await getDocs(moleculesRef);
+                const existingNames = snapshot.docs.map(doc => doc.data().name);
+
+                let finalName = moleculeName;
+                if (existingNames.includes(moleculeName)) {
+                    // Find the highest existing number for this base name
+                    const baseName = moleculeName.replace(/\(\d+\)$/, '').trim();
+                    let maxNum = 0;
+
+                    for (const name of existingNames) {
+                        if (name === baseName) {
+                            maxNum = Math.max(maxNum, 1);
+                        } else {
+                            const match = name.match(new RegExp(`^${baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\((\\d+)\\)$`));
+                            if (match) {
+                                maxNum = Math.max(maxNum, parseInt(match[1]) + 1);
+                            }
+                        }
+                    }
+
+                    finalName = `${baseName}(${maxNum})`;
+                }
+
                 // Save molecule
                 console.log(window.fragments)
-                const moleculesRef = collection(db, 'users', user.uid, 'molecules');
                 await addDoc(moleculesRef, {
-                    name: moleculeName,
+                    name: finalName,
                     data: {
                         molecule: window.main.data,
                         fragments: window.fragments.map((frag, i) => ({
@@ -195,20 +219,19 @@
                 // Update storage usage
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 const currentUsage = userDoc.exists() ? (userDoc.data().storageUsed || 0) : 0;
-
                 await setDoc(doc(db, 'users', user.uid), {
                     storageUsed: currentUsage + dataSize
                 }, { merge: true });
 
                 updateStorageIndicator();
+                showSaveNotification(`Saved: ${finalName}`);
                 return true;
             } catch (error) {
-                console.error('Error saving molecule:', error);
+                console.error('Error saving:', error);
                 alert('Error saving molecule');
                 return false;
             }
         }
-
         async function recalculateStorage() {
             const user = auth.currentUser;
             if (!user) return;
