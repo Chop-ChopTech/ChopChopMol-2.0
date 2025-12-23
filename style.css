@@ -3803,6 +3803,46 @@ input[type="range"]:focus {
     cursor: grab;
 }
 
+/* Multi-select styles */
+.file-item.selected,
+.cloud-item.selected {
+    background: rgba(0, 136, 255, 0.25) !important;
+    outline: 1px solid rgba(0, 136, 255, 0.5);
+}
+
+.file-item.marquee-hover,
+.cloud-item.marquee-hover {
+    background: rgba(0, 136, 255, 0.15);
+}
+
+.selection-marquee {
+    position: fixed;
+    border: 1px dashed rgba(0, 136, 255, 0.8);
+    background: rgba(0, 136, 255, 0.1);
+    pointer-events: none;
+    z-index: 10000;
+    transition: none;
+}
+
+/* Multi-select visual indicator */
+.file-item.selected::before,
+.cloud-item.selected::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 4px;
+    background: #0088ff;
+    border-radius: 50%;
+}
+
+.file-item,
+.cloud-item {
+    position: relative;
+}
+
 /* Mic Button */
 .ai-mic-btn {
     background: rgba(255, 255, 255, 0.1);

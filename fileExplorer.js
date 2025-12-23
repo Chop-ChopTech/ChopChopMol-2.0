@@ -13,7 +13,11 @@ class FileExplorer {
         this.storeName = 'directoryHandles';
         this.localSortMode = 'alpha';
         this.cloudSortMode = 'alpha';
-
+        this.selectedLocalFiles = new Set();  // paths of selected local files
+        this.selectedCloudItems = new Set();  // mol ids of selected cloud items
+        this.isMarqueeSelecting = false;
+        this.marqueeStart = null;
+        this.marqueeElement = null;
         this.init();
     }
 
@@ -100,8 +104,15 @@ class FileExplorer {
         }
         // Clear highlights when clicking outside file explorer items
         document.addEventListener('click', (e) => {
+            // Clear active highlight when clicking outside items
             if (!e.target.closest('.file-item') && !e.target.closest('.cloud-item')) {
                 document.querySelectorAll('.file-item.active, .cloud-item.active').forEach(el => el.classList.remove('active'));
+            }
+
+            // Clear multi-selection when clicking outside file explorer entirely
+            if (!e.target.closest('.file-explorer-panel')) {
+                this.clearLocalSelection();
+                this.clearCloudSelection();
             }
         });
         document.getElementById('createFolderBtn')?.addEventListener('click', () => this.createFolder());
@@ -112,6 +123,222 @@ class FileExplorer {
 
         // Try to restore previous folder on load
         this.tryRestorePreviousFolder();
+        // Setup marquee selection
+        this.setupMarqueeSelection();
+    }
+
+    clearLocalSelection() {
+        this.selectedLocalFiles.clear();
+        document.querySelectorAll('.file-item.selected').forEach(el => el.classList.remove('selected'));
+    }
+
+    clearCloudSelection() {
+        this.selectedCloudItems.clear();
+        document.querySelectorAll('.cloud-item.selected').forEach(el => el.classList.remove('selected'));
+    }
+
+    getSelectedLocalPaths() {
+        return Array.from(this.selectedLocalFiles);
+    }
+
+    getSelectedCloudMolecules() {
+        return Array.from(this.selectedCloudItems);
+    }
+
+    setupMarqueeSelection() {
+        const fileTree = this.fileTree;
+        const cloudList = document.getElementById('cloudList');
+
+        // Marquee for local files
+        fileTree?.addEventListener('mousedown', (e) => this.startMarquee(e, 'local'));
+        cloudList?.addEventListener('mousedown', (e) => this.startMarquee(e, 'cloud'));
+
+        document.addEventListener('mousemove', (e) => this.updateMarquee(e));
+        document.addEventListener('mouseup', (e) => this.endMarquee(e));
+    }
+
+    startMarquee(e, section) {
+        // Only start marquee if cmd/ctrl is held and clicking on empty space
+        if (!(e.metaKey || e.ctrlKey)) return;
+        if (e.target.closest('.file-item') || e.target.closest('.cloud-item') || e.target.closest('.folder-item')) return;
+
+        e.preventDefault();
+        this.isMarqueeSelecting = true;
+        this.marqueeSection = section;
+
+        const container = section === 'local' ? this.fileTree : document.getElementById('cloudList');
+        const rect = container.getBoundingClientRect();
+
+        this.marqueeStart = {
+            x: e.clientX,
+            y: e.clientY,
+            scrollTop: container.scrollTop
+        };
+        this.marqueeContainer = container;
+
+        // Create marquee element
+        this.marqueeElement = document.createElement('div');
+        this.marqueeElement.className = 'selection-marquee';
+        document.body.appendChild(this.marqueeElement);
+    }
+
+    updateMarquee(e) {
+        if (!this.isMarqueeSelecting || !this.marqueeElement) return;
+
+        const x1 = Math.min(this.marqueeStart.x, e.clientX);
+        const y1 = Math.min(this.marqueeStart.y, e.clientY);
+        const x2 = Math.max(this.marqueeStart.x, e.clientX);
+        const y2 = Math.max(this.marqueeStart.y, e.clientY);
+
+        this.marqueeElement.style.left = x1 + 'px';
+        this.marqueeElement.style.top = y1 + 'px';
+        this.marqueeElement.style.width = (x2 - x1) + 'px';
+        this.marqueeElement.style.height = (y2 - y1) + 'px';
+
+        // Highlight items within marquee
+        const marqueeRect = { left: x1, top: y1, right: x2, bottom: y2 };
+        const selector = this.marqueeSection === 'local' ? '.file-item' : '.cloud-item';
+
+        this.marqueeContainer.querySelectorAll(selector).forEach(item => {
+            const itemRect = item.getBoundingClientRect();
+            const intersects = !(itemRect.right < marqueeRect.left ||
+                itemRect.left > marqueeRect.right ||
+                itemRect.bottom < marqueeRect.top ||
+                itemRect.top > marqueeRect.bottom);
+            item.classList.toggle('marquee-hover', intersects);
+        });
+    }
+
+    endMarquee(e) {
+        if (!this.isMarqueeSelecting) return;
+
+        // Select all items that were in the marquee
+        const selector = this.marqueeSection === 'local' ? '.file-item' : '.cloud-item';
+        this.marqueeContainer?.querySelectorAll(selector + '.marquee-hover').forEach(item => {
+            item.classList.remove('marquee-hover');
+            item.classList.add('selected');
+
+            if (this.marqueeSection === 'local') {
+                this.selectedLocalFiles.add(item.dataset.path);
+            } else {
+                const molData = item._molData;
+                if (molData) this.selectedCloudItems.add(molData.id);
+            }
+        });
+
+        this.isMarqueeSelecting = false;
+        this.marqueeElement?.remove();
+        this.marqueeElement = null;
+    }
+
+    async deleteSelectedLocalFiles() {
+        const paths = this.getSelectedLocalPaths();
+        if (!paths.length) return;
+
+        if (!confirm(`Delete ${paths.length} file(s)?`)) return;
+
+        for (const path of paths) {
+            try {
+                const name = path.split('/').pop();
+                const parentPath = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '';
+                const parentHandle = parentPath ? await this.getDirectoryHandle(parentPath) : this.directoryHandle;
+                await parentHandle.removeEntry(name);
+                this.fileHandles.delete(path);
+            } catch (err) {
+                console.error('Error deleting:', path, err);
+            }
+        }
+
+        this.clearLocalSelection();
+        this.refresh();
+        window.showSaveNotification?.(`Deleted ${paths.length} file(s)`);
+    }
+
+    async deleteSelectedCloudItems() {
+        const ids = this.getSelectedCloudMolecules();
+        if (!ids.length) return;
+
+        if (!confirm(`Delete ${ids.length} molecule(s)?`)) return;
+
+        for (const id of ids) {
+            await window.deleteMolecule?.(id);
+        }
+
+        this.clearCloudSelection();
+        this.loadCloudMolecules();
+        window.showSaveNotification?.(`Deleted ${ids.length} molecule(s)`);
+    }
+
+    async moveSelectedLocalToFolder(targetHandle) {
+        const paths = this.getSelectedLocalPaths();
+        for (const path of paths) {
+            await this.moveFileToFolder(path, targetHandle);
+        }
+        this.clearLocalSelection();
+    }
+
+    async moveSelectedCloudToFolder(folderId) {
+        const ids = this.getSelectedCloudMolecules();
+        for (const id of ids) {
+            await window.moveMoleculeToFolder?.(id, folderId);
+        }
+        this.clearCloudSelection();
+        this.loadCloudMolecules();
+        window.showSaveNotification?.(`Moved ${ids.length} molecule(s)`);
+    }
+
+    async uploadSelectedLocalToCloud() {
+        const paths = this.getSelectedLocalPaths();
+        let uploaded = 0;
+
+        for (const path of paths) {
+            const handle = this.fileHandles.get(path);
+            if (!handle) continue;
+
+            const file = await handle.getFile();
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!MOLECULE_EXTENSIONS.includes(ext)) continue;
+
+            const text = await file.text();
+            const name = file.name.replace(/\.[^/.]+$/, '');
+
+            // Parse and save
+            await window.main?.loader?.handleFile({ target: { files: [file] } }, false);
+            await new Promise(r => setTimeout(r, 100));
+
+            if (window.main?.data) {
+                await window.saveMolecule(name);
+                uploaded++;
+            }
+        }
+
+        if (uploaded) {
+            this.loadCloudMolecules();
+            window.showSaveNotification?.(`Uploaded ${uploaded} file(s) to cloud`);
+        }
+        this.clearLocalSelection();
+    }
+
+    async downloadSelectedCloudToLocal() {
+        if (!this.directoryHandle) return alert('Open a local folder first');
+
+        const ids = this.getSelectedCloudMolecules();
+        let downloaded = 0;
+
+        // Get all cloud items and find matching ones
+        const cloudItems = document.querySelectorAll('.cloud-item');
+        for (const item of cloudItems) {
+            const mol = item._molData;
+            if (!mol || !ids.includes(mol.id)) continue;
+
+            await this.importAsXYZ(mol);
+            downloaded++;
+        }
+
+        if (downloaded) {
+            window.showSaveNotification?.(`Downloaded ${downloaded} file(s)`);
+        }
+        this.clearCloudSelection();
     }
 
     setupFilterDropdown(buttonId, dropdownId, sortModeProperty) {
@@ -475,14 +702,20 @@ class FileExplorer {
 
     showContextMenu(e, path) {
         e.preventDefault();
-
-        // Remove existing menu
         document.querySelector('.file-context-menu')?.remove();
+
+        const isMultiSelect = this.selectedLocalFiles.size > 1 && this.selectedLocalFiles.has(path);
+        const count = isMultiSelect ? this.selectedLocalFiles.size : 1;
 
         const menu = document.createElement('div');
         menu.className = 'file-context-menu';
-        menu.innerHTML = `
+        menu.innerHTML = isMultiSelect ? `
+        <div class="file-context-menu-item" data-action="upload"><i class="fas fa-cloud-upload-alt"></i> Upload ${count} to Cloud</div>
+        <div class="file-context-menu-divider"></div>
+        <div class="file-context-menu-item danger" data-action="delete"><i class="fas fa-trash"></i> Delete ${count} Files</div>
+    ` : `
         <div class="file-context-menu-item" data-action="open"><i class="fas fa-external-link-alt"></i> Open</div>
+        <div class="file-context-menu-item" data-action="upload"><i class="fas fa-cloud-upload-alt"></i> Upload to Cloud</div>
         <div class="file-context-menu-item" data-action="rename"><i class="fas fa-pen"></i> Rename</div>
         <div class="file-context-menu-divider"></div>
         <div class="file-context-menu-item danger" data-action="delete"><i class="fas fa-trash"></i> Delete</div>
@@ -492,20 +725,29 @@ class FileExplorer {
         menu.style.top = e.clientY + 'px';
         document.body.appendChild(menu);
 
-        // Keep menu in viewport
         const rect = menu.getBoundingClientRect();
         if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
         if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
 
-        menu.addEventListener('click', (ev) => {
+        menu.addEventListener('click', async (ev) => {
             const action = ev.target.closest('.file-context-menu-item')?.dataset.action;
-            if (action === 'open') this.openFile(path);
-            if (action === 'rename') this.renameFile(path);
-            if (action === 'delete') this.deleteFile(path);
+            if (!action) return;
+
+            if (isMultiSelect) {
+                if (action === 'delete') this.deleteSelectedLocalFiles();
+                if (action === 'upload') this.uploadSelectedLocalToCloud();
+            } else {
+                if (action === 'open') this.openFile(path);
+                if (action === 'rename') this.renameFile(path);
+                if (action === 'delete') this.deleteFile(path);
+                if (action === 'upload') {
+                    this.selectedLocalFiles.add(path);
+                    this.uploadSelectedLocalToCloud();
+                }
+            }
             menu.remove();
         });
 
-        // Close on click outside
         setTimeout(() => {
             document.addEventListener('click', () => menu.remove(), { once: true });
         }, 0);
@@ -817,9 +1059,27 @@ class FileExplorer {
                     e.preventDefault();
                     e.stopPropagation();
                     folderEl.classList.remove('drop-target');
-                    const srcPath = e.dataTransfer.getData('text/plain');
-                    if (srcPath && this.fileHandles.has(srcPath)) {
-                        await this.moveFileToFolder(srcPath, entry);
+
+                    const data = e.dataTransfer.getData('text/plain');
+                    if (!data) return;
+
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.multi && parsed.paths) {
+                            // Multi-file drop
+                            for (const path of parsed.paths) {
+                                if (this.fileHandles.has(path)) {
+                                    await this.moveFileToFolder(path, entry);
+                                }
+                            }
+                            this.clearLocalSelection();
+                            return;
+                        }
+                    } catch { }
+
+                    // Single file drop
+                    if (data && this.fileHandles.has(data)) {
+                        await this.moveFileToFolder(data, entry);
                     }
                 });
 
@@ -859,14 +1119,51 @@ class FileExplorer {
                     <span>${entry.name}</span>
                 `;
 
-                fileEl.addEventListener('click', () => this.openFile(fullPath));
+                fileEl.addEventListener('click', (e) => {
+                    if (e.metaKey || e.ctrlKey) {
+                        // Multi-select toggle
+                        e.stopPropagation();
+                        if (this.selectedLocalFiles.has(fullPath)) {
+                            this.selectedLocalFiles.delete(fullPath);
+                            fileEl.classList.remove('selected');
+                        } else {
+                            this.selectedLocalFiles.add(fullPath);
+                            fileEl.classList.add('selected');
+                        }
+                    } else if (e.shiftKey && this.selectedLocalFiles.size > 0) {
+                        // Range select
+                        e.stopPropagation();
+                        const allFiles = Array.from(container.querySelectorAll('.file-item'));
+                        const lastSelected = Array.from(this.selectedLocalFiles).pop();
+                        const lastIdx = allFiles.findIndex(f => f.dataset.path === lastSelected);
+                        const thisIdx = allFiles.indexOf(fileEl);
+                        const [start, end] = [Math.min(lastIdx, thisIdx), Math.max(lastIdx, thisIdx)];
+
+                        for (let i = start; i <= end; i++) {
+                            const path = allFiles[i].dataset.path;
+                            this.selectedLocalFiles.add(path);
+                            allFiles[i].classList.add('selected');
+                        }
+                    } else {
+                        // Normal click - clear selection and open
+                        this.clearLocalSelection();
+                        this.openFile(fullPath);
+                    }
+                });
                 fileEl.addEventListener('contextmenu', (e) => this.showContextMenu(e, fullPath));
 
                 // Make local files draggable to cloud
                 fileEl.draggable = true;
-                fileEl.addEventListener('dragstart', async (e) => {
+                fileEl.addEventListener('dragstart', (e) => {
                     fileEl.classList.add('dragging');
-                    e.dataTransfer.setData('text/plain', fullPath);
+
+                    // If this file is part of a multi-selection, drag all selected
+                    if (this.selectedLocalFiles.has(fullPath) && this.selectedLocalFiles.size > 1) {
+                        const paths = Array.from(this.selectedLocalFiles);
+                        e.dataTransfer.setData('text/plain', JSON.stringify({ multi: true, paths }));
+                    } else {
+                        e.dataTransfer.setData('text/plain', fullPath);
+                    }
                     e.dataTransfer.effectAllowed = 'copy';
                 });
                 fileEl.addEventListener('dragend', () => {
@@ -1313,16 +1610,25 @@ class FileExplorer {
                 e.stopPropagation();
                 folderEl.classList.remove('drop-target');
 
-                // Check if it's a cloud molecule being dragged
                 const molData = e.dataTransfer.getData('application/json');
                 if (molData) {
                     try {
-                        const mol = JSON.parse(molData);
-                        if (mol.id && window.moveMoleculeToFolder) {
-                            const moved = await window.moveMoleculeToFolder(mol.id, folder.id);
+                        const parsed = JSON.parse(molData);
+
+                        if (parsed.multi && parsed.ids) {
+                            // Multi-molecule drop
+                            for (const id of parsed.ids) {
+                                await window.moveMoleculeToFolder?.(id, folder.id);
+                            }
+                            this.clearCloudSelection();
+                            this.loadCloudMolecules();
+                            window.showSaveNotification?.(`Moved ${parsed.ids.length} molecules to ${folder.name}`);
+                        } else if (parsed.id) {
+                            // Single molecule drop
+                            const moved = await window.moveMoleculeToFolder(parsed.id, folder.id);
                             if (moved) {
                                 this.loadCloudMolecules();
-                                window.showSaveNotification?.(`Moved ${mol.name} to ${folder.name}`);
+                                window.showSaveNotification?.(`Moved ${parsed.name} to ${folder.name}`);
                             }
                         }
                     } catch (err) {
@@ -1367,19 +1673,28 @@ class FileExplorer {
         const item = document.createElement('div');
         item.className = 'cloud-item';
         item.draggable = true;
-        item.innerHTML = `
-            <i class="fas fa-atom file-mol"></i>
-            <span class="cloud-item-name">${mol.name}</span>
-            <div class="cloud-item-actions">
-                <button class="import-btn" title="Download as XYZ"><i class="fas fa-download"></i></button>
-                <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
+        item._molData = mol; // Store reference for multi-select
 
-        // Drag events
+        item.innerHTML = `
+        <i class="fas fa-atom file-mol"></i>
+        <span class="cloud-item-name">${mol.name}</span>
+        <div class="cloud-item-actions">
+            <button class="import-btn" title="Download as XYZ"><i class="fas fa-download"></i></button>
+            <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+        </div>
+    `;
+
+        // Drag events - handle multi-drag
         item.addEventListener('dragstart', (e) => {
             item.classList.add('dragging');
-            e.dataTransfer.setData('application/json', JSON.stringify(mol));
+
+            // If this item is selected, drag all selected; otherwise just this one
+            if (this.selectedCloudItems.has(mol.id) && this.selectedCloudItems.size > 1) {
+                const ids = Array.from(this.selectedCloudItems);
+                e.dataTransfer.setData('application/json', JSON.stringify({ multi: true, ids }));
+            } else {
+                e.dataTransfer.setData('application/json', JSON.stringify(mol));
+            }
             e.dataTransfer.effectAllowed = 'copy';
         });
 
@@ -1387,25 +1702,45 @@ class FileExplorer {
             item.classList.remove('dragging');
         });
 
-        item.querySelector('.cloud-item-name').addEventListener('click', () => {
-            // Highlight this cloud item
-            document.querySelectorAll('.file-item.active, .cloud-item.active').forEach(el => el.classList.remove('active'));
-            item.classList.add('active');
-
-            window.resetIsolationState?.();
-            window.resetIsolationState?.();
-            window.loadMolecule(mol);
-            if (mol.data?.fragments) window.fragments = mol.data.fragments.map(f => f.atoms);
+        // Click on name - handle multi-select
+        item.querySelector('.cloud-item-name').addEventListener('click', (e) => {
+            if (e.metaKey || e.ctrlKey) {
+                // Toggle selection
+                e.stopPropagation();
+                if (this.selectedCloudItems.has(mol.id)) {
+                    this.selectedCloudItems.delete(mol.id);
+                    item.classList.remove('selected');
+                } else {
+                    this.selectedCloudItems.add(mol.id);
+                    item.classList.add('selected');
+                }
+            } else {
+                // Normal click - load molecule
+                this.clearCloudSelection();
+                document.querySelectorAll('.file-item.active, .cloud-item.active').forEach(el => el.classList.remove('active'));
+                item.classList.add('active');
+                window.resetIsolationState?.();
+                window.loadMolecule(mol);
+                if (mol.data?.fragments) window.fragments = mol.data.fragments.map(f => f.atoms);
+            }
         });
 
         item.querySelector('.import-btn')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.importAsXYZ(mol);
+            if (this.selectedCloudItems.size > 1 && this.selectedCloudItems.has(mol.id)) {
+                this.downloadSelectedCloudToLocal();
+            } else {
+                this.importAsXYZ(mol);
+            }
         });
 
         item.querySelector('.delete-btn').addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (await window.deleteMolecule(mol.id)) this.loadCloudMolecules();
+            if (this.selectedCloudItems.size > 1 && this.selectedCloudItems.has(mol.id)) {
+                this.deleteSelectedCloudItems();
+            } else {
+                if (await window.deleteMolecule(mol.id)) this.loadCloudMolecules();
+            }
         });
 
         return item;
