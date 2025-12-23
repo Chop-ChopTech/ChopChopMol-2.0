@@ -863,25 +863,31 @@ input[type="range"]:focus {
 
 }
 
-/* Compact Database Search */
+/* Database Search Panel - Unified Panel */
 .db-search-panel {
-    /* position: absolute; */
-    top: 0px;
-    left: 280px;
-    width: 180px;
-    background: none;
-    border: none;
-    border-radius: 12px;
-    padding: 12px;
-    opacity: 1;
+    position: relative;
+    width: 340px;
+    min-width: 280px;
+    max-width: 600px;
+    min-height: 200px;
+    background: rgba(20, 20, 35, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    overflow: hidden;
+    opacity: 0;
     pointer-events: none;
     user-select: none;
     transform: translateY(-10px);
     transition: all 0.25s ease;
     z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    transition:
+        background-color 200ms ease,
+        color 200ms ease,
+        opacity 200ms ease,
+        transform 200ms ease,
+        box-shadow 200ms ease;
 }
 
 .db-search-panel.active {
@@ -891,89 +897,62 @@ input[type="range"]:focus {
     transform: translateY(0);
 }
 
-.db-search-input {
+/* Panel Header */
+.db-search-header {
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.db-search-header i {
+    color: rgba(0, 180, 255, 0.8);
+}
+
+/* Search Bar Row */
+.db-search-bar {
     position: relative;
-    width: 150px;
-    padding: 14px 16px;
-    top: -2px;
-    background: rgba(0, 0, 0, 0.04);
-    border-radius: 20px;
-    border: none;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.db-search-input {
+    width: 100%;
+    padding: 10px 12px;
+    padding-right: 36px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
     color: #fff;
-    font-size: 14px;
+    font-size: 13px;
     outline: none;
-    transition: border 0.2s;
-    backdrop-filter: blur(8px);
-    /* box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285); */
-    backdrop-filter: blur(10px);
-    text-align: center;
+    transition: all 0.2s;
+    box-sizing: border-box;
 }
 
 .db-search-input:focus {
-    border-color: rgba(0, 217, 255, 0.5);
+    border-color: rgba(0, 136, 255, 0.5);
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .db-search-input::placeholder {
     color: rgba(255, 255, 255, 0.4);
 }
 
-.db-search-dropdown {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.25s ease;
-    margin-top: 6px;
-    padding: 0 10px;
-}
-
-.db-search-dropdown.show {
-    max-height: 320px;
-    overflow-y: auto;
-}
-
-.db-search-dropdown::-webkit-scrollbar {
-    width: 6px;
-}
-
-.db-search-dropdown::-webkit-scrollbar-track {
-    background: none;
-}
-
-.db-search-dropdown::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-}
-
-.db-search-item {
-    padding: 10px 12px;
-    cursor: pointer;
-    border-radius: 20px;
-    margin: 2px 0;
-    color: #fff;
-    font-size: 13px;
-    transition: background 0.15s;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.137), inset -8px -8px 16px rgba(255, 255, 255, 0.159);
-
-}
-
-.db-search-item:hover,
-.db-search-item.active {
-    background: rgb(0, 157, 255);
-    box-shadow: 0 0px 10px rgb(0, 225, 255);
-
-}
-
-.db-search-empty {
-    padding: 12px;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 13px;
-}
-
+/* Loader Spinner */
 .db-search-loader {
     position: absolute;
-    right: 20px;
-    top: 22px;
+    right: 22px;
+    top: 50%;
+    transform: translateY(-50%);
     width: 14px;
     height: 14px;
     border: 2px solid rgba(255, 255, 255, 0.2);
@@ -986,6 +965,154 @@ input[type="range"]:focus {
 
 .db-search-loader.show {
     opacity: 1;
+}
+
+/* Results Dropdown */
+.db-search-dropdown {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.db-search-dropdown.show {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.db-search-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.db-search-dropdown::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.db-search-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+/* Table with Grid Lines */
+.db-search-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.db-search-table thead {
+    position: sticky;
+    top: 0;
+    background: rgba(30, 30, 50, 0.98);
+    z-index: 1;
+}
+
+.db-search-table th {
+    padding: 10px 12px;
+    text-align: left;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.db-search-table th:last-child {
+    border-right: none;
+}
+
+.db-search-table td {
+    padding: 10px 12px;
+    color: rgba(255, 255, 255, 0.85);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.db-search-table td:last-child {
+    border-right: none;
+}
+
+.db-search-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.db-search-table tbody tr:hover {
+    background: rgba(0, 136, 255, 0.15);
+}
+
+.db-search-table tbody tr.active {
+    background: rgba(0, 136, 255, 0.3);
+}
+
+.db-search-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Column Styles */
+.db-search-table .col-name {
+    font-weight: 500;
+    color: #fff;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.db-search-table .col-db {
+    color: rgba(0, 200, 255, 0.8);
+    font-size: 11px;
+}
+
+.db-search-table .col-type {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+}
+
+/* Empty State */
+.db-search-empty {
+    padding: 24px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+    border: none !important;
+}
+
+/* Panel Resizers */
+.db-search-resizer {
+    position: absolute;
+    background: transparent;
+    z-index: 10;
+    transition: background 0.2s;
+}
+
+.db-search-resizer:hover {
+    background: rgba(0, 136, 255, 0.4);
+}
+
+.db-search-resizer-left {
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: ew-resize;
+}
+
+.db-search-resizer-right {
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: ew-resize;
+}
+
+.db-search-resizer-bottom {
+    bottom: 0;
+    left: 5px;
+    right: 5px;
+    height: 5px;
+    cursor: ns-resize;
 }
 
 #dragFile.dragover {

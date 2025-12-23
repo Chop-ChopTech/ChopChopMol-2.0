@@ -787,9 +787,29 @@
                     <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
                         JSON</button>
                     <div id="dbSearchPanel" class="db-search-panel">
-                        <input id="dbSearchInput" class="db-search-input shine" type="text"
-                            placeholder="Search Molecules" autocomplete="off">
-                        <div id="dbSearchDropdown" class="db-search-dropdown"></div>
+                        <div class="db-search-resizer db-search-resizer-left"></div>
+                        <div class="db-search-resizer db-search-resizer-right"></div>
+                        <div class="db-search-resizer db-search-resizer-bottom"></div>
+                        <div class="db-search-header">
+                            <span><i class="fas fa-database"></i> PubChem Search</span>
+                        </div>
+                        <div class="db-search-bar">
+                            <input id="dbSearchInput" class="db-search-input" type="text"
+                                placeholder="Search molecules..." autocomplete="off">
+                            <div class="db-search-loader"></div>
+                        </div>
+                        <div id="dbSearchDropdown" class="db-search-dropdown">
+                            <table class="db-search-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Database</th>
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dbSearchResults"></tbody>
+                            </table>
+                        </div>
                     </div>
 
                 </div>

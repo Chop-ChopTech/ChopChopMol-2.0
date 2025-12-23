@@ -4733,29 +4733,31 @@ window.toggleRibbon = toggleRibbon;
     const panel = document.getElementById('dbSearchPanel');
     const input = document.getElementById('dbSearchInput');
     const dropdown = document.getElementById('dbSearchDropdown');
+    const tbody = document.getElementById('dbSearchResults');
     panel.classList.add('active');
 
-    if (!panel || !input || !dropdown) return;
+    if (!panel || !input || !dropdown || !tbody) return;
 
     // Add loader
-    const loader = document.createElement('div');
-    loader.className = 'db-search-loader';
-    panel.appendChild(loader);
+    const loader = panel.querySelector('.db-search-loader');
 
     let debounce;
     let activeIdx = -1;
     let items = [];
 
     document.addEventListener('click', (e) => {
-        if (!input.contains(e.target)) {
+        if (window.dbSearchJustResized) {
+            return;
+        }
+        if (!panel.contains(e.target)) {
             dropdown.classList.remove('show');
         }
-    })
-    input.addEventListener('focus', () => {
-        dropdown.classList.add('show');
     });
 
-    // Search on input
+    input.addEventListener('focus', () => {
+        if (items.length > 0) dropdown.classList.add('show');
+    });
+
     input.oninput = (e) => {
         const q = e.target.value.trim();
         clearTimeout(debounce);
@@ -4766,7 +4768,6 @@ window.toggleRibbon = toggleRibbon;
         }
 
         loader.classList.add('show');
-
         debounce = setTimeout(() => search(q), 300);
     };
 
@@ -4777,61 +4778,65 @@ window.toggleRibbon = toggleRibbon;
             );
             const data = await res.json();
             items = data.dictionary_terms?.compound || [];
-            show(items);
+            showResults(items);
         } catch (err) {
             console.error(err);
-            dropdown.innerHTML = '<div class="db-search-empty">Search failed</div>';
+            tbody.innerHTML = '<tr><td colspan="3" class="db-search-empty">Search failed</td></tr>';
             dropdown.classList.add('show');
         } finally {
             loader.classList.remove('show');
         }
     }
 
-    function show(list) {
+    function showResults(list) {
         if (!list.length) {
-            dropdown.innerHTML = '<div class="db-search-empty">No results</div>';
+            tbody.innerHTML = '<tr><td colspan="3" class="db-search-empty">No results found</td></tr>';
             dropdown.classList.add('show');
             return;
         }
 
-        dropdown.innerHTML = list.map((name, i) =>
-            `<div class="db-search-item" data-i="${i}">${name}</div>`
-        ).join('');
+        tbody.innerHTML = list.slice(0, 15).map((name, i) => `
+            <tr data-i="${i}" data-name="${name}">
+                <td class="col-name" title="${name}">${name}</td>
+                <td class="col-db">PubChem</td>
+                <td class="col-type">Compound</td>
+            </tr>
+        `).join('');
+
         dropdown.classList.add('show');
         activeIdx = -1;
 
-        dropdown.querySelectorAll('.db-search-item').forEach(el => {
-            el.onclick = () => load(el.textContent);
+        tbody.querySelectorAll('tr[data-name]').forEach(row => {
+            row.onclick = () => load(row.dataset.name);
         });
     }
 
-    // Keyboard nav
     input.onkeydown = (e) => {
-        const els = dropdown.querySelectorAll('.db-search-item');
+        const rows = tbody.querySelectorAll('tr[data-name]');
 
         if (e.key === 'ArrowDown') {
             e.preventDefault();
-            activeIdx = Math.min(activeIdx + 1, els.length - 1);
-            update(els);
+            activeIdx = Math.min(activeIdx + 1, rows.length - 1);
+            updateActive(rows);
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             activeIdx = Math.max(activeIdx - 1, 0);
-            update(els);
+            updateActive(rows);
         } else if (e.key === 'Enter') {
             e.preventDefault();
-            if (activeIdx >= 0 && els[activeIdx]) {
-                load(els[activeIdx].textContent);
+            if (activeIdx >= 0 && rows[activeIdx]) {
+                load(rows[activeIdx].dataset.name);
             }
         } else if (e.key === 'Escape') {
-            panel.classList.remove('active');
+            dropdown.classList.remove('show');
         }
     };
 
-    function update(els) {
-        els.forEach((el, i) => {
-            el.classList.toggle('active', i === activeIdx);
+    function updateActive(rows) {
+        rows.forEach((row, i) => {
+            row.classList.toggle('active', i === activeIdx);
             if (i === activeIdx) {
-                el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             }
         });
     }
@@ -4842,14 +4847,12 @@ window.toggleRibbon = toggleRibbon;
         loader.classList.add('show');
 
         try {
-            // Get CID
             const cidRes = await fetch(
                 `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`
             );
             const cidData = await cidRes.json();
             const cid = cidData.IdentifierList.CID[0];
 
-            // Get SDF format with 3D coordinates
             const sdfRes = await fetch(
                 `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF?record_type=3d`
             );
@@ -4857,13 +4860,10 @@ window.toggleRibbon = toggleRibbon;
             if (!sdfRes.ok) throw new Error('3D structure unavailable');
 
             const sdfText = await sdfRes.text();
-
-            // Parse SDF to get atom data
             const molData = parseSDF(sdfText);
 
             window.main.newMolecule(molData, window.main.setNewMode(molData.numAtoms <= 2000), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, false, false);
             window.main.zoomCameraToFitMolecule();
-
 
             loader.classList.remove('show');
         } catch (err) {
@@ -4875,54 +4875,89 @@ window.toggleRibbon = toggleRibbon;
 
     function parseSDF(sdfText) {
         const lines = sdfText.split('\n');
+        const countsLine = lines[3];
+        const numAtoms = parseInt(countsLine.slice(0, 3));
         const atomData = [];
 
-        // SDF format: line 4 (index 3) contains atom and bond counts
-        const countsLine = lines[3];
-        if (!countsLine) {
-            throw new Error('Invalid SDF format');
-        }
-
-        // First 3 characters are atom count, next 3 are bond count
-        const numAtoms = parseInt(countsLine.substring(0, 3).trim());
-
-        if (isNaN(numAtoms) || numAtoms <= 0) {
-            throw new Error('Invalid atom count in SDF');
-        }
-
-        // Atom block starts at line 5 (index 4)
-        // Each line: x(10 chars) y(10 chars) z(10 chars) symbol(3 chars)
-        for (let i = 0; i < numAtoms; i++) {
-            const lineIndex = 4 + i;
-
-            if (lineIndex >= lines.length) {
-                throw new Error(`Missing atom data at line ${lineIndex + 1}`);
-            }
-
-            const line = lines[lineIndex];
-
-            // Parse coordinates (columns 1-10, 11-20, 21-30)
-            const x = parseFloat(line.substring(0, 10).trim());
-            const y = parseFloat(line.substring(10, 20).trim());
-            const z = parseFloat(line.substring(20, 30).trim());
-
-            // Element symbol at column 32-34 (index 31-33)
-            const element = line.substring(31, 34).trim();
-
-            // Validate parsed data
-            if (isNaN(x) || isNaN(y) || isNaN(z) || !element) {
-                throw new Error(`Invalid atom data at line ${lineIndex + 1}`);
-            }
-
+        for (let i = 4; i < 4 + numAtoms; i++) {
+            const line = lines[i];
+            const x = parseFloat(line.slice(0, 10).trim());
+            const y = parseFloat(line.slice(10, 20).trim());
+            const z = parseFloat(line.slice(20, 30).trim());
+            const element = line.slice(31, 34).trim();
             atomData.push({ element, x, y, z });
         }
 
-        // Return data in the format ChopChopMol expects
-        return {
-            atomData: atomData,
-            numAtoms: numAtoms
-        };
+        return { atomData, numAtoms };
     }
+    // PubChem Panel Resize
+    (function () {
+        const panel = document.getElementById('dbSearchPanel');
+        if (!panel) return;
+
+        const resizerLeft = panel.querySelector('.db-search-resizer-left');
+        const resizerRight = panel.querySelector('.db-search-resizer-right');
+        const resizerBottom = panel.querySelector('.db-search-resizer-bottom');
+
+        let isResizing = false;
+        let currentResizer = null;
+        let startX, startY, startWidth, startHeight;
+
+        function onMouseDown(e, resizer) {
+            isResizing = true;
+            currentResizer = resizer;
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = panel.offsetWidth;
+            startHeight = panel.offsetHeight;
+
+            document.body.style.cursor = resizer === 'bottom' ? 'ns-resize' : 'ew-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        }
+
+        function onMouseMove(e) {
+            if (!isResizing) return;
+
+            if (currentResizer === 'right') {
+                const newWidth = startWidth + ((e.clientX - startX) * 2);
+                panel.style.width = Math.max(280, Math.min(600, newWidth)) + 'px';
+            } else if (currentResizer === 'left') {
+                const delta = (startX - e.clientX) * 2;
+                const newWidth = startWidth + delta;
+                if (newWidth >= 280 && newWidth <= 600) {
+                    panel.style.width = newWidth + 'px';
+                }
+            } else if (currentResizer === 'bottom') {
+                const newHeight = startHeight + (e.clientY - startY);
+                panel.style.height = Math.max(200, Math.min(500, newHeight)) + 'px';
+                const dropdown = document.getElementById('dbSearchDropdown');
+                if (dropdown && dropdown.classList.contains('show')) {
+                    dropdown.style.maxHeight = (newHeight - 100) + 'px';
+                }
+            }
+        }
+
+        function onMouseUp() {
+            if (isResizing) {
+                isResizing = false;
+                currentResizer = null;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+
+                // Prevent click-outside from closing panel
+                window.dbSearchJustResized = true;
+                setTimeout(() => { window.dbSearchJustResized = false; }, 100);
+            }
+        }
+
+        resizerLeft?.addEventListener('mousedown', (e) => onMouseDown(e, 'left'));
+        resizerRight?.addEventListener('mousedown', (e) => onMouseDown(e, 'right'));
+        resizerBottom?.addEventListener('mousedown', (e) => onMouseDown(e, 'bottom'));
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    })();
 })();
 window.labelIndexMode = false;
 
