@@ -4795,20 +4795,73 @@ window.toggleRibbon = toggleRibbon;
             return;
         }
 
-        tbody.innerHTML = list.slice(0, 15).map((name, i) => `
-            <tr data-i="${i}" data-name="${name}">
-                <td class="col-name" title="${name}">${name}</td>
-                <td class="col-db">PubChem</td>
-                <td class="col-type">Compound</td>
-            </tr>
-        `).join('');
+        const names = list.slice(0, 15);
+        tbody.innerHTML = names.map((name, i) => `
+        <tr data-i="${i}" data-name="${name}">
+            <td class="col-name" title="${name}">${name}</td>
+            <td class="col-desc" data-full="" data-short="">...</td>
+            <td class="col-type">Compound</td>
+        </tr>
+    `).join('');
 
         dropdown.classList.add('show');
         activeIdx = -1;
 
         tbody.querySelectorAll('tr[data-name]').forEach(row => {
-            row.onclick = () => load(row.dataset.name);
+            row.querySelector('.col-name').onclick = () => load(row.dataset.name);
+            row.querySelector('.col-type').onclick = () => load(row.dataset.name);
+
+            const descCell = row.querySelector('.col-desc');
+            descCell.onclick = (e) => {
+                e.stopPropagation();
+                descCell.classList.toggle('expanded');
+                if (descCell.dataset.full) {
+                    descCell.textContent = descCell.classList.contains('expanded')
+                        ? descCell.dataset.full
+                        : descCell.dataset.short;
+                }
+            };
         });
+
+        fetchDescriptions(names);
+    }
+
+    async function fetchDescriptions(names) {
+        const rows = tbody.querySelectorAll('tr[data-name]');
+        for (let i = 0; i < names.length; i++) {
+            const name = names[i];
+            const cell = rows[i]?.querySelector('.col-desc');
+            if (!cell) continue;
+
+            try {
+                const cidRes = await fetch(
+                    `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`
+                );
+                if (!cidRes.ok) { cell.textContent = '—'; continue; }
+                const cidData = await cidRes.json();
+                const cid = cidData.IdentifierList?.CID?.[0];
+                if (!cid) { cell.textContent = '—'; continue; }
+
+                const descRes = await fetch(
+                    `https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/${cid}/JSON?heading=Record+Description`
+                );
+                if (!descRes.ok) { cell.textContent = '—'; continue; }
+                const descData = await descRes.json();
+
+                const sections = descData.Record?.Section?.[0]?.Section?.[0]?.Information;
+                const desc = sections?.[0]?.Value?.StringWithMarkup?.[0]?.String || '';
+
+                if (desc) {
+                    cell.dataset.full = desc;
+                    cell.dataset.short = desc.length > 80 ? desc.slice(0, 77) + '...' : desc;
+                    cell.textContent = cell.dataset.short;
+                } else {
+                    cell.textContent = '—';
+                }
+            } catch (e) {
+                cell.textContent = '—';
+            }
+        }
     }
 
     input.onkeydown = (e) => {

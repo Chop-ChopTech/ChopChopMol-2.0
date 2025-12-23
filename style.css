@@ -868,7 +868,7 @@ input[type="range"]:focus {
     position: relative;
     width: 340px;
     min-width: 280px;
-    max-width: 600px;
+    max-width: 850px;
     min-height: 200px;
     background: rgba(20, 20, 35, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -888,6 +888,38 @@ input[type="range"]:focus {
         opacity 200ms ease,
         transform 200ms ease,
         box-shadow 200ms ease;
+}
+
+.db-search-table .col-desc {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.db-search-table .col-desc:hover {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.db-search-table .col-desc.expanded {
+    white-space: normal;
+    max-width: 300px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+}
+
+.db-search-table .col-desc {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .db-search-panel.active {
@@ -1209,7 +1241,6 @@ input[type="range"]:focus {
     border-radius: 20px;
     padding: 3px 10px;
     transition: opacity 0.3s ease, transform 0.3s ease;
-    backdrop-filter: blur(10px);
     background-repeat: no-repeat !important;
     perspective: 1000px;
 }
