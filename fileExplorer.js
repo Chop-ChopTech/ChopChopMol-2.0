@@ -1703,9 +1703,13 @@ class FileExplorer {
         });
 
         // Click on name - handle multi-select
-        item.querySelector('.cloud-item-name').addEventListener('click', (e) => {
+        // Click anywhere on item - handle selection
+        item.addEventListener('click', (e) => {
+            // Ignore if clicking on action buttons
+            if (e.target.closest('.cloud-item-actions')) return;
+
             if (e.metaKey || e.ctrlKey) {
-                // Toggle selection
+                // Toggle multi-selection
                 e.stopPropagation();
                 if (this.selectedCloudItems.has(mol.id)) {
                     this.selectedCloudItems.delete(mol.id);
@@ -1715,10 +1719,14 @@ class FileExplorer {
                     item.classList.add('selected');
                 }
             } else {
-                // Normal click - load molecule
+                // Normal click - clear selection, select this one, and load
                 this.clearCloudSelection();
+                this.clearLocalSelection();
                 document.querySelectorAll('.file-item.active, .cloud-item.active').forEach(el => el.classList.remove('active'));
                 item.classList.add('active');
+                item.classList.add('selected');
+                this.selectedCloudItems.add(mol.id);
+
                 window.resetIsolationState?.();
                 window.loadMolecule(mol);
                 if (mol.data?.fragments) window.fragments = mol.data.fragments.map(f => f.atoms);

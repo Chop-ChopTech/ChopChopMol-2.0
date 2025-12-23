@@ -3824,19 +3824,6 @@ input[type="range"]:focus {
     transition: none;
 }
 
-/* Multi-select visual indicator */
-.file-item.selected::before,
-.cloud-item.selected::before {
-    content: '';
-    position: absolute;
-    left: 4px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 4px;
-    background: #0088ff;
-    border-radius: 50%;
-}
 
 .file-item,
 .cloud-item {
