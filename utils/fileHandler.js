@@ -19,6 +19,10 @@ export default class FileHandler {
             try {
                 const text = e.target.result;
                 const fileType = findFileType(file);
+
+                // Store raw file content for cloud saving
+                window.currentFileContent = text;
+                window.currentFileFormat = fileType;
                 let parsedData = null;
 
                 if (fileType === 'mol') {

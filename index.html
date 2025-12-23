@@ -166,8 +166,22 @@
                 return;
             }
 
+            // Get raw file content or generate XYZ
+            let fileContent = window.currentFileContent || null;
+            let fileFormat = window.currentFileFormat || null;
+
+            if (!fileContent) {
+                // Generate XYZ from current atom data
+                const atoms = window.main.data.atomData;
+                fileContent = `${atoms.length}\n${moleculeName}\n`;
+                atoms.forEach(a => {
+                    fileContent += `${a.element}  ${a.x.toFixed(6)}  ${a.y.toFixed(6)}  ${a.z.toFixed(6)}\n`;
+                });
+                fileFormat = 'xyz';
+            }
+
             // Calculate size in MB
-            const dataSize = new Blob([JSON.stringify(window.main.data)]).size / (1024 * 1024);
+            const dataSize = new Blob([fileContent]).size / (1024 * 1024);
 
             // Check storage limit
             if (!await checkStorageLimit(dataSize)) {
@@ -175,14 +189,13 @@
             }
 
             try {
-                // Check for duplicate names and generate unique name
+                // Check for duplicate names
                 const moleculesRef = collection(db, 'users', user.uid, 'molecules');
                 const snapshot = await getDocs(moleculesRef);
                 const existingNames = snapshot.docs.map(doc => doc.data().name);
 
                 let finalName = moleculeName;
                 if (existingNames.includes(moleculeName)) {
-                    // Find the highest existing number for this base name
                     const baseName = moleculeName.replace(/\(\d+\)$/, '').trim();
                     let maxNum = 0;
 
@@ -196,21 +209,18 @@
                             }
                         }
                     }
-
                     finalName = `${baseName}(${maxNum})`;
                 }
 
-                // Save molecule
-                console.log(window.fragments)
+                // Save molecule with raw file content
                 await addDoc(moleculesRef, {
                     name: finalName,
-                    data: {
-                        molecule: window.main.data,
-                        fragments: window.fragments.map((frag, i) => ({
-                            id: i,
-                            atoms: frag
-                        }))
-                    },
+                    fileContent: fileContent,
+                    fileFormat: fileFormat,
+                    fragments: window.fragments.map((frag, i) => ({
+                        id: i,
+                        atoms: frag
+                    })),
                     timestamp: serverTimestamp(),
                     atomCount: window.main.data.numAtoms,
                     size: dataSize
@@ -388,20 +398,49 @@
         }
 
         function loadMolecule(moleculeData) {
-            if (!moleculeData || !moleculeData.data) return;
+            if (!moleculeData) return;
 
-            window.main.data = moleculeData.data.molecule;
-            window.main.newMolecule(
-                moleculeData.data.molecule,
-                moleculeData.numAtoms <= 2000 ? 0 : 1,
-                false,
-                { x: 0, y: 0, z: 0 },
-                { x: 0, y: 0, z: 0 },
-                true,
-                true
-            );
-            window.resetCamera()
+            // Check if it's new format (raw file) or old format (JSON)
+            if (moleculeData.fileContent && moleculeData.fileFormat) {
+                // New format - parse the raw file
+                const format = moleculeData.fileFormat;
+                const content = moleculeData.fileContent;
 
+                // Store for potential re-save
+                window.currentFileContent = content;
+                window.currentFileFormat = format;
+
+                // Create a fake file object and use the loader
+                const blob = new Blob([content], { type: 'text/plain' });
+                const file = new File([blob], `molecule.${format}`);
+
+                window.main?.loader?.handleFile({ target: { files: [file] } }, false);
+
+                // Restore fragments after a tick
+                setTimeout(() => {
+                    if (moleculeData.fragments) {
+                        window.fragments = moleculeData.fragments.map(f => f.atoms);
+                    }
+                }, 100);
+            } else if (moleculeData.data) {
+                // Old format - use existing JSON loading (for backward compatibility)
+                window.main.data = moleculeData.data.molecule;
+                window.main.newMolecule(
+                    moleculeData.data.molecule,
+                    moleculeData.atomCount <= 2000 ? 0 : 1,
+                    false,
+                    { x: 0, y: 0, z: 0 },
+                    { x: 0, y: 0, z: 0 },
+                    true,
+                    true
+                );
+
+                // Clear raw content since this was loaded from JSON
+                window.currentFileContent = null;
+                window.currentFileFormat = null;
+            }
+
+            window.resetCamera?.();
         }
 
         async function deleteMolecule(moleculeId) {
