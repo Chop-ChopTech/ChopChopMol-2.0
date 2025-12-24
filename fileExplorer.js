@@ -528,14 +528,32 @@ class FileExplorer {
         const dialog = document.createElement('div');
         dialog.id = 'localSaveDialog';
         dialog.className = 'local-save-dialog';
+        // Collect subfolders from the current directory
+        const subfolders = [];
+        for await (const [name, handle] of this.directoryHandle.entries()) {
+            if (handle.kind === 'directory') {
+                subfolders.push(name);
+            }
+        }
+        subfolders.sort((a, b) => a.localeCompare(b));
+
+        const folderOptions = subfolders.length > 0
+            ? `<option value="">${this.directoryHandle.name} (root)</option>` + subfolders.map(f => `<option value="${f}">/${f}</option>`).join('')
+            : `<option value="">${this.directoryHandle.name} (root)</option>`;
+
         dialog.innerHTML = `
     <h3 class="save-dialog-title"><i class="fas fa-laptop"></i> Save to Local</h3>
-    <div class="save-dialog-row">
-        <input type="text" id="localSaveInput" placeholder="Enter filename" value="${defaultName}">
-        <select id="localSaveExt">
-            <option value="xyz">.xyz</option>
-            <option value="pdb">.pdb</option>
-            <option value="mol">.mol</option>
+    <div class="save-dialog-row" style="flex-direction: column; gap: 10px;">
+        <div style="display: flex; gap: 10px; width: 100%;">
+            <input type="text" id="localSaveInput" placeholder="Enter filename" value="${defaultName}" style="flex: 1;">
+            <select id="localSaveExt">
+                <option value="xyz">.xyz</option>
+                <option value="pdb">.pdb</option>
+                <option value="mol">.mol</option>
+            </select>
+        </div>
+        <select id="localSaveFolder" style="width: 100%;">
+            ${folderOptions}
         </select>
     </div>
     <div class="save-dialog-buttons">
@@ -568,6 +586,22 @@ class FileExplorer {
 
             const ext = extSelect.value;
             const filename = name + '.' + ext;
+            // Get selected folder (empty string = root)
+            const folderSelect = document.getElementById('localSaveFolder');
+            const selectedFolder = folderSelect.value;
+            console.log('Selected folder:', selectedFolder);
+
+            // Get the target directory handle
+            let targetHandle = this.directoryHandle;
+            if (selectedFolder) {
+                try {
+                    targetHandle = await this.directoryHandle.getDirectoryHandle(selectedFolder);
+                } catch (err) {
+                    console.error('Error accessing subfolder:', err);
+                    window.showSaveNotification?.('Error: Folder not accessible');
+                    return;
+                }
+            }
             let content = '';
 
             if (ext === 'xyz') {
@@ -599,7 +633,7 @@ class FileExplorer {
             }
 
             try {
-                const fileHandle = await this.directoryHandle.getFileHandle(filename, { create: true });
+                const fileHandle = await targetHandle.getFileHandle(filename, { create: true });
                 const writable = await fileHandle.createWritable();
                 await writable.write(content);
                 await writable.close();
