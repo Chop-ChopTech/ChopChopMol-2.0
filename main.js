@@ -577,11 +577,7 @@ switchModeButton.addEventListener('click', (e) => {
 // closeStyleSelectorButton.addEventListener('click', () => {
 //     styleSelector.classList.add('on');
 // });
-document.addEventListener('click', function (event) {
-    if (!styleSelector.contains(event.target) && event.target.id !== 'switchMode' && !event.target.closest('#switchMode')) {
-        styleSelector.classList.add('on');
-    }
-});
+
 toggleLabelsButton.addEventListener('change', () => {
     main.toggleLabels(toggleLabelsButton.checked);
     render();

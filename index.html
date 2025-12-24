@@ -818,15 +818,8 @@
         function updateAccountIcon(user) {
             const accountIcon = document.getElementById('accountIcon');
             const accountLabel = document.getElementById('accountLabel');
-
-            if (user) {
-                const initials = getUserInitials(user.displayName);
-                accountIcon.innerHTML = `<div class="user-initials">${initials}</div>`;
-                accountLabel.textContent = user.displayName?.split(' ')[0] || 'Account';
-            } else {
-                accountIcon.innerHTML = '<i class="fa-solid fa-user"></i>';
-                accountLabel.textContent = 'Account';
-            }
+            accountIcon.innerHTML = '<i class="fa-solid fa-user"></i>';
+            accountLabel.textContent = 'Account';
         }
     </script>
     <div id="buttons">
