@@ -4799,8 +4799,8 @@ window.toggleRibbon = toggleRibbon;
         tbody.innerHTML = names.map((name, i) => `
         <tr data-i="${i}" data-name="${name}">
             <td class="col-name" title="${name}">${name}</td>
-            <td class="col-desc" data-full="" data-short="">...</td>
             <td class="col-type">Compound</td>
+            <td class="col-desc" data-full="" data-short="">...</td>
         </tr>
     `).join('');
 
@@ -4974,16 +4974,16 @@ window.toggleRibbon = toggleRibbon;
 
             if (currentResizer === 'right') {
                 const newWidth = startWidth + ((e.clientX - startX) * 2);
-                panel.style.width = Math.max(280, Math.min(600, newWidth)) + 'px';
+                panel.style.width = Math.max(280, Math.min(800, newWidth)) + 'px';
             } else if (currentResizer === 'left') {
                 const delta = (startX - e.clientX) * 2;
                 const newWidth = startWidth + delta;
-                if (newWidth >= 280 && newWidth <= 600) {
+                if (newWidth >= 280 && newWidth <= 800) {
                     panel.style.width = newWidth + 'px';
                 }
             } else if (currentResizer === 'bottom') {
                 const newHeight = startHeight + (e.clientY - startY);
-                panel.style.height = Math.max(200, Math.min(500, newHeight)) + 'px';
+                panel.style.height = Math.max(94, Math.min(500, newHeight)) + 'px';
                 const dropdown = document.getElementById('dbSearchDropdown');
                 if (dropdown && dropdown.classList.contains('show')) {
                     dropdown.style.maxHeight = (newHeight - 100) + 'px';

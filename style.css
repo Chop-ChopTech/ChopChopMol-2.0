@@ -866,7 +866,7 @@ input[type="range"]:focus {
 /* Database Search Panel - Unified Panel */
 .db-search-panel {
     position: relative;
-    width: 340px;
+    width: 800px;
     min-width: 280px;
     max-width: 850px;
     min-height: 20px;
