@@ -1090,6 +1090,13 @@ class FileExplorer {
                     <span>${entry.name}</span>
                 `;
 
+                // Add right-click context menu for folder delete
+                folderEl.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.showFolderContextMenu(e, fullPath, entry);
+                });
+
                 // Make folder a drop target
                 folderEl.addEventListener('dragover', (e) => {
                     e.preventDefault();
@@ -1221,6 +1228,61 @@ class FileExplorer {
 
                 container.appendChild(fileEl);
             }
+        }
+    }
+
+    showFolderContextMenu(e, path, dirHandle) {
+        e.preventDefault();
+        document.querySelector('.file-context-menu')?.remove();
+
+        const folderName = path.split('/').pop();
+
+        const menu = document.createElement('div');
+        menu.className = 'file-context-menu';
+        menu.innerHTML = `
+        <div class="file-context-menu-item danger" data-action="delete"><i class="fas fa-trash"></i> Delete Folder</div>
+    `;
+
+        menu.style.left = e.clientX + 'px';
+        menu.style.top = e.clientY + 'px';
+        document.body.appendChild(menu);
+
+        const rect = menu.getBoundingClientRect();
+        if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
+        if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
+
+        menu.addEventListener('click', async (ev) => {
+            const action = ev.target.closest('.file-context-menu-item')?.dataset.action;
+            if (action === 'delete') {
+                await this.deleteLocalFolder(path, folderName);
+            }
+            menu.remove();
+        });
+
+        setTimeout(() => {
+            document.addEventListener('click', () => menu.remove(), { once: true });
+        }, 0);
+    }
+
+    async deleteLocalFolder(path, folderName) {
+        if (!confirm(`Delete folder "${folderName}" and all its contents?`)) return;
+
+        try {
+            // Get parent handle
+            const pathParts = path.split('/');
+            const name = pathParts.pop();
+
+            let parentHandle = this.directoryHandle;
+            for (const part of pathParts) {
+                if (part) parentHandle = await parentHandle.getDirectoryHandle(part);
+            }
+
+            await parentHandle.removeEntry(name, { recursive: true });
+            window.showSaveNotification?.(`Deleted folder: ${folderName}`);
+            await this.refresh();
+        } catch (err) {
+            console.error('Error deleting folder:', err);
+            window.showSaveNotification?.('Error: ' + err.message);
         }
     }
 
