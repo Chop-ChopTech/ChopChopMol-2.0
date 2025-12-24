@@ -53,12 +53,7 @@ class FileExplorer {
         const cloudBtn = document.getElementById('cloudSaveBtn');
 
         cloudBtn?.addEventListener('click', () => {
-            if (cloudInput.classList.contains('visible')) {
-                this.saveToCloud();
-            } else {
-                cloudInput.classList.add('visible');
-                cloudInput.focus();
-            }
+            this.showCloudSaveDialog();
         });
 
         cloudInput?.addEventListener('keypress', (e) => {
@@ -522,33 +517,50 @@ class FileExplorer {
         const defaultName = (window.main.data.name || 'molecule').replace(/[^a-zA-Z0-9_-]/g, '_');
 
         // Create inline save dialog
-        const existing = document.getElementById('localSaveDialog');
+        // Create overlay + modal (same pattern as cloud save)
+        const existing = document.getElementById('localSaveOverlay');
         if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'save-dialog-overlay';
+        overlay.id = 'localSaveOverlay';
 
         const dialog = document.createElement('div');
         dialog.id = 'localSaveDialog';
         dialog.className = 'local-save-dialog';
         dialog.innerHTML = `
-        <input type="text" id="localSaveInput" placeholder="filename" value="${defaultName}">
+    <h3 class="save-dialog-title"><i class="fas fa-laptop"></i> Save to Local</h3>
+    <div class="save-dialog-row">
+        <input type="text" id="localSaveInput" placeholder="Enter filename" value="${defaultName}">
         <select id="localSaveExt">
             <option value="xyz">.xyz</option>
             <option value="pdb">.pdb</option>
             <option value="mol">.mol</option>
         </select>
-        <button id="localSaveConfirm" title="Save"><i class="fas fa-check"></i></button>
-        <button id="localSaveCancel" title="Cancel"><i class="fas fa-times"></i></button>
-    `;
+    </div>
+    <div class="save-dialog-buttons">
+        <button id="localSaveCancel"><i class="fas fa-times"></i> Cancel</button>
+        <button id="localSaveConfirm"><i class="fas fa-check"></i> Save</button>
+    </div>
+`;
 
-        const localSection = document.querySelector('.local-section');
-        const sectionHeader = localSection.querySelector('.section-header');
-        sectionHeader.insertAdjacentElement('afterend', dialog);
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        // Click outside to close
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) cleanup();
+        });
 
         const input = document.getElementById('localSaveInput');
         const extSelect = document.getElementById('localSaveExt');
         input.focus();
         input.select();
 
-        const cleanup = () => dialog.remove();
+        const cleanup = () => overlay.remove();
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) cleanup();
+        });
 
         const doSave = async () => {
             const name = input.value.trim();
@@ -1504,6 +1516,60 @@ class FileExplorer {
             input.classList.remove('visible');
             this.loadCloudMolecules();
         }
+    }
+
+    showCloudSaveDialog() {
+        if (!window.main?.data) return window.showSaveNotification?.('No molecule loaded');
+
+        const defaultName = (window.main.data.name || 'molecule').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        const existing = document.getElementById('cloudSaveOverlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'save-dialog-overlay';
+        overlay.id = 'cloudSaveOverlay';
+
+        const dialog = document.createElement('div');
+        dialog.className = 'local-save-dialog'; // reuse same styling
+        dialog.innerHTML = `
+            <h3 class="save-dialog-title"><i class="fas fa-cloud-upload-alt"></i> Save to Cloud</h3>
+            <input type="text" id="cloudSaveModalInput" placeholder="Enter molecule name" value="${defaultName}">
+            <div class="save-dialog-buttons">
+                <button id="cloudSaveCancel"><i class="fas fa-times"></i> Cancel</button>
+                <button id="cloudSaveConfirmBtn"><i class="fas fa-cloud-upload-alt"></i> Save</button>
+            </div>
+        `;
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        const input = document.getElementById('cloudSaveModalInput');
+        input.focus();
+        input.select();
+
+        const cleanup = () => overlay.remove();
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) cleanup();
+        });
+
+        document.getElementById('cloudSaveCancel').addEventListener('click', cleanup);
+
+        const doSave = async () => {
+            const name = input.value.trim();
+            if (!name) return;
+            const saved = await window.saveMolecule(name);
+            if (saved) {
+                cleanup();
+                this.loadCloudMolecules();
+            }
+        };
+
+        document.getElementById('cloudSaveConfirmBtn').addEventListener('click', doSave);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') doSave();
+        });
     }
 
     // Find where cloud items are created and add draggable attribute + events:

@@ -3312,13 +3312,51 @@ input[type="range"]:focus {
     margin: 4px 0;
 }
 
-/* Local Save Dialog */
-.local-save-dialog {
+/* Save Dialog Modal */
+.save-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 20000;
     display: flex;
-    gap: 4px;
-    padding: 8px 12px;
-    background: rgba(0, 100, 200, 0.15);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    align-items: center;
+    justify-content: center;
+}
+
+.local-save-dialog {
+    background: linear-gradient(135deg, #1a1a2e, #252545);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 24px 28px;
+    min-width: 340px;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.local-save-dialog .save-dialog-title {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.local-save-dialog .save-dialog-title i {
+    color: #4ade80;
+}
+
+.local-save-dialog .save-dialog-row {
+    display: flex;
+    gap: 10px;
     align-items: center;
 }
 
@@ -3326,25 +3364,26 @@ input[type="range"]:focus {
     flex: 1;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    padding: 6px 10px;
+    border-radius: 8px;
+    padding: 14px 16px;
     color: #fff;
-    font-size: 12px;
+    font-size: 15px;
     outline: none;
     min-width: 0;
 }
 
 .local-save-dialog input[type="text"]:focus {
-    border-color: rgba(0, 136, 255, 0.5);
+    border-color: rgba(0, 136, 255, 0.6);
+    box-shadow: 0 0 0 3px rgba(0, 136, 255, 0.15);
 }
 
 .local-save-dialog select {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    padding: 6px 8px;
+    border-radius: 8px;
+    padding: 14px 12px;
     color: #fff;
-    font-size: 12px;
+    font-size: 15px;
     outline: none;
     cursor: pointer;
 }
@@ -3353,27 +3392,44 @@ input[type="range"]:focus {
     background: #1a1a2e;
 }
 
+.local-save-dialog .save-dialog-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
 .local-save-dialog button {
+    flex: 1;
     background: rgba(255, 255, 255, 0.1);
     border: none;
-    color: rgba(255, 255, 255, 0.8);
-    padding: 6px 10px;
-    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 14px 20px;
+    border-radius: 10px;
     cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .local-save-dialog button:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+#localSaveConfirm {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
 }
 
 #localSaveConfirm:hover {
-    background: rgba(0, 200, 100, 0.3);
-    color: #4ade80;
+    box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
 }
 
 #localSaveCancel:hover {
-    background: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.2);
     color: #f87171;
 }
 
