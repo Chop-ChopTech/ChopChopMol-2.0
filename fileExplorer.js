@@ -1853,7 +1853,7 @@ class FileExplorer {
         const iconClass = this.getCloudFileIcon(mol.fileFormat);
         item.innerHTML = `
             <i class="${iconClass}"></i>
-            <span class="cloud-item-name">${mol.name}</span>
+            <span class="cloud-item-name">${mol.name}${mol.fileFormat ? '.' + mol.fileFormat : ''}</span>
             <div class="cloud-item-actions">
                 <button class="import-btn" title="Download"><i class="fas fa-download"></i></button>
                 <button class="delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
@@ -1936,17 +1936,11 @@ class FileExplorer {
     }
 
     getCloudFileIcon(format) {
-        switch (format) {
-            // case 'pdb': return 'fas fa-dna file-pdb';
-            // case 'xyz': return 'fas fa-atom file-xyz';
-            // case 'mol': case 'sdf': return 'fas fa-cube file-mol';
-            // case 'mol2': return 'fas fa-cubes file-mol2';
-            // case 'cif': return 'fas fa-th file-cif';
-            // case 'cml': return 'fas fa-code file-cml';
-            // case 'gro': return 'fas fa-box file-gro';
-            // case 'pqr': return 'fas fa-bolt file-pqr';
-            default: return 'fas fa-atom file-mol'; // fallback for old format molecules
-        }
+        if (format === 'pdb') return 'fas fa-dna file-pdb';
+        if (format === 'xyz') return 'fas fa-atom file-xyz';
+        if (format === 'mol' || format === 'sdf') return 'fas fa-atom file-mol';
+        if (format === 'cif' || format === 'mmcif') return 'fas fa-atom file-mol';
+        return 'fas fa-atom file-mol';
     }
 
     async importToLocal(mol) {

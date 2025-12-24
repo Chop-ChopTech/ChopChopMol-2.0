@@ -3818,6 +3818,18 @@ input[type="range"]:focus {
     flex: 1;
 }
 
+.cloud-item i.file-mol {
+    color: #00bbff;
+}
+
+.cloud-item i.file-pdb {
+    color: #ff6b6b;
+}
+
+.cloud-item i.file-xyz {
+    color: #4ecdc4;
+}
+
 #cloudSaveInput {
     display: none;
 }
