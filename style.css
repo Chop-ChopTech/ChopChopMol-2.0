@@ -2984,7 +2984,7 @@ input[type="range"]:focus {
 .folder-item {
     display: flex;
     align-items: center;
-    padding: 6px 16px;
+    padding: 3px 16px;
     cursor: pointer;
     color: rgba(255, 255, 255, 0.8);
     font-size: 13px;
@@ -3602,11 +3602,6 @@ input[type="range"]:focus {
     opacity: 0.8;
 }
 
-.cloud-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 0;
-}
 
 
 
@@ -3618,7 +3613,7 @@ input[type="range"]:focus {
 .cloud-item {
     display: flex;
     align-items: center;
-    padding: 2px 16px;
+    padding: 3px 16px;
     cursor: grab;
     transition: background 0.15s;
 }
@@ -3668,10 +3663,10 @@ input[type="range"]:focus {
 }
 
 .cloud-item-actions button {
-    background: transparent;
+    background: none;
     border: none;
     color: rgba(255, 255, 255, 0.4);
-    padding: 4px 6px;
+    padding: 0px 0px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 11px;
@@ -3679,7 +3674,6 @@ input[type="range"]:focus {
 }
 
 .cloud-item-actions button:hover {
-    background: rgba(255, 255, 255, 0.1);
     color: #fff;
 }
 
@@ -3687,25 +3681,6 @@ input[type="range"]:focus {
     color: #ff6b6b;
 }
 
-.cloud-item-actions button {
-    background: transparent;
-    border: none;
-    color: rgba(255, 255, 255, 0.4);
-    padding: 4px 6px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 11px;
-    transition: all 0.2s;
-}
-
-.cloud-item-actions button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-}
-
-.cloud-item-actions .delete-btn:hover {
-    color: #ff6b6b;
-}
 
 .cloud-empty {
     display: flex;
