@@ -153,7 +153,7 @@
             }
         }
 
-        async function saveMolecule(moleculeName) {
+        async function saveMolecule(moleculeName, folderId = null) {
             const user = auth.currentUser;
             if (!user) {
                 alert('Please sign in to save molecules');
@@ -207,7 +207,7 @@
                 }
 
                 // Save molecule with regenerated file content
-                await addDoc(moleculesRef, {
+                const moleculeData = {
                     name: finalName,
                     fileContent: fileContent,
                     fileFormat: fileFormat,
@@ -218,7 +218,11 @@
                     timestamp: serverTimestamp(),
                     atomCount: window.main.data.numAtoms,
                     size: dataSize
-                });
+                };
+                if (folderId) {
+                    moleculeData.folderId = folderId;
+                }
+                await addDoc(moleculesRef, moleculeData);
 
                 // Update storage usage
                 const userDoc = await getDoc(doc(db, 'users', user.uid));

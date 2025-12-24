@@ -1614,7 +1614,7 @@ class FileExplorer {
         }
     }
 
-    showCloudSaveDialog() {
+    async showCloudSaveDialog() {
         if (!window.main?.data) return window.showSaveNotification?.('No molecule loaded');
 
         const defaultName = (window.main.data.name || 'molecule').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -1622,20 +1622,32 @@ class FileExplorer {
         const existing = document.getElementById('cloudSaveOverlay');
         if (existing) existing.remove();
 
+        // Load cloud folders
+        const folders = await window.loadFoldersList?.() || [];
+        folders.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        const folderOptions = '<option value="">Cloud (root)</option>' +
+            folders.map(f => `<option value="${f.id}">/${f.name}</option>`).join('');
+
         const overlay = document.createElement('div');
         overlay.className = 'save-dialog-overlay';
         overlay.id = 'cloudSaveOverlay';
 
         const dialog = document.createElement('div');
-        dialog.className = 'local-save-dialog'; // reuse same styling
+        dialog.className = 'local-save-dialog';
         dialog.innerHTML = `
-            <h3 class="save-dialog-title"><i class="fas fa-cloud-upload-alt"></i> Save to Cloud</h3>
-            <input type="text" id="cloudSaveModalInput" placeholder="Enter molecule name" value="${defaultName}">
-            <div class="save-dialog-buttons">
-                <button id="cloudSaveCancel"><i class="fas fa-times"></i> Cancel</button>
-                <button id="cloudSaveConfirmBtn" style="background: linear-gradient(135deg, #22c55e, #16a34a);"><i class="fas fa-cloud-upload-alt"></i> Save</button>
-            </div>
-        `;
+        <h3 class="save-dialog-title"><i class="fas fa-cloud-upload-alt"></i> Save to Cloud</h3>
+        <div class="save-dialog-row" style="flex-direction: column; gap: 10px;">
+            <input type="text" id="cloudSaveModalInput" placeholder="Enter molecule name" value="${defaultName}" style="width: 90%;">
+            <select id="cloudSaveFolder" style="width: 100%;">
+                ${folderOptions}
+            </select>
+        </div>
+        <div class="save-dialog-buttons">
+            <button id="cloudSaveCancel"><i class="fas fa-times"></i> Cancel</button>
+            <button id="cloudSaveConfirmBtn" style="background: linear-gradient(135deg, #22c55e, #16a34a);"><i class="fas fa-cloud-upload-alt"></i> Save</button>
+        </div>
+    `;
 
         overlay.appendChild(dialog);
         document.body.appendChild(overlay);
@@ -1655,7 +1667,8 @@ class FileExplorer {
         const doSave = async () => {
             const name = input.value.trim();
             if (!name) return;
-            const saved = await window.saveMolecule(name);
+            const folderId = document.getElementById('cloudSaveFolder').value || null;
+            const saved = await window.saveMolecule(name, folderId);
             if (saved) {
                 cleanup();
                 this.loadCloudMolecules();
