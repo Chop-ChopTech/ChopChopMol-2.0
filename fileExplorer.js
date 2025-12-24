@@ -1537,7 +1537,7 @@ class FileExplorer {
             <input type="text" id="cloudSaveModalInput" placeholder="Enter molecule name" value="${defaultName}">
             <div class="save-dialog-buttons">
                 <button id="cloudSaveCancel"><i class="fas fa-times"></i> Cancel</button>
-                <button id="cloudSaveConfirmBtn"><i class="fas fa-cloud-upload-alt"></i> Save</button>
+                <button id="cloudSaveConfirmBtn" style="background: linear-gradient(135deg, #22c55e, #16a34a);"><i class="fas fa-cloud-upload-alt"></i> Save</button>
             </div>
         `;
 

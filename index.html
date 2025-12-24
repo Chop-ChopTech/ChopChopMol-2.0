@@ -851,6 +851,11 @@
                             <span><i class="fas fa-database"></i> Database Search</span>
                         </div>
                         <div class="db-search-bar">
+                            <select id="dbSourceSelect" class="db-source-select">
+                                <option value="pubchem">PubChem</option>
+                                <option value="pdb">RCSB PDB</option>
+                                <option value="chembl">ChEMBL</option>
+                            </select>
                             <input id="dbSearchInput" class="db-search-input" type="text"
                                 placeholder="Search molecules..." autocomplete="off">
                             <div class="db-search-loader"></div>

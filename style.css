@@ -3822,6 +3822,11 @@ input[type="range"]:focus {
     display: none;
 }
 
+#cloudSaveCancel:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+}
+
 #cloudSaveInput.visible {
     display: block;
     flex: 1;
@@ -3849,6 +3854,49 @@ input[type="range"]:focus {
     text-align: center;
     padding: 40px;
     color: rgba(255, 255, 255, 0.5);
+}
+
+/* Database Source Selector */
+.db-source-select {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+    cursor: pointer;
+    min-width: 100px;
+    transition: all 0.2s;
+}
+
+.db-source-select:hover {
+    border-color: rgba(0, 136, 255, 0.5);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.db-source-select:focus {
+    border-color: rgba(0, 136, 255, 0.5);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.db-source-select option {
+    background: #1a1a2e;
+    color: #fff;
+}
+
+.db-search-bar {
+    position: relative;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.15);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.db-search-input {
+    flex: 1;
 }
 
 /* Global Explorer Toolbar */

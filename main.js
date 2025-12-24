@@ -4734,24 +4734,32 @@ window.toggleRibbon = toggleRibbon;
     const input = document.getElementById('dbSearchInput');
     const dropdown = document.getElementById('dbSearchDropdown');
     const tbody = document.getElementById('dbSearchResults');
+    const sourceSelect = document.getElementById('dbSourceSelect');
     panel.classList.add('active');
 
     if (!panel || !input || !dropdown || !tbody) return;
 
-    // Add loader
     const loader = panel.querySelector('.db-search-loader');
-
     let debounce;
     let activeIdx = -1;
     let items = [];
 
+    // Update placeholder based on selected database
+    sourceSelect?.addEventListener('change', () => {
+        const placeholders = {
+            pubchem: 'Search compounds (e.g., caffeine)...',
+            pdb: 'Search PDB ID or name (e.g., 1CRN)...',
+            chembl: 'Search ChEMBL (e.g., aspirin)...',
+            drugbank: 'Enter DrugBank ID (e.g., DB00945)...'
+        };
+        input.placeholder = placeholders[sourceSelect.value] || 'Search molecules...';
+        dropdown.classList.remove('show');
+        items = [];
+    });
+
     document.addEventListener('click', (e) => {
-        if (window.dbSearchJustResized) {
-            return;
-        }
-        if (!panel.contains(e.target)) {
-            dropdown.classList.remove('show');
-        }
+        if (window.dbSearchJustResized) return;
+        if (!panel.contains(e.target)) dropdown.classList.remove('show');
     });
 
     input.addEventListener('focus', () => {
@@ -4761,24 +4769,23 @@ window.toggleRibbon = toggleRibbon;
     input.oninput = (e) => {
         const q = e.target.value.trim();
         clearTimeout(debounce);
-
         if (q.length < 2) {
             dropdown.classList.remove('show');
             return;
         }
-
         loader.classList.add('show');
         debounce = setTimeout(() => search(q), 300);
     };
 
     async function search(q) {
+        const source = sourceSelect?.value || 'pubchem';
         try {
-            const res = await fetch(
-                `https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/${encodeURIComponent(q)}/json`
-            );
-            const data = await res.json();
-            items = data.dictionary_terms?.compound || [];
-            showResults(items);
+            switch (source) {
+                case 'pubchem': await searchPubChem(q); break;
+                case 'pdb': await searchPDB(q); break;
+                case 'chembl': await searchChEMBL(q); break;
+                case 'drugbank': await searchDrugBank(q); break;
+            }
         } catch (err) {
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="3" class="db-search-empty">Search failed</td></tr>';
@@ -4788,6 +4795,54 @@ window.toggleRibbon = toggleRibbon;
         }
     }
 
+    // PubChem search (existing)
+    async function searchPubChem(q) {
+        const res = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/${encodeURIComponent(q)}/json`);
+        const data = await res.json();
+        items = data.dictionary_terms?.compound || [];
+        showResults(items.map(name => ({ name, source: 'PubChem', type: 'Compound' })));
+    }
+
+    // RCSB PDB search
+    async function searchPDB(q) {
+        const res = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                query: {
+                    type: 'terminal',
+                    service: 'full_text',
+                    parameters: { value: q }
+                },
+                return_type: 'entry',
+                request_options: { results_content_type: ['experimental'], paginate: { start: 0, rows: 15 } }
+            })
+        });
+        const data = await res.json();
+        items = data.result_set?.map(r => r.identifier) || [];
+        showResults(items.map(id => ({ name: id, source: 'PDB', type: 'Structure' })));
+    }
+
+    // ChEMBL search
+    async function searchChEMBL(q) {
+        const res = await fetch(`https://www.ebi.ac.uk/chembl/api/data/molecule/search?q=${encodeURIComponent(q)}&format=json&limit=15`);
+        const data = await res.json();
+        items = data.molecules || [];
+        showResults(items.map(m => ({
+            name: m.pref_name || m.molecule_chembl_id,
+            id: m.molecule_chembl_id,
+            source: 'ChEMBL',
+            type: 'Molecule'
+        })));
+    }
+
+    // DrugBank (direct ID lookup)
+    async function searchDrugBank(q) {
+        // DrugBank doesn't have a public search API, show direct ID entry
+        items = [{ name: q.toUpperCase(), source: 'DrugBank', type: 'Drug ID' }];
+        showResults(items);
+    }
+
     function showResults(list) {
         if (!list.length) {
             tbody.innerHTML = '<tr><td colspan="3" class="db-search-empty">No results found</td></tr>';
@@ -4795,78 +4850,24 @@ window.toggleRibbon = toggleRibbon;
             return;
         }
 
-        const names = list.slice(0, 15);
-        tbody.innerHTML = names.map((name, i) => `
-        <tr data-i="${i}" data-name="${name}">
-            <td class="col-name" title="${name}">${name}</td>
-            <td class="col-type">Compound</td>
-            <td class="col-desc" data-full="" data-short="">...</td>
-        </tr>
-    `).join('');
+        tbody.innerHTML = list.slice(0, 15).map((item, i) => `
+            <tr data-i="${i}" data-name="${item.name}" data-id="${item.id || item.name}" data-source="${item.source}">
+                <td class="col-name" title="${item.name}">${item.name}</td>
+                <td class="col-type">${item.source}</td>
+                <td class="col-desc">${item.type}</td>
+            </tr>
+        `).join('');
 
         dropdown.classList.add('show');
         activeIdx = -1;
 
         tbody.querySelectorAll('tr[data-name]').forEach(row => {
-            row.querySelector('.col-name').onclick = () => load(row.dataset.name);
-            row.querySelector('.col-type').onclick = () => load(row.dataset.name);
-
-            const descCell = row.querySelector('.col-desc');
-            descCell.onclick = (e) => {
-                e.stopPropagation();
-                descCell.classList.toggle('expanded');
-                if (descCell.dataset.full) {
-                    descCell.textContent = descCell.classList.contains('expanded')
-                        ? descCell.dataset.full
-                        : descCell.dataset.short;
-                }
-            };
+            row.onclick = () => load(row.dataset.name, row.dataset.source, row.dataset.id);
         });
-
-        fetchDescriptions(names);
-    }
-
-    async function fetchDescriptions(names) {
-        const rows = tbody.querySelectorAll('tr[data-name]');
-        for (let i = 0; i < names.length; i++) {
-            const name = names[i];
-            const cell = rows[i]?.querySelector('.col-desc');
-            if (!cell) continue;
-
-            try {
-                const cidRes = await fetch(
-                    `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`
-                );
-                if (!cidRes.ok) { cell.textContent = '—'; continue; }
-                const cidData = await cidRes.json();
-                const cid = cidData.IdentifierList?.CID?.[0];
-                if (!cid) { cell.textContent = '—'; continue; }
-
-                const descRes = await fetch(
-                    `https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/${cid}/JSON?heading=Record+Description`
-                );
-                if (!descRes.ok) { cell.textContent = '—'; continue; }
-                const descData = await descRes.json();
-
-                const sections = descData.Record?.Section?.[0]?.Section?.[0]?.Information;
-                const desc = sections?.[0]?.Value?.StringWithMarkup?.[0]?.String || '';
-
-                if (desc) {
-                    cell.dataset.full = desc;
-                    cell.dataset.short = desc.length > 80 ? desc.slice(0, 77) + '...' : desc;
-                    cell.textContent = cell.dataset.short;
-                } else {
-                    cell.textContent = '—';
-                }
-            } catch (e) {
-                cell.textContent = '—';
-            }
-        }
     }
 
     input.onkeydown = (e) => {
         const rows = tbody.querySelectorAll('tr[data-name]');
-
         if (e.key === 'ArrowDown') {
             e.preventDefault();
             activeIdx = Math.min(activeIdx + 1, rows.length - 1);
@@ -4878,7 +4879,8 @@ window.toggleRibbon = toggleRibbon;
         } else if (e.key === 'Enter') {
             e.preventDefault();
             if (activeIdx >= 0 && rows[activeIdx]) {
-                load(rows[activeIdx].dataset.name);
+                const row = rows[activeIdx];
+                load(row.dataset.name, row.dataset.source, row.dataset.id);
             }
         } else if (e.key === 'Escape') {
             dropdown.classList.remove('show');
@@ -4888,42 +4890,74 @@ window.toggleRibbon = toggleRibbon;
     function updateActive(rows) {
         rows.forEach((row, i) => {
             row.classList.toggle('active', i === activeIdx);
-            if (i === activeIdx) {
-                row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-            }
+            if (i === activeIdx) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         });
     }
 
-    async function load(name) {
+    async function load(name, source, id) {
         dropdown.classList.remove('show');
         input.value = name;
         loader.classList.add('show');
 
         try {
-            const cidRes = await fetch(
-                `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`
-            );
-            const cidData = await cidRes.json();
-            const cid = cidData.IdentifierList.CID[0];
-
-            const sdfRes = await fetch(
-                `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF?record_type=3d`
-            );
-
-            if (!sdfRes.ok) throw new Error('3D structure unavailable');
-
-            const sdfText = await sdfRes.text();
-            const molData = parseSDF(sdfText);
-
-            window.main.newMolecule(molData, window.main.setNewMode(molData.numAtoms <= 2000), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, false, false);
-            window.main.zoomCameraToFitMolecule();
-
-            loader.classList.remove('show');
+            switch (source) {
+                case 'PubChem': await loadPubChem(name); break;
+                case 'PDB': await loadPDB(name); break;
+                case 'ChEMBL': await loadChEMBL(id || name); break;
+                case 'DrugBank': await loadDrugBank(name); break;
+                default: await loadPubChem(name);
+            }
         } catch (err) {
             console.error('Load error:', err);
             alert('Failed to load: ' + err.message);
+        } finally {
             loader.classList.remove('show');
         }
+    }
+
+    // Load from PubChem
+    async function loadPubChem(name) {
+        const cidRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`);
+        const cidData = await cidRes.json();
+        const cid = cidData.IdentifierList.CID[0];
+
+        const sdfRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF?record_type=3d`);
+        if (!sdfRes.ok) throw new Error('3D structure unavailable');
+
+        const sdfText = await sdfRes.text();
+        const molData = parseSDF(sdfText);
+        loadMolecule(molData);
+    }
+
+    // Load from RCSB PDB
+    async function loadPDB(pdbId) {
+        const res = await fetch(`https://files.rcsb.org/download/${pdbId}.pdb`);
+        if (!res.ok) throw new Error('PDB structure not found');
+
+        const pdbText = await res.text();
+        const blob = new Blob([pdbText], { type: 'text/plain' });
+        const file = new File([blob], `${pdbId}.pdb`);
+        window.main?.loader?.handleFile({ target: { files: [file] } }, false);
+    }
+
+    // Load from ChEMBL
+    async function loadChEMBL(chemblId) {
+        const res = await fetch(`https://www.ebi.ac.uk/chembl/api/data/molecule/${chemblId}?format=json`);
+        if (!res.ok) throw new Error('ChEMBL molecule not found');
+
+        const data = await res.json();
+        const molfile = data.molecule_structures?.molfile;
+        if (!molfile) throw new Error('No structure available');
+
+        const molData = parseSDF(molfile);
+        loadMolecule(molData);
+    }
+
+    // Load from DrugBank (requires structure file URL - limited without API key)
+    async function loadDrugBank(drugId) {
+        // Try PubChem as fallback since DrugBank API is restricted
+        alert('DrugBank requires API access. Searching PubChem for: ' + drugId);
+        await loadPubChem(drugId);
     }
 
     function parseSDF(sdfText) {
@@ -4934,6 +4968,7 @@ window.toggleRibbon = toggleRibbon;
 
         for (let i = 4; i < 4 + numAtoms; i++) {
             const line = lines[i];
+            if (!line || line.length < 34) continue;
             const x = parseFloat(line.slice(0, 10).trim());
             const y = parseFloat(line.slice(10, 20).trim());
             const z = parseFloat(line.slice(20, 30).trim());
@@ -4943,7 +4978,12 @@ window.toggleRibbon = toggleRibbon;
 
         return { atomData, numAtoms };
     }
-    // PubChem Panel Resize
+
+    function loadMolecule(molData) {
+        window.main.newMolecule(molData, window.main.setNewMode(molData.numAtoms <= 2000), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, false, false);
+        window.main.zoomCameraToFitMolecule();
+    }
+
     (function () {
         const panel = document.getElementById('dbSearchPanel');
         if (!panel) return;
