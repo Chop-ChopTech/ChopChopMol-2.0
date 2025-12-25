@@ -996,11 +996,123 @@ const FUNCTIONS = {
             if (window.undoManager?.hasRedo?.()) { window.undoManager.redo(); return { success: true, message: "Redone" }; }
             return { success: false, message: "Nothing to redo" };
         }
-    }
+    },
+    calculate_energy: {
+        execute: async () => {
+            const molecule = window.main?.molecule;
+            if (!molecule?.atoms?.length) {
+                return { success: false, message: "No molecule loaded" };
+            }
+
+            const atoms = molecule.atoms.map(a => ({
+                element: a.element,
+                x: a.x,
+                y: a.y,
+                z: a.z
+            }));
+
+            try {
+                const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ atoms })
+                });
+                return await res.json();
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        }
+    },
+
+    optimize_geometry: {
+        execute: async (params) => {
+            const molecule = window.main?.molecule;
+            if (!molecule?.atoms?.length) {
+                return { success: false, message: "No molecule loaded" };
+            }
+
+            const atoms = molecule.atoms.map(a => ({
+                element: a.element,
+                x: a.x,
+                y: a.y,
+                z: a.z
+            }));
+
+            try {
+                const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/optimize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        atoms,
+                        fmax: params.fmax || 0.05,
+                        maxSteps: params.maxSteps || 100
+                    })
+                });
+                const result = await res.json();
+
+                if (result.success && result.positions) {
+                    // Save undo state
+                    window.undoManager?.saveState?.();
+
+                    // Animate atoms to new positions
+                    const targetPositions = {};
+                    result.positions.forEach(p => {
+                        targetPositions[p.index] = { x: p.x, y: p.y, z: p.z };
+                    });
+
+                    const indices = result.positions.map(p => p.index);
+                    await animateAtomPositions(indices, targetPositions, 600);
+                }
+
+                return result;
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        }
+    },
+    calculate_all_energies: {
+        execute: async () => {
+            const frames = window.xyzFrames;
+            if (!frames || frames.length === 0) {
+                // Fall back to current molecule if no frames
+                const molecule = window.main?.molecule;
+                if (!molecule?.atoms?.length) return { success: false, message: "No molecule or frames loaded" };
+
+                const atoms = molecule.atoms.map(a => ({ element: a.element, x: a.x, y: a.y, z: a.z }));
+                try {
+                    const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ atoms })
+                    });
+                    const result = await res.json();
+                    return { success: true, frameCount: 1, energies: [result] };
+                } catch (e) {
+                    return { success: false, message: e.message };
+                }
+            }
+
+            // Send all frames to backend
+            const allFrames = frames.map(f => f.atomData);
+
+            try {
+                const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy-batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frames: allFrames })
+                });
+                return await res.json();
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        }
+    },
 };
 
 function getMoleculeState() {
     const hasAtoms = !!window.main?.molecule?.atoms?.length;
+    const frames = window.xyzFrames || [];
+
     return {
         hasAtoms,
         atomCount: hasAtoms ? window.main.molecule.atoms.length : 0,
@@ -1010,7 +1122,16 @@ function getMoleculeState() {
         hasAxis: !!window.rotationAxis,
         axisAtoms: window.axisAtoms || [],
         hasRibbon: !!window.main?.data?.ribbonData,
-        bondLabels: window.bondLengthLabels?.filter(l => !l.isAngle && !l.isDihedral).map(l => [l.atom1Index, l.atom2Index]) || []
+        bondLabels: window.bondLengthLabels?.filter(l => !l.isAngle && !l.isDihedral).map(l => [l.atom1Index, l.atom2Index]) || [],
+        // Frame info
+        frameCount: frames.length,
+        currentFrame: frames.length > 0 ? parseInt(document.getElementById('frameSlider')?.value || 0) : 0,
+        frames: frames.map((f, i) => ({
+            index: i,
+            atomCount: f.numAtoms,
+            comment: f.comment || '',
+            atoms: f.atomData  // Full atom data for each frame
+        }))
     };
 }
 
