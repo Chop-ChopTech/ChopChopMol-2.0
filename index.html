@@ -2044,6 +2044,17 @@
                             </div>
                         `;
                         contentEl.innerHTML = escapeHtml(fullText) + actionsHtml;
+
+                        // Check for chart images in actions
+                        response.actions.forEach(action => {
+                            if (action.chartImage) {
+                                const img = document.createElement('img');
+                                img.src = `data:image/png;base64,${action.chartImage}`;
+                                img.style.cssText = 'max-width: 100%; border-radius: 8px; margin-top: 10px; cursor: pointer;';
+                                img.onclick = () => window.open(img.src, '_blank');
+                                contentEl.appendChild(img);
+                            }
+                        });
                     }
                 } catch (err) {
                     if (!typingRemoved) {

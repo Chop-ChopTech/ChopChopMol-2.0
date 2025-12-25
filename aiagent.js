@@ -1000,16 +1000,9 @@ const FUNCTIONS = {
     calculate_energy: {
         execute: async () => {
             const molecule = window.main?.molecule;
-            if (!molecule?.atoms?.length) {
-                return { success: false, message: "No molecule loaded" };
-            }
+            if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
 
-            const atoms = molecule.atoms.map(a => ({
-                element: a.element,
-                x: a.x,
-                y: a.y,
-                z: a.z
-            }));
+            const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
 
             try {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
@@ -1027,58 +1020,43 @@ const FUNCTIONS = {
     optimize_geometry: {
         execute: async (params) => {
             const molecule = window.main?.molecule;
-            if (!molecule?.atoms?.length) {
-                return { success: false, message: "No molecule loaded" };
-            }
+            if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
 
-            const atoms = molecule.atoms.map(a => ({
-                element: a.element,
-                x: a.x,
-                y: a.y,
-                z: a.z
-            }));
+            const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
 
             try {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/optimize`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        atoms,
-                        fmax: params.fmax || 0.05,
-                        maxSteps: params.maxSteps || 100
-                    })
+                    body: JSON.stringify({ atoms, fmax: params.fmax || 0.05, maxSteps: params.maxSteps || 100 })
                 });
                 const result = await res.json();
 
                 if (result.success && result.positions) {
-                    // Save undo state
                     window.undoManager?.saveState?.();
 
-                    // Animate atoms to new positions
                     const targetPositions = {};
                     result.positions.forEach(p => {
-                        targetPositions[p.index] = { x: p.x, y: p.y, z: p.z };
+                        targetPositions[p.index] = { x: p.x * 4, y: p.y * 4, z: p.z * 4 };
                     });
 
-                    const indices = result.positions.map(p => p.index);
-                    await animateAtomPositions(indices, targetPositions, 600);
+                    await animateAtomPositions(result.positions.map(p => p.index), targetPositions, 500);
                 }
-
                 return result;
             } catch (e) {
                 return { success: false, message: e.message };
             }
         }
     },
+
     calculate_all_energies: {
         execute: async () => {
             const frames = window.xyzFrames;
             if (!frames || frames.length === 0) {
-                // Fall back to current molecule if no frames
                 const molecule = window.main?.molecule;
                 if (!molecule?.atoms?.length) return { success: false, message: "No molecule or frames loaded" };
 
-                const atoms = molecule.atoms.map(a => ({ element: a.element, x: a.x, y: a.y, z: a.z }));
+                const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
                 try {
                     const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
                         method: 'POST',
@@ -1092,7 +1070,6 @@ const FUNCTIONS = {
                 }
             }
 
-            // Send all frames to backend
             const allFrames = frames.map(f => f.atomData);
 
             try {
@@ -1102,6 +1079,27 @@ const FUNCTIONS = {
                     body: JSON.stringify({ frames: allFrames })
                 });
                 return await res.json();
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        }
+    },
+
+    create_chart: {
+        execute: async (params) => {
+            try {
+                const res = await fetch(`${AI_CONFIG.backendUrl}/ai/chart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+                const result = await res.json();
+
+                if (result.success && result.image) {
+                    window._pendingChartImage = result.image;
+                    return { success: true, message: "Chart generated", hasImage: true };
+                }
+                return result;
             } catch (e) {
                 return { success: false, message: e.message };
             }
@@ -1231,9 +1229,21 @@ async function sendToAI(userMessage, onChunk) {
                     console.log('AI calling:', fn, args);
 
                     if (FUNCTIONS[fn]) {
-                        const res = FUNCTIONS[fn].execute(args);
+                        const res = await FUNCTIONS[fn].execute(args);
                         console.log('Result:', res);
-                        executed.push({ id: tc.id, name: fn, args, result: res });
+                        // After executing a tool, check if it's a chart
+                        if (fn === 'create_chart' && res.hasImage && window._pendingChartImage) {
+                            executed.push({
+                                id: tc.id,
+                                name: fn,
+                                args,
+                                result: res,
+                                chartImage: window._pendingChartImage
+                            });
+                            window._pendingChartImage = null;
+                        } else {
+                            executed.push({ id: tc.id, name: fn, args, result: res });
+                        }
                     } else {
                         executed.push({ id: tc.id, name: fn, args, result: { success: false, message: 'Function not found' } });
                     }
