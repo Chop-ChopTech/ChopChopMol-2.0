@@ -1,7 +1,9 @@
 // aiAgent.js - AI Agent for ChopChopMol (Backend Version)
 
+const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
+
 const AI_CONFIG = {
-    backendUrl: 'https://chopchopmol-ai-backend.onrender.com',
+    backendUrl: backendUrl[1] || backendUrl[0],
     sessionId: localStorage.getItem('chopchop_ai_session') || crypto.randomUUID(),
     model: localStorage.getItem('chopchop_ai_model') || 'gpt-5-mini'
 };
