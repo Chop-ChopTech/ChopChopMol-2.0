@@ -1162,7 +1162,8 @@ async function sendToAI(userMessage, onChunk) {
                         content: JSON.stringify(e.result)
                     }))
                 };
-                executed = [];
+                // Keep chart images for final response, clear the rest
+                executed = executed.filter(e => e.chartImage);
             }
 
             const response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat/stream`, {
