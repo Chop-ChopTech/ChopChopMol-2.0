@@ -2051,7 +2051,13 @@
                                 const img = document.createElement('img');
                                 img.src = `data:image/png;base64,${action.chartImage}`;
                                 img.style.cssText = 'max-width: 100%; border-radius: 8px; margin-top: 10px; cursor: pointer;';
-                                img.onclick = () => window.open(img.src, '_blank');
+                                img.onclick = () => {
+                                    const lightbox = document.createElement('div');
+                                    lightbox.className = 'chart-lightbox';
+                                    lightbox.innerHTML = `<img src="${img.src}">`;
+                                    lightbox.onclick = () => lightbox.remove();
+                                    document.body.appendChild(lightbox);
+                                };
                                 contentEl.appendChild(img);
                             }
                         });
