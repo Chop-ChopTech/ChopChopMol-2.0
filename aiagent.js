@@ -1156,22 +1156,15 @@ const FUNCTIONS = {
 
     create_chart: {
         execute: async (params) => {
-            try {
-                const res = await fetch(`${AI_CONFIG.backendUrl}/ai/chart`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(params)
-                });
-                const result = await res.json();
-
-                if (result.success && result.image) {
-                    window._pendingChartImage = result.image;
-                    return { success: true, message: "Chart generated", hasImage: true };
-                }
-                return result;
-            } catch (e) {
-                return { success: false, message: e.message };
-            }
+            window._pendingChartData = {
+                type: params.type || 'line',
+                title: params.title || '',
+                xLabel: params.xLabel || '',
+                yLabel: params.yLabel || '',
+                x: params.x || [],
+                y: params.y || []
+            };
+            return { success: true, message: "Chart ready", hasChart: true };
         }
     },
 };
@@ -1234,7 +1227,8 @@ async function sendToAI(userMessage, onChunk) {
                     }))
                 };
                 // Keep chart images for final response, clear the rest
-                executed = executed.filter(e => e.chartImage);
+                // Keep chart data for final response, clear the rest
+                executed = executed.filter(e => e.chartData);
             }
             if (i === 0 && onChunk) onChunk(null, 'Thinking');
 
@@ -1333,15 +1327,15 @@ async function sendToAI(userMessage, onChunk) {
                         const res = await FUNCTIONS[fn].execute(args);
                         console.log('Result:', res);
                         // After executing a tool, check if it's a chart
-                        if (fn === 'create_chart' && res.hasImage && window._pendingChartImage) {
+                        if (fn === 'create_chart' && res.hasChart && window._pendingChartData) {
                             executed.push({
                                 id: tc.id,
                                 name: fn,
                                 args,
                                 result: res,
-                                chartImage: window._pendingChartImage
+                                chartData: window._pendingChartData
                             });
-                            window._pendingChartImage = null;
+                            window._pendingChartData = null;
                         } else {
                             executed.push({ id: tc.id, name: fn, args, result: res });
                         }
