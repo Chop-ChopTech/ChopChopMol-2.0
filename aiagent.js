@@ -3,7 +3,7 @@
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[0] || backendUrl[0],
+    backendUrl: backendUrl[1] || backendUrl[0],
     sessionId: localStorage.getItem('chopchop_ai_session') || crypto.randomUUID(),
     model: localStorage.getItem('chopchop_ai_model') || 'gpt-5-mini'
 };
@@ -1087,6 +1087,9 @@ const FUNCTIONS = {
     calculate_all_energies: {
         execute: async () => {
             const frames = window.xyzFrames;
+            if (window.lastMaceResults && window.lastMaceResults.frameCount !== (frames?.length || 1)) {
+                window.lastMaceResults = null;
+            }
             if (!frames || frames.length === 0) {
                 const molecule = window.main?.molecule;
                 if (!molecule?.atoms?.length) return { success: false, message: "No molecule or frames loaded" };
@@ -1114,6 +1117,7 @@ const FUNCTIONS = {
                     body: JSON.stringify({ frames: allFrames })
                 });
                 const result = await res.json();
+                if (result.success) window.lastMaceResults = result;
 
                 // Auto-save multi-frame extxyz to local folder if open
                 if (result.success && window.fileExplorer?.directoryHandle) {
@@ -1138,6 +1142,15 @@ const FUNCTIONS = {
             } catch (e) {
                 return { success: false, message: e.message };
             }
+        }
+    },
+
+    get_cached_energies: {
+        execute: () => {
+            if (!window.lastMaceResults) {
+                return { success: false, message: "No cached MACE results. Run calculate_all_energies first." };
+            }
+            return window.lastMaceResults;
         }
     },
 
@@ -1180,6 +1193,8 @@ function getMoleculeState() {
         // Frame info
         frameCount: frames.length,
         currentFrame: frames.length > 0 ? parseInt(document.getElementById('frameSlider')?.value || 0) : 0,
+        hasMaceCache: !!window.lastMaceResults,
+        maceFrameCount: window.lastMaceResults?.frameCount || 0,
         frames: frames.map((f, i) => ({
             index: i,
             atomCount: f.numAtoms,
@@ -1295,8 +1310,17 @@ async function sendToAI(userMessage, onChunk) {
                     save_image: 'Saving image',
                     toggle_labels: 'Toggling labels',
                     calculate_energy: 'Calculating energy',
+                    calculate_all_energies: 'Calculating all frame energies',
+                    get_cached_energies: 'Retrieving cached energies',
                     optimize_geometry: 'Optimizing geometry',
-                    create_chart: 'Creating chart'
+                    create_chart: 'Creating chart',
+                    read_file: 'Reading file',
+                    list_folder_files: 'Listing files',
+                    create_file: 'Creating file',
+                    edit_file: 'Editing file',
+                    split_molecule: 'Splitting molecule',
+                    rotational_scan: 'Running rotational scan',
+                    translation_scan: 'Running translation scan'
                 };
                 for (const tc of toolCalls) {
                     const fn = tc.function.name;
