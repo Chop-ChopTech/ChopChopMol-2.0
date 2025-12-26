@@ -1775,7 +1775,7 @@
                 i === frameIndex ? '#f093fb' : 'rgba(102, 126, 234, 0.8)'
             );
             dataset.pointRadius = dataset.data.map((_, i) =>
-                i === frameIndex ? 10 : 6
+                i === frameIndex ? 6 : 3
             );
 
             chart.update('none'); // 'none' = no animation for snappy response
@@ -2076,10 +2076,10 @@
                         response.actions.forEach(action => {
                             if (action.chartData) {
                                 const chartContainer = document.createElement('div');
-                                chartContainer.style.cssText = 'margin-top: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; position: relative;';
+                                chartContainer.style.cssText = 'margin-top: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; position: relative; transition: none;';
 
                                 const canvas = document.createElement('canvas');
-                                canvas.style.cssText = 'width: 100%; height: 200px;';
+                                canvas.style.cssText = 'width: 100%; height: 200px; transition: none;';
                                 chartContainer.appendChild(canvas);
                                 contentEl.appendChild(chartContainer);
 
@@ -2098,7 +2098,7 @@
                                             label: data.yLabel || 'Energy (eV)',
                                             data: data.y,
                                             borderColor: '#667eea',
-                                            borderWidth: 0,
+                                            borderWidth: 2,
                                             backgroundColor: pointColors,
                                             pointBackgroundColor: pointColors,
                                             pointBorderColor: '#fff',
@@ -2106,6 +2106,7 @@
                                             pointRadius: pointSizes,
                                             pointHoverRadius: 10,
                                             tension: 0.3,
+                                            showLine: true,
                                             fill: false
                                         }]
                                     },
@@ -2141,12 +2142,12 @@
                                             },
                                             legend: { display: false },
                                             tooltip: {
-                                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                                backgroundColor: 'rgba(0,0,0,0)',
                                                 titleColor: '#fff',
                                                 bodyColor: '#fff',
                                                 cornerRadius: 6,
                                                 callbacks: {
-                                                    title: (items) => `Frame ${items[0].dataIndex}`,
+                                                    title: () => ``,
                                                     label: (item) => {
                                                         const val = typeof item.raw === 'number' ? item.raw.toFixed(6) : item.raw;
                                                         return `${data.yLabel || 'Energy'}: ${val}`;
