@@ -3,7 +3,7 @@
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[0] || backendUrl[0],
+    backendUrl: backendUrl[1] || backendUrl[0],
     sessionId: localStorage.getItem('chopchop_ai_session') || crypto.randomUUID(),
     model: localStorage.getItem('chopchop_ai_model') || 'gpt-5-mini'
 };
@@ -1012,7 +1012,25 @@ const FUNCTIONS = {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ atoms })
                 });
-                return await res.json();
+                const result = await res.json();
+
+                // Auto-save extxyz to local folder if open
+                if (result.success && window.fileExplorer?.directoryHandle) {
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                    const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
+                    const props = 'Properties=species:S:1:pos:R:3:forces:R:3';
+                    const comment = `${lattice} ${props} energy=${result.energy_eV} pbc="F F F"`;
+
+                    let extxyz = `${atoms.length}\n${comment}\n`;
+                    atoms.forEach((a, i) => {
+                        const f = result.forces[i];
+                        extxyz += `${a.element.padEnd(4)} ${a.x.toFixed(8).padStart(14)} ${a.y.toFixed(8).padStart(14)} ${a.z.toFixed(8).padStart(14)} ${f[0].toFixed(8).padStart(14)} ${f[1].toFixed(8).padStart(14)} ${f[2].toFixed(8).padStart(14)}\n`;
+                    });
+
+                    await window.fileExplorer.createFile(`mace_energy_${timestamp}.extxyz`, extxyz);
+                }
+
+                return result;
             } catch (e) {
                 return { success: false, message: e.message };
             }
@@ -1033,6 +1051,21 @@ const FUNCTIONS = {
                     body: JSON.stringify({ atoms, fmax: params.fmax || 0.05, maxSteps: params.maxSteps || 100 })
                 });
                 const result = await res.json();
+
+                // Auto-save extxyz to local folder if open
+                if (result.success && window.fileExplorer?.directoryHandle) {
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                    const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
+                    const props = 'Properties=species:S:1:pos:R:3';
+                    const comment = `${lattice} ${props} energy=${result.energy_eV} pbc="F F F" config_type="optimized"`;
+
+                    let extxyz = `${atoms.length}\n${comment}\n`;
+                    result.positions.forEach((p, i) => {
+                        extxyz += `${atoms[i].element.padEnd(4)} ${p.x.toFixed(8).padStart(14)} ${p.y.toFixed(8).padStart(14)} ${p.z.toFixed(8).padStart(14)}\n`;
+                    });
+
+                    await window.fileExplorer.createFile(`mace_opt_${timestamp}.extxyz`, extxyz);
+                }
 
                 if (result.success && result.positions) {
                     window.undoManager?.saveState?.();
@@ -1080,7 +1113,28 @@ const FUNCTIONS = {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ frames: allFrames })
                 });
-                return await res.json();
+                const result = await res.json();
+
+                // Auto-save multi-frame extxyz to local folder if open
+                if (result.success && window.fileExplorer?.directoryHandle) {
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                    const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
+                    const props = 'Properties=species:S:1:pos:R:3';
+
+                    let extxyz = '';
+                    allFrames.forEach((frameAtoms, i) => {
+                        const energy = result.energies[i].energy_eV;
+                        const comment = `${lattice} ${props} energy=${energy} pbc="F F F" frame=${i}`;
+                        extxyz += `${frameAtoms.length}\n${comment}\n`;
+                        frameAtoms.forEach(a => {
+                            extxyz += `${a.element.padEnd(4)} ${a.x.toFixed(8).padStart(14)} ${a.y.toFixed(8).padStart(14)} ${a.z.toFixed(8).padStart(14)}\n`;
+                        });
+                    });
+
+                    await window.fileExplorer.createFile(`mace_batch_${timestamp}.extxyz`, extxyz);
+                }
+
+                return result;
             } catch (e) {
                 return { success: false, message: e.message };
             }

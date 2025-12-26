@@ -67,6 +67,7 @@ function findFileType(file) {
     const name = file.name.toLowerCase();
     if (name.endsWith('.mol') || name.endsWith('.sdf')) return 'mol';
     if (name.endsWith('.pdb')) return 'pdb';
+    if (name.endsWith('.extxyz')) return 'extxyz';
     if (name.endsWith('.xyz')) return 'xyz';
     if (name.endsWith('.cif') || name.endsWith('.mmcif')) return 'cif';
     if (name.endsWith('.mol2')) return 'mol2';

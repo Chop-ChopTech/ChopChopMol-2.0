@@ -30,6 +30,8 @@ export default class FileHandler {
                     parsedData = this.parsePdbToJson(text);
                 } else if (fileType === 'xyz') {
                     parsedData = this.parseXyzToJson(text);
+                } else if (fileType === 'extxyz') {
+                    parsedData = this.parseExtxyzToJson(text);
                 } else if (fileType === 'cif') {
                     parsedData = this.parseCifToJson(text);
                 } else if (fileType === 'mol2') {
@@ -149,6 +151,70 @@ export default class FileHandler {
         };
     }
 
+    parseExtxyzToJson(content) {
+        const lines = content.trim().split('\n');
+        const frames = [];
+        const frameEnergies = [];
+        let i = 0;
+
+        while (i < lines.length) {
+            if (!lines[i].trim()) { i++; continue; }
+
+            const numAtoms = parseInt(lines[i].trim(), 10);
+            if (isNaN(numAtoms) || numAtoms <= 0) break;
+
+            // Parse comment line for energy and properties
+            const commentLine = lines[i + 1] || '';
+            let energy = null;
+            const energyMatch = commentLine.match(/energy\s*=\s*(-?[\d.eE+-]+)/i);
+            if (energyMatch) energy = parseFloat(energyMatch[1]);
+            frameEnergies.push(energy);
+
+            // Parse Properties to find column layout (default: species:S:1:pos:R:3)
+            let columns = [{ name: 'species', type: 'S', count: 1 }, { name: 'pos', type: 'R', count: 3 }];
+            const propsMatch = commentLine.match(/Properties\s*=\s*"?([^"]+)"?/i);
+            if (propsMatch) {
+                columns = [];
+                const parts = propsMatch[1].split(':');
+                for (let p = 0; p < parts.length; p += 3) {
+                    columns.push({ name: parts[p], type: parts[p + 1], count: parseInt(parts[p + 2]) || 1 });
+                }
+            }
+
+            // Find species and pos column indices
+            let colIdx = 0, speciesIdx = 0, posIdx = 1;
+            for (let c = 0; c < columns.length; c++) {
+                if (columns[c].name === 'species') speciesIdx = colIdx;
+                if (columns[c].name === 'pos') posIdx = colIdx;
+                colIdx += columns[c].count;
+            }
+
+            const atomData = [];
+            const startLine = i + 2;
+
+            for (let j = startLine; j < startLine + numAtoms && j < lines.length; j++) {
+                const parts = lines[j].trim().split(/\s+/);
+                if (parts.length < posIdx + 3) continue;
+
+                const element = parts[speciesIdx];
+                const x = parseFloat(parts[posIdx]);
+                const y = parseFloat(parts[posIdx + 1]);
+                const z = parseFloat(parts[posIdx + 2]);
+
+                if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                    atomData.push({ element, x, y, z });
+                }
+            }
+
+            frames.push({ atomData, numAtoms: atomData.length });
+            i = startLine + numAtoms;
+        }
+
+        window.xyzFrames = frames.length > 1 ? frames : null;
+        window.frameEnergies = frameEnergies;
+
+        return frames.length > 0 ? frames[0] : { atomData: [], numAtoms: 0 };
+    }
 
     parseMolToJson(molText) {
         const lines = molText.split("\n");
