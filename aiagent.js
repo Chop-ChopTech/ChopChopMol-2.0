@@ -3,7 +3,7 @@
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[1] || backendUrl[0],
+    backendUrl: backendUrl[0] || backendUrl[0],
     sessionId: localStorage.getItem('chopchop_ai_session') || crypto.randomUUID(),
     model: localStorage.getItem('chopchop_ai_model') || 'gpt-5-mini'
 };
@@ -1197,6 +1197,8 @@ async function sendToAI(userMessage, onChunk) {
     let fullContent = "";
     const startTime = performance.now();
     let firstTokenTime = null;
+    // Send initial status
+    if (onChunk) onChunk(null, 'Analyzing request');
 
     try {
         const MAX_ITERATIONS = 5;
@@ -1219,6 +1221,7 @@ async function sendToAI(userMessage, onChunk) {
                 // Keep chart images for final response, clear the rest
                 executed = executed.filter(e => e.chartImage);
             }
+            if (i === 0 && onChunk) onChunk(null, 'Thinking');
 
             const response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat/stream`, {
                 method: 'POST',
@@ -1280,10 +1283,27 @@ async function sendToAI(userMessage, onChunk) {
 
             // Execute tool calls if any
             if (toolCalls?.length > 0) {
+                const toolStatusMap = {
+                    select_atoms: 'Selecting atoms',
+                    load_molecule: 'Loading molecule',
+                    transform_atoms: 'Transforming atoms',
+                    measure_distance: 'Measuring distance',
+                    measure_angle: 'Measuring angle',
+                    create_fragment: 'Creating fragment',
+                    delete_atoms: 'Deleting atoms',
+                    save_xyz: 'Saving file',
+                    save_image: 'Saving image',
+                    toggle_labels: 'Toggling labels',
+                    calculate_energy: 'Calculating energy',
+                    optimize_geometry: 'Optimizing geometry',
+                    create_chart: 'Creating chart'
+                };
                 for (const tc of toolCalls) {
                     const fn = tc.function.name;
                     const args = JSON.parse(tc.function.arguments || '{}');
                     console.log('AI calling:', fn, args);
+
+                    if (onChunk) onChunk(null, toolStatusMap[fn] || fn.replace(/_/g, ' '));
 
                     if (FUNCTIONS[fn]) {
                         const res = await FUNCTIONS[fn].execute(args);

@@ -2017,14 +2017,21 @@
                 let typingRemoved = false;
 
                 try {
-                    const response = await window.AIAgent.send(message, (chunk) => {
+                    const response = await window.AIAgent.send(message, (chunk, status) => {
+                        // Status update only (chunk is null)
+                        if (chunk === null) {
+                            if (status) typingEl.setStatus(status);
+                            return;
+                        }
+
+                        // First actual text chunk - remove typing, show message
                         if (!typingRemoved) {
                             typingEl.remove();
-                            messagesContainer.appendChild(msgEl);
                             typingRemoved = true;
+                            messagesContainer.appendChild(msgEl);
                         }
                         fullText += chunk;
-                        contentEl.textContent = fullText;
+                        contentEl.innerHTML = escapeHtml(fullText);
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     });
 
@@ -2114,16 +2121,25 @@
             }
 
             // Show typing indicator
+            // Show typing indicator with status
             function showTyping() {
                 const typingEl = document.createElement('div');
                 typingEl.className = 'ai-message assistant';
                 typingEl.innerHTML = `
-                    <div class="ai-typing">
-                        <span></span><span></span><span></span>
-                    </div>
-                `;
+        <div class="ai-status-text">analyzing request</div>
+        <div class="ai-typing">
+            <span></span><span></span><span></span>
+        </div>
+    `;
                 messagesContainer.appendChild(typingEl);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                // Expose setStatus method
+                typingEl.setStatus = (status) => {
+                    const statusEl = typingEl.querySelector('.ai-status-text');
+                    if (statusEl) statusEl.textContent = status;
+                };
+
                 return typingEl;
             }
 
