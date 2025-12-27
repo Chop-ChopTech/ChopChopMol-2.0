@@ -3611,16 +3611,19 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
             font-family: 'Segoe UI', system-ui, sans-serif;
             font-size: 14px;
             font-weight: 600;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 6px;
-            padding: 5px 10px;
+            background: transparent;
+            border: none;
+            padding: 2px 4px;
             text-align: center;
-            width: 65px;
+            width: 60px;
             cursor: text;
             outline: none;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            text-shadow: 
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 3px rgba(0,0,0,0.9);
             transition: none!important;
         `;
 
@@ -3730,14 +3733,22 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
 
         // Focus effect
         input.addEventListener('focus', () => {
-            input.style.border = '1px solid ' + color;
-            input.style.boxShadow = '0 0 12px ' + color.replace('rgb', 'rgba').replace(')', ', 0.4)');
+            input.style.textShadow = `
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 8px ${color}`;
             input.select();
         });
 
         input.addEventListener('blur', () => {
-            input.style.border = '1px solid rgba(255, 255, 255, 0.15)';
-            input.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+            input.style.textShadow = `
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 3px rgba(0,0,0,0.9)`;
 
             // Only reset value if we didn't just apply a transform
             if (!justAppliedTransform) {
@@ -3760,14 +3771,16 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
             font-family: 'Segoe UI', system-ui, sans-serif;
             font-size: 14px;
             font-weight: 600;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 6px;
-            padding: 5px 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            background: transparent;
+            padding: 2px 4px;
+            text-shadow: 
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 3px rgba(0,0,0,0.9);
             pointer-events: none;
-            transition: none !important;
+            transition: none;
         `;
     }
 
