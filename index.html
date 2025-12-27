@@ -883,6 +883,12 @@
                 style="border: none; display: none;">
                 <i class="fas fa-folder-tree"></i>
             </button>
+            <div class="dropdown" id="energyChartDropdown" style="display: none;">
+                <span class="dropdown-icon" title="Energy Chart"><i class="fas fa-chart-line"></i></span>
+                <div class="dropdown-content" style="width: 320px; padding: 10px;">
+                    <canvas id="energyChartCanvas" style="width: 300px; height: 180px;"></canvas>
+                </div>
+            </div>
             <button class="dropdown-icon dropdown" id="switchMode" style="display: none;"><i
                     class="fa-solid fa-wand-sparkles"></i></button>
             <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"
@@ -2539,6 +2545,102 @@
             });
         })();
     </script>
+
+    <script>
+        let energyChart = null;
+
+        function updateEnergyChartButton() {
+            const dropdown = document.getElementById('energyChartDropdown');
+            const hasEnergies = window.frameEnergies?.some(e => e !== null);
+            const hasPendingChart = window._pendingChartData;
+            if (dropdown) {
+                dropdown.style.display = (hasEnergies || hasPendingChart) ? 'none' : 'none';
+            }
+        }
+
+        function renderEnergyChart() {
+            const canvas = document.getElementById('energyChartCanvas');
+            if (!canvas) return;
+
+            let chartData;
+            if (window._pendingChartData) {
+                chartData = window._pendingChartData;
+            } else if (window.frameEnergies?.some(e => e !== null)) {
+                chartData = {
+                    x: window.frameEnergies.map((_, i) => i + 1),
+                    y: window.frameEnergies.map(e => e ?? 0),
+                    xLabel: 'Frame',
+                    yLabel: 'Energy (eV)',
+                    title: 'Energy Profile'
+                };
+            } else {
+                return;
+            }
+
+            const currentFrame = parseInt(document.getElementById('frameSlider')?.value) || 0;
+
+            if (energyChart) {
+                energyChart.destroy();
+                energyChart = null;
+            }
+
+            const ctx = canvas.getContext('2d');
+            energyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.x.map(v => v.toString()),
+                    datasets: [{
+                        data: chartData.y,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(0, 0, 0, 0)',
+                        borderWidth: 2,
+                        pointBackgroundColor: chartData.y.map((_, i) => i === currentFrame ? '#f093fb' : '#667eea'),
+                        pointRadius: chartData.y.map((_, i) => i === currentFrame ? 6 : 3),
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (e, elements) => {
+                        if (elements.length && window.xyzFrames) {
+                            const idx = elements[0].index;
+                            const slider = document.getElementById('frameSlider');
+                            slider.value = idx;
+                            slider.dispatchEvent(new Event('input'));
+                        }
+                    },
+                    plugins: { legend: { display: false }, title: { display: !!chartData.title, text: chartData.title, color: '#fff', font: { size: 12 } } },
+                    scales: {
+                        x: { title: { display: true, text: chartData.xLabel, color: '#aaa' }, ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        y: { title: { display: true, text: chartData.yLabel, color: '#aaa' }, ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                    }
+                }
+            });
+
+            window._activeEnergyChart = energyChart;
+        }
+
+        // Direct click on the dropdown icon
+        document.getElementById('energyChartDropdown')?.querySelector('.dropdown-icon')?.addEventListener('click', () => {
+            setTimeout(renderEnergyChart, 150);
+        });
+
+        // Sync with frame slider
+        document.getElementById('frameSlider')?.addEventListener('input', () => {
+            if (!energyChart) return;
+            const idx = parseInt(document.getElementById('frameSlider').value) || 0;
+            const ds = energyChart.data.datasets[0];
+            ds.pointBackgroundColor = ds.data.map((_, i) => i === idx ? '#f093fb' : '#667eea');
+            ds.pointRadius = ds.data.map((_, i) => i === idx ? 6 : 3);
+            energyChart.update('none');
+        });
+
+        window.updateEnergyChartButton = updateEnergyChartButton;
+        window.renderEnergyChart = renderEnergyChart;
+    </script>
+
 
     <pre id="output"></pre>
     <script src="stripe.js"></script>

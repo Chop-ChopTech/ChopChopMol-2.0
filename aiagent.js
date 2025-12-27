@@ -1177,7 +1177,14 @@ const FUNCTIONS = {
                 x: params.x || [],
                 y: params.y || []
             };
-            return { success: true, message: "Chart ready", hasChart: true };
+            window.updateEnergyChartButton?.();
+            // Auto-open the dropdown and render
+            const dropdown = document.getElementById('energyChartDropdown');
+            if (dropdown && !dropdown.classList.contains('active')) {
+                dropdown.classList.add('active');
+            }
+            setTimeout(() => window.renderEnergyChart?.(), 100);
+            return { success: true, message: "Chart displayed", hasChart: true };
         }
     },
 };

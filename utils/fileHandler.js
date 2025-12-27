@@ -213,6 +213,8 @@ export default class FileHandler {
         window.xyzFrames = frames.length > 1 ? frames : null;
         window.frameEnergies = frameEnergies;
 
+        window.updateEnergyChartButton?.();
+
         return frames.length > 0 ? frames[0] : { atomData: [], numAtoms: 0 };
     }
 
