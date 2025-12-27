@@ -605,8 +605,12 @@ function worldToScreen(worldPos, camera) {
     vector.copy(worldPos);
     vector.project(camera);
 
-    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
+    // Use renderer dimensions and account for canvas offset
+    const canvas = renderer.domElement;
+    const canvasRect = canvas.getBoundingClientRect();
+
+    const x = (vector.x * 0.5 + 0.5) * canvasRect.width + canvasRect.left;
+    const y = (vector.y * -0.5 + 0.5) * canvasRect.height + canvasRect.top;
 
     return { x, y };
 }
@@ -4632,8 +4636,14 @@ function render() {
 }
 
 function updateRendererSize() {
-    // Just use full window size, ignore AI panel
-    const width = window.innerWidth;
+    // Calculate available space accounting for open panels
+    const aiPanel = document.getElementById('aiChatPanel');
+    const explorerPanel = document.getElementById('fileExplorerPanel');
+
+    const leftOffset = (aiPanel && aiPanel.classList.contains('open')) ? aiPanel.offsetWidth : 0;
+    const rightOffset = (explorerPanel && explorerPanel.classList.contains('open')) ? explorerPanel.offsetWidth : 0;
+
+    const width = window.innerWidth - leftOffset - rightOffset;
     const height = window.innerHeight;
 
     camera.aspect = width / height;
@@ -4650,11 +4660,18 @@ function updateRendererSize() {
     }
 
     renderer.setSize(width, height);
-    renderer.domElement.style.marginLeft = '0px';  // No offset
+    renderer.domElement.style.marginLeft = leftOffset + 'px';
+
+    // Center frame slider on canvas
+    const frameSlider = document.getElementById('frameSliderContainer');
+    if (frameSlider) {
+        frameSlider.style.left = (leftOffset + width / 2) + 'px';
+    }
+
     render();
 }
 window.addEventListener('resize', updateRendererSize);
-window.updateRendererSize = null;
+window.updateRendererSize = updateRendererSize;
 function toggleRibbon() {
     if (!window.main || !window.main.data) {
         alert('No molecule loaded');
