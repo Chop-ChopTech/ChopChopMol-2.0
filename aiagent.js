@@ -5,7 +5,8 @@ const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0
 const AI_CONFIG = {
     backendUrl: backendUrl[0] || backendUrl[0],
     sessionId: localStorage.getItem('chopchop_ai_session') || crypto.randomUUID(),
-    model: localStorage.getItem('chopchop_ai_model') || 'gpt-5-mini'
+    model: localStorage.getItem('chopchop_ai_model') || 'gpt-5-mini',
+    maceModel: localStorage.getItem('chopchop_mace_model') || null
 };
 // Save immediately if new
 if (!localStorage.getItem('chopchop_ai_session')) {
@@ -1000,9 +1001,13 @@ const FUNCTIONS = {
         }
     },
     calculate_energy: {
-        execute: async () => {
+        execute: async (params) => {
             const molecule = window.main?.molecule;
             if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
+
+            const model = params.model || AI_CONFIG.maceModel || 'mace-mp-0a';
+            AI_CONFIG.maceModel = model;
+            localStorage.setItem('chopchop_mace_model', model);
 
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
 
@@ -1010,7 +1015,7 @@ const FUNCTIONS = {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ atoms })
+                    body: JSON.stringify({ atoms, model })
                 });
                 const result = await res.json();
 
@@ -1048,7 +1053,12 @@ const FUNCTIONS = {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/optimize`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ atoms, fmax: params.fmax || 0.05, maxSteps: params.maxSteps || 100 })
+                    body: JSON.stringify({
+                        atoms,
+                        model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a',
+                        fmax: params.fmax || 0.05,
+                        maxSteps: params.maxSteps || 100
+                    })
                 });
                 const result = await res.json();
 
@@ -1085,7 +1095,10 @@ const FUNCTIONS = {
     },
 
     calculate_all_energies: {
-        execute: async () => {
+        execute: async (params = {}) => {
+            const model = params.model || AI_CONFIG.maceModel || 'mace-mp-0a';
+            AI_CONFIG.maceModel = model;
+            localStorage.setItem('chopchop_mace_model', model);
             const frames = window.xyzFrames;
             if (window.lastMaceResults && window.lastMaceResults.frameCount !== (frames?.length || 1)) {
                 window.lastMaceResults = null;
@@ -1099,7 +1112,7 @@ const FUNCTIONS = {
                     const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ atoms })
+                        body: JSON.stringify({ atoms, model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a' })
                     });
                     const result = await res.json();
                     return { success: true, frameCount: 1, energies: [result] };
@@ -1114,7 +1127,7 @@ const FUNCTIONS = {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy-batch`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ frames: allFrames })
+                    body: JSON.stringify({ frames: allFrames, model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a' })
                 });
                 const result = await res.json();
                 if (result.success) window.lastMaceResults = result;
@@ -1193,7 +1206,8 @@ function getMoleculeState() {
             atomCount: f.numAtoms,
             comment: f.comment || '',
             atoms: f.atomData  // Full atom data for each frame
-        }))
+        })),
+        maceModel: AI_CONFIG.maceModel || null,
     };
 }
 
