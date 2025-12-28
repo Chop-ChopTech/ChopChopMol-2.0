@@ -4386,7 +4386,7 @@ input[type="range"]:focus {
     padding: 10px;
 }
 
-/* Tutorial Overlay */
+/* ===== TUTORIAL OVERLAY - ORANGE THEME ===== */
 .tutorial-overlay {
     display: none;
     position: fixed;
@@ -4395,145 +4395,350 @@ input[type="range"]:focus {
     width: 100%;
     height: 100%;
     z-index: 100000;
-    pointer-events: none;
 }
 
 .tutorial-overlay.active {
     display: block;
 }
 
-.tutorial-overlay::before {
-    content: '';
+/* Four dark panels around the spotlight */
+.tutorial-backdrop-top,
+.tutorial-backdrop-bottom,
+.tutorial-backdrop-left,
+.tutorial-backdrop-right {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.6);
     pointer-events: auto;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.tutorial-backdrop-top {
+    top: 0;
+    left: 0;
+    right: 0;
+}
+
+.tutorial-backdrop-bottom {
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.tutorial-backdrop-left {
+    left: 0;
+}
+
+.tutorial-backdrop-right {
+    right: 0;
+}
+
+/* Highlight ring around target */
 .tutorial-highlight {
     position: absolute;
     border-radius: 50%;
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75);
     pointer-events: none;
-    transition: all 0.4s ease;
     z-index: 100001;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.tutorial-highlight::before {
-    content: '';
+.tutorial-ring {
     position: absolute;
-    top: -8px;
-    left: -8px;
-    right: -8px;
-    bottom: -8px;
-    border: 3px solid #667eea;
-    border-radius: 50%;
-    animation: tutorialPulse 2s infinite;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    border: 3px solid #ff6b35;
+    border-radius: inherit;
 }
 
-@keyframes tutorialPulse {
+.tutorial-ring-2 {
+    top: -14px;
+    left: -14px;
+    right: -14px;
+    bottom: -14px;
+    border: 2px solid rgba(255, 107, 53, 0.5);
+    display: none;
+}
+
+@keyframes tutorialPulseOrange {
 
     0%,
     100% {
         transform: scale(1);
         opacity: 1;
+        border-color: #ff6b35;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+        border-color: #f7931e;
+    }
+}
+
+@keyframes tutorialPulseOrange2 {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.6;
     }
 
     50% {
         transform: scale(1.1);
-        opacity: 0.7;
+        opacity: 0.3;
     }
 }
 
 .tutorial-tooltip {
     position: absolute;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
-    border: 1px solid rgba(102, 126, 234, 0.5);
-    border-radius: 12px;
-    padding: 20px;
-    max-width: 320px;
+    background: linear-gradient(145deg, #1a1a2e 0%, #0f0f1a 100%);
+    border: 2px solid #ff6b35;
+    border-radius: 16px;
+    padding: 0;
+    width: 340px;
     color: white;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.6),
+        0 0 40px rgba(255, 107, 53, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
     pointer-events: auto;
     z-index: 100002;
-    transition: all 0.4s ease;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.tutorial-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tutorial-step-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.tutorial-close {
+    background: rgba(0, 0, 0, 0.2);
+    border: none;
+    color: white;
+    font-size: 20px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.tutorial-close:hover {
+    background: rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
 }
 
 .tutorial-step-indicator {
     display: flex;
     gap: 6px;
-    margin-bottom: 12px;
+    padding: 16px 20px 12px;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 .tutorial-step-dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.2);
     transition: all 0.3s;
+    cursor: pointer;
+}
+
+.tutorial-step-dot:hover {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(1.2);
 }
 
 .tutorial-step-dot.active {
-    background: #667eea;
-    transform: scale(1.2);
+    background: #ff6b35;
+    transform: scale(1.3);
+    box-shadow: 0 0 12px rgba(255, 107, 53, 0.6);
 }
 
 .tutorial-step-dot.completed {
     background: #4ade80;
 }
 
+.tutorial-content {
+    padding: 0 20px 16px;
+}
+
 .tutorial-content h3 {
-    margin: 0 0 8px 0;
+    margin: 0 0 10px 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tutorial-content h3 i {
+    color: #ff6b35;
     font-size: 18px;
-    color: #a5b4fc;
 }
 
 .tutorial-content p {
     margin: 0;
     font-size: 14px;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.tutorial-content .tutorial-tip {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: rgba(255, 107, 53, 0.15);
+    border-left: 3px solid #ff6b35;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    color: #ffb088;
+}
+
+.tutorial-content .tutorial-tip i {
+    margin-right: 6px;
 }
 
 .tutorial-buttons {
     display: flex;
     gap: 10px;
-    margin-top: 16px;
+    padding: 16px 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .tutorial-btn {
-    padding: 8px 16px;
+    padding: 10px 18px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 13px;
+    font-weight: 600;
     transition: all 0.2s;
     background: rgba(255, 255, 255, 0.1);
     color: white;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.tutorial-btn:hover {
+.tutorial-btn:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
 }
 
 .tutorial-btn.tutorial-next {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
     margin-left: auto;
+    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 }
 
 .tutorial-btn.tutorial-next:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.5);
+    transform: translateY(-2px);
 }
 
 .tutorial-btn.tutorial-skip {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.5);
+    background: transparent;
+    font-weight: 400;
+}
+
+.tutorial-btn.tutorial-skip:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: transparent;
 }
 
 .tutorial-btn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Highlight shape variants */
+.tutorial-highlight.rect {
+    border-radius: 12px;
+}
+
+.tutorial-highlight.rect .tutorial-ring,
+.tutorial-highlight.rect .tutorial-ring-2 {
+    border-radius: 16px;
+}
+
+/* Arrow pointer */
+.tutorial-tooltip::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(145deg, #1a1a2e, #0f0f1a);
+    border: 2px solid #ff6b35;
+    transform: rotate(45deg);
+    z-index: -1;
+}
+
+.tutorial-tooltip.arrow-top::after {
+    top: -10px;
+    left: 50%;
+    margin-left: -8px;
+    border-right: none;
+    border-bottom: none;
+}
+
+.tutorial-tooltip.arrow-bottom::after {
+    bottom: -10px;
+    left: 50%;
+    margin-left: -8px;
+    border-left: none;
+    border-top: none;
+}
+
+.tutorial-tooltip.arrow-left::after {
+    left: -10px;
+    top: 50%;
+    margin-top: -8px;
+    border-right: none;
+    border-top: none;
+}
+
+.tutorial-tooltip.arrow-right::after {
+    right: -10px;
+    top: 50%;
+    margin-top: -8px;
+    border-left: none;
+    border-bottom: none;
+}
+
+.tutorial-tooltip.arrow-none::after {
+    display: none;
+}
+
+/* Full dark overlay for center messages */
+.tutorial-overlay .tutorial-full-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    pointer-events: auto;
 }

@@ -4830,18 +4830,34 @@ window.toggleRibbon = toggleRibbon;
     }
 
     // RCSB PDB search
+    // RCSB PDB search
     async function searchPDB(q) {
+        const query = q.trim().toUpperCase();
+
+        // Check if it looks like a PDB ID (4 characters, starts with number)
+        const isPdbId = /^\d[A-Z0-9]{3}$/i.test(query);
+
+        const searchQuery = isPdbId ? {
+            type: 'terminal',
+            service: 'text',
+            parameters: {
+                attribute: 'rcsb_entry_container_identifiers.entry_id',
+                operator: 'exact_match',
+                value: query
+            }
+        } : {
+            type: 'terminal',
+            service: 'full_text',
+            parameters: { value: q }
+        };
+
         const res = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                query: {
-                    type: 'terminal',
-                    service: 'full_text',
-                    parameters: { value: q }
-                },
+                query: searchQuery,
                 return_type: 'entry',
-                request_options: { results_content_type: ['experimental'], paginate: { start: 0, rows: 15 } }
+                request_options: { paginate: { start: 0, rows: 15 } }
             })
         });
         const data = await res.json();
@@ -4956,13 +4972,45 @@ window.toggleRibbon = toggleRibbon;
     }
 
     // Load from RCSB PDB
+    // Load from RCSB PDB - handles huge files like 4v88
     async function loadPDB(pdbId) {
-        const res = await fetch(`https://files.rcsb.org/download/${pdbId}.pdb`);
-        if (!res.ok) throw new Error('PDB structure not found');
+        // Try compressed mmCIF first (smallest), then compressed PDB, then uncompressed
+        const urls = [
+            `https://files.rcsb.org/download/${pdbId}.cif.gz`,
+            `https://files.rcsb.org/download/${pdbId}.pdb.gz`,
+            `https://files.rcsb.org/download/${pdbId}.cif`,
+            `https://files.rcsb.org/download/${pdbId}.pdb`
+        ];
 
-        const pdbText = await res.text();
-        const blob = new Blob([pdbText], { type: 'text/plain' });
-        const file = new File([blob], `${pdbId}.pdb`);
+        let data = null;
+        let ext = 'pdb';
+
+        for (const url of urls) {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) continue;
+
+                const isGzip = url.endsWith('.gz');
+                ext = url.includes('.cif') ? 'cif' : 'pdb';
+
+                if (isGzip) {
+                    const buffer = await res.arrayBuffer();
+                    const ds = new DecompressionStream('gzip');
+                    const decompressed = new Response(new Blob([buffer]).stream().pipeThrough(ds));
+                    data = await decompressed.text();
+                } else {
+                    data = await res.text();
+                }
+                break;
+            } catch (e) {
+                continue;
+            }
+        }
+
+        if (!data) throw new Error('PDB structure not found');
+
+        const blob = new Blob([data], { type: 'text/plain' });
+        const file = new File([blob], `${pdbId}.${ext}`);
         window.main?.loader?.handleFile({ target: { files: [file] } }, false);
     }
 

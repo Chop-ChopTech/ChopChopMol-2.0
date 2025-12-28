@@ -993,8 +993,9 @@
                         <i class="fas fa-question-circle"></i> Tutorial
                     </button>
                     <!-- Tutorial Button -->
+                    <!-- Tutorial Button -->
                     <button class="fancy-button" id="startTutorialBtn"
-                        style="margin-top: 10px; background: linear-gradient(135deg, #667eea, #764ba2);">
+                        style="margin-top: 10px; background: linear-gradient(135deg, #ff6b35, #f7931e);">
                         <i class="fas fa-graduation-cap"></i> Start Tutorial
                     </button>
                 </div>
@@ -2659,58 +2660,150 @@
 
     <!-- Tutorial Overlay -->
     <div id="tutorialOverlay" class="tutorial-overlay">
-        <div class="tutorial-highlight" id="tutorialHighlight"></div>
+        <div class="tutorial-backdrop-top" id="tutorialBackdropTop"></div>
+        <div class="tutorial-backdrop-bottom" id="tutorialBackdropBottom"></div>
+        <div class="tutorial-backdrop-left" id="tutorialBackdropLeft"></div>
+        <div class="tutorial-backdrop-right" id="tutorialBackdropRight"></div>
+        <div class="tutorial-highlight" id="tutorialHighlight">
+            <div class="tutorial-ring"></div>
+            <div class="tutorial-ring tutorial-ring-2"></div>
+        </div>
         <div class="tutorial-tooltip" id="tutorialTooltip">
+            <div class="tutorial-header">
+                <span class="tutorial-step-label" id="tutorialStepLabel">Step 1 of 12</span>
+                <button class="tutorial-close" id="tutorialClose">×</button>
+            </div>
             <div class="tutorial-step-indicator" id="tutorialStepIndicator"></div>
             <div class="tutorial-content" id="tutorialContent"></div>
             <div class="tutorial-buttons">
-                <button id="tutorialPrev" class="tutorial-btn">← Back</button>
-                <button id="tutorialSkip" class="tutorial-btn tutorial-skip">Skip</button>
-                <button id="tutorialNext" class="tutorial-btn tutorial-next">Next →</button>
+                <button id="tutorialPrev" class="tutorial-btn"><i class="fas fa-arrow-left"></i> Back</button>
+                <button id="tutorialSkip" class="tutorial-btn tutorial-skip">Skip Tutorial</button>
+                <button id="tutorialNext" class="tutorial-btn tutorial-next">Next <i
+                        class="fas fa-arrow-right"></i></button>
             </div>
         </div>
     </div>
-
     <script>
         (function () {
             const tutorialSteps = [
                 {
-                    target: '#fileInput + #toolbar-background .dropdown:first-child',
-                    fallback: '.dropdown-icon[title="Upload file"]',
-                    title: 'Search & Load Molecules',
-                    text: 'Search molecular databases like PubChem or upload your own files (PDB, XYZ, MOL, CIF).',
+                    target: null,
+                    title: 'Welcome to ChopChopMol!',
+                    icon: 'fa-flask',
+                    text: 'This quick tutorial will show you how to visualize, edit, and analyze molecules like a pro.',
+                    tip: 'You can restart this tutorial anytime from Settings.',
+                    position: 'center'
+                },
+                {
+                    target: '#toolbar-background .dropdown:first-child .dropdown-icon',
+                    title: 'Search Molecules',
+                    icon: 'fa-magnifying-glass',
+                    text: 'Search molecular databases like PubChem, ChEMBL, or the Protein Data Bank. You can also upload local files.',
+                    tip: 'Supported formats: PDB, XYZ, MOL, SDF, CIF, MOL2, GRO',
                     position: 'bottom'
                 },
                 {
                     target: '#resetCamera',
-                    title: 'Reset View',
-                    text: 'Click here to reset the camera and center the molecule in view.',
+                    title: 'Reset Camera',
+                    icon: 'fa-arrows-to-eye',
+                    text: 'Lost your molecule? Click here to snap the camera back and center the molecule in view.',
                     position: 'bottom'
                 },
                 {
                     target: '#settingsGear',
-                    title: 'Settings',
-                    text: 'Customize appearance, atom sizes, colors, and rendering options here.',
+                    title: 'Settings & Style',
+                    icon: 'fa-gear',
+                    text: 'Customize everything! Adjust atom sizes, bond thickness, colors, background, and rendering quality.',
+                    tip: 'Try "Styled Mode" for a polished look.',
                     position: 'bottom'
                 },
                 {
                     target: '#aiToggleBtn',
-                    title: 'AI Assistant',
-                    text: 'Open the AI chat to ask questions, edit molecules with natural language, or run calculations.',
-                    position: 'left'
+                    title: 'AI Assistant Button',
+                    icon: 'fa-comment-dots',
+                    text: 'Click this button to open or close the AI Assistant panel.',
+                    position: 'bottom',
+                    action: () => {
+                        const panel = document.getElementById('aiChatPanel');
+                        if (panel && !panel.classList.contains('open')) {
+                            document.getElementById('aiToggleBtn')?.click();
+                        }
+                    }
+                },
+                {
+                    target: '#aiChatPanel',
+                    title: 'AI Assistant Panel',
+                    icon: 'fa-robot',
+                    text: 'Your molecular co-pilot! Ask questions in natural language, edit molecules, run energy calculations, or get explanations.',
+                    tip: 'Try: "Rotate the benzene ring 45°" or "What\'s the distance between atoms 1 and 5?"',
+                    position: 'right',
+                    shape: 'rect',
+                    padding: 0,
+                    requiresOpen: 'aiChatPanel'
+                },
+                {
+                    target: '#aiChatInput',
+                    title: 'Chat Input',
+                    icon: 'fa-keyboard',
+                    text: 'Type your questions or commands here. The AI understands natural language and can perform complex molecular operations.',
+                    position: 'top',
+                    shape: 'rect',
+                    requiresOpen: 'aiChatPanel'
                 },
                 {
                     target: '#toggleFileExplorer',
-                    title: 'File Explorer',
-                    text: 'Access your cloud and local files. Save and organize your molecules here.',
-                    position: 'left'
+                    title: 'File Explorer Button',
+                    icon: 'fa-folder-tree',
+                    text: 'Click this button to open or close the File Explorer panel.',
+                    position: 'bottom',
+                    action: () => {
+                        const panel = document.getElementById('fileExplorerPanel');
+                        if (panel && !panel.classList.contains('open')) {
+                            document.getElementById('toggleFileExplorer')?.click();
+                        }
+                    }
+                },
+                {
+                    target: '#fileExplorerPanel',
+                    title: 'File Explorer Panel',
+                    icon: 'fa-folder-open',
+                    text: 'Manage all your molecule files here. Access cloud storage or connect a local folder for seamless file management.',
+                    tip: 'Sign in to sync your molecules across devices.',
+                    position: 'left',
+                    shape: 'rect',
+                    padding: 0,
+                    requiresOpen: 'fileExplorerPanel'
+                },
+                {
+                    target: '#switchMode',
+                    title: 'Edit Mode',
+                    icon: 'fa-wand-sparkles',
+                    text: 'Toggle editing mode to add atoms, delete bonds, or directly modify your molecule structure.',
+                    position: 'bottom'
+                },
+                {
+                    target: '#showAllBondLengths',
+                    title: 'Measurements',
+                    icon: 'fa-ruler',
+                    text: 'Display all bond lengths at once. Click atoms to measure distances, angles, and dihedrals.',
+                    position: 'bottom'
                 },
                 {
                     target: '#threeCanvas',
-                    title: 'Molecule Viewer',
-                    text: 'Rotate: Left-click drag. Zoom: Scroll. Pan: Right-click drag. Click atoms to select them.',
+                    title: '3D Viewer Controls',
+                    icon: 'fa-cube',
+                    text: 'Interact with your molecule in 3D!',
+                    tip: '<b>Rotate:</b> Left-click + drag<br><b>Zoom:</b> Scroll wheel<br><b>Pan:</b> Right-click + drag<br><b>Select:</b> Click atoms',
                     position: 'center',
-                    highlight: 'rect'
+                    shape: 'rect'
+                },
+                {
+                    target: null,
+                    title: 'You\'re All Set!',
+                    icon: 'fa-check-circle',
+                    text: 'You now know the basics of ChopChopMol. Start exploring molecules and have fun!',
+                    tip: 'Pro tip: Press Ctrl+Z to undo any changes.',
+                    position: 'center'
                 }
             ];
 
@@ -2720,14 +2813,23 @@
             const tooltip = document.getElementById('tutorialTooltip');
             const content = document.getElementById('tutorialContent');
             const indicator = document.getElementById('tutorialStepIndicator');
+            const stepLabel = document.getElementById('tutorialStepLabel');
             const prevBtn = document.getElementById('tutorialPrev');
             const nextBtn = document.getElementById('tutorialNext');
             const skipBtn = document.getElementById('tutorialSkip');
+            const closeBtn = document.getElementById('tutorialClose');
+
+            const backdropTop = document.getElementById('tutorialBackdropTop');
+            const backdropBottom = document.getElementById('tutorialBackdropBottom');
+            const backdropLeft = document.getElementById('tutorialBackdropLeft');
+            const backdropRight = document.getElementById('tutorialBackdropRight');
 
             function startTutorial() {
                 currentStep = 0;
                 overlay.classList.add('active');
-                document.querySelector('.dropdown-content')?.classList.remove('show');
+                document.querySelectorAll('.dropdown-content.show, .dropdown.active').forEach(el => {
+                    el.classList.remove('show', 'active');
+                });
                 showStep(currentStep);
             }
 
@@ -2736,88 +2838,146 @@
                 localStorage.setItem('tutorialCompleted', 'true');
             }
 
-            function showStep(index) {
-                const step = tutorialSteps[index];
-                let el = document.querySelector(step.target);
-                if (!el && step.fallback) el = document.querySelector(step.fallback);
+            function isStepVisible(step) {
+                if (!step.target) return true;
+                if (step.requiresOpen) return true; // We'll open it
+                const el = document.querySelector(step.target);
+                return el && el.offsetParent !== null && getComputedStyle(el).display !== 'none';
+            }
 
-                // Skip hidden elements
-                if (el && (el.style.display === 'none' || el.offsetParent === null)) {
-                    if (index < tutorialSteps.length - 1) {
-                        currentStep++;
-                        showStep(currentStep);
-                        return;
-                    }
+            function getVisibleSteps() {
+                return tutorialSteps.filter(step => isStepVisible(step));
+            }
+
+            function positionBackdrops(rect, padding = 15) {
+                if (!rect) {
+                    // Full overlay for center position
+                    backdropTop.style.cssText = 'top:0;left:0;right:0;bottom:0;';
+                    backdropBottom.style.cssText = 'display:none;';
+                    backdropLeft.style.cssText = 'display:none;';
+                    backdropRight.style.cssText = 'display:none;';
+                    return;
                 }
 
+                const top = rect.top - padding;
+                const left = rect.left - padding;
+                const bottom = window.innerHeight - rect.bottom - padding;
+                const right = window.innerWidth - rect.right - padding;
+                const width = rect.width + padding * 2;
+                const height = rect.height + padding * 2;
+
+                backdropTop.style.cssText = `top:0; left:0; right:0; height:${Math.max(0, top)}px; display:block;`;
+                backdropBottom.style.cssText = `bottom:0; left:0; right:0; height:${Math.max(0, bottom)}px; display:block;`;
+                backdropLeft.style.cssText = `top:${top}px; left:0; width:${Math.max(0, left)}px; height:${height}px; display:block;`;
+                backdropRight.style.cssText = `top:${top}px; right:0; width:${Math.max(0, right)}px; height:${height}px; display:block;`;
+            }
+
+            function showStep(index) {
+                const visibleSteps = getVisibleSteps();
+                const step = visibleSteps[index];
+                if (!step) return;
+
+                // Execute action if present (e.g., open panel)
+                if (step.action) {
+                    step.action();
+                    // Small delay to let panels animate open
+                    setTimeout(() => renderStep(step, index, visibleSteps.length), 100);
+                } else {
+                    renderStep(step, index, visibleSteps.length);
+                }
+            }
+
+            function renderStep(step, index, totalSteps) {
+                stepLabel.textContent = `Step ${index + 1} of ${totalSteps}`;
+
                 // Update step indicator
-                indicator.innerHTML = tutorialSteps.map((_, i) =>
-                    `<div class="tutorial-step-dot ${i < index ? 'completed' : ''} ${i === index ? 'active' : ''}"></div>`
+                indicator.innerHTML = Array.from({ length: totalSteps }, (_, i) =>
+                    `<div class="tutorial-step-dot ${i < index ? 'completed' : ''} ${i === index ? 'active' : ''}" data-step="${i}"></div>`
                 ).join('');
 
-                // Update content
-                content.innerHTML = `<h3>${step.title}</h3><p>${step.text}</p>`;
+                indicator.querySelectorAll('.tutorial-step-dot').forEach(dot => {
+                    dot.addEventListener('click', () => {
+                        currentStep = parseInt(dot.dataset.step);
+                        showStep(currentStep);
+                    });
+                });
+
+                // Build content
+                const tipHtml = step.tip ? `<div class="tutorial-tip"><i class="fas fa-lightbulb"></i>${step.tip}</div>` : '';
+                content.innerHTML = `
+            <h3><i class="fas ${step.icon}"></i>${step.title}</h3>
+            <p>${step.text}</p>
+            ${tipHtml}
+        `;
 
                 // Update buttons
                 prevBtn.disabled = index === 0;
-                nextBtn.textContent = index === tutorialSteps.length - 1 ? 'Finish ✓' : 'Next →';
+                prevBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+                nextBtn.innerHTML = index === totalSteps - 1
+                    ? 'Finish <i class="fas fa-check"></i>'
+                    : 'Next <i class="fas fa-arrow-right"></i>';
 
-                // Position highlight
-                if (el) {
+                // Position highlight and tooltip
+                const el = step.target ? document.querySelector(step.target) : null;
+                tooltip.className = 'tutorial-tooltip';
+
+                if (el && step.position !== 'center') {
                     const rect = el.getBoundingClientRect();
-                    const padding = 15;
-                    const size = Math.max(rect.width, rect.height) + padding * 2;
+                    const padding = step.padding !== undefined ? step.padding : 15;
 
-                    if (step.highlight === 'rect') {
-                        highlight.style.borderRadius = '12px';
+                    highlight.style.display = 'block';
+                    highlight.className = 'tutorial-highlight' + (step.shape === 'rect' ? ' rect' : '');
+
+                    if (step.shape === 'rect') {
                         highlight.style.width = rect.width + padding * 2 + 'px';
                         highlight.style.height = rect.height + padding * 2 + 'px';
+                        highlight.style.left = rect.left - padding + 'px';
+                        highlight.style.top = rect.top - padding + 'px';
                     } else {
-                        highlight.style.borderRadius = '50%';
+                        const size = Math.max(rect.width, rect.height) + padding * 2;
                         highlight.style.width = size + 'px';
                         highlight.style.height = size + 'px';
+                        highlight.style.left = rect.left + rect.width / 2 - size / 2 + 'px';
+                        highlight.style.top = rect.top + rect.height / 2 - size / 2 + 'px';
                     }
 
-                    highlight.style.left = rect.left + rect.width / 2 - (step.highlight === 'rect' ? (rect.width + padding * 2) / 2 : size / 2) + 'px';
-                    highlight.style.top = rect.top + rect.height / 2 - (step.highlight === 'rect' ? (rect.height + padding * 2) / 2 : size / 2) + 'px';
-
-                    // Position tooltip
+                    positionBackdrops(rect, padding);
                     positionTooltip(rect, step.position);
                 } else {
-                    // Center if no element
                     highlight.style.display = 'none';
+                    positionBackdrops(null);
                     tooltip.style.left = '50%';
                     tooltip.style.top = '50%';
                     tooltip.style.transform = 'translate(-50%, -50%)';
+                    tooltip.classList.add('arrow-none');
                 }
             }
 
             function positionTooltip(rect, position) {
-                highlight.style.display = 'block';
+                const gap = 30;
+                const tooltipWidth = 340;
                 tooltip.style.transform = 'none';
-                const gap = 20;
 
                 switch (position) {
                     case 'bottom':
-                        tooltip.style.left = Math.max(10, Math.min(window.innerWidth - 340, rect.left + rect.width / 2 - 160)) + 'px';
+                        tooltip.style.left = Math.max(10, Math.min(window.innerWidth - tooltipWidth - 10, rect.left + rect.width / 2 - tooltipWidth / 2)) + 'px';
                         tooltip.style.top = rect.bottom + gap + 'px';
+                        tooltip.classList.add('arrow-top');
                         break;
                     case 'top':
-                        tooltip.style.left = Math.max(10, rect.left + rect.width / 2 - 160) + 'px';
-                        tooltip.style.top = rect.top - tooltip.offsetHeight - gap + 'px';
+                        tooltip.style.left = Math.max(10, Math.min(window.innerWidth - tooltipWidth - 10, rect.left + rect.width / 2 - tooltipWidth / 2)) + 'px';
+                        tooltip.style.top = Math.max(10, rect.top - gap - 260) + 'px';
+                        tooltip.classList.add('arrow-bottom');
                         break;
                     case 'left':
-                        tooltip.style.left = Math.max(10, rect.left - 340 - gap) + 'px';
-                        tooltip.style.top = rect.top + rect.height / 2 - 60 + 'px';
+                        tooltip.style.left = Math.max(10, rect.left - tooltipWidth - gap) + 'px';
+                        tooltip.style.top = Math.max(10, Math.min(window.innerHeight - 300, rect.top + rect.height / 2 - 120)) + 'px';
+                        tooltip.classList.add('arrow-right');
                         break;
                     case 'right':
-                        tooltip.style.left = rect.right + gap + 'px';
-                        tooltip.style.top = rect.top + rect.height / 2 - 60 + 'px';
-                        break;
-                    case 'center':
-                        tooltip.style.left = '50%';
-                        tooltip.style.top = '50%';
-                        tooltip.style.transform = 'translate(-50%, -50%)';
+                        tooltip.style.left = Math.min(window.innerWidth - tooltipWidth - 10, rect.right + gap) + 'px';
+                        tooltip.style.top = Math.max(10, Math.min(window.innerHeight - 300, rect.top + rect.height / 2 - 120)) + 'px';
+                        tooltip.classList.add('arrow-left');
                         break;
                 }
             }
@@ -2830,7 +2990,8 @@
             });
 
             nextBtn.addEventListener('click', () => {
-                if (currentStep < tutorialSteps.length - 1) {
+                const visibleSteps = getVisibleSteps();
+                if (currentStep < visibleSteps.length - 1) {
                     currentStep++;
                     showStep(currentStep);
                 } else {
@@ -2839,13 +3000,18 @@
             });
 
             skipBtn.addEventListener('click', endTutorial);
+            closeBtn.addEventListener('click', endTutorial);
+
+            document.addEventListener('keydown', (e) => {
+                if (!overlay.classList.contains('active')) return;
+                if (e.key === 'Escape') endTutorial();
+                if (e.key === 'ArrowRight' || e.key === 'Enter') nextBtn.click();
+                if (e.key === 'ArrowLeft') prevBtn.click();
+            });
 
             document.getElementById('startTutorialBtn')?.addEventListener('click', startTutorial);
 
-            // Auto-start for first-time users (optional)
-            // if (!localStorage.getItem('tutorialCompleted')) {
-            //     setTimeout(startTutorial, 1000);
-            // }
+            window.startTutorial = startTutorial;
         })();
     </script>
 
