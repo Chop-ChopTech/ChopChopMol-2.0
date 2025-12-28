@@ -2749,23 +2749,6 @@
                     requiresOpen: 'aiChatPanel'
                 },
                 {
-                    target: '#toggleFileExplorer',
-                    title: 'File Explorer Button',
-                    icon: 'fa-folder-tree',
-                    text: 'Click this button to open or close the File Explorer panel.',
-                    position: 'bottom',
-                    action: () => {
-                        const explorerToggle = document.getElementById('explorerCollapseToggle');
-
-                        explorerToggle?.addEventListener('click', () => {
-                            explorerPanel.classList.toggle('open');
-                            explorerToggle.classList.toggle('collapsed', !explorerPanel.classList.contains('open'));
-                            window.updateRendererSize?.();
-                        });
-                        console.log(explorerToggle);
-                    }
-                },
-                {
                     target: '#fileExplorerPanel',
                     title: 'File Explorer Panel',
                     icon: 'fa-folder-open',
@@ -2780,25 +2763,9 @@
                     target: '#settingsDropdown',
                     title: 'Edit Mode',
                     icon: 'fa-wand-sparkles',
-                    text: 'Toggle editing mode to add atoms, delete bonds, or directly modify your molecule structure.',
-                    position: 'bottom',
-                    requiresOpen: 'settingsDropdown',
-                    shape: 'rect'
-                },
-                {
-                    target: '#showAllBondLengths',
-                    title: 'Measurements',
-                    icon: 'fa-ruler',
-                    text: 'Display all bond lengths at once. Click atoms to measure distances, angles, and dihedrals.',
-                    position: 'bottom'
-                },
-                {
-                    target: '#threeCanvas',
-                    title: '3D Viewer Controls',
-                    icon: 'fa-cube',
-                    text: 'Interact with your molecule in 3D!',
-                    tip: '<b>Rotate:</b> Left-click + drag<br><b>Zoom:</b> Scroll wheel<br><b>Pan:</b> Right-click + drag<br><b>Select:</b> Click atoms',
-                    position: 'center',
+                    text: 'Customize your molecule to look the way you want, and save them for future use.',
+                    position: 'left',
+                    requiresOpen: 'settingsDropdown,styleSubmenu',
                     shape: 'rect'
                 },
                 {
@@ -2840,6 +2807,15 @@
             function endTutorial() {
                 overlay.classList.remove('active');
                 localStorage.setItem('tutorialCompleted', 'true');
+                document.querySelectorAll('.dropdown-content').forEach(d => {
+                    d.style.opacity = '';
+                    d.style.pointerEvents = '';
+                    d.style.transform = '';
+                });
+                document.querySelectorAll('.submenu-content.open').forEach(s => {
+                    s.classList.remove('open');
+                    s.closest('.settings-submenu')?.classList.remove('open');
+                });
             }
 
             function isStepVisible(step) {
@@ -2884,20 +2860,36 @@
 
                 // Handle requiresOpen - open the panel FIRST
                 if (step.requiresOpen) {
-                    const panel = document.getElementById(step.requiresOpen);
-                    if (panel && !panel.classList.contains('open')) {
-                        panel.classList.add('open');
-                        if (step.requiresOpen === 'aiChatPanel') {
-                            document.getElementById('aiToggleBtn')?.classList.add('active');
-                            document.getElementById('aiCollapseToggle')?.classList.remove('collapsed');
-                        } else if (step.requiresOpen === 'fileExplorerPanel') {
-                            document.getElementById('explorerCollapseToggle')?.classList.remove('collapsed');
-                        } else if (step.requiresOpen === 'settingsDropdown') {
-                            document.getElementById('settingsGear').classList.add('active');
-                            console.log('settingsDropdown');
+                    const parts = step.requiresOpen.split(',');
+                    const panel = document.getElementById(parts[0]);
+
+                    if (panel) {
+                        // Check if it's a dropdown-content inside a .dropdown
+                        if (panel.classList.contains('dropdown-content')) {
+                            panel.style.opacity = '1';
+                            panel.style.pointerEvents = 'auto';
+                            panel.style.transform = 'translateX(-50%) translateY(0)';
+                            needsDelay = true;
+                        } else if (!panel.classList.contains('open')) {
+                            panel.classList.add('open');
+                            if (parts[0] === 'aiChatPanel') {
+                                document.getElementById('aiToggleBtn')?.classList.add('active');
+                                document.getElementById('aiCollapseToggle')?.classList.remove('collapsed');
+                            } else if (parts[0] === 'fileExplorerPanel') {
+                                document.getElementById('explorerCollapseToggle')?.classList.remove('collapsed');
+                            }
+                            window.updateRendererSize?.();
+                            needsDelay = true;
                         }
-                        window.updateRendererSize?.();
-                        needsDelay = true;
+                    }
+
+                    // Handle sub-dropdown
+                    if (parts[1]) {
+                        const submenu = document.getElementById(parts[1]);
+                        if (submenu) {
+                            submenu.classList.add('open');
+                            submenu.closest('.settings-submenu')?.classList.add('open');
+                        }
                     }
                 }
 
