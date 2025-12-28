@@ -19,6 +19,7 @@
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 
 <body>
@@ -2057,7 +2058,7 @@
                             messagesContainer.appendChild(msgEl);
                         }
                         fullText += chunk;
-                        contentEl.innerHTML = escapeHtml(fullText);
+                        contentEl.innerHTML = renderMarkdown(fullText);
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     });
 
@@ -2076,7 +2077,7 @@
                                 ${response.actions.map(a => `<span class="ai-action-tag"><i class="fas fa-bolt"></i> ${a.name}</span>`).join('')}
                             </div>
                         `;
-                        contentEl.innerHTML = escapeHtml(fullText) + actionsHtml;
+                        contentEl.innerHTML = renderMarkdown(fullText) + actionsHtml;
 
                         // Check for interactive charts in actions
                         response.actions.forEach(action => {
@@ -2237,7 +2238,7 @@
 
                 msgEl.innerHTML = `
                     <div class="ai-message-content">
-                        ${escapeHtml(content)}
+                        ${type === 'assistant' ? renderMarkdown(content) : escapeHtml(content)}
                         ${actionsHtml}
                     </div>
                 `;
@@ -2274,6 +2275,16 @@
                 const div = document.createElement('div');
                 div.textContent = text;
                 return div.innerHTML;
+            }
+            /*************  ✨ Windsurf Command ⭐  *************/
+            /**
+             * Render a markdown string as HTML
+             * @param {string} text - markdown string to render
+             * @return {string} rendered HTML string
+             */
+            /*******  a6be3692-f35c-4d13-a0f4-b1e5ccd613ea  *******/
+            function renderMarkdown(text) {
+                return marked.parse(text);
             }
 
             // Check if API key exists on load
