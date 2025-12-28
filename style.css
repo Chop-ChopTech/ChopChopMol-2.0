@@ -4460,6 +4460,38 @@ input[type="range"]:focus {
     display: none;
 }
 
+/* Expanded description row */
+.desc-expanded-row {
+    background: rgba(0, 50, 80, 0.4) !important;
+}
+
+.desc-expanded-row:hover {
+    background: rgba(0, 50, 80, 0.5) !important;
+}
+
+.desc-expanded-row td {
+    padding: 0 !important;
+    border: none !important;
+}
+
+.desc-expanded-cell {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 20px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
+    white-space: normal;
+    cursor: pointer;
+    border-left: 3px solid rgba(0, 180, 255, 0.6);
+    transition: max-height 0.25s ease, padding 0.25s ease;
+}
+
+.desc-expanded-row.show .desc-expanded-cell {
+    max-height: 200px;
+    padding: 16px 20px;
+}
+
 @keyframes tutorialPulseOrange {
 
     0%,

@@ -4821,15 +4821,53 @@ window.toggleRibbon = toggleRibbon;
         }
     }
 
-    // PubChem search (existing)
+    // PubChem search with descriptions for ALL results
     async function searchPubChem(q) {
-        const res = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/${encodeURIComponent(q)}/json`);
+        const res = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/${encodeURIComponent(q)}/json?limit=8`);
         const data = await res.json();
-        items = data.dictionary_terms?.compound || [];
-        showResults(items.map(name => ({ name, source: 'PubChem', type: 'Compound' })));
+        const names = data.dictionary_terms?.compound || [];
+
+        if (!names.length) {
+            items = [];
+            showResults([]);
+            return;
+        }
+
+        // Fetch CIDs for each name in parallel
+        const cidPromises = names.map(name =>
+            fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`)
+                .then(r => r.json())
+                .then(d => ({ name, cid: d.IdentifierList?.CID?.[0] }))
+                .catch(() => ({ name, cid: null }))
+        );
+
+        const cidResults = await Promise.all(cidPromises);
+        const validCids = cidResults.filter(r => r.cid).map(r => r.cid);
+
+        // Map name to CID
+        const nameToCid = {};
+        cidResults.forEach(r => nameToCid[r.name] = r.cid);
+
+        // Fetch descriptions for all CIDs at once
+        const cidDesc = {};
+        if (validCids.length) {
+            try {
+                const descRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${validCids.join(',')}/description/JSON`);
+                const descData = await descRes.json();
+                (descData.InformationList?.Information || []).forEach(d => {
+                    if (d.Description && !cidDesc[d.CID]) cidDesc[d.CID] = d.Description;
+                });
+            } catch (e) { /* ignore */ }
+        }
+
+        items = names;
+        showResults(names.map(name => ({
+            name,
+            source: 'PubChem',
+            type: cidDesc[nameToCid[name]] || 'Compound'
+        })));
     }
 
-    // RCSB PDB search
     // RCSB PDB search
     async function searchPDB(q) {
         const query = q.trim().toUpperCase();
@@ -4893,18 +4931,45 @@ window.toggleRibbon = toggleRibbon;
         }
 
         tbody.innerHTML = list.slice(0, 15).map((item, i) => `
-            <tr data-i="${i}" data-name="${item.name}" data-id="${item.id || item.name}" data-source="${item.source}">
-                <td class="col-name" title="${item.name}">${item.name}</td>
-                <td class="col-type">${item.source}</td>
-                <td class="col-desc">${item.type}</td>
-            </tr>
-        `).join('');
+        <tr data-i="${i}" data-name="${item.name}" data-id="${item.id || item.name}" data-source="${item.source}">
+            <td class="col-name" title="${item.name}">${item.name}</td>
+            <td class="col-type">${item.source}</td>
+            <td class="col-desc" title="Click to expand">${item.type || ''}</td>
+        </tr>
+    `).join('');
 
         dropdown.classList.add('show');
         activeIdx = -1;
 
         tbody.querySelectorAll('tr[data-name]').forEach(row => {
-            row.onclick = () => load(row.dataset.name, row.dataset.source, row.dataset.id);
+            row.onclick = (e) => {
+                if (e.target.classList.contains('col-desc')) {
+                    e.stopPropagation();
+                    const existingExpand = row.nextElementSibling?.classList.contains('desc-expanded-row');
+
+                    // Collapse any existing expanded rows
+                    tbody.querySelectorAll('.desc-expanded-row').forEach(r => {
+                        r.classList.remove('show');
+                        setTimeout(() => r.remove(), 250);
+                    });
+
+                    // If wasn't already expanded, add new expanded row
+                    if (!existingExpand && e.target.textContent !== 'Compound') {
+                        const expandRow = document.createElement('tr');
+                        expandRow.className = 'desc-expanded-row';
+                        expandRow.innerHTML = `<td colspan="3"><div class="desc-expanded-cell">${e.target.textContent}</div></td>`;
+                        expandRow.onclick = () => {
+                            expandRow.classList.remove('show');
+                            setTimeout(() => expandRow.remove(), 250);
+                        };
+                        row.after(expandRow);
+                        // Trigger reflow then animate
+                        requestAnimationFrame(() => expandRow.classList.add('show'));
+                    }
+                    return;
+                }
+                load(row.dataset.name, row.dataset.source, row.dataset.id);
+            };
         });
     }
 
