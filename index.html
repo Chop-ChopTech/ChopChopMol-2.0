@@ -912,7 +912,7 @@
                 <i class="fa-solid fa-book-open"></i></button>
             <div class="dropdown" id="settingsGear">
                 <span class="dropdown-icon"><i class="fa-solid fa-gear"></i></span>
-                <div class="dropdown-content shine" style="min-width: 200px;">
+                <div class="dropdown-content shine" id="settingsDropdown" style="min-width: 200px;">
 
                     <!-- Style Settings Sub-dropdown -->
                     <div class="settings-submenu">
@@ -2762,6 +2762,7 @@
                             explorerToggle.classList.toggle('collapsed', !explorerPanel.classList.contains('open'));
                             window.updateRendererSize?.();
                         });
+                        console.log(explorerToggle);
                     }
                 },
                 {
@@ -2776,11 +2777,13 @@
                     requiresOpen: 'fileExplorerPanel'
                 },
                 {
-                    target: '#switchMode',
+                    target: '#settingsDropdown',
                     title: 'Edit Mode',
                     icon: 'fa-wand-sparkles',
                     text: 'Toggle editing mode to add atoms, delete bonds, or directly modify your molecule structure.',
-                    position: 'bottom'
+                    position: 'bottom',
+                    requiresOpen: 'settingsDropdown',
+                    shape: 'rect'
                 },
                 {
                     target: '#showAllBondLengths',
@@ -2872,17 +2875,41 @@
                 backdropLeft.style.cssText = `top:${top}px; left:0; width:${Math.max(0, left)}px; height:${height}px; display:block;`;
                 backdropRight.style.cssText = `top:${top}px; right:0; width:${Math.max(0, right)}px; height:${height}px; display:block;`;
             }
-
             function showStep(index) {
                 const visibleSteps = getVisibleSteps();
                 const step = visibleSteps[index];
                 if (!step) return;
 
-                // Execute action if present (e.g., open panel)
+                let needsDelay = false;
+
+                // Handle requiresOpen - open the panel FIRST
+                if (step.requiresOpen) {
+                    const panel = document.getElementById(step.requiresOpen);
+                    if (panel && !panel.classList.contains('open')) {
+                        panel.classList.add('open');
+                        if (step.requiresOpen === 'aiChatPanel') {
+                            document.getElementById('aiToggleBtn')?.classList.add('active');
+                            document.getElementById('aiCollapseToggle')?.classList.remove('collapsed');
+                        } else if (step.requiresOpen === 'fileExplorerPanel') {
+                            document.getElementById('explorerCollapseToggle')?.classList.remove('collapsed');
+                        } else if (step.requiresOpen === 'settingsDropdown') {
+                            document.getElementById('settingsGear').classList.add('active');
+                            console.log('settingsDropdown');
+                        }
+                        window.updateRendererSize?.();
+                        needsDelay = true;
+                    }
+                }
+
+                // Execute action if present
                 if (step.action) {
                     step.action();
-                    // Small delay to let panels animate open
-                    setTimeout(() => renderStep(step, index, visibleSteps.length), 100);
+                    needsDelay = true;
+                }
+
+                // Wait for animations to complete before positioning
+                if (needsDelay) {
+                    setTimeout(() => renderStep(step, index, visibleSteps.length), 550);
                 } else {
                     renderStep(step, index, visibleSteps.length);
                 }
