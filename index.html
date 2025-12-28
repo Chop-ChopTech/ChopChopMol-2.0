@@ -992,6 +992,11 @@
                         style="background-color: #006dea; margin-top: 10px;">
                         <i class="fas fa-question-circle"></i> Tutorial
                     </button>
+                    <!-- Tutorial Button -->
+                    <button class="fancy-button" id="startTutorialBtn"
+                        style="margin-top: 10px; background: linear-gradient(135deg, #667eea, #764ba2);">
+                        <i class="fas fa-graduation-cap"></i> Start Tutorial
+                    </button>
                 </div>
             </div>
         </div>
@@ -2652,6 +2657,197 @@
         window.renderEnergyChart = renderEnergyChart;
     </script>
 
+    <!-- Tutorial Overlay -->
+    <div id="tutorialOverlay" class="tutorial-overlay">
+        <div class="tutorial-highlight" id="tutorialHighlight"></div>
+        <div class="tutorial-tooltip" id="tutorialTooltip">
+            <div class="tutorial-step-indicator" id="tutorialStepIndicator"></div>
+            <div class="tutorial-content" id="tutorialContent"></div>
+            <div class="tutorial-buttons">
+                <button id="tutorialPrev" class="tutorial-btn">← Back</button>
+                <button id="tutorialSkip" class="tutorial-btn tutorial-skip">Skip</button>
+                <button id="tutorialNext" class="tutorial-btn tutorial-next">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const tutorialSteps = [
+                {
+                    target: '#fileInput + #toolbar-background .dropdown:first-child',
+                    fallback: '.dropdown-icon[title="Upload file"]',
+                    title: 'Search & Load Molecules',
+                    text: 'Search molecular databases like PubChem or upload your own files (PDB, XYZ, MOL, CIF).',
+                    position: 'bottom'
+                },
+                {
+                    target: '#resetCamera',
+                    title: 'Reset View',
+                    text: 'Click here to reset the camera and center the molecule in view.',
+                    position: 'bottom'
+                },
+                {
+                    target: '#settingsGear',
+                    title: 'Settings',
+                    text: 'Customize appearance, atom sizes, colors, and rendering options here.',
+                    position: 'bottom'
+                },
+                {
+                    target: '#aiToggleBtn',
+                    title: 'AI Assistant',
+                    text: 'Open the AI chat to ask questions, edit molecules with natural language, or run calculations.',
+                    position: 'left'
+                },
+                {
+                    target: '#toggleFileExplorer',
+                    title: 'File Explorer',
+                    text: 'Access your cloud and local files. Save and organize your molecules here.',
+                    position: 'left'
+                },
+                {
+                    target: '#threeCanvas',
+                    title: 'Molecule Viewer',
+                    text: 'Rotate: Left-click drag. Zoom: Scroll. Pan: Right-click drag. Click atoms to select them.',
+                    position: 'center',
+                    highlight: 'rect'
+                }
+            ];
+
+            let currentStep = 0;
+            const overlay = document.getElementById('tutorialOverlay');
+            const highlight = document.getElementById('tutorialHighlight');
+            const tooltip = document.getElementById('tutorialTooltip');
+            const content = document.getElementById('tutorialContent');
+            const indicator = document.getElementById('tutorialStepIndicator');
+            const prevBtn = document.getElementById('tutorialPrev');
+            const nextBtn = document.getElementById('tutorialNext');
+            const skipBtn = document.getElementById('tutorialSkip');
+
+            function startTutorial() {
+                currentStep = 0;
+                overlay.classList.add('active');
+                document.querySelector('.dropdown-content')?.classList.remove('show');
+                showStep(currentStep);
+            }
+
+            function endTutorial() {
+                overlay.classList.remove('active');
+                localStorage.setItem('tutorialCompleted', 'true');
+            }
+
+            function showStep(index) {
+                const step = tutorialSteps[index];
+                let el = document.querySelector(step.target);
+                if (!el && step.fallback) el = document.querySelector(step.fallback);
+
+                // Skip hidden elements
+                if (el && (el.style.display === 'none' || el.offsetParent === null)) {
+                    if (index < tutorialSteps.length - 1) {
+                        currentStep++;
+                        showStep(currentStep);
+                        return;
+                    }
+                }
+
+                // Update step indicator
+                indicator.innerHTML = tutorialSteps.map((_, i) =>
+                    `<div class="tutorial-step-dot ${i < index ? 'completed' : ''} ${i === index ? 'active' : ''}"></div>`
+                ).join('');
+
+                // Update content
+                content.innerHTML = `<h3>${step.title}</h3><p>${step.text}</p>`;
+
+                // Update buttons
+                prevBtn.disabled = index === 0;
+                nextBtn.textContent = index === tutorialSteps.length - 1 ? 'Finish ✓' : 'Next →';
+
+                // Position highlight
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    const padding = 15;
+                    const size = Math.max(rect.width, rect.height) + padding * 2;
+
+                    if (step.highlight === 'rect') {
+                        highlight.style.borderRadius = '12px';
+                        highlight.style.width = rect.width + padding * 2 + 'px';
+                        highlight.style.height = rect.height + padding * 2 + 'px';
+                    } else {
+                        highlight.style.borderRadius = '50%';
+                        highlight.style.width = size + 'px';
+                        highlight.style.height = size + 'px';
+                    }
+
+                    highlight.style.left = rect.left + rect.width / 2 - (step.highlight === 'rect' ? (rect.width + padding * 2) / 2 : size / 2) + 'px';
+                    highlight.style.top = rect.top + rect.height / 2 - (step.highlight === 'rect' ? (rect.height + padding * 2) / 2 : size / 2) + 'px';
+
+                    // Position tooltip
+                    positionTooltip(rect, step.position);
+                } else {
+                    // Center if no element
+                    highlight.style.display = 'none';
+                    tooltip.style.left = '50%';
+                    tooltip.style.top = '50%';
+                    tooltip.style.transform = 'translate(-50%, -50%)';
+                }
+            }
+
+            function positionTooltip(rect, position) {
+                highlight.style.display = 'block';
+                tooltip.style.transform = 'none';
+                const gap = 20;
+
+                switch (position) {
+                    case 'bottom':
+                        tooltip.style.left = Math.max(10, Math.min(window.innerWidth - 340, rect.left + rect.width / 2 - 160)) + 'px';
+                        tooltip.style.top = rect.bottom + gap + 'px';
+                        break;
+                    case 'top':
+                        tooltip.style.left = Math.max(10, rect.left + rect.width / 2 - 160) + 'px';
+                        tooltip.style.top = rect.top - tooltip.offsetHeight - gap + 'px';
+                        break;
+                    case 'left':
+                        tooltip.style.left = Math.max(10, rect.left - 340 - gap) + 'px';
+                        tooltip.style.top = rect.top + rect.height / 2 - 60 + 'px';
+                        break;
+                    case 'right':
+                        tooltip.style.left = rect.right + gap + 'px';
+                        tooltip.style.top = rect.top + rect.height / 2 - 60 + 'px';
+                        break;
+                    case 'center':
+                        tooltip.style.left = '50%';
+                        tooltip.style.top = '50%';
+                        tooltip.style.transform = 'translate(-50%, -50%)';
+                        break;
+                }
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentStep > 0) {
+                    currentStep--;
+                    showStep(currentStep);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentStep < tutorialSteps.length - 1) {
+                    currentStep++;
+                    showStep(currentStep);
+                } else {
+                    endTutorial();
+                }
+            });
+
+            skipBtn.addEventListener('click', endTutorial);
+
+            document.getElementById('startTutorialBtn')?.addEventListener('click', startTutorial);
+
+            // Auto-start for first-time users (optional)
+            // if (!localStorage.getItem('tutorialCompleted')) {
+            //     setTimeout(startTutorial, 1000);
+            // }
+        })();
+    </script>
 
     <pre id="output"></pre>
     <script src="stripe.js"></script>
