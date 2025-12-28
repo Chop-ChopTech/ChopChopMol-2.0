@@ -4945,27 +4945,11 @@ window.toggleRibbon = toggleRibbon;
             row.onclick = (e) => {
                 if (e.target.classList.contains('col-desc')) {
                     e.stopPropagation();
-                    const existingExpand = row.nextElementSibling?.classList.contains('desc-expanded-row');
-
-                    // Collapse any existing expanded rows
-                    tbody.querySelectorAll('.desc-expanded-row').forEach(r => {
-                        r.classList.remove('show');
-                        setTimeout(() => r.remove(), 250);
+                    // Collapse others first
+                    tbody.querySelectorAll('.col-desc.expanded').forEach(el => {
+                        if (el !== e.target) el.classList.remove('expanded');
                     });
-
-                    // If wasn't already expanded, add new expanded row
-                    if (!existingExpand && e.target.textContent !== 'Compound') {
-                        const expandRow = document.createElement('tr');
-                        expandRow.className = 'desc-expanded-row';
-                        expandRow.innerHTML = `<td colspan="3"><div class="desc-expanded-cell">${e.target.textContent}</div></td>`;
-                        expandRow.onclick = () => {
-                            expandRow.classList.remove('show');
-                            setTimeout(() => expandRow.remove(), 250);
-                        };
-                        row.after(expandRow);
-                        // Trigger reflow then animate
-                        requestAnimationFrame(() => expandRow.classList.add('show'));
-                    }
+                    e.target.classList.toggle('expanded');
                     return;
                 }
                 load(row.dataset.name, row.dataset.source, row.dataset.id);

@@ -898,11 +898,12 @@ input[type="range"]:focus {
     color: rgba(255, 255, 255, 0.5);
     font-size: 11px;
     max-width: 180px;
+    max-height: 20px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.25s ease;
 }
 
 .db-search-table .col-desc:hover {
@@ -911,19 +912,14 @@ input[type="range"]:focus {
 
 .db-search-table .col-desc.expanded {
     white-space: normal;
-    max-width: 300px;
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    max-height: 200px;
+    padding: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 50, 80, 0.4);
     border-radius: 4px;
-}
-
-.db-search-table .col-desc {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 11px;
-    max-width: 180px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .db-search-panel.active {
@@ -1063,6 +1059,7 @@ input[type="range"]:focus {
     color: rgba(255, 255, 255, 0.85);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     border-right: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: left;
 }
 
 .db-search-table td:last-child {
