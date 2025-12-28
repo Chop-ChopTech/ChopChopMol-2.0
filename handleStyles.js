@@ -220,7 +220,7 @@ export function showNotification(message, type) {
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
         ${type === 'success' ? 'background: linear-gradient(135deg, #00c851 0%, #00ff00 100%);' : ''}
         ${type === 'error' ? 'background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);' : ''}
-        ${type === 'info' ? 'background: linear-gradient(135deg,rgb(81, 208, 255) 0%,rgb(0, 105, 204) 50%, rgb(85, 0, 204) 100%);' : ''}
+        ${type === 'info' ? 'background-color:rgba(0, 13, 43, 0);' : ''}
     `;
 
     document.body.appendChild(notification);
