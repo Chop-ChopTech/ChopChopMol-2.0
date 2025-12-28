@@ -2755,10 +2755,13 @@
                     text: 'Click this button to open or close the File Explorer panel.',
                     position: 'bottom',
                     action: () => {
-                        const panel = document.getElementById('fileExplorerPanel');
-                        if (panel && !panel.classList.contains('open')) {
-                            document.getElementById('toggleFileExplorer')?.click();
-                        }
+                        const explorerToggle = document.getElementById('explorerCollapseToggle');
+
+                        explorerToggle?.addEventListener('click', () => {
+                            explorerPanel.classList.toggle('open');
+                            explorerToggle.classList.toggle('collapsed', !explorerPanel.classList.contains('open'));
+                            window.updateRendererSize?.();
+                        });
                     }
                 },
                 {
