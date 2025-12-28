@@ -2701,7 +2701,7 @@
                     position: 'bottom'
                 },
                 {
-                    target: '#resetCamera',
+                    target: '#reset-camera',
                     title: 'Reset Camera',
                     icon: 'fa-arrows-to-eye',
                     text: 'Lost your molecule? Click here to snap the camera back and center the molecule in view.',
@@ -2766,6 +2766,15 @@
                     text: 'Customize your molecule to look the way you want, and save them for future use.',
                     position: 'left',
                     requiresOpen: 'settingsDropdown,styleSubmenu',
+                    shape: 'rect'
+                },
+                {
+                    target: '#settingsDropdown',
+                    title: 'Edit Mode',
+                    icon: 'fa-wand-sparkles',
+                    text: 'Account settings here, and you can also donate, to help the project grow.',
+                    position: 'left',
+                    requiresOpen: 'settingsDropdown,accountSubmenu',
                     shape: 'rect'
                 },
                 {
@@ -2863,8 +2872,24 @@
                     const parts = step.requiresOpen.split(',');
                     const panel = document.getElementById(parts[0]);
 
+                    // Close previously opened dropdowns (unless same one)
+                    document.querySelectorAll('.dropdown-content').forEach(d => {
+                        if (d.id !== parts[0]) {
+                            d.style.opacity = '';
+                            d.style.pointerEvents = '';
+                            d.style.transform = '';
+                        }
+                    });
+
+                    // Close previously opened submenus (unless same one)
+                    document.querySelectorAll('.submenu-content.open').forEach(s => {
+                        if (s.id !== parts[1]) {
+                            s.classList.remove('open');
+                            s.closest('.settings-submenu')?.classList.remove('open');
+                        }
+                    });
+
                     if (panel) {
-                        // Check if it's a dropdown-content inside a .dropdown
                         if (panel.classList.contains('dropdown-content')) {
                             panel.style.opacity = '1';
                             panel.style.pointerEvents = 'auto';
@@ -2891,6 +2916,17 @@
                             submenu.closest('.settings-submenu')?.classList.add('open');
                         }
                     }
+                } else {
+                    // No requiresOpen - close all dropdowns and submenus
+                    document.querySelectorAll('.dropdown-content').forEach(d => {
+                        d.style.opacity = '';
+                        d.style.pointerEvents = '';
+                        d.style.transform = '';
+                    });
+                    document.querySelectorAll('.submenu-content.open').forEach(s => {
+                        s.classList.remove('open');
+                        s.closest('.settings-submenu')?.classList.remove('open');
+                    });
                 }
 
                 // Execute action if present
@@ -2943,10 +2979,16 @@
 
                 if (el && step.position !== 'center') {
                     const rect = el.getBoundingClientRect();
-                    const padding = step.padding !== undefined ? step.padding : 15;
+
+                    // Auto-detect: small elements (icons/buttons) get padding + circle, larger elements hug tight + rect
+                    const isSmallElement = el.matches('.dropdown-icon, button, .dropdown-icon *, button *') ||
+                        (rect.width < 60 && rect.height < 60);
+
+                    const padding = step.padding !== undefined ? step.padding : (isSmallElement ? 15 : 0);
+                    const shape = step.shape !== undefined ? step.shape : (isSmallElement ? '' : 'rect');
 
                     highlight.style.display = 'block';
-                    highlight.className = 'tutorial-highlight' + (step.shape === 'rect' ? ' rect' : '');
+                    highlight.className = 'tutorial-highlight' + (shape === 'rect' ? ' rect' : '');
 
                     if (step.shape === 'rect') {
                         highlight.style.width = rect.width + padding * 2 + 'px';
