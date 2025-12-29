@@ -1456,3 +1456,13 @@ window.AIAgent = {
     setModel: (m) => { AI_CONFIG.model = m; localStorage.setItem('chopchop_ai_model', m); },
     getModel: () => AI_CONFIG.model
 };
+
+// Cleanup session on tab/window close
+window.addEventListener('beforeunload', () => {
+    if (AI_CONFIG.sessionId) {
+        navigator.sendBeacon(
+            `${AI_CONFIG.backendUrl}/ai/clear`,
+            JSON.stringify({ sessionId: AI_CONFIG.sessionId })
+        );
+    }
+});
