@@ -1460,9 +1460,10 @@ window.AIAgent = {
 // Cleanup session on tab/window close
 window.addEventListener('beforeunload', () => {
     if (AI_CONFIG.sessionId) {
-        navigator.sendBeacon(
-            `${AI_CONFIG.backendUrl}/ai/clear`,
-            JSON.stringify({ sessionId: AI_CONFIG.sessionId })
+        const blob = new Blob(
+            [JSON.stringify({ sessionId: AI_CONFIG.sessionId })],
+            { type: 'application/json' }
         );
+        navigator.sendBeacon(`${AI_CONFIG.backendUrl}/ai/clear`, blob);
     }
 });
