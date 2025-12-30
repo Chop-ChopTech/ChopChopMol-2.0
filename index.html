@@ -1922,7 +1922,24 @@
 
             <div id="bottom-options">
                 <select id="aiModelSelect" class="ai-model-select" title="Select AI Model">
-                    <option value="gpt-5-mini">GPT-5 Mini</option>
+                    <optgroup label="GPT-5.2 (Latest)">
+                        <option value="gpt-5.2">GPT-5.2</option>
+                        <option value="gpt-5.2-pro">GPT-5.2 Pro</option>
+                    </optgroup>
+                    <optgroup label="GPT-5.1">
+                        <option value="gpt-5.1">GPT-5.1</option>
+                        <option value="gpt-5.1-codex-max">GPT-5.1 Codex Max</option>
+                    </optgroup>
+                    <optgroup label="GPT-5">
+                        <option value="gpt-5">GPT-5</option>
+                        <option value="gpt-5-mini" selected>GPT-5 Mini</option>
+                        <option value="gpt-5-nano">GPT-5 Nano</option>
+                    </optgroup>
+                    <optgroup label="GPT-4.1 (No Reasoning)">
+                        <option value="gpt-4.1">GPT-4.1</option>
+                        <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                        <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                    </optgroup>
                 </select>
                 <button id="aiSendBtn"><i class="fas fa-paper-plane"></i></button>
                 <button id="aiMicBtn" class="ai-mic-btn" title="Voice input">
