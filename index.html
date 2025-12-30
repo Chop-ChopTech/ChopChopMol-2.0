@@ -1207,7 +1207,7 @@
                 </div>
                 <div class="hero-stats">
                     <div class="stat">
-                        <div class="stat-value" data-target="50000" data-suffix="+" data-format="comma">0</div>
+                        <div class="stat-value" data-target="450000" data-suffix="+" data-format="comma">0</div>
                         <div class="stat-label">Atoms Supported</div>
                     </div>
                     <div class="stat">
@@ -1562,50 +1562,45 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // Caffeine molecule (C8H10N4O2) - accurate coordinates
-        const caffeineAtoms = [
-            { element: 'C', x: 0, y: 0, z: 0, color: 0x404040 },
-            { element: 'C', x: 1.4, y: 0, z: 0, color: 0x404040 },
-            { element: 'C', x: 2.1, y: 1.21, z: 0, color: 0x404040 },
-            { element: 'C', x: 1.4, y: 2.42, z: 0, color: 0x404040 },
-            { element: 'C', x: 0, y: 2.42, z: 0, color: 0x404040 },
-            { element: 'C', x: -0.7, y: 1.21, z: 0, color: 0x404040 },
-            { element: 'C', x: 3.55, y: 1.21, z: 0, color: 0x404040 },
-            { element: 'C', x: -2.15, y: 1.21, z: 0, color: 0x404040 },
-            { element: 'N', x: 2.1, y: -1.05, z: 0, color: 0x3050ff },
-            { element: 'N', x: -0.7, y: 3.47, z: 0, color: 0x3050ff },
-            { element: 'N', x: 2.1, y: 3.47, z: 0, color: 0x3050ff },
-            { element: 'N', x: -0.7, y: -0.85, z: 0, color: 0x3050ff },
-            { element: 'O', x: 4.2, y: 0.1, z: 0, color: 0xff3030 },
-            { element: 'O', x: -2.8, y: 2.2, z: 0, color: 0xff3030 },
-            { element: 'H', x: 2.1, y: -1.85, z: 0.85, color: 0xffffff },
-            { element: 'H', x: 2.9, y: -1.85, z: -0.42, color: 0xffffff },
-            { element: 'H', x: 1.3, y: -1.85, z: -0.42, color: 0xffffff },
-            { element: 'H', x: -0.7, y: 4.27, z: 0.85, color: 0xffffff },
-            { element: 'H', x: 0.1, y: 4.27, z: -0.42, color: 0xffffff },
-            { element: 'H', x: -1.5, y: 4.27, z: -0.42, color: 0xffffff },
-            { element: 'H', x: 2.1, y: 4.27, z: 0.85, color: 0xffffff },
-            { element: 'H', x: 2.9, y: 4.27, z: -0.42, color: 0xffffff },
-            { element: 'H', x: 1.3, y: 4.27, z: -0.42, color: 0xffffff },
-            { element: 'H', x: 4.05, y: 2.1, z: 0, color: 0xffffff },
-        ];
+        /* =========================
+           LOAD DATA
+        ========================= */
+        const moleculeData = await fetch('molecule-data.json')
+            .then(r => r.json())
+            .catch(() => null);
 
-        const caffeineBonds = [
-            [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0], [1, 8], [4, 9], [3, 10], [0, 11],
-            [2, 6], [5, 7], [6, 12], [7, 13], [8, 14], [8, 15], [8, 16], [9, 17], [9, 18], [9, 19],
-            [10, 20], [10, 21], [10, 22], [6, 23]
-        ];
+        /* =========================
+           ELEMENT SETTINGS
+        ========================= */
+        const ELEMENTS = {
+            H: { color: 'white', radius: 0.31 },
+            C: { color: 'gray', radius: 0.76 },
+            N: { color: 'blue', radius: 0.71 },
+            O: { color: '#ff3b3b', radius: 0.66 },
+            Si: { color: 'darkgray', radius: 1.11 },
+        };
 
-        const atomRadii = { 'C': 0.4, 'N': 0.38, 'O': 0.35, 'H': 0.22 };
-
+        /* =========================
+           THREE.JS SETUP
+        ========================= */
         const canvas = document.getElementById('molecule-canvas');
         const container = canvas.parentElement;
 
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
-        camera.position.set(8, 5, 10);
 
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        const camera = new THREE.PerspectiveCamera(
+            50,
+            container.clientWidth / container.clientHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(20, 20, 50);
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas,
+            antialias: true,
+            alpha: true
+        });
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -1613,60 +1608,156 @@
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.5;
+        controls.autoRotateSpeed = 0.3;
         controls.enablePan = false;
-        controls.minDistance = 5;
-        controls.maxDistance = 20;
+        controls.minDistance = 30;
+        controls.maxDistance = 150;
 
+        /* =========================
+           LIGHTING
+        ========================= */
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const light1 = new THREE.DirectionalLight(0xffffff, 1);
-        light1.position.set(10, 10, 10);
-        scene.add(light1);
-        const light2 = new THREE.DirectionalLight(0xffffff, 0.4);
-        light2.position.set(-10, -5, -10);
-        scene.add(light2);
 
+        const dir1 = new THREE.DirectionalLight(0xffffff, 1);
+        dir1.position.set(50, 50, 50);
+        scene.add(dir1);
+
+        const dir2 = new THREE.DirectionalLight(0xffffff, 0.4);
+        dir2.position.set(-50, -25, -50);
+        scene.add(dir2);
+
+        /* =========================
+           MOLECULE GROUP
+        ========================= */
         const moleculeGroup = new THREE.Group();
-        const sphereGeo = new THREE.SphereGeometry(1, 32, 32);
-
-        caffeineAtoms.forEach(atom => {
-            const material = new THREE.MeshStandardMaterial({ color: atom.color, roughness: 0.3, metalness: 0.2 });
-            const mesh = new THREE.Mesh(sphereGeo, material);
-            mesh.scale.setScalar(atomRadii[atom.element] || 0.3);
-            mesh.position.set(atom.x, atom.y, atom.z);
-            moleculeGroup.add(mesh);
-        });
-
-        caffeineBonds.forEach(([i, j]) => {
-            const a1 = caffeineAtoms[i], a2 = caffeineAtoms[j];
-            const start = new THREE.Vector3(a1.x, a1.y, a1.z);
-            const end = new THREE.Vector3(a2.x, a2.y, a2.z);
-            const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-            const dir = new THREE.Vector3().subVectors(end, start).normalize();
-            const halfLen1 = start.distanceTo(mid);
-            const halfLen2 = mid.distanceTo(end);
-
-            // First half - color of atom 1
-            const mat1 = new THREE.MeshStandardMaterial({ color: a1.color, roughness: 0.3, metalness: 0.2 });
-            const geo1 = new THREE.CylinderGeometry(0.08, 0.08, halfLen1, 8);
-            const mesh1 = new THREE.Mesh(geo1, mat1);
-            mesh1.position.copy(start).lerp(mid, 0.5);
-            mesh1.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-            moleculeGroup.add(mesh1);
-
-            // Second half - color of atom 2
-            const mat2 = new THREE.MeshStandardMaterial({ color: a2.color, roughness: 0.3, metalness: 0.2 });
-            const geo2 = new THREE.CylinderGeometry(0.08, 0.08, halfLen2, 8);
-            const mesh2 = new THREE.Mesh(geo2, mat2);
-            mesh2.position.copy(mid).lerp(end, 0.5);
-            mesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-            moleculeGroup.add(mesh2);
-        });
-
-        const box = new THREE.Box3().setFromObject(moleculeGroup);
-        moleculeGroup.position.sub(box.getCenter(new THREE.Vector3()));
         scene.add(moleculeGroup);
 
+        if (moleculeData?.atomData) {
+            const atoms = moleculeData.atomData;
+
+            /* ---------- Center molecule ---------- */
+            let cx = 0, cy = 0, cz = 0;
+            atoms.forEach(a => {
+                cx += a.x; cy += a.y; cz += a.z;
+            });
+            cx /= atoms.length;
+            cy /= atoms.length;
+            cz /= atoms.length;
+
+            atoms.forEach(a => {
+                a.x -= cx;
+                a.y -= cy;
+                a.z -= cz;
+            });
+
+            /* ---------- ATOMS (Instanced) ---------- */
+            const sphereGeo = new THREE.SphereGeometry(1, 20, 20);
+            const atomsByElement = {};
+
+            atoms.forEach(atom => {
+                if (!atomsByElement[atom.element]) {
+                    atomsByElement[atom.element] = [];
+                }
+                atomsByElement[atom.element].push(atom);
+            });
+
+            Object.entries(atomsByElement).forEach(([element, list]) => {
+                const settings = ELEMENTS[element] || { color: '#888', radius: 0.5 };
+
+                const material = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(settings.color),
+                    roughness: 0.3,
+                    metalness: 0.15
+                });
+
+                const mesh = new THREE.InstancedMesh(
+                    sphereGeo,
+                    material,
+                    list.length
+                );
+
+                const scale = 2;
+                const mat = new THREE.Matrix4();
+                list.forEach((a, i) => {
+                    mat.makeScale(
+                        settings.radius / scale,
+                        settings.radius / scale,
+                        settings.radius / scale
+                    );
+                    mat.setPosition(a.x, a.y, a.z);
+                    mesh.setMatrixAt(i, mat);
+                });
+
+                mesh.instanceMatrix.needsUpdate = true;
+                moleculeGroup.add(mesh);
+            });
+
+            /* =========================
+               BONDS (HALF-COLORED)
+            ========================= */
+            const BOND_FACTOR = 1.25;
+            const bondRadius = 0.09;
+
+            const bondGeo = new THREE.CylinderGeometry(
+                bondRadius,
+                bondRadius,
+                1,
+                12
+            );
+
+            const up = new THREE.Vector3(0, 1, 0);
+
+            for (let i = 0; i < atoms.length; i++) {
+                for (let j = i + 1; j < atoms.length; j++) {
+                    const a = atoms[i];
+                    const b = atoms[j];
+
+                    const ra = ELEMENTS[a.element]?.radius ?? 0.5;
+                    const rb = ELEMENTS[b.element]?.radius ?? 0.5;
+                    const maxDist = (ra + rb) * BOND_FACTOR;
+
+                    const vA = new THREE.Vector3(a.x, a.y, a.z);
+                    const vB = new THREE.Vector3(b.x, b.y, b.z);
+
+                    const dist = vA.distanceTo(vB);
+                    if (dist > maxDist) continue;
+
+                    const mid = vA.clone().add(vB).multiplyScalar(0.5);
+                    const dir = vB.clone().sub(vA).normalize();
+                    const quat = new THREE.Quaternion().setFromUnitVectors(up, dir);
+
+                    // ---- half bond A -> mid ----
+                    const matA = new THREE.MeshStandardMaterial({
+                        color: new THREE.Color(ELEMENTS[a.element]?.color ?? '#888'),
+                        roughness: 0.4,
+                        metalness: 0.1
+                    });
+
+                    const bondA = new THREE.Mesh(bondGeo, matA);
+                    bondA.quaternion.copy(quat);
+                    bondA.scale.set(1, dist / 2, 1);
+                    bondA.position.copy(vA.clone().add(mid).multiplyScalar(0.5));
+                    moleculeGroup.add(bondA);
+
+                    // ---- half bond B -> mid ----
+                    const matB = new THREE.MeshStandardMaterial({
+                        color: new THREE.Color(ELEMENTS[b.element]?.color ?? '#888'),
+                        roughness: 0.4,
+                        metalness: 0.1
+                    });
+
+                    const bondB = new THREE.Mesh(bondGeo, matB);
+                    bondB.quaternion.copy(quat);
+                    bondB.scale.set(1, dist / 2, 1);
+                    bondB.position.copy(vB.clone().add(mid).multiplyScalar(0.5));
+                    moleculeGroup.add(bondB);
+                }
+            }
+        }
+
+        /* =========================
+           ANIMATION LOOP
+        ========================= */
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
@@ -1674,13 +1765,15 @@
         }
         animate();
 
+        /* =========================
+           RESIZE
+        ========================= */
         window.addEventListener('resize', () => {
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(container.clientWidth, container.clientHeight);
         });
 
-        // Navbar scroll
         const navbar = document.getElementById('navbar');
         window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
 
@@ -1696,66 +1789,45 @@
         const observer = new IntersectionObserver(entries => {
             entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'translateY(0)'; } });
         }, { threshold: 0.1 });
-        document.querySelectorAll('.feature-card, .pricing-card, .ai-feature').forEach(el => {
+        document.querySelectorAll('.feature-card, .pricing-card, .ai-feature, .mace-feature').forEach(el => {
             el.style.opacity = '0';
             el.style.transform = 'translateY(30px)';
             el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
             observer.observe(el);
         });
 
-        // Rolling number animation - slot machine style
+        // Rolling number animation
         function createSlotMachine(el) {
             const target = el.dataset.target;
             const suffix = el.dataset.suffix || '';
             const useComma = el.dataset.format === 'comma';
-
             if (el.dataset.text === 'true') return;
-
             el.innerHTML = '';
-
-            // Format with commas if needed
-            let displayTarget = target;
-            if (useComma) {
-                displayTarget = parseInt(target).toLocaleString();
-            }
-
-            // Create digit slots for each character in target
-            const chars = displayTarget.split('');
-            chars.forEach((char, index) => {
-                // Handle comma as static character
+            let displayTarget = useComma ? parseInt(target).toLocaleString() : target;
+            const digits = displayTarget.split('');
+            digits.forEach((char, i) => {
                 if (char === ',') {
                     const comma = document.createElement('span');
-                    comma.className = 'stat-suffix';
                     comma.textContent = ',';
+                    comma.className = 'stat-suffix';
                     el.appendChild(comma);
                     return;
                 }
-
-                const slot = document.createElement('div');
+                const slot = document.createElement('span');
                 slot.className = 'digit-slot';
-
-                const roll = document.createElement('div');
+                const roll = document.createElement('span');
                 roll.className = 'digit-roll';
-
-                // Create the sequence: 0-9 repeated, ending at target digit
-                const targetNum = parseInt(char);
-                // Add numbers 0-9 twice, then 0 to target
-                for (let i = 0; i <= 10 + targetNum; i++) {
+                for (let n = 0; n <= 9; n++) {
                     const span = document.createElement('span');
-                    span.textContent = i % 10;
+                    span.textContent = n;
                     roll.appendChild(span);
                 }
-
                 slot.appendChild(roll);
                 el.appendChild(slot);
-
-                // Stagger the animation
                 setTimeout(() => {
-                    roll.style.transform = `translateY(-${(10 + targetNum) * 1.2}em)`;
-                }, index * 100);
+                    roll.style.transform = `translateY(-${parseInt(char) * 1.2}em)`;
+                }, 100 + i * 150);
             });
-
-            // Add suffix
             if (suffix) {
                 const suffixSpan = document.createElement('span');
                 suffixSpan.className = 'stat-suffix';
@@ -1764,22 +1836,20 @@
             }
         }
 
-        const counterObserver = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    createSlotMachine(entry.target);
-                    counterObserver.unobserve(entry.target);
+        const statObserver = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if (e.isIntersecting && !e.target.dataset.animated) {
+                    e.target.dataset.animated = 'true';
+                    createSlotMachine(e.target);
                 }
             });
         }, { threshold: 0.5 });
-
-        document.querySelectorAll('.stat-value[data-target]').forEach(el => {
-            if (el.dataset.text !== 'true') {
-                el.textContent = '0';
-                counterObserver.observe(el);
-            }
-        });
+        document.querySelectorAll('.stat-value').forEach(el => statObserver.observe(el));
     </script>
+
+
+
+
 </body>
 
 </html>
