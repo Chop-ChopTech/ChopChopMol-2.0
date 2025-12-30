@@ -820,6 +820,155 @@
             margin-bottom: 2rem;
         }
 
+        .mace-section {
+            background: linear-gradient(180deg, transparent, rgba(0, 200, 150, 0.03), transparent);
+        }
+
+        .mace-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .mace-content h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        .mace-content h3 span {
+            background: linear-gradient(135deg, #00c896, #667eea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .mace-content>p {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .mace-features {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .mace-feature {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .mace-feature:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .mace-feature-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 200, 150, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .mace-feature-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: #00c896;
+            fill: none;
+        }
+
+        .mace-feature-text strong {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .mace-feature-text span {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .mace-models {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .mace-model {
+            padding: 0.5rem 1rem;
+            background: rgba(0, 200, 150, 0.1);
+            border: 1px solid rgba(0, 200, 150, 0.3);
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #00c896;
+        }
+
+        .mace-visual {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .energy-display {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 3rem;
+            text-align: center;
+            min-width: 280px;
+        }
+
+        .energy-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .energy-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #00c896;
+        }
+
+        .energy-value span {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        .energy-kcal {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .mace-container {
+                grid-template-columns: 1fr;
+            }
+
+            .mace-visual {
+                order: 2;
+            }
+        }
+
         footer {
             background: rgba(0, 0, 0, 0.3);
             border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -1030,6 +1179,7 @@
             <li><a href="#features">Features</a></li>
             <li><a href="#ai">AI Assistant</a></li>
             <li><a href="#formats">Formats</a></li>
+            <li><a href="#mace">MACE</a></li>
             <li><a href="#pricing">Pricing</a></li>
         </ul>
         <div class="nav-cta">
@@ -1046,7 +1196,7 @@
                 <p>Professional molecular visualization meets AI-powered editing. Build, analyze, and transform
                     molecular structures with unprecedented speed and precision.</p>
                 <div class="hero-buttons">
-                    <a href="demo/index.html" class="btn btn-primary btn-large">
+                    <a href="demo/" class="btn btn-primary btn-large">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -1225,6 +1375,62 @@
         </div>
     </section>
 
+    <section class="section mace-section" id="mace">
+        <div class="section-header">
+            <span class="section-tag">ML Potentials</span>
+            <h2 class="section-title">MACE Energy Calculations</h2>
+            <p class="section-subtitle">State-of-the-art machine learning potentials for accurate energy calculations
+                and
+                geometry optimization.</p>
+        </div>
+        <div class="mace-container">
+            <div class="mace-content">
+                <h3>Powered by <span>MACE-MP</span></h3>
+                <p>Calculate molecular energies and optimize geometries using foundation models trained on millions of
+                    DFT
+                    calculations.</p>
+                <div class="mace-features">
+                    <div class="mace-feature">
+                        <div class="mace-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                            </svg></div>
+                        <div class="mace-feature-text"><strong>Single-Point Energy</strong><span>Get accurate energies
+                                in
+                                seconds</span></div>
+                    </div>
+                    <div class="mace-feature">
+                        <div class="mace-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
+                                <path
+                                    d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83">
+                                </path>
+                            </svg></div>
+                        <div class="mace-feature-text"><strong>Geometry Optimization</strong><span>Find minimum energy
+                                structures automatically</span></div>
+                    </div>
+                    <div class="mace-feature">
+                        <div class="mace-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg></div>
+                        <div class="mace-feature-text"><strong>Energy Profiles</strong><span>Scan rotations and
+                                translations
+                                with energy tracking</span></div>
+                    </div>
+                </div>
+                <div class="mace-models">
+                    <span class="mace-model">mace-mp-0a</span>
+                    <span class="mace-model">mace-mp-0b3</span>
+                    <span class="mace-model">mace-mpa-0</span>
+                </div>
+            </div>
+            <div class="mace-visual">
+                <div class="energy-display">
+                    <div class="energy-label">Energy</div>
+                    <div class="energy-value">-156.42 <span>eV</span></div>
+                    <div class="energy-kcal">-3,607.8 kcal/mol</div>
+                </div>
+            </div>
+        </div>
+    </section>
     <section class="section pricing-section" id="pricing">
         <div class="section-header">
             <span class="section-tag">Simple Pricing</span>
@@ -1275,7 +1481,7 @@
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>Advanced measurements</li>
                 </ul>
-                <a href="upgrade/premium.html" class="btn btn-primary">Upgrade to Pro</a>
+                <a href="upgrade/" class="btn btn-primary">Upgrade to Pro</a>
             </div>
         </div>
     </section>
