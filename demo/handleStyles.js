@@ -13,7 +13,7 @@ export async function saveStylePreferences(userId) {
             roughness: parseFloat(document.getElementById('style1').value),
             metalness: parseFloat(document.getElementById('style2').value),
             opacity: parseFloat(document.getElementById('style3').value),
-            bonds: parseFloat(document.getElementById('style4').value) || 1, // Default if no value
+            bondThickness: parseFloat(document.getElementById('style4').value),
             atomSize: parseFloat(document.getElementById('style5').value),
             resolution: parseInt(document.getElementById('style6').value),
             antialias: document.getElementById('style7').checked,
@@ -23,6 +23,7 @@ export async function saveStylePreferences(userId) {
             toggleLabels: document.getElementById('toggleLabels').checked,
             lastUpdated: new Date().toISOString()
         };
+
 
         console.log('Saving preferences:', stylePrefs);
 
@@ -95,8 +96,10 @@ export function applyStylePreferences(prefs, renderer) {
         main.opacity = prefs.opacity;
     }
 
-    if (prefs.bonds !== undefined) {
-        document.getElementById('style4').value = prefs.bonds;
+    if (prefs.bondThickness !== undefined) {
+        console.log('Bond thickness:', prefs.bondThickness);
+        document.getElementById('style4').value = prefs.bondThickness;
+        main.bondThickness = prefs.bondThickness;
     }
 
     if (prefs.atomSize !== undefined) {

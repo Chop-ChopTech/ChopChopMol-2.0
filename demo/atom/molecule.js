@@ -324,8 +324,9 @@ export default class Molecule {
         this.main.scene.add(this.bondGroup);
     }
 
-    visualizeBondsStyle(bonds, rotation, translation) {
-        const radius = 0.15;
+    visualizeBondsStyle(bonds, mode) {
+        console.log("mode", mode)
+        const radius = mode.bondThickness || 0.15;
         const radialSegments = 8;
 
         const tempVec1 = new THREE.Vector3();
@@ -420,7 +421,7 @@ export default class Molecule {
         if (mode == 0) {
             this.visualizeBondsFast(this.bonds, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
         } else {
-            this.visualizeBondsStyle(this.bonds, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+            this.visualizeBondsStyle(this.bonds, mode);
         }
     }
 

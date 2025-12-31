@@ -162,6 +162,7 @@ export default class Main {
         this.mode = 0
         this.roughness = 0.17;
         this.metalness = 0.3;
+        this.bondThickness = 0.15;
         this.opacity = 1;
         this.atomSize = 1;
         this.resolution = 16
@@ -292,6 +293,8 @@ export default class Main {
             }
         }
 
+        this.molecule.updateBonds(this.mode);
+
         // Labels only work in normal mode
         if (!useRibbonMode && labelMode && this.molecule.atoms && this.molecule.atoms.length > 0) {
             this.toggleLabels(true);
@@ -332,7 +335,7 @@ export default class Main {
     }
     setNewMode(style = false) {
         if (style) {
-            this.mode = { roughness: main.roughness, metalness: main.metalness, opacity: main.opacity, atomSize: main.atomSize, resolution: main.resolution, antialias: antialiasToggled, labels: main.labelsToggled };
+            this.mode = { roughness: main.roughness, metalness: main.metalness, bondThickness: main.bondThickness, opacity: main.opacity, atomSize: main.atomSize, resolution: main.resolution, antialias: antialiasToggled, labels: main.labelsToggled };
         } else {
             this.mode = 0
         }
@@ -425,6 +428,12 @@ roughnessSelector.addEventListener('input', () => {
 });
 metalnessSelector.addEventListener('input', () => {
     main.metalness = metalnessSelector.value;
+    if (mode != 0) {
+        updateStyles();
+    }
+});
+bondsSelector.addEventListener('input', () => {
+    main.bondThickness = bondsSelector.value;
     if (mode != 0) {
         updateStyles();
     }
