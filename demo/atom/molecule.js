@@ -316,53 +316,86 @@ export default class Molecule {
     }
 
     visualizeBondsStyle(bonds, mode) {
-        console.log("mode", mode)
         const radius = mode.bondThickness || 0.15;
         const radialSegments = 8;
 
-        const tempVec1 = new THREE.Vector3();
-        const tempVec2 = new THREE.Vector3();
-        const tempVec3 = new THREE.Vector3();
+        // Shared unit cylinder (Y axis, height = 1)
+        const baseGeometry = new THREE.CylinderGeometry(
+            radius,
+            radius,
+            1,
+            radialSegments,
+            1,
+            false
+        );
 
-        const cylinderGeometry = (length) =>
-            new THREE.CylinderGeometry(radius, radius, length, radialSegments);
+        // Group bonds by color to minimize materials
+        const colorMap = new Map();
 
-        bonds.forEach(bond => {
-            const start = tempVec1.copy(bond.atom1.position).sub(this.offset);
-            const end = tempVec2.copy(bond.atom2.position).sub(this.offset);
+        for (const bond of bonds) {
+            const c1 = bond.atom1.color;
+            const c2 = bond.atom2.color;
 
-            const midpoint = tempVec3.addVectors(start, end).multiplyScalar(0.5);
+            if (!colorMap.has(c1)) colorMap.set(c1, []);
+            if (!colorMap.has(c2)) colorMap.set(c2, []);
 
-            const color1 = bond.atom1.color;
-            const color2 = bond.atom2.color;
+            colorMap.get(c1).push({ bond, half: 1 });
+            colorMap.get(c2).push({ bond, half: 2 });
+        }
 
-            const length1 = start.distanceTo(midpoint);
-            const length2 = end.distanceTo(midpoint);
+        const tempStart = new THREE.Vector3();
+        const tempEnd = new THREE.Vector3();
+        const midpoint = new THREE.Vector3();
+        const dir = new THREE.Vector3();
+        const quat = new THREE.Quaternion();
+        const mat = new THREE.Matrix4();
+        const scale = new THREE.Vector3();
 
-            const bondGeom1 = cylinderGeometry(length1);
-            const bondGeom2 = cylinderGeometry(length2);
+        for (const [color, entries] of colorMap) {
+            const material = new THREE.MeshStandardMaterial({ color });
 
-            const material1 = new THREE.MeshStandardMaterial({ color: color1 });
-            const material2 = new THREE.MeshStandardMaterial({ color: color2 });
+            const mesh = new THREE.InstancedMesh(
+                baseGeometry,
+                material,
+                entries.length
+            );
 
-            const bondMesh1 = new THREE.Mesh(bondGeom1, material1);
-            const bondMesh2 = new THREE.Mesh(bondGeom2, material2);
+            let i = 0;
+            for (const { bond, half } of entries) {
+                tempStart.copy(bond.atom1.position).sub(this.offset);
+                tempEnd.copy(bond.atom2.position).sub(this.offset);
+                midpoint.addVectors(tempStart, tempEnd).multiplyScalar(0.5);
 
-            bondMesh1.position.copy(start).lerp(midpoint, 0.5);
-            bondMesh1.lookAt(midpoint);
-            bondMesh1.rotateX(Math.PI / 2);
+                const a = half === 1 ? tempStart : midpoint;
+                const b = half === 1 ? midpoint : tempEnd;
 
-            bondMesh2.position.copy(midpoint).lerp(end, 0.5);
-            bondMesh2.lookAt(end);
-            bondMesh2.rotateX(Math.PI / 2);
+                dir.subVectors(b, a);
+                const length = dir.length();
 
+                dir.normalize();
+                quat.setFromUnitVectors(
+                    new THREE.Vector3(0, 1, 0),
+                    dir
+                );
 
-            this.bondGroup.add(bondMesh1);
-            this.bondGroup.add(bondMesh2);
-        });
+                scale.set(1, length, 1);
+
+                mat.compose(
+                    a.clone().addScaledVector(dir, length * 0.5),
+                    quat,
+                    scale
+                );
+
+                mesh.setMatrixAt(i++, mat);
+            }
+
+            mesh.instanceMatrix.needsUpdate = true;
+            this.bondGroup.add(mesh);
+        }
 
         this.main.scene.add(this.bondGroup);
     }
+
 
     reset() {
         this.atoms = [];

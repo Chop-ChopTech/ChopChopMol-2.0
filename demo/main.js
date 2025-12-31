@@ -4860,7 +4860,7 @@ window.toggleRibbon = toggleRibbon;
             frameSliderContainer.style.display = 'none';
         }
 
-        window.main.newMolecule(molData, window.main.setNewMode(molData.numAtoms <= 2000), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, false, false);
+        window.main.newMolecule(molData, window.main.setNewMode(molData.numAtoms <= 2000));
         window.main.zoomCameraToFitMolecule();
     }
 
