@@ -171,8 +171,8 @@ export default class Main {
 
 
     }
-    init(data, mode, rotation, translation) {
-        this.molecule.init(data, mode);
+    init(data, mode) {
+        this.molecule.init(data, mode, true, false);
         render()
         console.log(this.data);
     }
@@ -265,32 +265,29 @@ export default class Main {
         updateFragmentList(document.getElementById('fragmentList'));
         render();
     }
-    newMolecule(data, mode, overlay, rotation, translation, center = true, soft = false, useRibbonMode = false) {
-        if (overlay) {
-            this.overlayMolecule.init(data, mode, rotation, translation, center, false);
-        } else {
-            this.reset(soft);
-            this.molecule.init(data, mode, rotation, translation, center, useRibbonMode);
+    newMolecule(data, mode, center = true, soft = false, useRibbonMode = false) {
 
-            // If ribbon mode, create ribbon instead of showing atoms
-            if (useRibbonMode && data.ribbonData) {
-                import('./ribbon.js').then(module => {
-                    ribbonGroup = module.createRibbon(
-                        data.ribbonData,
-                        scene,
-                        this.molecule.stretch,
-                        this.molecule.offset
-                    );
-                    render();
-                });
-                ribbonMode = true;
-                disableAtomInteractions();
-            } else {
-                // Normal mode - ensure interactions are enabled
-                ribbonMode = false;
-                console.log("numAtoms", this.molecule.atoms.length);
-                enableAtomInteractions();
-            }
+        this.reset(soft);
+        this.molecule.init(data, mode, center, useRibbonMode);
+
+        // If ribbon mode, create ribbon instead of showing atoms
+        if (useRibbonMode && data.ribbonData) {
+            import('./ribbon.js').then(module => {
+                ribbonGroup = module.createRibbon(
+                    data.ribbonData,
+                    scene,
+                    this.molecule.stretch,
+                    this.molecule.offset
+                );
+                render();
+            });
+            ribbonMode = true;
+            disableAtomInteractions();
+        } else {
+            // Normal mode - ensure interactions are enabled
+            ribbonMode = false;
+            console.log("numAtoms", this.molecule.atoms.length);
+            enableAtomInteractions();
         }
 
         this.molecule.updateBonds(this.mode);
@@ -330,7 +327,13 @@ export default class Main {
             ribbonMode = false;
         }
 
-        this.newMolecule(data, this.mode, overlay, rotation, translation, center, soft, useRibbon);
+        this.newMolecule(
+            data,
+            this.mode,
+            center,
+            soft,
+            useRibbon
+        );
         this.data = data;
     }
     setNewMode(style = false) {
@@ -471,7 +474,12 @@ function updateStyles() {
 
     mode = main.setNewMode(true);
 
-    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+    main.newMolecule(main.data,
+        main.mode,
+        true,
+        true,
+        false
+    );
 
     // Restore selection after molecule is recreated
     atomsSelected = previousSelection;
@@ -500,7 +508,13 @@ toggleStyleChanges.addEventListener('change', () => {
     } else {
         mode = main.setNewMode();
     }
-    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+    main.newMolecule(
+        main.data,
+        main.mode,
+        true,
+        true,
+        false
+    );
 
     // Restore selection
     atomsSelected = previousSelection;
@@ -548,7 +562,7 @@ window.addEventListener('keydown', function (e) {
     if (isLPressed && e.key === 'Enter') {
         const newData = window.prompt("Enter the JSON data:");
         if (newData) {
-            main.createNewMoleculeFromJSON(newData);
+            main.newMolecule(newData, main.mode);
         }
     }
     if (e.key == "Shift") {
@@ -595,7 +609,7 @@ toggleLabelsButton.addEventListener('change', () => {
 window.addEventListener('replyUpdated', (event) => {
     const newReply = event.detail;
     console.log(newReply);
-    main.createNewMoleculeFromJSON(JSON.stringify(newReply));
+    main.newMolecule(JSON.stringify(newReply), main.mode);
 
 });
 
@@ -1373,7 +1387,12 @@ function attachButtonEventListeners() {
                     atomsSelected.forEach(idx => {
                         main.data.atomData[idx].element = replacingMolecule;
                     });
-                    main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+                    main.newMolecule(main.data,
+                        main.mode,
+                        true,
+                        true,
+                        false
+                    );
                 }
             }
         });
@@ -1391,8 +1410,15 @@ function attachButtonEventListeners() {
             });
             main.data.numAtoms = main.data.atomData.length;  // Use actual length instead
             atomsSelected = [];
-            main.newMolecule(main.data, main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+            main.newMolecule(
+                main.data,
+                main.mode,
+                true,
+                true,
+                false
+            );
         });
+
     }
 
     if (fragmentBtn) {
@@ -1506,8 +1532,13 @@ function attachButtonEventListeners() {
 
                     isInIsolationMode = true;
 
-                    main.newMolecule(newData, main.mode, false,
-                        { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+                    main.newMolecule(
+                        newData,
+                        main.mode,
+                        true,
+                        true,
+                        false
+                    );
                     main.data = newData;
 
                     updateIsolationModeUI();
@@ -1556,8 +1587,13 @@ function attachButtonEventListeners() {
 
                 isInIsolationMode = true;
 
-                main.newMolecule(newData, main.mode, false,
-                    { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+                main.newMolecule(
+                    newData,
+                    main.mode,
+                    true,
+                    true,
+                    false
+                );
                 main.data = newData;
 
                 updateIsolationModeUI();
@@ -1718,11 +1754,6 @@ function isolateFragment(fragmentIndex) {
     main.newMolecule(
         newData,
         main.setNewMode(newData.numAtoms <= 2000),
-        false,
-        { x: 0, y: 0, z: 0 },
-        { x: 0, y: 0, z: 0 },
-        true,
-        false
     );
 
     main.data = newData;
@@ -1839,11 +1870,9 @@ function restoreOriginalMolecule() {
     main.newMolecule(
         restoredData,
         main.setNewMode(restoredData.numAtoms <= 2000),
-        false,
-        { x: 0, y: 0, z: 0 },
-        { x: 0, y: 0, z: 0 },
         true,
-        true
+        true,
+        false
     );
 
     main.data = restoredData;
@@ -1859,261 +1888,6 @@ function restoreOriginalMolecule() {
 
     console.log('Restored with', fragments.length, 'fragments');
 }
-function navigateIsolationHistory(direction) {
-    // Save current edits AND fragments before navigating
-    if (isInIsolationMode && currentIsolationIndex >= 0) {
-        const currentIsolation = isolationHistory[currentIsolationIndex];
-        if (currentIsolation && currentIsolation.originalIndices && main.molecule.atoms) {
-            // Update original molecule data with current positions
-            currentIsolation.originalIndices.forEach((originalIdx, localIdx) => {
-                if (localIdx < main.molecule.atoms.length && originalIdx < originalMoleculeData.atomData.length) {
-                    const atom = main.molecule.atoms[localIdx];
-                    originalMoleculeData.atomData[originalIdx] = {
-                        ...originalMoleculeData.atomData[originalIdx],
-                        x: atom.position.x / 4,
-                        y: atom.position.y / 4,
-                        z: atom.position.z / 4
-                    };
-                }
-            });
-
-            // SAVE SUB-FRAGMENTS created in current isolation
-            if (fragments && fragments.length > 0) {
-                // Store sub-fragments in the isolation history entry
-                currentIsolation.subFragments = fragments.map(fragment => [...fragment]);
-                console.log(`Saved ${fragments.length} sub-fragments in isolation history`);
-            }
-        }
-    }
-
-    const newIndex = currentIsolationIndex + direction;
-
-    if (newIndex < 0 || newIndex >= isolationHistory.length) {
-        console.error('Invalid history index');
-        return;
-    }
-
-    currentIsolationIndex = newIndex;
-    const isolationEntry = isolationHistory[currentIsolationIndex];
-
-    // Store current camera position
-    const currentCameraPosition = {
-        x: camera.position.x,
-        y: camera.position.y,
-        z: camera.position.z
-    };
-    const currentCameraRotation = {
-        x: camera.rotation.x,
-        y: camera.rotation.y,
-        z: camera.rotation.z
-    };
-
-    // Clear selections
-    atomsSelected = [];
-    fragmentsSelected = [];
-    fragments = [];
-
-    // Generate data using the existing generateDataFromAtoms but with updated positions
-    const updatedAtomData = [];
-    isolationEntry.originalIndices.forEach(idx => {
-        if (idx < originalMoleculeData.atomData.length) {
-            const atomData = originalMoleculeData.atomData[idx];
-            updatedAtomData.push({
-                element: atomData.element,
-                x: atomData.x,
-                y: atomData.y,
-                z: atomData.z
-            });
-        }
-    });
-
-    const historicalData = {
-        atomData: updatedAtomData,
-        numAtoms: updatedAtomData.length
-    };
-
-    main.newMolecule(
-        historicalData,
-        main.mode,
-        false,
-        currentCameraPosition,
-        currentCameraRotation,
-        true,
-        true
-    );
-
-    main.data = historicalData;
-
-    // RESTORE SUB-FRAGMENTS if they exist for this isolation
-    if (isolationEntry.subFragments) {
-        fragments = isolationEntry.subFragments.map(fragment => [...fragment]);
-        console.log(`Restored ${fragments.length} sub-fragments from history`);
-    } else {
-        fragments = [];
-    }
-
-    // Update UI
-    const fragmentList = document.getElementById('fragmentList');
-    if (fragmentList) {
-        updateFragmentList(fragmentList);
-    }
-
-    updateEditingContent();
-    render();
-
-    console.log(`Navigated to: ${isolationEntry.name}`);
-}
-
-function debugGlobalFragments() {
-    console.log('=== Global Fragment Store Debug ===');
-    console.log('Original atom count:', globalFragmentStore.originalAtomCount);
-    console.log('Total fragments:', globalFragmentStore.fragments.length);
-    globalFragmentStore.fragments.forEach((fragment, index) => {
-        console.log(`Fragment ${index + 1}: [${fragment.join(', ')}]`);
-    });
-    console.log('=================================');
-}
-
-// Clear all fragments (useful for reset)
-function clearGlobalFragments() {
-    globalFragmentStore = {
-        originalAtomCount: 0,
-        fragments: [],
-        fragmentIdMap: new Map()
-    };
-    fragments = [];
-    console.log('Cleared all fragments');
-}
-
-// 5. Show fragment in context of original molecule (highlight it)
-function showFragmentInContext(fragmentIndex) {
-    if (!originalMoleculeData) {
-        console.error('No original molecule data available');
-        return;
-    }
-
-    // Get the current isolation entry
-    const currentIsolation = isolationHistory[currentIsolationIndex];
-    if (!currentIsolation) return;
-
-    // Restore original molecule temporarily
-    const restoredData = JSON.parse(JSON.stringify(originalMoleculeData));
-
-    // Store current camera position
-    const currentCameraPosition = {
-        x: camera.position.x,
-        y: camera.position.y,
-        z: camera.position.z
-    };
-    const currentCameraRotation = {
-        x: camera.rotation.x,
-        y: camera.rotation.y,
-        z: camera.rotation.z
-    };
-
-    // Clear current selections
-    atomsSelected = [];
-    fragmentsSelected = [];
-    fragments = JSON.parse(JSON.stringify(originalFragments));
-
-    // Recreate the full molecule
-    main.newMolecule(
-        restoredData,
-        main.mode,
-        false,
-        currentCameraPosition,
-        currentCameraRotation,
-        true,
-        true
-    );
-
-    main.data = restoredData;
-
-    // Highlight the isolated fragment atoms
-    setTimeout(() => {
-        if (currentIsolation.originalIndices) {
-            atomsSelected = [...currentIsolation.originalIndices];
-            atomsSelected.forEach(idx => {
-                selectAtom(idx, false);
-            });
-        }
-
-        // Add a "Return to Isolation" button
-        const returnBtn = document.createElement('button');
-        returnBtn.textContent = 'Return to Isolated View';
-        returnBtn.className = 'fancy-button';
-        returnBtn.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgb(255, 140, 0);
-            padding: 10px 20px;
-            z-index: 10000;
-        `;
-
-        returnBtn.addEventListener('click', () => {
-            returnBtn.remove();
-            navigateIsolationHistory(0); // Reload current isolation
-        });
-
-        document.body.appendChild(returnBtn);
-
-        render();
-    }, 100);
-}
-
-// 6. Update UI to show isolation mode
-function updateIsolationModeUI() {
-
-}
-
-function validateFragments() {
-    if (!main.molecule || !main.molecule.atoms) return [];
-    const totalAtoms = main.molecule.atoms.length;
-    const allAtomIndices = Array.from({ length: totalAtoms }, (_, i) => i);
-
-    // Remove duplicates within each fragment
-    fragments = fragments.map(fragment => [...new Set(fragment)]);
-
-    // Check for atoms that appear in multiple fragments
-    const atomCounts = new Map();
-    fragments.forEach((fragment, fragmentIndex) => {
-        fragment.forEach(atomIndex => {
-            if (!atomCounts.has(atomIndex)) {
-                atomCounts.set(atomIndex, []);
-            }
-            atomCounts.get(atomIndex).push(fragmentIndex);
-        });
-    });
-
-    // Remove atoms from later fragments if they appear in multiple
-    atomCounts.forEach((fragmentIndices, atomIndex) => {
-        if (fragmentIndices.length > 1) {
-            // Keep the atom only in the first fragment
-            for (let i = 1; i < fragmentIndices.length; i++) {
-                const fragIndex = fragmentIndices[i];
-                fragments[fragIndex] = fragments[fragIndex].filter(idx => idx !== atomIndex);
-            }
-        }
-    });
-
-    // Remove empty fragments
-    fragments = fragments.filter(fragment => fragment.length > 0);
-
-    // Find unassigned atoms
-    const assignedAtoms = new Set(fragments.flat());
-    const unassignedAtoms = allAtomIndices.filter(index => !assignedAtoms.has(index));
-
-    // Add unassigned atoms as a new fragment if any exist
-    if (unassignedAtoms.length > 0) {
-        fragments.push(unassignedAtoms);
-    }
-
-    return fragments;
-}
-
-
 
 
 function highlightFragment(fragmentIndex) {
@@ -4717,9 +4491,6 @@ function toggleRibbon() {
     window.main.newMolecule(
         currentData,
         currentMode,
-        false,
-        { x: 0, y: 0, z: 0 },
-        { x: 0, y: 0, z: 0 },
         true,
         false,
         ribbonMode  // Pass ribbonMode state
@@ -4758,7 +4529,7 @@ function enableAtomInteractions() {
 }
 
 function testMoleculeFromJSON(json) {
-    window.main.newMolecule(json, window.main.setNewMode(json.numAtoms <= 2000), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, false, false);
+    window.main.newMolecule(json, window.main.setNewMode(json.numAtoms <= 2000));
     window.main.zoomCameraToFitMolecule();
 }
 window.testMoleculeFromJSON = testMoleculeFromJSON;

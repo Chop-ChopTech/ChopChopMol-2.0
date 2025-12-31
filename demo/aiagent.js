@@ -97,7 +97,7 @@ const FUNCTIONS = {
             }
             window.main.data.atomData.push({ element: params.element.toUpperCase(), x, y, z });
             window.main.data.numAtoms++;
-            window.main.newMolecule(window.main.data, window.main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+            window.main.newMolecule(window.main.data, window.main.mode, true, true);
             return { success: true, message: `Added ${params.element}` };
         }
     },
@@ -484,7 +484,7 @@ const FUNCTIONS = {
             window.atomsSelected.forEach(idx => {
                 if (window.main.data.atomData[idx]) window.main.data.atomData[idx].element = params.element.toUpperCase();
             });
-            window.main.newMolecule(window.main.data, window.main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+            window.main.newMolecule(window.main.data, window.main.mode, true, true);
             return { success: true, message: `Changed ${window.atomsSelected.length} atom(s) to ${params.element}` };
         }
     },
@@ -498,7 +498,7 @@ const FUNCTIONS = {
             window.main.data.numAtoms -= window.atomsSelected.length;
             const removed = window.atomsSelected.length;
             window.atomsSelected = [];
-            window.main.newMolecule(window.main.data, window.main.mode, false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, true);
+            window.main.newMolecule(window.main.data, window.main.mode, true, true);
             return { success: true, message: `Removed ${removed} atom(s)` };
         }
     },

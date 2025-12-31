@@ -19,7 +19,7 @@ export default class Molecule {
         this.bondGroup = new THREE.Group();
     }
 
-    init(data, mode, rotation, translation, center, ribbonMode = false) {
+    init(data, mode, center, ribbonMode = false) {
         this.reset();
         console.log(data);
 
@@ -48,20 +48,20 @@ export default class Molecule {
         // NORMAL MODE: Create atoms and bonds
         const bondThreshold = 1;
 
-        this.createAtoms(data, rotation, translation, mode);
+        this.createAtoms(data, mode);
         this.centerMolecule(!center);
 
         this.main.scene.add(this.instancedMesh);
 
         this.createBonds(this.atoms, bondThreshold);
         if (mode == 0) {
-            this.visualizeBondsFast(this.bonds, rotation, translation);
+            this.visualizeBondsFast(this.bonds);
         } else {
-            this.visualizeBondsStyle(this.bonds, rotation, translation);
+            this.visualizeBondsStyle(this.bonds, mode);
         }
     }
 
-    createAtoms(data, rotation, translation, mode) {
+    createAtoms(data, mode) {
         const resolution = mode.resolution || 8;
         const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
 
@@ -117,13 +117,6 @@ export default class Molecule {
         this.instancedMesh.instanceMatrix.needsUpdate = true;
         colorAttribute.needsUpdate = true;
 
-        // Apply transformations if provided
-        if (rotation && (rotation.x || rotation.y || rotation.z)) {
-            this.instancedMesh.rotation.set(rotation.x || 0, rotation.y || 0, rotation.z || 0);
-        }
-        if (translation && (translation.x || translation.y || translation.z)) {
-            this.instancedMesh.position.set(translation.x || 0, translation.y || 0, translation.z || 0);
-        }
 
         this.main.scene.add(this.instancedMesh);
     }
@@ -290,7 +283,7 @@ export default class Molecule {
         this.main.data = data
     }
 
-    visualizeBondsFast(bonds, rotation, translation) {
+    visualizeBondsFast(bonds) {
         const positions = new Float32Array(bonds.length * 6);
         const ox = this.offset.x, oy = this.offset.y, oz = this.offset.z;
 
@@ -317,8 +310,6 @@ export default class Molecule {
         });
 
         const lines = new THREE.LineSegments(geometry, material);
-        lines.rotation.set(rotation.x, rotation.y, rotation.z);
-        lines.position.set(translation.x, translation.y, translation.z);
 
         this.bondGroup.add(lines);
         this.main.scene.add(this.bondGroup);

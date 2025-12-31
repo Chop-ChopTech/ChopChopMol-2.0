@@ -428,9 +428,6 @@
                 window.main.newMolecule(
                     moleculeData.data.molecule,
                     moleculeData.atomCount <= 2000 ? 0 : 1,
-                    false,
-                    { x: 0, y: 0, z: 0 },
-                    { x: 0, y: 0, z: 0 },
                     true,
                     true
                 );
@@ -1714,10 +1711,10 @@
             const frameIndex = parseInt(this.value);
             if (window.xyzFrames && window.xyzFrames[frameIndex]) {
                 const frame = window.xyzFrames[frameIndex];
-                window.main.createNewMoleculeFromJSON(JSON.stringify({
+                window.main.newMolecule({
                     atomData: frame.atomData,
                     numAtoms: frame.numAtoms
-                }), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, false, true);
+                }, window.main.mode, false, true);
                 document.getElementById('frameLabel').textContent =
                     `Frame ${frameIndex + 1} / ${window.xyzFrames.length}`;
             }

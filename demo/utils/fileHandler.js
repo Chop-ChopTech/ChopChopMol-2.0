@@ -58,7 +58,7 @@ export default class FileHandler {
                     document.getElementById("toggleStyleChanges").checked = false;
                 }
                 window.resetIsolationState();
-                this.main.createNewMoleculeFromJSON(JSON.stringify(parsedData), overlay, rotation, translation, true, false);
+                this.main.newMolecule(parsedData, this.main.mode);
                 const frameSliderContainer = document.getElementById('frameSliderContainer');
 
                 if (frameSliderContainer) {
