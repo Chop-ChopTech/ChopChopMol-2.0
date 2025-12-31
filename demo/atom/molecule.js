@@ -317,82 +317,65 @@ export default class Molecule {
 
     visualizeBondsStyle(bonds, mode) {
         const radius = mode.bondThickness || 0.15;
-        const radialSegments = 8;
+        const radialSegments = Math.max(3, mode.resolution || 8); // Allow lower res for speed
 
-        // Shared unit cylinder (Y axis, height = 1)
-        const baseGeometry = new THREE.CylinderGeometry(
-            radius,
-            radius,
-            1,
-            radialSegments,
-            1,
-            false
-        );
+        // 1. One geometry for ALL bonds
+        const baseGeometry = new THREE.CylinderGeometry(radius, radius, 1, radialSegments);
 
-        // Group bonds by color to minimize materials
-        const colorMap = new Map();
+        // 2. One material that uses Vertex Colors
+        const material = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            metalness: mode.metalness || 0,
+            roughness: mode.roughness || 0.5
+        });
 
-        for (const bond of bonds) {
-            const c1 = bond.atom1.color;
-            const c2 = bond.atom2.color;
+        // 3. Each bond has 2 halves (two instances)
+        const totalInstances = bonds.length * 2;
+        const mesh = new THREE.InstancedMesh(baseGeometry, material, totalInstances);
 
-            if (!colorMap.has(c1)) colorMap.set(c1, []);
-            if (!colorMap.has(c2)) colorMap.set(c2, []);
+        const colorAttribute = new THREE.InstancedBufferAttribute(new Float32Array(totalInstances * 3), 3);
+        mesh.geometry.setAttribute('color', colorAttribute);
 
-            colorMap.get(c1).push({ bond, half: 1 });
-            colorMap.get(c2).push({ bond, half: 2 });
-        }
-
-        const tempStart = new THREE.Vector3();
-        const tempEnd = new THREE.Vector3();
-        const midpoint = new THREE.Vector3();
-        const dir = new THREE.Vector3();
-        const quat = new THREE.Quaternion();
+        // Reuse these (defined outside the loop or at class level)
         const mat = new THREE.Matrix4();
-        const scale = new THREE.Vector3();
+        const vStart = new THREE.Vector3();
+        const vEnd = new THREE.Vector3();
+        const vMid = new THREE.Vector3();
+        const vDir = new THREE.Vector3();
+        const vPos = new THREE.Vector3();
+        const vScale = new THREE.Vector3();
+        const qRot = new THREE.Quaternion();
+        const up = new THREE.Vector3(0, 1, 0);
 
-        for (const [color, entries] of colorMap) {
-            const material = new THREE.MeshStandardMaterial({ color });
+        bonds.forEach((bond, i) => {
+            vStart.copy(bond.atom1.position).sub(this.offset);
+            vEnd.copy(bond.atom2.position).sub(this.offset);
+            vMid.addVectors(vStart, vEnd).multiplyScalar(0.5);
 
-            const mesh = new THREE.InstancedMesh(
-                baseGeometry,
-                material,
-                entries.length
-            );
+            // Process two halves: Start-to-Mid and Mid-to-End
+            const segments = [[vStart, vMid, bond.atom1.color], [vMid, vEnd, bond.atom2.color]];
 
-            let i = 0;
-            for (const { bond, half } of entries) {
-                tempStart.copy(bond.atom1.position).sub(this.offset);
-                tempEnd.copy(bond.atom2.position).sub(this.offset);
-                midpoint.addVectors(tempStart, tempEnd).multiplyScalar(0.5);
+            segments.forEach((seg, j) => {
+                const idx = i * 2 + j;
+                const [a, b, col] = seg;
 
-                const a = half === 1 ? tempStart : midpoint;
-                const b = half === 1 ? midpoint : tempEnd;
+                vDir.subVectors(b, a);
+                const len = vDir.length();
+                vDir.normalize();
 
-                dir.subVectors(b, a);
-                const length = dir.length();
+                qRot.setFromUnitVectors(up, vDir);
+                vPos.addVectors(a, b).multiplyScalar(0.5);
+                vScale.set(1, len, 1);
 
-                dir.normalize();
-                quat.setFromUnitVectors(
-                    new THREE.Vector3(0, 1, 0),
-                    dir
-                );
+                mat.compose(vPos, qRot, vScale);
+                mesh.setMatrixAt(idx, mat);
 
-                scale.set(1, length, 1);
+                const c = new THREE.Color(col);
+                colorAttribute.setXYZ(idx, c.r, c.g, c.b);
+            });
+        });
 
-                mat.compose(
-                    a.clone().addScaledVector(dir, length * 0.5),
-                    quat,
-                    scale
-                );
-
-                mesh.setMatrixAt(i++, mat);
-            }
-
-            mesh.instanceMatrix.needsUpdate = true;
-            this.bondGroup.add(mesh);
-        }
-
+        this.bondGroup.add(mesh);
         this.main.scene.add(this.bondGroup);
     }
 
