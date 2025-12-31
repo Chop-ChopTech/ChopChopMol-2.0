@@ -152,7 +152,7 @@ export default class Molecule {
         const stretchSq = this.stretch * this.stretch;
         const thresholdSq = threshold * threshold;
 
-        // Populate grid
+        // Populate grid - OPTIMIZED: Store only index to save memory/GC
         for (let i = 0; i < n; i++) {
             const idx = i * 3;
             const x = Math.floor((positions[idx] - minX) * invCellSize);
@@ -161,14 +161,27 @@ export default class Molecule {
             const key = (x * 73856093) ^ (y * 19349663) ^ (z * 83492791);
 
             if (!grid.has(key)) grid.set(key, []);
-            grid.get(key).push({ i, x, y, z });
+            grid.get(key).push(i); // Store just the index
         }
 
         // Check pairs - fully optimized inner loop
-        for (let [key, cellAtoms] of grid) {
-            const len1 = cellAtoms.length;
+        for (let [key, cellIndices] of grid) {
+            const len1 = cellIndices.length;
+
+            // We need to re-derive x,y,z for the cell logic, or just iterate offsets 
+            // Since we stored indices, we look up position of the first atom to determine neighbor keys
+            // Actually, we can just iterate neighbors based on the grid key logic, 
+            // but since we need 'cx, cy, cz' for the neighbor loop:
+
+            // Re-calculate cell coords from the first atom in the bucket (all share same cell)
+            if (len1 === 0) continue;
+            const firstIdx = cellIndices[0] * 3;
+            const cx = Math.floor((positions[firstIdx] - minX) * invCellSize);
+            const cy = Math.floor((positions[firstIdx + 1] - minY) * invCellSize);
+            const cz = Math.floor((positions[firstIdx + 2] - minZ) * invCellSize);
+
             for (let a = 0; a < len1; a++) {
-                const { i: i1, x: cx, y: cy, z: cz } = cellAtoms[a];
+                const i1 = cellIndices[a];
                 const idx1 = i1 * 3;
                 const x1 = positions[idx1];
                 const y1 = positions[idx1 + 1];
@@ -186,14 +199,14 @@ export default class Molecule {
 
                             const len2 = neighbors.length;
                             for (let b = 0; b < len2; b++) {
-                                const i2 = neighbors[b].i;
-                                if (i1 >= i2) continue;
+                                const i2 = neighbors[b];
+                                if (i1 >= i2) continue; // Unique pairs
 
                                 const idx2 = i2 * 3;
-                                const dx = x1 - positions[idx2];
-                                const dy = y1 - positions[idx2 + 1];
-                                const dz = z1 - positions[idx2 + 2];
-                                const distSq = dx * dx + dy * dy + dz * dz;
+                                const diffX = x1 - positions[idx2];
+                                const diffY = y1 - positions[idx2 + 1];
+                                const diffZ = z1 - positions[idx2 + 2];
+                                const distSq = diffX * diffX + diffY * diffY + diffZ * diffZ;
 
                                 const sumR = r1 + radii[i2];
                                 const maxDistSq = sumR * sumR * stretchSq + 2 * this.stretch * sumR * threshold + thresholdSq;
@@ -284,96 +297,143 @@ export default class Molecule {
     }
 
     visualizeBondsFast(bonds) {
-        const positions = new Float32Array(bonds.length * 6);
-        const ox = this.offset.x, oy = this.offset.y, oz = this.offset.z;
+        if (!bonds || bonds.length === 0) return;
 
-        let i = 0;
-        for (const bond of bonds) {
-            const a1 = bond.atom1.position;
-            const a2 = bond.atom2.position;
-
-            positions[i++] = a1.x - ox;
-            positions[i++] = a1.y - oy;
-            positions[i++] = a1.z - oz;
-            positions[i++] = a2.x - ox;
-            positions[i++] = a2.y - oy;
-            positions[i++] = a2.z - oz;
+        // 1. Reuse Material (create once)
+        if (!this.fastBondMaterial) {
+            this.fastBondMaterial = new THREE.LineBasicMaterial({
+                color: 0x00ff00,
+                opacity: this.overlay ? 0.5 : 1,
+                transparent: this.overlay,
+                depthTest: !this.overlay // Disable depth test if overlaying
+            });
         }
 
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const vertexCount = bonds.length * 2;
+        const ox = this.offset.x, oy = this.offset.y, oz = this.offset.z;
+        let positions;
+        let lineSegments = this.bondGroup.children[0];
 
-        const material = new THREE.LineBasicMaterial({
-            color: 0x00ff00,
-            opacity: this.overlay ? 0.5 : 1,
-            transparent: this.overlay
-        });
+        // 2. Reuse Geometry if possible (faster updates)
+        if (lineSegments && lineSegments.isLineSegments && lineSegments.geometry.attributes.position.count === vertexCount) {
+            positions = lineSegments.geometry.attributes.position.array;
+        } else {
+            // Clear old if size changed or missing
+            if (this.bondGroup.children.length > 0) {
+                this.bondGroup.children[0].geometry.dispose();
+                this.bondGroup.clear();
+            }
 
-        const lines = new THREE.LineSegments(geometry, material);
+            positions = new Float32Array(vertexCount * 3);
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-        this.bondGroup.add(lines);
-        this.main.scene.add(this.bondGroup);
+            lineSegments = new THREE.LineSegments(geometry, this.fastBondMaterial);
+            // Disable culling for speed if molecule is always in view
+            lineSegments.frustumCulled = false;
+
+            this.bondGroup.add(lineSegments);
+            this.main.scene.add(this.bondGroup);
+        }
+
+        // 3. Fast Loop (write directly to buffer)
+        for (let i = 0; i < bonds.length; i++) {
+            const bond = bonds[i];
+            const p1 = bond.atom1.position;
+            const p2 = bond.atom2.position;
+
+            const idx = i * 6; // 2 vertices * 3 coords
+
+            positions[idx] = p1.x - ox;
+            positions[idx + 1] = p1.y - oy;
+            positions[idx + 2] = p1.z - oz;
+
+            positions[idx + 3] = p2.x - ox;
+            positions[idx + 4] = p2.y - oy;
+            positions[idx + 5] = p2.z - oz;
+        }
+
+        lineSegments.geometry.attributes.position.needsUpdate = true;
     }
 
     visualizeBondsStyle(bonds, mode) {
-        const radius = mode.bondThickness || 0.15;
-        const radialSegments = Math.max(3, mode.resolution || 8); // Allow lower res for speed
+        if (bonds.length === 0) return;
 
-        // 1. One geometry for ALL bonds
+        const radius = mode.bondThickness || 0.15;
+        // Limit resolution to prevent massive geometry overhead on large molecules
+        const radialSegments = Math.min(mode.resolution || 8, 12);
+
         const baseGeometry = new THREE.CylinderGeometry(radius, radius, 1, radialSegments);
 
-        // 2. One material that uses Vertex Colors
+        // Translate geometry so pivot is at bottom (0,0,0) makes scaling easier conceptually,
+        // but center pivot (default) is fine if we position at segment centers.
+        // Default Cylinder centers at (0,0,0) with height 1.
+
         const material = new THREE.MeshStandardMaterial({
             vertexColors: true,
             metalness: mode.metalness || 0,
             roughness: mode.roughness || 0.5
         });
 
-        // 3. Each bond has 2 halves (two instances)
         const totalInstances = bonds.length * 2;
         const mesh = new THREE.InstancedMesh(baseGeometry, material, totalInstances);
 
         const colorAttribute = new THREE.InstancedBufferAttribute(new Float32Array(totalInstances * 3), 3);
         mesh.geometry.setAttribute('color', colorAttribute);
 
-        // Reuse these (defined outside the loop or at class level)
+        // Pre-allocate temporaries
         const mat = new THREE.Matrix4();
         const vStart = new THREE.Vector3();
         const vEnd = new THREE.Vector3();
-        const vMid = new THREE.Vector3();
         const vDir = new THREE.Vector3();
         const vPos = new THREE.Vector3();
         const vScale = new THREE.Vector3();
         const qRot = new THREE.Quaternion();
         const up = new THREE.Vector3(0, 1, 0);
+        const col1 = new THREE.Color();
+        const col2 = new THREE.Color();
 
-        bonds.forEach((bond, i) => {
+        for (let i = 0; i < bonds.length; i++) {
+            const bond = bonds[i];
+
+            // Local coordinates relative to offset
             vStart.copy(bond.atom1.position).sub(this.offset);
             vEnd.copy(bond.atom2.position).sub(this.offset);
-            vMid.addVectors(vStart, vEnd).multiplyScalar(0.5);
 
-            // Process two halves: Start-to-Mid and Mid-to-End
-            const segments = [[vStart, vMid, bond.atom1.color], [vMid, vEnd, bond.atom2.color]];
+            // 1. Calculate orientation ONE TIME for the whole bond
+            vDir.subVectors(vEnd, vStart);
+            const fullLen = vDir.length();
+            if (fullLen < 0.0001) continue; // Prevent zero-length errors
 
-            segments.forEach((seg, j) => {
-                const idx = i * 2 + j;
-                const [a, b, col] = seg;
+            vDir.normalize();
+            qRot.setFromUnitVectors(up, vDir);
 
-                vDir.subVectors(b, a);
-                const len = vDir.length();
-                vDir.normalize();
+            // Half length for each segment
+            const halfLen = fullLen * 0.5;
+            vScale.set(1, halfLen, 1);
 
-                qRot.setFromUnitVectors(up, vDir);
-                vPos.addVectors(a, b).multiplyScalar(0.5);
-                vScale.set(1, len, 1);
+            // 2. First Half (Atom 1 -> Midpoint)
+            // Center is at Start + (Dir * (Length / 4))
+            vPos.copy(vStart).addScaledVector(vDir, fullLen * 0.25);
+            mat.compose(vPos, qRot, vScale);
 
-                mat.compose(vPos, qRot, vScale);
-                mesh.setMatrixAt(idx, mat);
+            const idx1 = i * 2;
+            mesh.setMatrixAt(idx1, mat);
 
-                const c = new THREE.Color(col);
-                colorAttribute.setXYZ(idx, c.r, c.g, c.b);
-            });
-        });
+            col1.set(bond.atom1.color);
+            colorAttribute.setXYZ(idx1, col1.r, col1.g, col1.b);
+
+            // 3. Second Half (Midpoint -> Atom 2)
+            // Center is at Start + (Dir * (Length * 0.75))
+            vPos.copy(vStart).addScaledVector(vDir, fullLen * 0.75);
+            mat.compose(vPos, qRot, vScale); // Reuse qRot and vScale
+
+            const idx2 = i * 2 + 1;
+            mesh.setMatrixAt(idx2, mat);
+
+            col2.set(bond.atom2.color);
+            colorAttribute.setXYZ(idx2, col2.r, col2.g, col2.b);
+        }
 
         this.bondGroup.add(mesh);
         this.main.scene.add(this.bondGroup);
