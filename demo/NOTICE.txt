@@ -1,9 +1,0 @@
-This project uses third-party libraries:
-
-RDKit:
-BSD 3-Clause License
-
-Copyright (c) 2006-2015, Rational Discovery LLC, Greg Landrum, and Julie Penzotti and others
-All rights reserved.
-
-

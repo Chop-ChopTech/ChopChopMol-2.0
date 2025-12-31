@@ -24,7 +24,7 @@
 
 <body>
     <script src="https://unpkg.com/undo-manager@1.0.5/lib/undomanager.js"></script>
-    <script src="undo.js"></script>
+    <script src="utils/undo.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
@@ -1024,7 +1024,6 @@
         <button onclick="closeAnalysisWindow()" id="closeAnalysis" class="fancy-button">Close</button>
         <canvas id="explorationCanvas" class="on"></canvas>
     </div>
-    <script src="effects.js"></script>
 
 
     <!-- Chat interface -->
@@ -3093,7 +3092,7 @@
     </script>
 
     <pre id="output"></pre>
-    <script src="stripe.js"></script>
+    <script src="utils/stripe.js"></script>
 
     <script type="module" src="main.js"></script>
     <script src="fileExplorer.js"></script>

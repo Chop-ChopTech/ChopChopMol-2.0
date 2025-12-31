@@ -221,7 +221,7 @@ export default class Main {
 
         // Clear ribbon
         if (ribbonGroup) {
-            import('./ribbon.js').then(module => {
+            import('./utils/ribbon.js').then(module => {
                 module.removeRibbon(ribbonGroup, scene);
                 ribbonGroup = null;
             });
@@ -271,7 +271,7 @@ export default class Main {
 
         // If ribbon mode, create ribbon instead of showing atoms
         if (useRibbonMode && data.ribbonData) {
-            import('./ribbon.js').then(module => {
+            import('./utils/ribbon.js').then(module => {
                 ribbonGroup = module.createRibbon(
                     data.ribbonData,
                     scene,
