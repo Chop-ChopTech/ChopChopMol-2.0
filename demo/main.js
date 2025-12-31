@@ -5103,6 +5103,13 @@ window.toggleRibbon = toggleRibbon;
     }
 
     function loadMolecule(molData) {
+        // Clear frames and hide slider when loading from database
+        window.xyzFrames = null;
+        const frameSliderContainer = document.getElementById('frameSliderContainer');
+        if (frameSliderContainer) {
+            frameSliderContainer.style.display = 'none';
+        }
+
         window.main.newMolecule(molData, window.main.setNewMode(molData.numAtoms <= 2000), false, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, true, false, false);
         window.main.zoomCameraToFitMolecule();
     }

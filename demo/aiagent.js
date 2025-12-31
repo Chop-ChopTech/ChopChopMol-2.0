@@ -1230,7 +1230,7 @@ async function sendToAI(userMessage, onChunk) {
     if (onChunk) onChunk(null, 'Analyzing request');
 
     try {
-        const MAX_ITERATIONS = 5;
+        const MAX_ITERATIONS = 10;
         for (let i = 0; i < MAX_ITERATIONS; i++) {
             const payload = {
                 sessionId,
