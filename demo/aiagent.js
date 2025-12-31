@@ -4,7 +4,7 @@ const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0
 
 const AI_CONFIG = {
     backendUrl: backendUrl[0] || backendUrl[0],
-    sessionId: localStorage.getItem('chopchop_ai_session') || crypto.randomUUID(),
+    sessionId: crypto.randomUUID(),
     model: localStorage.getItem('chopchop_ai_model') || 'gpt-5-mini',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
 };
