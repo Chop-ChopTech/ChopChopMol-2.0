@@ -969,30 +969,24 @@
 
                     <!-- Account Sub-dropdown -->
                     <div class="settings-submenu">
-                        <div class="submenu-header" onclick="toggleSubmenu('accountSubmenu')">
-                            <span id="accountIcon"><i class="fa-solid fa-user"></i></span>
-                            <span id="accountLabel">Account</span>
-                            <i class="fa-solid fa-chevron-down submenu-arrow"></i>
-                        </div>
                         <div class="submenu-content" id="accountSubmenu">
                             <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign
                                 In</button>
                             <button class="fancy-button" id="signOutButton" style="display: none;"><i
-                                    class="fas fa-sign-out-alt"></i> Sign Out</button>
+                                    class="fas fa-sign-out-alt"></i> Sign
+                                Out</button>
                             <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
                                 onclick="showPremiumModal()">Subscription</button>
                             <button class="donate-btn fancy-button" onclick="openDonateModal()"><i
                                     class="fas fa-heart"></i>
                                 Donation</button>
                         </div>
+                        <div class="submenu-header" onclick="toggleSubmenu('accountSubmenu')">
+                            <span id="accountIcon"><i class="fa-solid fa-user"></i></span>
+                            <span id="accountLabel">Account</span>
+                            <i class="fa-solid fa-chevron-down submenu-arrow"></i>
+                        </div>
                     </div>
-
-                    <button onclick="window.location.href='https://chopchopmol.com'" class="fancy-button"
-                        style="background-color: #006dea; margin-top: 10px;">
-                        <i class="fas fa-question-circle"></i> Tutorial
-                    </button>
-                    <!-- Tutorial Button -->
-
                 </div>
             </div>
         </div>
