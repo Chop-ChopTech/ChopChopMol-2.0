@@ -560,10 +560,7 @@ window.addEventListener('keyup', function (e) {
 
 window.addEventListener('keydown', function (e) {
     if (isLPressed && e.key === 'Enter') {
-        const newData = window.prompt("Enter the JSON data:");
-        if (newData) {
-            main.newMolecule(newData, main.mode);
-        }
+        saveImage();
     }
     if (e.key == "Shift") {
         shiftDown = true;
@@ -611,10 +608,6 @@ window.addEventListener('replyUpdated', (event) => {
     console.log(newReply);
     main.newMolecule(JSON.stringify(newReply), main.mode);
 
-});
-
-saveImageButton.addEventListener('click', () => {
-    saveImage();
 });
 
 renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
