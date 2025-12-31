@@ -243,13 +243,13 @@ export function resetToDefaults() {
     const currentSelection = hasMolecule ? [...(window.atomsSelected || [])] : [];
 
     // Reset sliders to default values
-    document.getElementById('style1').value = 0.17; // Roughness
-    document.getElementById('style2').value = 0.3;  // Metalness
+    document.getElementById('style1').value = 0.46; // Roughness
+    document.getElementById('style2').value = 0.37;  // Metalness
     document.getElementById('style3').value = 1;    // Opacity
     document.getElementById('style4').value = 1;    // Bonds
-    document.getElementById('style5').value = 1;    // Atom Size
-    document.getElementById('style6').value = 16;   // Resolution
-    document.getElementById('style7').checked = false; // Antialias
+    document.getElementById('style5').value = 0.83;    // Atom Size
+    document.getElementById('style6').value = 17;   // Resolution
+    document.getElementById('style7').checked = true; // Antialias
     document.getElementById('style8').value = '#01101f'; // Background (dark blue)
     document.getElementById('toggleStyleChanges').checked = false;
     document.getElementById('toggleLabels').checked = false;
