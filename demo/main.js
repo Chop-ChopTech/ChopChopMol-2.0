@@ -266,7 +266,6 @@ export default class Main {
         render();
     }
     newMolecule(data, mode, center = true, soft = false, useRibbonMode = false) {
-
         this.reset(soft);
         this.molecule.init(data, mode, center, useRibbonMode);
 
@@ -305,6 +304,7 @@ export default class Main {
 
         window.startMeasurement = null;
         window.endMeasurement = null;
+        this.data = data;
     }
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
@@ -312,29 +312,6 @@ export default class Main {
             this.molecule.toggleLabels(labelMode, window.labelIndexMode);
         }
         render();
-    }
-    createNewMoleculeFromJSON(json, overlay, rotation, translation, center = true, soft = false) {
-        const data = JSON.parse(json);
-        console.log(this.mode);
-
-        // Check if this is a protein - if not, force ball-and-stick mode
-        const hasProteinData = data.ribbonData && data.ribbonData.backbone && data.ribbonData.backbone.length > 0;
-        const useRibbon = ribbonMode && hasProteinData;
-
-        // If current ribbonMode is true but molecule has no protein data, disable ribbon mode
-        if (ribbonMode && !hasProteinData) {
-            console.log('Non-protein molecule loaded - switching to ball-and-stick mode');
-            ribbonMode = false;
-        }
-
-        this.newMolecule(
-            data,
-            this.mode,
-            center,
-            soft,
-            useRibbon
-        );
-        this.data = data;
     }
     setNewMode(style = false) {
         if (style) {
