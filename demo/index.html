@@ -2068,8 +2068,52 @@
                 let typingRemoved = false;
 
                 try {
-                    const response = await window.AIAgent.send(message, (chunk, status) => {
-                        // Status update only (chunk is null)
+                    const response = await window.AIAgent.send(message, (chunk, status, statusType) => {
+                        // Tool status during streaming - show at bottom of message
+                        if (chunk === null && statusType === 'tool_status') {
+                            // If message not shown yet, show it first
+                            if (!typingRemoved) {
+                                typingEl.remove();
+                                typingRemoved = true;
+                                messagesContainer.appendChild(msgEl);
+                            }
+                            // Add/update tool caption at bottom
+                            let toolCaption = contentEl.querySelector('.ai-tool-caption');
+                            if (!toolCaption) {
+                                toolCaption = document.createElement('div');
+                                toolCaption.className = 'ai-tool-caption';
+                                contentEl.appendChild(toolCaption);
+                            }
+                            const toolStatusMap = {
+                                select_atoms: 'Selecting atoms',
+                                load_molecule: 'Loading molecule',
+                                transform_atoms: 'Transforming atoms',
+                                measure_distance: 'Measuring distance',
+                                measure_angle: 'Measuring angle',
+                                create_fragment: 'Creating fragment',
+                                delete_atoms: 'Deleting atoms',
+                                save_xyz: 'Saving file',
+                                save_image: 'Saving image',
+                                toggle_labels: 'Toggling labels',
+                                calculate_energy: 'Calculating energy',
+                                calculate_all_energies: 'Calculating all frame energies',
+                                get_cached_energies: 'Retrieving cached energies',
+                                optimize_geometry: 'Optimizing geometry',
+                                create_chart: 'Creating chart',
+                                read_file: 'Reading file',
+                                list_folder_files: 'Listing files',
+                                create_file: 'Creating file',
+                                edit_file: 'Editing file',
+                                split_molecule: 'Splitting molecule',
+                                rotational_scan: 'Running rotational scan',
+                                translation_scan: 'Running translation scan'
+                            };
+                            toolCaption.innerHTML = `<i class="fas fa-cog fa-spin"></i> ${toolStatusMap[status] || status.replace(/_/g, ' ')}`;
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            return;
+                        }
+
+                        // Status update only (chunk is null) - for typing indicator
                         if (chunk === null) {
                             if (status) typingEl.setStatus(status);
                             return;
@@ -2081,6 +2125,11 @@
                             typingRemoved = true;
                             messagesContainer.appendChild(msgEl);
                         }
+
+                        // Remove tool caption when text comes in (tool finished)
+                        const toolCaption = contentEl.querySelector('.ai-tool-caption');
+                        if (toolCaption) toolCaption.remove();
+
                         fullText += chunk;
                         contentEl.innerHTML = renderMarkdown(fullText);
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;

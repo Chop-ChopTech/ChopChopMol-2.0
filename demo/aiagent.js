@@ -1291,6 +1291,9 @@ async function sendToAI(userMessage, onChunk) {
                             iterationContent += data.content;
                             fullContent += data.content;
                             if (onChunk) onChunk(data.content);
+                        } else if (data.type === 'tool_status') {
+                            // Real-time tool status from streaming (Claude)
+                            if (onChunk) onChunk(null, data.toolName, 'tool_status');
                         } else if (data.type === 'tool_calls') {
                             toolCalls = data.toolCalls;
                             assistantMessage = data.assistantMessage;

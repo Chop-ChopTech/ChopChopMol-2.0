@@ -2882,6 +2882,36 @@ input[type="range"]:focus {
     color: white;
 }
 
+/* Tool Caption (shown at bottom of message during streaming) */
+.ai-tool-caption {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: rgba(102, 126, 234, 0.15);
+    border-radius: 8px;
+    color: #a5b4fc;
+    font-size: 12px;
+    animation: toolCaptionPulse 1.5s ease-in-out infinite;
+}
+
+.ai-tool-caption i {
+    font-size: 11px;
+}
+
+@keyframes toolCaptionPulse {
+
+    0%,
+    100% {
+        opacity: 0.7;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
 /* Responsive */
 @media (max-width: 480px) {
     .ai-chat-panel {
