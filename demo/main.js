@@ -3796,6 +3796,8 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
 
         labelDiv.appendChild(input);
         labelDiv.style.pointerEvents = 'auto';
+        input.style.setProperty('transition', 'none', 'important');
+        labelDiv.style.setProperty('transition', 'none', 'important');
 
     } else {
         // For angle (3 atoms) - keep as non-editable text
