@@ -2726,13 +2726,8 @@ function recreateRenderer(antialiasEnabled) {
     controls.panSpeed = 1.0;
     controls.dynamicDampingFactor = 1.0;
     controls.cursorZoom = true;
-    controls.enableAnimations = false;
+    controls.enableAnimations = true;
 
-
-    // IMPORTANT: Re-attach the controls change event listener
-    controls.addEventListener('change', () => {
-        render();
-    });
 
     // IMPORTANT: Re-attach the pointer down event for atom selection
     renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
@@ -4182,12 +4177,6 @@ document.addEventListener('click', (event) => {
     }
 });
 
-if (controls) {
-    controls.addEventListener('change', () => {
-        updateAllBondLengthLabels();
-    });
-}
-
 function onAtomsMoved() {
     updateAllBondLengthLabels();
 }
@@ -4392,6 +4381,7 @@ function animate() {
     window.fragments = fragments;
     requestAnimationFrame(animate);
     controls.update();
+    render();
 }
 function render() {
     renderer.render(scene, getActiveCamera());
