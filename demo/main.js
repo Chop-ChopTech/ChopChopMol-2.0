@@ -3599,7 +3599,206 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
         labelDiv.style.setProperty('transition', 'none', 'important');
         labelDiv.style.pointerEvents = 'auto';
         labelDiv.inputElement = input; // Store reference
+    } else if (isDihedral) {
+        // For dihedral: create an editable input
+        const input = document.createElement('input');
+        labelDiv.inputElement = input;
+        input.type = 'text';
+        input.value = value;
+        input.style.cssText = `
+            color: ${color};
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            background: transparent;
+            border: none;
+            padding: 2px 4px;
+            text-align: center;
+            width: 70px;
+            cursor: text;
+            outline: none;
+            text-shadow: 
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 3px rgba(0,0,0,0.9);
+            transition: none!important;
+        `;
+
+        let justAppliedTransform = false;
+
+        // Pre-calculate fragment on the atom4 side (rotating around B-C axis)
+        let cachedFragment = null;
+        let cachedBasePositions = null;
+
+        const buildAdjacencyList = () => {
+            const adj = new Map();
+            for (let i = 0; i < main.molecule.atoms.length; i++) {
+                adj.set(i, []);
+            }
+            main.molecule.bonds.forEach(bond => {
+                const idx1 = main.molecule.atoms.indexOf(bond.atom1);
+                const idx2 = main.molecule.atoms.indexOf(bond.atom2);
+                if (idx1 !== -1 && idx2 !== -1) {
+                    adj.get(idx1).push(idx2);
+                    adj.get(idx2).push(idx1);
+                }
+            });
+            return adj;
+        };
+
+        const findConnectedAtoms = (startIdx, excludeIdx, adj) => {
+            const visited = new Set([startIdx]);
+            const queue = [startIdx];
+
+            while (queue.length > 0) {
+                const current = queue.shift();
+                const neighbors = adj.get(current) || [];
+
+                for (const neighborIdx of neighbors) {
+                    if (current === startIdx && neighborIdx === excludeIdx) continue;
+                    if (!visited.has(neighborIdx)) {
+                        visited.add(neighborIdx);
+                        queue.push(neighborIdx);
+                    }
+                }
+            }
+            return Array.from(visited);
+        };
+
+        // Cache fragment: atoms connected to atom3 (C), excluding atom2 (B)
+        const adj = buildAdjacencyList();
+        const atom3Neighbors = adj.get(atom3Index) || [];
+        if (atom3Neighbors.includes(atom2Index)) {
+            cachedFragment = findConnectedAtoms(atom3Index, atom2Index, adj);
+            // Store base positions
+            cachedBasePositions = {};
+            cachedFragment.forEach(idx => {
+                cachedBasePositions[idx] = main.molecule.atoms[idx].position.clone();
+            });
+        }
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const targetAngleStr = input.value.replace('°', '').trim();
+                const targetAngle = parseFloat(targetAngleStr);
+
+                if (!isNaN(targetAngle) && cachedFragment && cachedFragment.length > 0) {
+                    // Get current dihedral angle
+                    const currentAngle = parseFloat(calculateDihedral(
+                        main.molecule.atoms[atom1Index],
+                        main.molecule.atoms[atom2Index],
+                        main.molecule.atoms[atom3Index],
+                        main.molecule.atoms[atom4Index]
+                    ));
+
+                    // Calculate rotation needed
+                    let deltaAngle = targetAngle - currentAngle;
+
+                    // Normalize to -180 to 180
+                    while (deltaAngle > 180) deltaAngle -= 360;
+                    while (deltaAngle < -180) deltaAngle += 360;
+
+                    const deltaRadians = deltaAngle * Math.PI / 180;
+
+                    // Rotation axis is B->C
+                    const axisStart = main.molecule.atoms[atom2Index].position.clone();
+                    const axisEnd = main.molecule.atoms[atom3Index].position.clone();
+                    const axisDirection = new THREE.Vector3().subVectors(axisEnd, axisStart).normalize();
+
+                    // Create rotation matrix
+                    const rotationMatrix = new THREE.Matrix4().makeRotationAxis(axisDirection, deltaRadians);
+
+                    // Rotate all atoms in the fragment around the axis
+                    cachedFragment.forEach(atomIdx => {
+                        const atom = main.molecule.atoms[atomIdx];
+                        const pos = atom.position.clone();
+
+                        // Translate to axis origin (atom2/B position)
+                        pos.sub(axisStart);
+
+                        // Apply rotation
+                        pos.applyMatrix4(rotationMatrix);
+
+                        // Translate back
+                        pos.add(axisStart);
+
+                        // Update atom position
+                        atom.position.copy(pos);
+                        atom.x = atom.position.x;
+                        atom.y = atom.position.y;
+                        atom.z = atom.position.z;
+                        updateAtomMatrix(atomIdx);
+                    });
+
+                    // Update base positions for next rotation
+                    cachedFragment.forEach(idx => {
+                        cachedBasePositions[idx] = main.molecule.atoms[idx].position.clone();
+                    });
+
+                    // Update everything
+                    main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+                    main.molecule.updateBonds(main.mode);
+                    if (main.molecule.labels && main.molecule.labels.length > 0) {
+                        main.molecule.updateLabels();
+                    }
+
+                    justAppliedTransform = true;
+                    updateAllBondLengthLabels();
+                    saveUndoState("Set Dihedral");
+                    main.molecule.updateMainCoordinates();
+                    render();
+
+                    input.blur();
+                    return;
+                }
+                input.blur();
+            } else if (e.key === 'Escape') {
+                input.value = calculateDihedral(
+                    main.molecule.atoms[atom1Index],
+                    main.molecule.atoms[atom2Index],
+                    main.molecule.atoms[atom3Index],
+                    main.molecule.atoms[atom4Index]
+                ) + '°';
+                input.blur();
+            }
+        });
+
+        input.addEventListener('focus', () => {
+            input.style.textShadow = `
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 8px ${color}`;
+            input.select();
+        });
+
+        input.addEventListener('blur', () => {
+            input.style.textShadow = `
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 3px rgba(0,0,0,0.9)`;
+
+            if (!justAppliedTransform) {
+                input.value = calculateDihedral(
+                    main.molecule.atoms[atom1Index],
+                    main.molecule.atoms[atom2Index],
+                    main.molecule.atoms[atom3Index],
+                    main.molecule.atoms[atom4Index]
+                ) + '°';
+            }
+            justAppliedTransform = false;
+        });
+
+        labelDiv.appendChild(input);
+        labelDiv.style.pointerEvents = 'auto';
+
     } else {
+        // For angle (3 atoms) - keep as non-editable text
         labelDiv.textContent = value;
         labelDiv.style.cssText = `
             color: ${color};
@@ -3614,7 +3813,6 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
                 -1px 1px 0 #000,
                 1px 1px 0 #000,
                 0 0 3px rgba(0,0,0,0.9);
-            pointer-events: none;
             transition: none;
         `;
     }
@@ -3964,7 +4162,11 @@ function updateBondLengthLabel(labelInfo) {
     // Update value if atoms have moved
     if (labelInfo.isDihedral) {
         const newDihedral = calculateDihedral(atom1, atom2, atom3, atom4);
-        labelInfo.element.textContent = `${newDihedral}°`;
+        if (labelInfo.element.inputElement && document.activeElement !== labelInfo.element.inputElement) {
+            labelInfo.element.inputElement.value = `${newDihedral}°`;
+        } else if (!labelInfo.element.inputElement) {
+            labelInfo.element.textContent = `${newDihedral}°`;
+        }
     } else if (labelInfo.isAngle) {
         const newAngle = calculateAngle(atom1, atom2, atom3);
         labelInfo.element.textContent = `${newAngle}°`;
