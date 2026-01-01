@@ -3447,60 +3447,86 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
 
         let justAppliedTransform = false; // Flag to prevent blur from resetting
 
-        // Handle Enter key to apply distance
-        // Handle Enter key to apply distance
+        // Pre-calculate fragments once when label is created
+        let cachedFragment1 = null;
+        let cachedFragment2 = null;
+
+        const buildAdjacencyList = () => {
+            const adj = new Map();
+            for (let i = 0; i < main.molecule.atoms.length; i++) {
+                adj.set(i, []);
+            }
+            main.molecule.bonds.forEach(bond => {
+                const idx1 = main.molecule.atoms.indexOf(bond.atom1);
+                const idx2 = main.molecule.atoms.indexOf(bond.atom2);
+                if (idx1 !== -1 && idx2 !== -1) {
+                    adj.get(idx1).push(idx2);
+                    adj.get(idx2).push(idx1);
+                }
+            });
+            return adj;
+        };
+
+        const findConnectedAtoms = (startIdx, excludeIdx, adj) => {
+            const visited = new Set([startIdx]);
+            const queue = [startIdx];
+
+            while (queue.length > 0) {
+                const current = queue.shift();
+                const neighbors = adj.get(current) || [];
+
+                for (const neighborIdx of neighbors) {
+                    if (current === startIdx && neighborIdx === excludeIdx) continue;
+                    if (!visited.has(neighborIdx)) {
+                        visited.add(neighborIdx);
+                        queue.push(neighborIdx);
+                    }
+                }
+            }
+            return Array.from(visited);
+        };
+
+        // Cache fragments immediately
+        const adj = buildAdjacencyList();
+        const atom1Neighbors = adj.get(atom1Index) || [];
+        if (atom1Neighbors.includes(atom2Index)) {
+            cachedFragment1 = findConnectedAtoms(atom1Index, atom2Index, adj);
+            cachedFragment2 = findConnectedAtoms(atom2Index, atom1Index, adj);
+        }
+
         // Handle Enter key to apply distance
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 const targetDistance = parseFloat(input.value);
                 if (!isNaN(targetDistance) && targetDistance > 0) {
-                    // Determine which atoms to move and which atom is the anchor
                     let atomsToMove = [];
                     let anchorAtomIndex;
 
-                    if (atomsSelected.length > 0) {
-                        // Check which label atom is in the selection
-                        const atom1InSelection = atomsSelected.includes(atom1Index);
-                        const atom2InSelection = atomsSelected.includes(atom2Index);
-
-                        if (atom1InSelection && !atom2InSelection) {
-                            // Move all selected atoms, anchor is atom2
-                            atomsToMove = [...atomsSelected];
-                            anchorAtomIndex = atom2Index;
-                        } else if (atom2InSelection && !atom1InSelection) {
-                            // Move all selected atoms, anchor is atom1
-                            atomsToMove = [...atomsSelected];
+                    if (cachedFragment1 && cachedFragment2) {
+                        // Use cached fragments - move the smaller one
+                        if (cachedFragment2.length <= cachedFragment1.length) {
+                            atomsToMove = cachedFragment2;
                             anchorAtomIndex = atom1Index;
                         } else {
-                            // If both or neither in selection, move atom2 only
-                            atomsToMove = [atom2Index];
-                            anchorAtomIndex = atom1Index;
+                            atomsToMove = cachedFragment1;
+                            anchorAtomIndex = atom2Index;
                         }
                     } else {
-                        // No selection - default to moving atom2 relative to atom1
+                        // Fallback if not bonded
                         atomsToMove = [atom2Index];
                         anchorAtomIndex = atom1Index;
                     }
 
-                    // Get the reference atom from the label (the one in atomsToMove)
-                    let referenceAtomIndex;
-                    if (atomsToMove.includes(atom1Index)) {
-                        referenceAtomIndex = atom1Index;
-                    } else {
-                        referenceAtomIndex = atom2Index;
-                    }
+                    const referenceAtomIndex = atomsToMove.includes(atom1Index) ? atom1Index : atom2Index;
 
-                    // Convert from displayed units to internal units
                     const targetDistanceInternal = targetDistance * 4;
                     const anchorAtom = main.molecule.atoms[anchorAtomIndex];
                     const referenceAtom = main.molecule.atoms[referenceAtomIndex];
 
-                    // Calculate translation needed
                     const currentVector = new THREE.Vector3().subVectors(referenceAtom.position, anchorAtom.position);
                     const currentDistance = currentVector.length();
 
                     if (currentDistance === 0) {
-                        console.warn('Cannot set distance between atoms at the same position');
                         input.blur();
                         return;
                     }
@@ -3509,36 +3535,27 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
                     const direction = currentVector.normalize();
                     const translationVector = direction.multiplyScalar(translationDistance);
 
-                    // Move ALL atoms in the group by the same translation
                     atomsToMove.forEach(atomIdx => {
                         const atom = main.molecule.atoms[atomIdx];
-                        atom.position.add(translationVector);
+                        atom.position.add(translationVector.clone());
                         atom.x = atom.position.x;
                         atom.y = atom.position.y;
                         atom.z = atom.position.z;
                         updateAtomMatrix(atomIdx);
                     });
 
-                    // Update everything
                     main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
                     main.molecule.updateBonds(main.mode);
                     if (main.molecule.labels && main.molecule.labels.length > 0) {
                         main.molecule.updateLabels();
                     }
 
-                    // Set flag before updating labels and blurring
                     justAppliedTransform = true;
-
-                    // Update all labels (this will update our input to the new correct value)
                     updateAllBondLengthLabels();
-
                     saveUndoState("Set Distance");
                     main.molecule.updateMainCoordinates();
                     render();
 
-                    console.log(`Moved ${atomsToMove.length} atom(s) to set distance to ${targetDistance}`);
-
-                    // Blur after everything is updated
                     input.blur();
                     return;
                 }
