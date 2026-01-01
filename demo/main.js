@@ -2707,7 +2707,7 @@ function recreateRenderer(antialiasEnabled) {
 
     // Create new renderer with updated antialias
     renderer = new THREE.WebGLRenderer({
-        antialias: false,
+        antialias: antialiasEnabled,
         powerPreference: "high-performance",
         alpha: true,
         preserveDrawingBuffer: true
