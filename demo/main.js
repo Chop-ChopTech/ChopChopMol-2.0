@@ -2893,6 +2893,24 @@ function selectAtom(index, reset = true) {
     main.molecule.atoms[index].displayColor = new THREE.Color(1, 1, 0);
     colorAttr.setXYZ(index, 1, 1, 0);
     colorAttr.needsUpdate = true;
+    // Highlight bond halves connected to this atom
+    if (main.molecule.bonds && main.molecule.bondGroup?.children[0]) {
+        const bondMesh = main.molecule.bondGroup.children[0];
+        const bondColorAttr = bondMesh.geometry.getAttribute('color');
+        if (bondColorAttr) {
+            const atom = main.molecule.atoms[index];
+            main.molecule.bonds.forEach((bond, bondIdx) => {
+                if (bond.atom1 === atom) {
+                    // This atom is atom1, highlight first half (bondIdx * 2)
+                    bondColorAttr.setXYZ(bondIdx * 2, 1, 1, 0);
+                } else if (bond.atom2 === atom) {
+                    // This atom is atom2, highlight second half (bondIdx * 2 + 1)
+                    bondColorAttr.setXYZ(bondIdx * 2 + 1, 1, 1, 0);
+                }
+            });
+            bondColorAttr.needsUpdate = true;
+        }
+    }
 }
 
 
@@ -2918,6 +2936,20 @@ function unselectAtom(index = null) {
         colorAttr.setXYZ(index, color.r, color.g, color.b);
     }
     colorAttr.needsUpdate = true;
+    // Reset bond colors
+    if (main.molecule.bonds && main.molecule.bondGroup?.children[0]) {
+        const bondMesh = main.molecule.bondGroup.children[0];
+        const bondColorAttr = bondMesh.geometry.getAttribute('color');
+        if (bondColorAttr) {
+            main.molecule.bonds.forEach((bond, bondIdx) => {
+                const c1 = new THREE.Color(bond.atom1.color);
+                const c2 = new THREE.Color(bond.atom2.color);
+                bondColorAttr.setXYZ(bondIdx * 2, c1.r, c1.g, c1.b);
+                bondColorAttr.setXYZ(bondIdx * 2 + 1, c2.r, c2.g, c2.b);
+            });
+            bondColorAttr.needsUpdate = true;
+        }
+    }
 }
 
 function saveImage() {
