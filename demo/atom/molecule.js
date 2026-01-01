@@ -361,7 +361,7 @@ export default class Molecule {
 
         const radius = mode.bondThickness || 0.15;
         // Limit resolution to prevent massive geometry overhead on large molecules
-        const radialSegments = Math.min(mode.resolution || 8, 12);
+        const radialSegments = mode.resolution || 8;
 
         const baseGeometry = new THREE.CylinderGeometry(radius, radius, 1, radialSegments);
 
