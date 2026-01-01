@@ -1877,12 +1877,35 @@ function highlightFragment(fragmentIndex) {
     const color = new THREE.Color(fragmentColors[fragmentIndex % fragmentColors.length]);
 
     // Apply the fragment color
+    // Apply the fragment color
     fragment.forEach(atomIndex => {
         colorAttr.setXYZ(atomIndex, color.r, color.g, color.b);
         main.molecule.atoms[atomIndex].displayColor = color;
     });
 
     colorAttr.needsUpdate = true;
+
+    // Highlight bond halves for fragment atoms
+    if (main.molecule.bonds && main.molecule.bondGroup?.children[0]) {
+        const bondMesh = main.molecule.bondGroup.children[0];
+        const bondColorAttr = bondMesh.geometry.getAttribute('color');
+        if (bondColorAttr) {
+            const fragmentSet = new Set(fragment);
+            main.molecule.bonds.forEach((bond, bondIdx) => {
+                const atom1Idx = main.molecule.atoms.indexOf(bond.atom1);
+                const atom2Idx = main.molecule.atoms.indexOf(bond.atom2);
+                if (fragmentSet.has(atom1Idx)) {
+                    bondColorAttr.setXYZ(bondIdx * 2, color.r, color.g, color.b);
+                }
+                if (fragmentSet.has(atom2Idx)) {
+                    bondColorAttr.setXYZ(bondIdx * 2 + 1, color.r, color.g, color.b);
+                }
+            });
+            bondColorAttr.needsUpdate = true;
+        }
+    }
+
+    render();
     render();
 }
 
@@ -2799,6 +2822,21 @@ function selectFragment(fragmentAtoms, fragmentIndex) {
         const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
         atom.displayColor = color;
         colorAttr.setXYZ(i, color.r, color.g, color.b);
+    }
+
+    // Reset bond colors
+    if (main.molecule.bonds && main.molecule.bondGroup?.children[0]) {
+        const bondMesh = main.molecule.bondGroup.children[0];
+        const bondColorAttr = bondMesh.geometry.getAttribute('color');
+        if (bondColorAttr) {
+            main.molecule.bonds.forEach((bond, bondIdx) => {
+                const c1 = new THREE.Color(bond.atom1.color);
+                const c2 = new THREE.Color(bond.atom2.color);
+                bondColorAttr.setXYZ(bondIdx * 2, c1.r, c1.g, c1.b);
+                bondColorAttr.setXYZ(bondIdx * 2 + 1, c2.r, c2.g, c2.b);
+            });
+            bondColorAttr.needsUpdate = true;
+        }
     }
 
     // Highlight selected fragments
