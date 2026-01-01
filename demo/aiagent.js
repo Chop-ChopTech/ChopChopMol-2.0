@@ -5,7 +5,7 @@ const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0
 const AI_CONFIG = {
     backendUrl: backendUrl[1] || backendUrl[0],
     sessionId: crypto.randomUUID(),
-    model: localStorage.getItem('chopchop_ai_model') || 'gpt-5-mini',
+    model: 'gpt-5-mini',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
 };
 // Save immediately if new
@@ -1215,6 +1215,7 @@ function getMoleculeState() {
             atoms: f.atomData  // Full atom data for each frame
         })),
         maceModel: AI_CONFIG.maceModel || null,
+        aiModel: AI_CONFIG.model
     };
 }
 
