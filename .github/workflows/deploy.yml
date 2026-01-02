@@ -40,7 +40,7 @@ jobs:
       - name: Run AI tests
         run: node tests/ai-tests.js
         env:
-          BACKEND_URL: http://localhost:10000
+          BACKEND_URL: https://chopchopmol-ai-backend.onrender.com
       
       - name: Upload test results
         if: failure()
