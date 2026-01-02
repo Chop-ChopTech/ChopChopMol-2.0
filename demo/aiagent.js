@@ -1129,15 +1129,47 @@ const FUNCTIONS = {
     },
 
     load_molecule: {
-        execute: (params) => {
-            const input = document.getElementById('dbSearchInput');
-            if (input) {
-                input.value = params.name;
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-                input.focus();
-                return { success: true, message: `Searching for "${params.name}"...` };
+        execute: async (params) => {
+            try {
+                // Directly fetch from PubChem
+                const cidRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(params.name)}/cids/JSON`);
+                if (!cidRes.ok) throw new Error('Molecule not found');
+                const cidData = await cidRes.json();
+                const cid = cidData.IdentifierList?.CID?.[0];
+                if (!cid) throw new Error('No CID found');
+
+                const sdfRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF?record_type=3d`);
+                if (!sdfRes.ok) throw new Error('3D structure unavailable');
+
+                const sdfText = await sdfRes.text();
+
+                // Parse SDF
+                const lines = sdfText.split('\n');
+                const numAtoms = parseInt(lines[3].slice(0, 3));
+                const atomData = [];
+                for (let i = 4; i < 4 + numAtoms; i++) {
+                    const line = lines[i];
+                    if (!line || line.length < 34) continue;
+                    atomData.push({
+                        element: line.slice(31, 34).trim(),
+                        x: parseFloat(line.slice(0, 10).trim()),
+                        y: parseFloat(line.slice(10, 20).trim()),
+                        z: parseFloat(line.slice(20, 30).trim())
+                    });
+                }
+
+                // Clear frames and load
+                window.xyzFrames = null;
+                const frameSlider = document.getElementById('frameSliderContainer');
+                if (frameSlider) frameSlider.style.display = 'none';
+
+                window.main.newMolecule({ atomData, numAtoms }, window.main.setNewMode(numAtoms <= 2000));
+                window.main.zoomCameraToFitMolecule();
+
+                return { success: true, message: `Loaded "${params.name}" (${numAtoms} atoms)` };
+            } catch (err) {
+                return { success: false, message: `Failed to load: ${err.message}` };
             }
-            return { success: false, message: "Search not available" };
         }
     },
 
