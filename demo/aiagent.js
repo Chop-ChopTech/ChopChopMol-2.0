@@ -214,19 +214,199 @@ const FUNCTIONS = {
     set_bond_distance: {
         execute: (params) => {
             if (!window.atomsSelected || window.atomsSelected.length !== 2) return { success: false, message: "Select exactly 2 atoms" };
+
             const idx1 = window.atomsSelected[0], idx2 = window.atomsSelected[1];
-            const atom1 = window.main.molecule.atoms[idx1], atom2 = window.main.molecule.atoms[idx2];
+            const atoms = window.main.molecule.atoms;
+            const bonds = window.main.molecule.bonds;
+
+            // Build adjacency list
+            const adj = new Map();
+            for (let i = 0; i < atoms.length; i++) adj.set(i, []);
+            bonds.forEach(bond => {
+                const i1 = atoms.indexOf(bond.atom1);
+                const i2 = atoms.indexOf(bond.atom2);
+                if (i1 !== -1 && i2 !== -1) {
+                    adj.get(i1).push(i2);
+                    adj.get(i2).push(i1);
+                }
+            });
+
+            // Find connected atoms (BFS excluding the bond between idx1-idx2)
+            const findFragment = (start, exclude) => {
+                const visited = new Set([start]);
+                const queue = [start];
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    for (const neighbor of (adj.get(current) || [])) {
+                        if (current === start && neighbor === exclude) continue;
+                        if (!visited.has(neighbor)) {
+                            visited.add(neighbor);
+                            queue.push(neighbor);
+                        }
+                    }
+                }
+                return Array.from(visited);
+            };
+
+            // Check if bonded and find fragments
+            const neighbors1 = adj.get(idx1) || [];
+            let atomsToMove, anchorIdx;
+
+            if (neighbors1.includes(idx2)) {
+                const frag1 = findFragment(idx1, idx2);
+                const frag2 = findFragment(idx2, idx1);
+                if (frag2.length <= frag1.length) {
+                    atomsToMove = frag2;
+                    anchorIdx = idx1;
+                } else {
+                    atomsToMove = frag1;
+                    anchorIdx = idx2;
+                }
+            } else {
+                atomsToMove = [idx2];
+                anchorIdx = idx1;
+            }
+
+            const refIdx = atomsToMove.includes(idx1) ? idx1 : idx2;
+            const anchorAtom = atoms[anchorIdx];
+            const refAtom = atoms[refIdx];
+
             const targetInternal = params.distance * 4;
-            const currentVector = new window.THREE.Vector3().subVectors(atom2.position, atom1.position);
+            const currentVector = new window.THREE.Vector3().subVectors(refAtom.position, anchorAtom.position);
             const currentDist = currentVector.length();
             if (currentDist === 0) return { success: false, message: "Atoms at same position" };
+
             const translation = currentVector.normalize().multiplyScalar(targetInternal - currentDist);
-            atom2.position.add(translation);
-            atom2.x = atom2.position.x;
-            atom2.y = atom2.position.y;
-            atom2.z = atom2.position.z;
-            if (typeof window.updateMoleculeVisualization === 'function') window.updateMoleculeVisualization();
-            return { success: true, message: `Set distance to ${params.distance} Å` };
+
+            atomsToMove.forEach(atomIdx => {
+                const atom = atoms[atomIdx];
+                atom.position.add(translation.clone());
+                atom.x = atom.position.x;
+                atom.y = atom.position.y;
+                atom.z = atom.position.z;
+                // Call updateAtomMatrix like the UI does
+                if (typeof window.updateAtomMatrix === 'function') {
+                    window.updateAtomMatrix(atomIdx);
+                }
+            });
+
+            // Update exactly like the UI does
+            window.main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+            window.main.molecule.updateBonds(window.main.mode);
+            if (window.main.molecule.labels && window.main.molecule.labels.length > 0 && window.main.molecule.updateLabels) {
+                window.main.molecule.updateLabels();
+            }
+            if (typeof window.updateAllBondLengthLabels === 'function') {
+                window.updateAllBondLengthLabels();
+            }
+            if (typeof window.saveUndoState === 'function') {
+                window.saveUndoState("Set Distance");
+            }
+            window.main.molecule.updateMainCoordinates();
+            if (typeof window.render === 'function') {
+                window.render();
+            }
+
+            return { success: true, message: `Set distance to ${params.distance} Å (moved ${atomsToMove.length} atoms)` };
+        }
+    },
+
+    set_dihedral_angle: {
+        execute: (params) => {
+            if (!window.atomsSelected || window.atomsSelected.length !== 4) return { success: false, message: "Select exactly 4 atoms for dihedral" };
+
+            const [idx1, idx2, idx3, idx4] = window.atomsSelected;
+            const atoms = window.main.molecule.atoms;
+            const bonds = window.main.molecule.bonds;
+
+            // Build adjacency list
+            const adj = new Map();
+            for (let i = 0; i < atoms.length; i++) adj.set(i, []);
+            bonds.forEach(bond => {
+                const i1 = atoms.indexOf(bond.atom1);
+                const i2 = atoms.indexOf(bond.atom2);
+                if (i1 !== -1 && i2 !== -1) {
+                    adj.get(i1).push(i2);
+                    adj.get(i2).push(i1);
+                }
+            });
+
+            // Find fragment connected to atom3, excluding atom2
+            const findFragment = (start, exclude) => {
+                const visited = new Set([start]);
+                const queue = [start];
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    for (const neighbor of (adj.get(current) || [])) {
+                        if (current === start && neighbor === exclude) continue;
+                        if (!visited.has(neighbor)) {
+                            visited.add(neighbor);
+                            queue.push(neighbor);
+                        }
+                    }
+                }
+                return Array.from(visited);
+            };
+
+            const neighbors2 = adj.get(idx2) || [];
+            if (!neighbors2.includes(idx3)) return { success: false, message: "Atoms 2 and 3 must be bonded (central bond)" };
+
+            const atomsToMove = findFragment(idx3, idx2);
+
+            // Calculate current dihedral
+            const a1 = atoms[idx1], a2 = atoms[idx2], a3 = atoms[idx3], a4 = atoms[idx4];
+            const b1 = new window.THREE.Vector3().subVectors(a2.position, a1.position);
+            const b2 = new window.THREE.Vector3().subVectors(a3.position, a2.position);
+            const b3 = new window.THREE.Vector3().subVectors(a4.position, a3.position);
+
+            const n1 = new window.THREE.Vector3().crossVectors(b1, b2).normalize();
+            const n2 = new window.THREE.Vector3().crossVectors(b2, b3).normalize();
+            const cosAngle = n1.dot(n2);
+            const sinAngle = new window.THREE.Vector3().crossVectors(n1, n2).dot(b2.clone().normalize());
+            let currentAngle = Math.atan2(sinAngle, cosAngle) * 180 / Math.PI;
+            if (currentAngle < 0) currentAngle += 360;
+
+            let deltaAngle = params.angle - currentAngle;
+            while (deltaAngle > 180) deltaAngle -= 360;
+            while (deltaAngle < -180) deltaAngle += 360;
+
+            const deltaRadians = deltaAngle * Math.PI / 180;
+            const axisStart = a2.position.clone();
+            const axisDir = new window.THREE.Vector3().subVectors(a3.position, a2.position).normalize();
+            const rotMatrix = new window.THREE.Matrix4().makeRotationAxis(axisDir, deltaRadians);
+
+            atomsToMove.forEach(atomIdx => {
+                const atom = atoms[atomIdx];
+                const pos = atom.position.clone().sub(axisStart);
+                pos.applyMatrix4(rotMatrix);
+                pos.add(axisStart);
+                atom.position.copy(pos);
+                atom.x = atom.position.x;
+                atom.y = atom.position.y;
+                atom.z = atom.position.z;
+                if (typeof window.updateAtomMatrix === 'function') {
+                    window.updateAtomMatrix(atomIdx);
+                }
+            });
+
+            // Update exactly like the UI does
+            window.main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+            window.main.molecule.updateBonds(window.main.mode);
+            if (window.main.molecule.labels && window.main.molecule.labels.length > 0 && window.main.molecule.updateLabels) {
+                window.main.molecule.updateLabels();
+            }
+            if (typeof window.updateAllBondLengthLabels === 'function') {
+                window.updateAllBondLengthLabels();
+            }
+            if (typeof window.saveUndoState === 'function') {
+                window.saveUndoState("Set Dihedral");
+            }
+            window.main.molecule.updateMainCoordinates();
+            if (typeof window.render === 'function') {
+                window.render();
+            }
+
+            return { success: true, message: `Set dihedral to ${params.angle}° (rotated ${atomsToMove.length} atoms)` };
         }
     },
 

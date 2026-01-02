@@ -4277,8 +4277,10 @@ function updateAllBondLengthLabels() {
 
 function removeBondLengthLabel(index) {
     if (bondLengthLabels[index]) {
-        // Remove the label from DOM
-        document.body.removeChild(bondLengthLabels[index].element);
+        // Remove the label from DOM safely
+        if (bondLengthLabels[index].element && bondLengthLabels[index].element.parentNode) {
+            bondLengthLabels[index].element.parentNode.removeChild(bondLengthLabels[index].element);
+        }
 
         // Remove the dotted line from the scene
         if (bondLengthLabels[index].line) {
@@ -4297,8 +4299,10 @@ window.removeBondLengthLabel = removeBondLengthLabel;
 
 function clearAllBondLengthLabels() {
     bondLengthLabels.forEach(labelInfo => {
-        // Remove label from DOM
-        document.body.removeChild(labelInfo.element);
+        // Remove label from DOM safely
+        if (labelInfo.element && labelInfo.element.parentNode) {
+            labelInfo.element.parentNode.removeChild(labelInfo.element);
+        }
 
         // Remove dotted line from scene
         if (labelInfo.line) {
