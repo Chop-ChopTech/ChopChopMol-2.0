@@ -3,9 +3,9 @@
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[0] || backendUrl[0],
+    backendUrl: backendUrl[1] || backendUrl[0],
     sessionId: crypto.randomUUID(),
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-sonnet-4-5-20250929',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
 };
 // Save immediately if new
@@ -348,8 +348,6 @@ const FUNCTIONS = {
                 return Array.from(visited);
             };
 
-            const neighbors2 = adj.get(idx2) || [];
-            if (!neighbors2.includes(idx3)) return { success: false, message: "Atoms 2 and 3 must be bonded (central bond)" };
 
             const atomsToMove = findFragment(idx3, idx2);
 
@@ -1131,19 +1129,20 @@ const FUNCTIONS = {
     load_molecule: {
         execute: async (params) => {
             try {
-                // Directly fetch from PubChem
                 const cidRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(params.name)}/cids/JSON`);
                 if (!cidRes.ok) throw new Error('Molecule not found');
                 const cidData = await cidRes.json();
                 const cid = cidData.IdentifierList?.CID?.[0];
                 if (!cid) throw new Error('No CID found');
 
-                const sdfRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF?record_type=3d`);
-                if (!sdfRes.ok) throw new Error('3D structure unavailable');
+                // Try 3D first, fall back to 2D
+                let sdfRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF?record_type=3d`);
+                if (!sdfRes.ok) {
+                    sdfRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF`);
+                    if (!sdfRes.ok) throw new Error('Structure unavailable');
+                }
 
                 const sdfText = await sdfRes.text();
-
-                // Parse SDF
                 const lines = sdfText.split('\n');
                 const numAtoms = parseInt(lines[3].slice(0, 3));
                 const atomData = [];
@@ -1158,7 +1157,6 @@ const FUNCTIONS = {
                     });
                 }
 
-                // Clear frames and load
                 window.xyzFrames = null;
                 const frameSlider = document.getElementById('frameSliderContainer');
                 if (frameSlider) frameSlider.style.display = 'none';

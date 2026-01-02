@@ -3669,15 +3669,12 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
 
         // Cache fragment: atoms connected to atom3 (C), excluding atom2 (B)
         const adj = buildAdjacencyList();
-        const atom3Neighbors = adj.get(atom3Index) || [];
-        if (atom3Neighbors.includes(atom2Index)) {
-            cachedFragment = findConnectedAtoms(atom3Index, atom2Index, adj);
-            // Store base positions
-            cachedBasePositions = {};
-            cachedFragment.forEach(idx => {
-                cachedBasePositions[idx] = main.molecule.atoms[idx].position.clone();
-            });
-        }
+        cachedFragment = findConnectedAtoms(atom3Index, atom2Index, adj);
+        // Store base positions
+        cachedBasePositions = {};
+        cachedFragment.forEach(idx => {
+            cachedBasePositions[idx] = main.molecule.atoms[idx].position.clone();
+        });
 
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -5045,10 +5042,15 @@ window.toggleRibbon = toggleRibbon;
     async function loadPubChem(name) {
         const cidRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`);
         const cidData = await cidRes.json();
-        const cid = cidData.IdentifierList.CID[0];
+        const cid = cidData.IdentifierList?.CID?.[0];
+        if (!cid) throw new Error('Molecule not found');
 
-        const sdfRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF?record_type=3d`);
-        if (!sdfRes.ok) throw new Error('3D structure unavailable');
+        // Try 3D first, fall back to 2D
+        let sdfRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF?record_type=3d`);
+        if (!sdfRes.ok) {
+            sdfRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF`);
+            if (!sdfRes.ok) throw new Error('Structure unavailable');
+        }
 
         const sdfText = await sdfRes.text();
         const molData = parseSDF(sdfText);
