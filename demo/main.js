@@ -4301,12 +4301,23 @@ function clearAllBondLengthLabels() {
             labelInfo.element.parentNode.removeChild(labelInfo.element);
         }
 
-        // Remove dotted line from scene
+        // Remove line/group from scene
         if (labelInfo.line) {
             scene.remove(labelInfo.line);
-            // Dispose of geometry and material to free memory
-            labelInfo.line.geometry.dispose();
-            labelInfo.line.material.dispose();
+            // Handle both simple lines and groups (for dihedrals)
+            if (labelInfo.line.geometry) {
+                labelInfo.line.geometry.dispose();
+            }
+            if (labelInfo.line.material) {
+                labelInfo.line.material.dispose();
+            }
+            // For groups (dihedrals), dispose children
+            if (labelInfo.line.children) {
+                labelInfo.line.children.forEach(child => {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) child.material.dispose();
+                });
+            }
         }
     });
     bondLengthLabels = [];
