@@ -146,7 +146,7 @@ async function sendPrompt(message, state, sessionId) {
         const payload = {
             sessionId,
             state: { ...state }, // Send current state
-            model: 'claude-sonnet-4-5-20250929'
+            model: 'gpt-5-mini'
         };
 
         if (iter === 0) {
