@@ -1,0 +1,104 @@
+{
+    "molecule": "glucose.xyz",
+    "tests": [
+        {
+            "name": "count_atoms",
+            "prompt": "How many atoms total?",
+            "expect": {
+                "type": "contains",
+                "values": [
+                    "24"
+                ]
+            }
+        },
+        {
+            "name": "count_carbons",
+            "prompt": "How many carbon atoms?",
+            "expect": {
+                "type": "contains_any",
+                "values": [
+                    "6",
+                    "six"
+                ]
+            }
+        },
+        {
+            "name": "count_oxygens",
+            "prompt": "How many oxygen atoms?",
+            "expect": {
+                "type": "contains_any",
+                "values": [
+                    "6",
+                    "six"
+                ]
+            }
+        },
+        {
+            "name": "select_oxygens",
+            "prompt": "Select all oxygen atoms",
+            "expect": {
+                "type": "function_called",
+                "function": [
+                    "select_atoms",
+                    "select_atoms_by_element"
+                ]
+            }
+        },
+        {
+            "name": "identify_molecule",
+            "prompt": "What molecule is this based on the formula C6H12O6?",
+            "expect": {
+                "type": "contains_any",
+                "values": [
+                    "glucose",
+                    "sugar",
+                    "fructose",
+                    "hexose",
+                    "carbohydrate",
+                    "monosaccharide"
+                ]
+            }
+        },
+        {
+            "name": "get_formula",
+            "prompt": "What is the molecular formula?",
+            "expect": {
+                "type": "contains_any",
+                "values": [
+                    "c6h12o6",
+                    "c₆h₁₂o₆",
+                    "6 carbon",
+                    "12 hydrogen",
+                    "6 oxygen"
+                ]
+            }
+        },
+        {
+            "name": "torsion_scan_workflow",
+            "prompt": "Do a torsion scan around bond 12, 9 with mace-mpa-0, then plot it. After that, save the energy calculation outputs in a file called glucose_calc.json.",
+            "expect": {
+                "type": "workflow",
+                "steps": [
+                    {
+                        "function": "rotational_scan"
+                    },
+                    {
+                        "function": "calculate_all_energies",
+                        "args_contain": {
+                            "model": "mace-mpa-0"
+                        }
+                    },
+                    {
+                        "function": "create_chart"
+                    },
+                    {
+                        "function": "create_file",
+                        "args_contain": {
+                            "filename": "glucose_calc.json"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
