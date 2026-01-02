@@ -5,7 +5,7 @@ const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0
 const AI_CONFIG = {
     backendUrl: backendUrl[0] || backendUrl[0],
     sessionId: crypto.randomUUID(),
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'gpt-5-mini',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
 };
 // Save immediately if new

@@ -1922,7 +1922,7 @@
                     </optgroup>
                     <optgroup label="GPT-5">
                         <option value="gpt-5">GPT-5</option>
-                        <option value="gpt-5-mini">GPT-5 Mini</option>
+                        <option value="gpt-5-mini" selected>GPT-5 Mini</option>
                         <option value="gpt-5-nano">GPT-5 Nano</option>
                     </optgroup>
                     <optgroup label="GPT-4.1 (No Reasoning)">
@@ -1936,7 +1936,7 @@
                         <option value="claude-opus-4-20250514">Claude Opus 4</option>
                     </optgroup>
                     <optgroup label="Claude Sonnet">
-                        <option value="claude-sonnet-4-5-20250929" selected>Claude Sonnet 4.5</option>
+                        <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5</option>
                         <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
                     </optgroup>
                     <optgroup label="Claude Haiku">
@@ -1986,7 +1986,7 @@
             const sendBtn = document.getElementById('aiSendBtn');
             const messagesContainer = document.getElementById('aiChatMessages');
             const modelSelect = document.getElementById('aiModelSelect');
-            modelSelect.value = window.AIAgent?.getModel() || 'claude-sonnet-4-5-20250929';
+            modelSelect.value = window.AIAgent?.getModel() || 'gpt-5-mini';
             modelSelect.addEventListener('change', () => {
                 window.AIAgent?.setModel(modelSelect.value);
             });
