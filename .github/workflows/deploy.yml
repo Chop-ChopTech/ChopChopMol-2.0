@@ -19,35 +19,15 @@ jobs:
         with:
           node-version: '20'
       
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: Install Python dependencies
+      - name: Wake up Render backend
         run: |
-          cd backend
-          pip install -r requirements.txt
-      
-      - name: Start backend server
-        run: |
-          cd backend
-          python app.py &
-          sleep 5
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          curl -s https://chopchopmol-ai-backend.onrender.com/health || true
+          sleep 30
       
       - name: Run AI tests
         run: node tests/ai-tests.js
         env:
           BACKEND_URL: https://chopchopmol-ai-backend.onrender.com
-      
-      - name: Upload test results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-failures
-          path: tests/results/
 
   deploy-frontend:
     needs: test
