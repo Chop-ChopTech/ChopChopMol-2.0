@@ -3796,24 +3796,214 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
         input.style.setProperty('transition', 'none', 'important');
         labelDiv.style.setProperty('transition', 'none', 'important');
 
-    } else {
-        // For angle (3 atoms) - keep as non-editable text
-        labelDiv.textContent = value;
-        labelDiv.style.cssText = `
+    } else if (isAngle) {
+        // For angle (3 atoms): create an editable input
+        const input = document.createElement('input');
+        labelDiv.inputElement = input;
+        input.type = 'text';
+        input.value = value;
+        input.style.cssText = `
             color: ${color};
             font-family: 'Segoe UI', system-ui, sans-serif;
             font-size: 14px;
             font-weight: 600;
             background: transparent;
+            border: none;
             padding: 2px 4px;
+            text-align: center;
+            width: 70px;
+            cursor: text;
+            outline: none;
             text-shadow: 
                 -1px -1px 0 #000,
                 1px -1px 0 #000,
                 -1px 1px 0 #000,
                 1px 1px 0 #000,
                 0 0 3px rgba(0,0,0,0.9);
-            transition: none;
+            transition: none!important;
         `;
+
+        let justAppliedTransform = false;
+
+        // Pre-calculate fragment on atom1's side (excluding vertex atom2)
+        let cachedFragment = null;
+
+        const buildAdjacencyList = () => {
+            const adj = new Map();
+            for (let i = 0; i < main.molecule.atoms.length; i++) {
+                adj.set(i, []);
+            }
+            main.molecule.bonds.forEach(bond => {
+                const idx1 = main.molecule.atoms.indexOf(bond.atom1);
+                const idx2 = main.molecule.atoms.indexOf(bond.atom2);
+                if (idx1 !== -1 && idx2 !== -1) {
+                    adj.get(idx1).push(idx2);
+                    adj.get(idx2).push(idx1);
+                }
+            });
+            return adj;
+        };
+
+        const findConnectedAtoms = (startIdx, excludeIdx, adj) => {
+            const visited = new Set([startIdx]);
+            const queue = [startIdx];
+            while (queue.length > 0) {
+                const current = queue.shift();
+                const neighbors = adj.get(current) || [];
+                for (const neighborIdx of neighbors) {
+                    if (current === startIdx && neighborIdx === excludeIdx) continue;
+                    if (!visited.has(neighborIdx)) {
+                        visited.add(neighborIdx);
+                        queue.push(neighborIdx);
+                    }
+                }
+            }
+            return Array.from(visited);
+        };
+
+        // Cache fragment: atoms connected to atom1 (A), excluding atom2 (B/vertex)
+        const adj = buildAdjacencyList();
+        cachedFragment = findConnectedAtoms(atom1Index, atom2Index, adj);
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const targetAngleStr = input.value.replace('°', '').trim();
+                const targetAngle = parseFloat(targetAngleStr);
+
+                console.log('=== ANGLE ADJUSTMENT DEBUG ===');
+                console.log('Target angle string:', targetAngleStr);
+                console.log('Target angle parsed:', targetAngle);
+                console.log('Cached fragment:', cachedFragment);
+                console.log('Fragment length:', cachedFragment ? cachedFragment.length : 0);
+
+                if (!isNaN(targetAngle) && cachedFragment && cachedFragment.length > 0) {
+                    const currentAngle = parseFloat(calculateAngle(
+                        main.molecule.atoms[atom1Index],
+                        main.molecule.atoms[atom2Index],
+                        main.molecule.atoms[atom3Index]
+                    ));
+
+                    const deltaAngle = targetAngle - currentAngle;
+                    const deltaRadians = deltaAngle * Math.PI / 180;
+
+                    console.log('Current angle:', currentAngle);
+                    console.log('Delta angle:', deltaAngle);
+                    console.log('Delta radians:', deltaRadians);
+
+                    const posA = main.molecule.atoms[atom1Index].position.clone();
+                    const posB = main.molecule.atoms[atom2Index].position.clone();
+                    const posC = main.molecule.atoms[atom3Index].position.clone();
+
+                    console.log('Position A:', posA);
+                    console.log('Position B (vertex):', posB);
+                    console.log('Position C:', posC);
+
+                    const vecBA = new THREE.Vector3().subVectors(posA, posB);
+                    const vecBC = new THREE.Vector3().subVectors(posC, posB);
+                    const rotationAxis = new THREE.Vector3().crossVectors(vecBA, vecBC).normalize();
+
+                    console.log('Vector BA:', vecBA);
+                    console.log('Vector BC:', vecBC);
+                    console.log('Rotation axis:', rotationAxis);
+                    console.log('Rotation axis length squared:', rotationAxis.lengthSq());
+
+                    if (rotationAxis.lengthSq() < 0.0001) {
+                        console.log('ABORT: rotation axis too small (collinear atoms)');
+                        input.blur();
+                        return;
+                    }
+
+                    // ... rest of the rotation code
+
+                    // Create rotation matrix
+                    const rotationMatrix = new THREE.Matrix4().makeRotationAxis(rotationAxis, -deltaRadians);
+
+                    // Rotate all atoms in the fragment around vertex B
+                    cachedFragment.forEach(atomIdx => {
+                        const atom = main.molecule.atoms[atomIdx];
+                        const pos = atom.position.clone();
+
+                        // Translate to vertex origin
+                        pos.sub(posB);
+
+                        // Apply rotation
+                        pos.applyMatrix4(rotationMatrix);
+
+                        // Translate back
+                        pos.add(posB);
+
+                        // Update atom position
+                        atom.position.copy(pos);
+                        atom.x = atom.position.x;
+                        atom.y = atom.position.y;
+                        atom.z = atom.position.z;
+                        updateAtomMatrix(atomIdx);
+                    });
+
+                    // Update everything
+                    main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+                    main.molecule.updateBonds(main.mode);
+                    if (main.molecule.labels && main.molecule.labels.length > 0) {
+                        main.molecule.updateLabels();
+                    }
+
+                    justAppliedTransform = true;
+                    updateAllBondLengthLabels();
+                    saveUndoState("Set Angle");
+                    main.molecule.updateMainCoordinates();
+                    render();
+
+                    input.value = calculateAngle(
+                        main.molecule.atoms[atom1Index],
+                        main.molecule.atoms[atom2Index],
+                        main.molecule.atoms[atom3Index]
+                    ) + '°';
+                    input.blur();
+                    return;
+                }
+                input.blur();
+            } else if (e.key === 'Escape') {
+                input.value = calculateAngle(
+                    main.molecule.atoms[atom1Index],
+                    main.molecule.atoms[atom2Index],
+                    main.molecule.atoms[atom3Index]
+                ) + '°';
+                input.blur();
+            }
+        });
+
+        input.addEventListener('focus', () => {
+            input.style.textShadow = `
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 8px ${color}`;
+            input.select();
+        });
+
+        input.addEventListener('blur', () => {
+            input.style.textShadow = `
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 3px rgba(0,0,0,0.9)`;
+
+            if (!justAppliedTransform) {
+                input.value = calculateAngle(
+                    main.molecule.atoms[atom1Index],
+                    main.molecule.atoms[atom2Index],
+                    main.molecule.atoms[atom3Index]
+                ) + '°';
+            }
+            justAppliedTransform = false;
+        });
+
+        labelDiv.appendChild(input);
+        labelDiv.style.pointerEvents = 'auto';
+        input.style.setProperty('transition', 'none', 'important');
+        labelDiv.style.setProperty('transition', 'none', 'important');
     }
 
     // CREATE VISUALIZATION
@@ -4168,7 +4358,11 @@ function updateBondLengthLabel(labelInfo) {
         }
     } else if (labelInfo.isAngle) {
         const newAngle = calculateAngle(atom1, atom2, atom3);
-        labelInfo.element.textContent = `${newAngle}°`;
+        if (labelInfo.element.inputElement && document.activeElement !== labelInfo.element.inputElement) {
+            labelInfo.element.inputElement.value = `${newAngle}°`;
+        } else if (!labelInfo.element.inputElement) {
+            labelInfo.element.textContent = `${newAngle}°`;
+        }
     } else {
         const newDistance = calculateBondLength(atom1, atom2);
         // Update input value if it exists and is not focused
