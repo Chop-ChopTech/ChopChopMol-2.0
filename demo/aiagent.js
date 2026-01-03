@@ -3,7 +3,7 @@
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[0] || backendUrl[0],
+    backendUrl: backendUrl[1] || backendUrl[0],
     sessionId: crypto.randomUUID(),
     model: 'gpt-5-mini',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
@@ -13,7 +13,31 @@ if (!localStorage.getItem('chopchop_ai_session')) {
     localStorage.setItem('chopchop_ai_session', AI_CONFIG.sessionId);
 }
 //
-
+const toolStatusMap = {
+    select_atoms: 'Selecting atoms',
+    load_molecule: 'Loading molecule',
+    transform_atoms: 'Transforming atoms',
+    measure_distance: 'Measuring distance',
+    measure_angle: 'Measuring angle',
+    create_fragment: 'Creating fragment',
+    delete_atoms: 'Deleting atoms',
+    save_xyz: 'Saving file',
+    save_image: 'Saving image',
+    toggle_labels: 'Toggling labels',
+    calculate_energy: 'Calculating energy',
+    calculate_all_energies: 'Calculating all frame energies',
+    get_cached_energies: 'Retrieving cached energies',
+    optimize_geometry: 'Optimizing geometry',
+    create_chart: 'Creating chart',
+    read_file: 'Reading file',
+    list_folder_files: 'Listing files',
+    create_file: 'Creating file',
+    edit_file: 'Editing file',
+    split_molecule: 'Splitting molecule',
+    rotational_scan: 'Running rotational scan',
+    translation_scan: 'Running translation scan',
+    angle_scan: 'Running angle scan',
+};
 // ALL functions the AI can execute (kept on frontend - they manipulate DOM/Three.js)
 const FUNCTIONS = {
 
@@ -101,7 +125,182 @@ const FUNCTIONS = {
             return { success: true, message: `Added ${params.element}` };
         }
     },
+    set_angle: {
+        execute: (params) => {
+            if (!window.atomsSelected || window.atomsSelected.length !== 3) return { success: false, message: "Select exactly 3 atoms (A-B-C where B is the vertex)" };
 
+            const [idx1, idx2, idx3] = window.atomsSelected;
+            const atoms = window.main.molecule.atoms;
+            const bonds = window.main.molecule.bonds;
+
+            // Build adjacency list
+            const adj = new Map();
+            for (let i = 0; i < atoms.length; i++) adj.set(i, []);
+            bonds.forEach(bond => {
+                const i1 = atoms.indexOf(bond.atom1);
+                const i2 = atoms.indexOf(bond.atom2);
+                if (i1 !== -1 && i2 !== -1) {
+                    adj.get(i1).push(i2);
+                    adj.get(i2).push(i1);
+                }
+            });
+
+            // Find fragment connected to atom1, excluding vertex atom2
+            const findFragment = (start, exclude) => {
+                const visited = new Set([start]);
+                const queue = [start];
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    for (const neighbor of (adj.get(current) || [])) {
+                        if (current === start && neighbor === exclude) continue;
+                        if (!visited.has(neighbor)) {
+                            visited.add(neighbor);
+                            queue.push(neighbor);
+                        }
+                    }
+                }
+                return Array.from(visited);
+            };
+
+            const atomsToMove = findFragment(idx1, idx2);
+
+            // Calculate current angle
+            const a1 = atoms[idx1], a2 = atoms[idx2], a3 = atoms[idx3];
+            const vecBA = new window.THREE.Vector3().subVectors(a1.position, a2.position);
+            const vecBC = new window.THREE.Vector3().subVectors(a3.position, a2.position);
+            const currentAngle = vecBA.angleTo(vecBC) * 180 / Math.PI;
+
+            const deltaAngle = params.angle - currentAngle;
+            const deltaRadians = deltaAngle * Math.PI / 180;
+
+            // Rotation axis = perpendicular to plane ABC
+            const rotationAxis = new window.THREE.Vector3().crossVectors(vecBA, vecBC).normalize();
+            if (rotationAxis.lengthSq() < 0.0001) return { success: false, message: "Atoms are collinear" };
+
+            const rotMatrix = new window.THREE.Matrix4().makeRotationAxis(rotationAxis, -deltaRadians);
+            const pivot = a2.position.clone();
+
+            atomsToMove.forEach(atomIdx => {
+                const atom = atoms[atomIdx];
+                const pos = atom.position.clone().sub(pivot);
+                pos.applyMatrix4(rotMatrix);
+                pos.add(pivot);
+                atom.position.copy(pos);
+                atom.x = atom.position.x;
+                atom.y = atom.position.y;
+                atom.z = atom.position.z;
+                if (typeof window.updateAtomMatrix === 'function') {
+                    window.updateAtomMatrix(atomIdx);
+                }
+            });
+
+            window.main.molecule.instancedMesh.instanceMatrix.needsUpdate = true;
+            window.main.molecule.updateBonds(window.main.mode);
+            if (window.main.molecule.labels && window.main.molecule.labels.length > 0 && window.main.molecule.updateLabels) {
+                window.main.molecule.updateLabels();
+            }
+            if (typeof window.updateAllBondLengthLabels === 'function') {
+                window.updateAllBondLengthLabels();
+            }
+            if (typeof window.saveUndoState === 'function') {
+                window.saveUndoState("Set Angle");
+            }
+            window.main.molecule.updateMainCoordinates();
+            if (typeof window.render === 'function') {
+                window.render();
+            }
+
+            return { success: true, message: `Set angle to ${params.angle}° (moved ${atomsToMove.length} atoms)` };
+        }
+    },
+
+    angle_scan: {
+        execute: (params) => {
+            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
+
+            const { atom1, atom2, atom3, atomsToMove, increment = 10 } = params;
+            const molecule = window.main.molecule;
+            const stretch = molecule.stretch || 4;
+            const offset = molecule.offset || { x: 0, y: 0, z: 0 };
+            const allAtoms = molecule.atoms;
+
+            const a1 = allAtoms[atom1], a2 = allAtoms[atom2], a3 = allAtoms[atom3];
+            if (!a1 || !a2 || !a3) return { success: false, message: "Invalid atom indices" };
+            if (!atomsToMove || atomsToMove.length === 0) return { success: false, message: "No atoms to move" };
+            if (increment <= 0) return { success: false, message: "Increment must be positive" };
+
+            const steps = Math.floor(360 / increment);
+
+            // Rotation axis = perpendicular to plane ABC
+            const vecBA = new window.THREE.Vector3().subVectors(a1.position, a2.position);
+            const vecBC = new window.THREE.Vector3().subVectors(a3.position, a2.position);
+            const rotationAxis = new window.THREE.Vector3().crossVectors(vecBA, vecBC).normalize();
+            if (rotationAxis.lengthSq() < 0.0001) return { success: false, message: "Atoms are collinear" };
+
+            const pivot = a2.position.clone();
+
+            // Store original positions
+            const originalPositions = {};
+            atomsToMove.forEach(idx => {
+                const atom = allAtoms[idx];
+                if (atom) originalPositions[idx] = atom.position.clone();
+            });
+
+            const parsedFrames = [];
+
+            for (let step = 0; step < steps; step++) {
+                const angle = step * increment;
+                const angleRadians = angle * Math.PI / 180;
+
+                const rotMatrix = new window.THREE.Matrix4().makeRotationAxis(rotationAxis, -angleRadians);
+
+                const atomData = [];
+
+                allAtoms.forEach((atom, idx) => {
+                    let x, y, z;
+
+                    if (atomsToMove.includes(idx)) {
+                        const basePos = originalPositions[idx].clone();
+                        basePos.sub(pivot);
+                        basePos.applyMatrix4(rotMatrix);
+                        basePos.add(pivot);
+                        x = (basePos.x + offset.x) / stretch;
+                        y = (basePos.y + offset.y) / stretch;
+                        z = (basePos.z + offset.z) / stretch;
+                    } else {
+                        x = (atom.position.x + offset.x) / stretch;
+                        y = (atom.position.y + offset.y) / stretch;
+                        z = (atom.position.z + offset.z) / stretch;
+                    }
+
+                    atomData.push({ element: atom.type, x, y, z });
+                });
+
+                parsedFrames.push({ atomData, numAtoms: atomData.length, comment: `angle=${angle}` });
+            }
+
+            window.xyzFrames = parsedFrames;
+
+            const frameSliderContainer = document.getElementById('frameSliderContainer');
+            if (frameSliderContainer) {
+                frameSliderContainer.style.display = 'flex';
+                const slider = document.getElementById('frameSlider');
+                const label = document.getElementById('frameLabel');
+                if (slider) {
+                    slider.max = parsedFrames.length - 1;
+                    slider.value = 0;
+                }
+                if (label) {
+                    label.textContent = `Frame 1 / ${parsedFrames.length}`;
+                }
+            }
+
+            return {
+                success: true,
+                message: `Generated ${steps} frames (0° to ${(steps) * increment}° in ${increment}° steps). Use frame slider to play.`
+            };
+        }
+    },
     transform_atoms: {
         execute: async (params) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
@@ -1527,30 +1726,6 @@ async function sendToAI(userMessage, onChunk) {
 
             // Execute tool calls if any
             if (toolCalls?.length > 0) {
-                const toolStatusMap = {
-                    select_atoms: 'Selecting atoms',
-                    load_molecule: 'Loading molecule',
-                    transform_atoms: 'Transforming atoms',
-                    measure_distance: 'Measuring distance',
-                    measure_angle: 'Measuring angle',
-                    create_fragment: 'Creating fragment',
-                    delete_atoms: 'Deleting atoms',
-                    save_xyz: 'Saving file',
-                    save_image: 'Saving image',
-                    toggle_labels: 'Toggling labels',
-                    calculate_energy: 'Calculating energy',
-                    calculate_all_energies: 'Calculating all frame energies',
-                    get_cached_energies: 'Retrieving cached energies',
-                    optimize_geometry: 'Optimizing geometry',
-                    create_chart: 'Creating chart',
-                    read_file: 'Reading file',
-                    list_folder_files: 'Listing files',
-                    create_file: 'Creating file',
-                    edit_file: 'Editing file',
-                    split_molecule: 'Splitting molecule',
-                    rotational_scan: 'Running rotational scan',
-                    translation_scan: 'Running translation scan'
-                };
                 for (const tc of toolCalls) {
                     const fn = tc.function.name;
                     const args = JSON.parse(tc.function.arguments || '{}');
