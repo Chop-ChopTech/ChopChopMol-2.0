@@ -78,7 +78,7 @@ export default class FileHandler {
                         window.xyzFrames = null;
                     }
                 }
-                this.main.zoomCameraToFitMolecule();
+                window.resetCamera();
 
             } catch (error) {
                 console.error("Error parsing file:", error);
