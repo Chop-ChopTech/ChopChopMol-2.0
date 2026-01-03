@@ -3,7 +3,7 @@
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[0] || backendUrl[0],
+    backendUrl: backendUrl[1] || backendUrl[0],
     sessionId: crypto.randomUUID(),
     model: 'gpt-5-mini',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
@@ -218,16 +218,48 @@ const FUNCTIONS = {
         execute: (params) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
 
-            const { atom1, atom2, atom3, atomsToMove, increment = 10 } = params;
+            const { atom1, atom2, atom3, increment = 10 } = params;
             const molecule = window.main.molecule;
             const stretch = molecule.stretch || 4;
             const offset = molecule.offset || { x: 0, y: 0, z: 0 };
             const allAtoms = molecule.atoms;
+            const bonds = molecule.bonds;
 
             const a1 = allAtoms[atom1], a2 = allAtoms[atom2], a3 = allAtoms[atom3];
             if (!a1 || !a2 || !a3) return { success: false, message: "Invalid atom indices" };
-            if (!atomsToMove || atomsToMove.length === 0) return { success: false, message: "No atoms to move" };
             if (increment <= 0) return { success: false, message: "Increment must be positive" };
+
+            // Build adjacency list
+            const adj = new Map();
+            for (let i = 0; i < allAtoms.length; i++) adj.set(i, []);
+            bonds.forEach(bond => {
+                const i1 = allAtoms.indexOf(bond.atom1);
+                const i2 = allAtoms.indexOf(bond.atom2);
+                if (i1 !== -1 && i2 !== -1) {
+                    adj.get(i1).push(i2);
+                    adj.get(i2).push(i1);
+                }
+            });
+
+            // Find fragment connected to atom1, NEVER crossing through vertex (atom2)
+            const findFragment = (start, vertex) => {
+                const visited = new Set([start]);
+                const queue = [start];
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    for (const neighbor of (adj.get(current) || [])) {
+                        if (neighbor === vertex) continue; // Never cross the vertex
+                        if (!visited.has(neighbor)) {
+                            visited.add(neighbor);
+                            queue.push(neighbor);
+                        }
+                    }
+                }
+                return Array.from(visited);
+            };
+
+            const atomsToMove = params.atomsToMove || findFragment(atom1, atom2);
+            if (atomsToMove.length === 0) return { success: false, message: "No atoms to move" };
 
             const steps = Math.floor(360 / increment);
 
@@ -297,7 +329,7 @@ const FUNCTIONS = {
 
             return {
                 success: true,
-                message: `Generated ${steps} frames (0° to ${(steps) * increment}° in ${increment}° steps). Use frame slider to play.`
+                message: `Generated ${steps} frames (0° to ${(steps - 1) * increment}° in ${increment}° steps). Rotating ${atomsToMove.length} atoms. Use frame slider to play.`
             };
         }
     },
@@ -778,10 +810,6 @@ const FUNCTIONS = {
                 }
             });
 
-            // Check if atom1 and atom2 are bonded
-            if (!adj[atom1].includes(atom2)) {
-                return { success: false, message: `Atoms ${atom1} and ${atom2} are not bonded` };
-            }
 
             // BFS from atom1, excluding the bond to atom2
             const visited = new Set();
