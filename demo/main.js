@@ -5101,11 +5101,12 @@ window.toggleRibbon = toggleRibbon;
             } catch (e) { /* ignore */ }
         }
 
-        items = names;
-        showResults(names.map(name => ({
+        items = names.filter(name => nameToCid[name]);
+        showResults(items.map(name => ({
             name,
             source: 'PubChem',
-            type: cidDesc[nameToCid[name]] || 'Compound'
+            type: cidDesc[nameToCid[name]] || 'Compound',
+            cid: nameToCid[name]
         })));
     }
 
@@ -5172,7 +5173,7 @@ window.toggleRibbon = toggleRibbon;
         }
 
         tbody.innerHTML = list.slice(0, 15).map((item, i) => `
-        <tr data-i="${i}" data-name="${item.name}" data-id="${item.id || item.name}" data-source="${item.source}">
+        <tr data-i="${i}" data-name="${item.name}" data-id="${item.id || item.name}" data-source="${item.source}"${item.cid ? ` data-cid="${item.cid}"` : ''}>
             <td class="col-name" title="${item.name}">${item.name}</td>
             <td class="col-type">${item.source}</td>
             <td class="col-desc" title="Click to expand">${item.type || ''}</td>
@@ -5193,7 +5194,7 @@ window.toggleRibbon = toggleRibbon;
                     e.target.classList.toggle('expanded');
                     return;
                 }
-                load(row.dataset.name, row.dataset.source, row.dataset.id);
+                load(row.dataset.name, row.dataset.source, row.dataset.id, row.dataset.cid);
             };
         });
     }
@@ -5212,7 +5213,7 @@ window.toggleRibbon = toggleRibbon;
             e.preventDefault();
             if (activeIdx >= 0 && rows[activeIdx]) {
                 const row = rows[activeIdx];
-                load(row.dataset.name, row.dataset.source, row.dataset.id);
+                load(row.dataset.name, row.dataset.source, row.dataset.id, row.dataset.cid);
             }
         } else if (e.key === 'Escape') {
             dropdown.classList.remove('show');
@@ -5226,14 +5227,14 @@ window.toggleRibbon = toggleRibbon;
         });
     }
 
-    async function load(name, source, id) {
+    async function load(name, source, id, cid) {
         dropdown.classList.remove('show');
         input.value = name;
         loader.classList.add('show');
 
         try {
             switch (source) {
-                case 'PubChem': await loadPubChem(name); break;
+                case 'PubChem': await loadPubChem(name, cid); break;
                 case 'PDB': await loadPDB(name); break;
                 case 'ChEMBL': await loadChEMBL(id || name); break;
                 case 'DrugBank': await loadDrugBank(name); break;
@@ -5248,10 +5249,13 @@ window.toggleRibbon = toggleRibbon;
     }
 
     // Load from PubChem
-    async function loadPubChem(name) {
-        const cidRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`);
-        const cidData = await cidRes.json();
-        const cid = cidData.IdentifierList?.CID?.[0];
+    async function loadPubChem(name, existingCid) {
+        let cid = existingCid && existingCid !== 'undefined' ? existingCid : null;
+        if (!cid) {
+            const cidRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/cids/JSON`);
+            const cidData = await cidRes.json();
+            cid = cidData.IdentifierList?.CID?.[0];
+        }
         if (!cid) throw new Error('Molecule not found');
 
         // Try 3D first, fall back to 2D
