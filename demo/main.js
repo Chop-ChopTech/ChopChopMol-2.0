@@ -5337,6 +5337,7 @@ window.toggleRibbon = toggleRibbon;
         const lines = sdfText.split('\n');
         const countsLine = lines[3];
         const numAtoms = parseInt(countsLine.slice(0, 3));
+        const numBonds = parseInt(countsLine.slice(3, 6));
         const atomData = [];
 
         for (let i = 4; i < 4 + numAtoms; i++) {
@@ -5347,6 +5348,43 @@ window.toggleRibbon = toggleRibbon;
             const z = parseFloat(line.slice(20, 30).trim());
             const element = line.slice(31, 34).trim();
             atomData.push({ element, x, y, z });
+        }
+
+        // Parse bond block to get actual bonds
+        const bonds = [];
+        const bondStart = 4 + numAtoms;
+        for (let i = bondStart; i < bondStart + numBonds; i++) {
+            const line = lines[i];
+            if (!line || line.length < 6) continue;
+            const a1 = parseInt(line.slice(0, 3)) - 1; // 1-indexed to 0-indexed
+            const a2 = parseInt(line.slice(3, 6)) - 1;
+            if (a1 >= 0 && a2 >= 0 && a1 < numAtoms && a2 < numAtoms) {
+                bonds.push([a1, a2]);
+            }
+        }
+
+        // Calculate average bond length from actual bonds
+        if (bonds.length > 0 && atomData.length > 1) {
+            let totalDist = 0;
+            bonds.forEach(([a1, b1]) => {
+                const dx = atomData[a1].x - atomData[b1].x;
+                const dy = atomData[a1].y - atomData[b1].y;
+                const dz = atomData[a1].z - atomData[b1].z;
+                totalDist += Math.sqrt(dx * dx + dy * dy + dz * dz);
+            });
+            const avgBondLen = totalDist / bonds.length;
+
+            // Expected average bond length is ~1.4-1.5 Å
+            // If significantly off, scale the coordinates
+            if (avgBondLen < 0.87 || avgBondLen > 3.0) {
+                const scale = 1.25 / avgBondLen;
+                atomData.forEach(a => {
+                    a.x *= scale;
+                    a.y *= scale;
+                    a.z *= scale;
+                });
+                console.log(`SDF coordinates scaled by ${scale.toFixed(2)} (avg bond was ${avgBondLen.toFixed(3)} Å)`);
+            }
         }
 
         return { atomData, numAtoms };
