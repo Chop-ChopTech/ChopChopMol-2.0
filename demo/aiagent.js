@@ -479,23 +479,17 @@ const FUNCTIONS = {
                 return Array.from(visited);
             };
 
-            // Check if bonded and find fragments
-            const neighbors1 = adj.get(idx1) || [];
+            // Find fragments on each side (works whether bonded or not)
+            const frag1 = findFragment(idx1, idx2);
+            const frag2 = findFragment(idx2, idx1);
             let atomsToMove, anchorIdx;
 
-            if (neighbors1.includes(idx2)) {
-                const frag1 = findFragment(idx1, idx2);
-                const frag2 = findFragment(idx2, idx1);
-                if (frag2.length <= frag1.length) {
-                    atomsToMove = frag2;
-                    anchorIdx = idx1;
-                } else {
-                    atomsToMove = frag1;
-                    anchorIdx = idx2;
-                }
-            } else {
-                atomsToMove = [idx2];
+            if (frag2.length <= frag1.length) {
+                atomsToMove = frag2;
                 anchorIdx = idx1;
+            } else {
+                atomsToMove = frag1;
+                anchorIdx = idx2;
             }
 
             const refIdx = atomsToMove.includes(idx1) ? idx1 : idx2;
