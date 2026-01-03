@@ -218,7 +218,7 @@ const FUNCTIONS = {
         execute: (params) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
 
-            const { atom1, atom2, atom3, increment = 10 } = params;
+            const { atom1, atom2, atom3, increment = 10, startAngle = 0, endAngle = 360 } = params;
             const molecule = window.main.molecule;
             const stretch = molecule.stretch || 4;
             const offset = molecule.offset || { x: 0, y: 0, z: 0 };
@@ -248,7 +248,7 @@ const FUNCTIONS = {
                 while (queue.length > 0) {
                     const current = queue.shift();
                     for (const neighbor of (adj.get(current) || [])) {
-                        if (neighbor === vertex) continue; // Never cross the vertex
+                        if (neighbor === vertex) continue;
                         if (!visited.has(neighbor)) {
                             visited.add(neighbor);
                             queue.push(neighbor);
@@ -261,7 +261,8 @@ const FUNCTIONS = {
             const atomsToMove = params.atomsToMove || findFragment(atom1, atom2);
             if (atomsToMove.length === 0) return { success: false, message: "No atoms to move" };
 
-            const steps = Math.floor(360 / increment);
+            const range = endAngle - startAngle;
+            const steps = Math.floor(Math.abs(range) / increment) + 1;
 
             // Rotation axis = perpendicular to plane ABC
             const vecBA = new window.THREE.Vector3().subVectors(a1.position, a2.position);
@@ -271,7 +272,6 @@ const FUNCTIONS = {
 
             const pivot = a2.position.clone();
 
-            // Store original positions
             const originalPositions = {};
             atomsToMove.forEach(idx => {
                 const atom = allAtoms[idx];
@@ -279,11 +279,11 @@ const FUNCTIONS = {
             });
 
             const parsedFrames = [];
+            const direction = range >= 0 ? 1 : -1;
 
             for (let step = 0; step < steps; step++) {
-                const angle = step * increment;
+                const angle = startAngle + step * increment * direction;
                 const angleRadians = angle * Math.PI / 180;
-
                 const rotMatrix = new window.THREE.Matrix4().makeRotationAxis(rotationAxis, -angleRadians);
 
                 const atomData = [];
@@ -329,7 +329,7 @@ const FUNCTIONS = {
 
             return {
                 success: true,
-                message: `Generated ${steps} frames (0° to ${(steps - 1) * increment}° in ${increment}° steps). Rotating ${atomsToMove.length} atoms. Use frame slider to play.`
+                message: `Generated ${steps} frames (${startAngle}° to ${startAngle + (steps - 1) * increment * direction}° in ${increment}° steps). Rotating ${atomsToMove.length} atoms. Use frame slider to play.`
             };
         }
     },
@@ -997,7 +997,7 @@ const FUNCTIONS = {
         execute: (params) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
 
-            const { axisAtom1, axisAtom2, atomsToMove, increment } = params;
+            const { axisAtom1, axisAtom2, atomsToMove, increment = 10, startAngle = 0, endAngle = 360 } = params;
             const molecule = window.main.molecule;
             const stretch = molecule.stretch || 4;
             const offset = molecule.offset || { x: 0, y: 0, z: 0 };
@@ -1008,7 +1008,8 @@ const FUNCTIONS = {
             if (!atomsToMove || atomsToMove.length === 0) return { success: false, message: "No atoms to rotate" };
             if (!increment || increment <= 0) return { success: false, message: "Increment must be positive" };
 
-            const steps = Math.floor(360 / increment);
+            const range = endAngle - startAngle;
+            const steps = Math.floor(Math.abs(range) / increment) + 1;
             const allAtoms = molecule.atoms;
 
             const originalPositions = {};
@@ -1023,9 +1024,10 @@ const FUNCTIONS = {
             const axisPoint = pos1.clone();
 
             const parsedFrames = [];
+            const direction = range >= 0 ? 1 : -1;
 
             for (let step = 0; step < steps; step++) {
-                const angle = step * increment;
+                const angle = startAngle + step * increment * direction;
                 const angleRadians = angle * Math.PI / 180;
                 const rotationMatrix = new window.THREE.Matrix4().makeRotationAxis(axisDirection, angleRadians);
 
@@ -1039,12 +1041,10 @@ const FUNCTIONS = {
                         basePos.sub(axisPoint);
                         basePos.applyMatrix4(rotationMatrix);
                         basePos.add(axisPoint);
-                        // Add offset back before dividing by stretch
                         x = (basePos.x + offset.x) / stretch;
                         y = (basePos.y + offset.y) / stretch;
                         z = (basePos.z + offset.z) / stretch;
                     } else {
-                        // Add offset back before dividing by stretch
                         x = (atom.position.x + offset.x) / stretch;
                         y = (atom.position.y + offset.y) / stretch;
                         z = (atom.position.z + offset.z) / stretch;
@@ -1074,15 +1074,16 @@ const FUNCTIONS = {
 
             return {
                 success: true,
-                message: `Generated ${steps} frames (0° to ${(steps - 1) * increment}° in ${increment}° steps). Use frame slider to play.`
+                message: `Generated ${steps} frames (${startAngle}° to ${startAngle + (steps - 1) * increment * direction}° in ${increment}° steps). Use frame slider to play.`
             };
         }
     },
+
     translation_scan: {
         execute: (params) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
 
-            const { axisAtom1, axisAtom2, atomsToMove, totalDistance = 3, increment = 0.2 } = params;
+            const { axisAtom1, axisAtom2, atomsToMove, startDistance = 0, endDistance = 3, increment = 0.2 } = params;
             const molecule = window.main.molecule;
             const stretch = molecule.stretch || 4;
             const offset = molecule.offset || { x: 0, y: 0, z: 0 };
@@ -1093,7 +1094,8 @@ const FUNCTIONS = {
             if (!atomsToMove || atomsToMove.length === 0) return { success: false, message: "No atoms to translate" };
             if (increment <= 0) return { success: false, message: "Increment must be positive" };
 
-            const steps = Math.floor(totalDistance / increment) + 1;
+            const range = endDistance - startDistance;
+            const steps = Math.floor(Math.abs(range) / increment) + 1;
             const allAtoms = molecule.atoms;
 
             const originalPositions = {};
@@ -1107,9 +1109,10 @@ const FUNCTIONS = {
             const axisDirection = new window.THREE.Vector3().subVectors(pos2, pos1).normalize();
 
             const parsedFrames = [];
+            const direction = range >= 0 ? 1 : -1;
 
             for (let step = 0; step < steps; step++) {
-                const dist = step * increment;
+                const dist = startDistance + step * increment * direction;
                 const translationVec = axisDirection.clone().multiplyScalar(dist * stretch);
 
                 const atomData = [];
@@ -1153,7 +1156,7 @@ const FUNCTIONS = {
 
             return {
                 success: true,
-                message: `Generated ${steps} frames (0 to ${totalDistance}Å in ${increment}Å steps). Use frame slider to play.`
+                message: `Generated ${steps} frames (${startDistance}Å to ${startDistance + (steps - 1) * increment * direction}Å in ${increment}Å steps). Use frame slider to play.`
             };
         }
     },
