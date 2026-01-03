@@ -534,6 +534,188 @@ window.addEventListener('keyup', function (e) {
     }
 });
 
+// Easter egg: Hold "." and press "h" 3 times to explode the molecule
+let periodHeld = false;
+let hPressCount = 0;
+let explosionAnimating = false;
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === '.') {
+        periodHeld = true;
+        hPressCount = 0;
+    }
+
+    if (periodHeld && e.key.toLowerCase() === 'h') {
+        hPressCount++;
+        if (hPressCount >= 3 && !explosionAnimating) {
+            triggerExplosion();
+            hPressCount = 0;
+        }
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.key === '.') {
+        periodHeld = false;
+        hPressCount = 0;
+    }
+});
+
+function triggerExplosion() {
+    if (!main.molecule || !main.molecule.atoms || main.molecule.atoms.length === 0) return;
+
+    explosionAnimating = true;
+
+    const gravity = -0.015;
+    const explosionForce = 1.5;
+    const drag = 0.99;
+
+    // Each atom gets velocity, spin, and tracks position
+    const particles = main.molecule.atoms.map(() => ({
+        vx: (Math.random() - 0.5) * explosionForce,
+        vy: Math.random() * explosionForce * 0.8 + 0.3, // Bias upward initially
+        vz: (Math.random() - 0.5) * explosionForce,
+        spin: {
+            x: (Math.random() - 0.5) * 0.1,
+            y: (Math.random() - 0.5) * 0.1,
+            z: (Math.random() - 0.5) * 0.1
+        }
+    }));
+
+    // Bond particles
+    let bondParticles = [];
+    const bondMesh = main.molecule.bondGroup?.children[0];
+    if (bondMesh && bondMesh.isInstancedMesh) {
+        bondParticles = Array.from({ length: bondMesh.count }, () => ({
+            vx: (Math.random() - 0.5) * explosionForce,
+            vy: Math.random() * explosionForce * 0.8 + 0.3,
+            vz: (Math.random() - 0.5) * explosionForce,
+            spin: {
+                x: (Math.random() - 0.5) * 0.15,
+                y: (Math.random() - 0.5) * 0.15,
+                z: (Math.random() - 0.5) * 0.15
+            }
+        }));
+    }
+
+    let frame = 0;
+    const maxFrames = 180; // 3 seconds at 60fps
+
+    function animateExplosion() {
+        frame++;
+
+        const instancedMesh = main.molecule.instancedMesh;
+        if (!instancedMesh) return;
+
+        const matrix = new THREE.Matrix4();
+        const pos = new THREE.Vector3();
+        const quat = new THREE.Quaternion();
+        const scale = new THREE.Vector3();
+        const euler = new THREE.Euler();
+        const spinQuat = new THREE.Quaternion();
+
+        // Animate atoms
+        for (let i = 0; i < main.molecule.atoms.length; i++) {
+            const p = particles[i];
+
+            // Apply gravity
+            p.vy += gravity;
+
+            // Apply drag
+            p.vx *= drag;
+            p.vy *= drag;
+            p.vz *= drag;
+
+            instancedMesh.getMatrixAt(i, matrix);
+            matrix.decompose(pos, quat, scale);
+
+            // Update position
+            pos.x += p.vx;
+            pos.y += p.vy;
+            pos.z += p.vz;
+
+            // Apply spin
+            euler.setFromQuaternion(quat);
+            euler.x += p.spin.x;
+            euler.y += p.spin.y;
+            euler.z += p.spin.z;
+            quat.setFromEuler(euler);
+
+            // Slight shrink over time
+            if (frame > maxFrames * 0.7) {
+                scale.multiplyScalar(0.95);
+            }
+
+            matrix.compose(pos, quat, scale);
+            instancedMesh.setMatrixAt(i, matrix);
+        }
+        instancedMesh.instanceMatrix.needsUpdate = true;
+
+        // Animate styled bonds
+        if (bondMesh && bondMesh.isInstancedMesh && bondParticles.length > 0) {
+            for (let i = 0; i < bondMesh.count; i++) {
+                const p = bondParticles[i];
+
+                p.vy += gravity;
+                p.vx *= drag;
+                p.vy *= drag;
+                p.vz *= drag;
+
+                bondMesh.getMatrixAt(i, matrix);
+                matrix.decompose(pos, quat, scale);
+
+                pos.x += p.vx;
+                pos.y += p.vy;
+                pos.z += p.vz;
+
+                euler.setFromQuaternion(quat);
+                euler.x += p.spin.x;
+                euler.y += p.spin.y;
+                euler.z += p.spin.z;
+                quat.setFromEuler(euler);
+
+                if (frame > maxFrames * 0.7) {
+                    scale.multiplyScalar(0.94);
+                }
+
+                matrix.compose(pos, quat, scale);
+                bondMesh.setMatrixAt(i, matrix);
+            }
+            bondMesh.instanceMatrix.needsUpdate = true;
+        }
+
+        // Animate fast bonds (LineSegments) - scatter vertices
+        if (bondMesh && bondMesh.isLineSegments) {
+            const positions = bondMesh.geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                positions[i] += (Math.random() - 0.5) * 0.3;
+                positions[i + 1] += gravity * frame * 0.1;
+                positions[i + 2] += (Math.random() - 0.5) * 0.3;
+            }
+            bondMesh.geometry.attributes.position.needsUpdate = true;
+        }
+
+        render();
+
+        if (frame < maxFrames) {
+            requestAnimationFrame(animateExplosion);
+        } else {
+            // Clean up
+            main.data = { atomData: [], numAtoms: 0 };
+            main.molecule.reset();
+            clearScene(main.scene);
+            atomsSelected = [];
+            fragments = [];
+            fragmentsSelected = [];
+            explosionAnimating = false;
+            render();
+            showNotification('💥 Boom!', 'info');
+        }
+    }
+
+    animateExplosion();
+}
+
 
 window.addEventListener('keydown', function (e) {
     if (isLPressed && e.key === 'Enter') {
