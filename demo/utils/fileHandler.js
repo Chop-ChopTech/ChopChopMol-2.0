@@ -139,6 +139,7 @@ export default class FileHandler {
 
         // Store frames globally for slider access
         window.xyzFrames = frames.length > 1 ? frames : null;
+        window._pendingChartData = null; // Clear AI chart when loading new molecule
 
         // Return first frame data (no circular reference)
         if (frames.length === 0) {
@@ -212,6 +213,7 @@ export default class FileHandler {
 
         window.xyzFrames = frames.length > 1 ? frames : null;
         window.frameEnergies = frameEnergies;
+        window._pendingChartData = null; // Clear AI chart when loading new molecule
 
         window.updateEnergyChartButton?.();
 
