@@ -1233,15 +1233,13 @@ input[type="range"]:focus {
 
 #toolbar-background {
     position: absolute;
-    top: 0px;
+    top: 10px;
     left: 50%;
-    transform: translateX(-50%) translateY(10px);
-    /* background: linear-gradient(135deg, rgba(236, 210, 255, 0.025), rgba(178, 215, 255, 0.096)) !important; */
-
+    transform: translateX(-50%);
     z-index: -999999999999999;
     border-radius: 20px;
     padding: 3px 10px;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: opacity 0.3s ease;
     background-repeat: no-repeat !important;
     perspective: 1000px;
 }
@@ -1641,8 +1639,8 @@ input[type="range"]:focus {
 
 /* Dropdown content */
 .dropdown-content {
-    position: absolute;
-    top: 140%;
+    position: fixed;
+    top: 60px;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
     min-width: 160px;

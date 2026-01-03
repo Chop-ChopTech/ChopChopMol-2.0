@@ -4920,7 +4920,11 @@ function updateRendererSize() {
     if (frameSlider) {
         frameSlider.style.left = (leftOffset + width / 2) + 'px';
     }
-
+    const toolbarBg = document.getElementById('toolbar-background');
+    if (toolbarBg) {
+        toolbarBg.style.left = (leftOffset + width / 2) + 'px';
+        toolbarBg.style.transform = 'translateX(-50%)';
+    }
     render();
 }
 window.addEventListener('resize', updateRendererSize);
