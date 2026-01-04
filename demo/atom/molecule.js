@@ -595,19 +595,21 @@ export default class Molecule {
                     void main() {
                         vUv = mix(uvBounds.xy, uvBounds.zw, uv);
                         
-                        // Extract position and scale from instance matrix
-                        vec3 instancePos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
-                        float scaleX = length(vec3(instanceMatrix[0][0], instanceMatrix[0][1], instanceMatrix[0][2]));
-                        float scaleY = length(vec3(instanceMatrix[1][0], instanceMatrix[1][1], instanceMatrix[1][2]));
+                        // Extract instance position and uniform scale from instanceMatrix
+                        vec3 instancePos = instanceMatrix[3].xyz;
+                        float scale = length(instanceMatrix[0].xyz); // Uniform scale assumed
                         
-                        // Transform instance position to view space
-                        vec4 mvPosition = modelViewMatrix * vec4(instancePos, 1.0);
+                        // World position of the atom center
+                        vec4 worldPosition = modelMatrix * vec4(instancePos, 1.0);
                         
-                        // Push label toward camera (negative z in view space)
-                        mvPosition.z += scaleX * 0.6;
+                        // View space position
+                        vec4 mvPosition = viewMatrix * worldPosition;
                         
-                        // Add the billboard offset in view space (always facing camera)
-                        mvPosition.xy += position.xy * vec2(scaleX, scaleY);
+                        // Full billboarding: use camera right and up vectors
+                        vec3 cameraRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+                        vec3 cameraUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+                        
+                        mvPosition.xyz += cameraRight * position.x * scale + cameraUp * position.y * scale;
                         
                         gl_Position = projectionMatrix * mvPosition;
                     }
@@ -623,11 +625,11 @@ export default class Molecule {
                     }
                 `,
                 transparent: true,
-                depthTest: true,
-                depthWrite: false,
-                side: THREE.DoubleSide
+                depthTest: false,    // Draws on top for always-visible labels
+                depthWrite: false,   // No z-fighting
+                side: THREE.DoubleSide,
+                blending: THREE.NormalBlending  // Good for overlaying on atoms
             });
-
             this.labelInstancedMesh = new THREE.InstancedMesh(geometry, material, this.atoms.length);
             this.labelInstancedMesh.renderOrder = 999;
             this.labelInstancedMesh.frustumCulled = false;
@@ -650,6 +652,25 @@ export default class Molecule {
             geometry.setAttribute('uvBounds', new THREE.InstancedBufferAttribute(uvBounds, 4));
 
             this.main.scene.add(this.labelInstancedMesh);
+            const matrix = new THREE.Matrix4();
+            const tempMatrix = new THREE.Matrix4();
+            const position = new THREE.Vector3();
+            const scale = new THREE.Vector3();
+            const rotation = new THREE.Quaternion();  // Not used, but for decompose
+
+            this.atoms.forEach((atom, i) => {
+                this.instancedMesh.getMatrixAt(i, tempMatrix);
+                tempMatrix.decompose(position, rotation, scale);
+
+                const labelScale = scale.x * 2.0;  // Adjust multiplier if labels feel too big/small
+
+                matrix.makeScale(labelScale, labelScale, labelScale);
+                matrix.setPosition(position);
+
+                this.labelInstancedMesh.setMatrixAt(i, matrix);
+            });
+
+            this.labelInstancedMesh.instanceMatrix.needsUpdate = true;
             console.log(`Created labels for ${this.atoms.length} atoms`);
         } else {
             // Update existing mesh
