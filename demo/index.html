@@ -3167,7 +3167,7 @@
             // Close style panel when clicking outside
             document.addEventListener('click', (e) => {
                 const stylePanel = document.getElementById('stylePanel');
-                const paletteBtn = e.target.closest('.fa-palette')?.parentElement;
+                const paletteBtn = e.target.closest('.fa-gear')?.parentElement;
                 if (stylePanel?.classList.contains('open') &&
                     !stylePanel.contains(e.target) &&
                     !paletteBtn) {
