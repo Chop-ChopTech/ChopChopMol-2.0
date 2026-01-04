@@ -574,7 +574,7 @@ export default class Molecule {
             return;
         }
 
-        // Recreate atlas if mode changed
+        // Recreate atlas if content changed
         if (this.labelAtlas) {
             this.labelAtlas.dispose();
             this.labelAtlas = null;
@@ -582,87 +582,87 @@ export default class Molecule {
         this.createLabelAtlas(showElements, showIndices);
 
         if (!this.labelInstancedMesh) {
-            const geometry = new THREE.PlaneGeometry(1, 1);
+            const geometry = new THREE.PlaneGeometry(1, 1); // Centered plane (-0.5 to +0.5)
 
             const material = new THREE.ShaderMaterial({
                 uniforms: {
                     map: { value: this.labelAtlas }
                 },
                 vertexShader: `
-                    attribute vec4 uvBounds;
-                    varying vec2 vUv;
+                attribute vec4 uvBounds;
+                varying vec2 vUv;
+                
+                void main() {
+                    vUv = mix(uvBounds.xy, uvBounds.zw, uv);
                     
-                    void main() {
-                        vUv = mix(uvBounds.xy, uvBounds.zw, uv);
-                        
-                        // Extract instance position and uniform scale from instanceMatrix
-                        vec3 instancePos = instanceMatrix[3].xyz;
-                        float scale = length(instanceMatrix[0].xyz); // Uniform scale assumed
-                        
-                        // World position of the atom center
-                        vec4 worldPosition = modelMatrix * vec4(instancePos, 1.0);
-                        
-                        // View space position
-                        vec4 mvPosition = viewMatrix * worldPosition;
-                        
-                        // Full billboarding: use camera right and up vectors
-                        vec3 cameraRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
-                        vec3 cameraUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-                        
-                        mvPosition.xyz += cameraRight * position.x * scale + cameraUp * position.y * scale;
-                        
-                        gl_Position = projectionMatrix * mvPosition;
-                    }
-                `,
+                    // Instance translation only (from instanceMatrix column 3)
+                    vec3 instancePos = instanceMatrix[3].xyz;
+                    
+                    // Uniform scale from instance matrix (assuming uniform scaling)
+                    float scale = length(vec3(instanceMatrix[0]));
+                    
+                    // World position = object modelMatrix * instance translation
+                    vec4 worldPos = modelMatrix * vec4(instancePos, 1.0);
+                    
+                    // Camera right/up vectors in world space (transposed view matrix rows via columns)
+                    vec3 cameraRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+                    vec3 cameraUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+                    
+                    // Add billboard offset in world space: plane vertices -0.5..0.5, full size = scale
+                    worldPos.xyz += cameraRight * position.x * scale + cameraUp * position.y * scale;
+                    
+                    // Transform to view and project
+                    vec4 viewPos = viewMatrix * worldPos;
+                    gl_Position = projectionMatrix * viewPos;
+                }
+            `,
                 fragmentShader: `
-                    uniform sampler2D map;
-                    varying vec2 vUv;
-                    
-                    void main() {
-                        vec4 texColor = texture2D(map, vUv);
-                        if (texColor.a < 0.1) discard;
-                        gl_FragColor = texColor;
-                    }
-                `,
+                uniform sampler2D map;
+                varying vec2 vUv;
+                
+                void main() {
+                    vec4 texColor = texture2D(map, vUv);
+                    if (texColor.a < 0.1) discard;
+                    gl_FragColor = texColor;
+                }
+            `,
                 transparent: true,
-                depthTest: false,    // Draws on top for always-visible labels
-                depthWrite: false,   // No z-fighting
-                side: THREE.DoubleSide,
-                blending: THREE.NormalBlending  // Good for overlaying on atoms
+                depthTest: false,     // Always visible on top
+                depthWrite: false,
+                side: THREE.DoubleSide
             });
+
             this.labelInstancedMesh = new THREE.InstancedMesh(geometry, material, this.atoms.length);
             this.labelInstancedMesh.renderOrder = 999;
             this.labelInstancedMesh.frustumCulled = false;
 
+            // UV bounds for atlas
             const uvBounds = new Float32Array(this.atoms.length * 4);
-
             this.atoms.forEach((atom, i) => {
                 const bounds = this.atomTypeMap[i];
-                if (!bounds) {
-                    console.warn(`No bounds found for ${useIndices ? 'index' : 'atom type'}: ${useIndices ? i : atom.type}`);
-                    return;
-                }
                 const idx = i * 4;
                 uvBounds[idx] = bounds.uMin;
                 uvBounds[idx + 1] = bounds.vMin;
                 uvBounds[idx + 2] = bounds.uMax;
                 uvBounds[idx + 3] = bounds.vMax;
             });
-
             geometry.setAttribute('uvBounds', new THREE.InstancedBufferAttribute(uvBounds, 4));
 
-            this.main.scene.add(this.labelInstancedMesh);
+            // One-time setup: position + scale each instance (no rotation!)
             const matrix = new THREE.Matrix4();
             const tempMatrix = new THREE.Matrix4();
             const position = new THREE.Vector3();
-            const scale = new THREE.Vector3();
-            const rotation = new THREE.Quaternion();  // Not used, but for decompose
+            const scaleVec = new THREE.Vector3();
+            const dummyQuat = new THREE.Quaternion();
 
             this.atoms.forEach((atom, i) => {
                 this.instancedMesh.getMatrixAt(i, tempMatrix);
-                tempMatrix.decompose(position, rotation, scale);
+                // Decompose local instance matrix
+                tempMatrix.decompose(position, dummyQuat, scaleVec);
+                // Apply instancedMesh's world matrix to get true world position
+                position.applyMatrix4(this.instancedMesh.matrixWorld);
 
-                const labelScale = scale.x * 2.0;  // Adjust multiplier if labels feel too big/small
+                const labelScale = scaleVec.x * 2.0; // Tweak multiplier for label size
 
                 matrix.makeScale(labelScale, labelScale, labelScale);
                 matrix.setPosition(position);
@@ -671,28 +671,27 @@ export default class Molecule {
             });
 
             this.labelInstancedMesh.instanceMatrix.needsUpdate = true;
+
+            this.main.scene.add(this.labelInstancedMesh);
             console.log(`Created labels for ${this.atoms.length} atoms`);
         } else {
-            // Update existing mesh
+            // Update atlas + UVs only
             this.labelInstancedMesh.material.uniforms.map.value = this.labelAtlas;
 
             const uvBounds = new Float32Array(this.atoms.length * 4);
             this.atoms.forEach((atom, i) => {
                 const bounds = this.atomTypeMap[i];
-                if (!bounds) return;
                 const idx = i * 4;
                 uvBounds[idx] = bounds.uMin;
                 uvBounds[idx + 1] = bounds.vMin;
                 uvBounds[idx + 2] = bounds.uMax;
                 uvBounds[idx + 3] = bounds.vMax;
             });
-
             this.labelInstancedMesh.geometry.attributes.uvBounds.array = uvBounds;
             this.labelInstancedMesh.geometry.attributes.uvBounds.needsUpdate = true;
+
             this.labelInstancedMesh.visible = true;
         }
-
-        this.updateLabels();
     }
 
     updateLabels() {
