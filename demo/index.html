@@ -103,13 +103,6 @@
                 signOutButton.style.display = 'none';
                 userStatus.innerHTML = 'Not signed in';
 
-                // Reset dropdown icon
-                const dropdownIcon = document.querySelector('#settings .dropdown-icon');
-                if (dropdownIcon) {
-                    dropdownIcon.innerHTML = '<i class="fa-solid fa-user"></i>';
-                    dropdownIcon.classList.remove('signed-in');
-                    dropdownIcon.title = '';
-                }
 
                 // Hide premium button
                 const premiumBtn = document.getElementById('premiumUpgradeBtn');
@@ -820,8 +813,36 @@
         function updateAccountIcon(user) {
             const accountIcon = document.getElementById('accountIcon');
             const accountLabel = document.getElementById('accountLabel');
-            accountIcon.innerHTML = '<i class="fa-solid fa-user"></i>';
-            accountLabel.textContent = 'Account';
+            const settingsIcon = document.querySelector('#settingsGear > .dropdown-icon');
+
+            if (user) {
+                // Get initials from display name (e.g., "Buu Pham" -> "BP")
+                let initials = '??';
+                if (user.displayName) {
+                    const parts = user.displayName.trim().split(/\s+/);
+                    initials = parts.length > 1
+                        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                        : parts[0].substring(0, 2).toUpperCase();
+                }
+
+                // Update toolbar icon
+                if (settingsIcon) {
+                    settingsIcon.innerHTML = `<span class="user-initials">${initials}</span>`;
+                    settingsIcon.title = user.displayName || user.email;
+                }
+
+                // Update account submenu
+                if (accountIcon) accountIcon.innerHTML = `<span class="user-initials">${initials}</span>`;
+                if (accountLabel) accountLabel.textContent = user.displayName || user.email;
+            } else {
+                // Signed out - show default icon
+                if (settingsIcon) {
+                    settingsIcon.innerHTML = '<i class="fa-solid fa-gear"></i>';
+                    settingsIcon.title = '';
+                }
+                if (accountIcon) accountIcon.innerHTML = '<i class="fa-solid fa-user"></i>';
+                if (accountLabel) accountLabel.textContent = 'Account';
+            }
         }
     </script>
     <div id="buttons">

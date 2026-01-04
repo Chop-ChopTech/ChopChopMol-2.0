@@ -1745,16 +1745,16 @@ input[type="range"]:focus {
     top: -4px;
     width: 32px;
     height: 32px;
-    background: linear-gradient(135deg, #3995ff 0%, #4300bf 100%);
+    background: none;
     color: white;
     border-radius: 50%;
     font-weight: bold;
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border: none;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
+    border: 3px solid rgb(0, 175, 3);
     transition: all 0.3s ease;
+    margin: 0px;
 }
 
 /* Signed-in state for dropdown icon */
