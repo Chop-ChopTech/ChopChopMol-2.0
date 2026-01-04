@@ -265,7 +265,7 @@ export default class Main {
         updateFragmentList(document.getElementById('fragmentList'));
         render();
     }
-    newMolecule(data, mode, center = true, soft = false, useRibbonMode = false) {
+    newMolecule(data, mode, center = true, soft = false, useRibbonMode = false, animate = true) {
         window._pendingChartData = null;
         this.reset(soft);
         this.molecule.init(data, mode, center, useRibbonMode);
@@ -288,9 +288,35 @@ export default class Main {
             ribbonMode = false;
             console.log("numAtoms", this.molecule.atoms.length);
             enableAtomInteractions();
+
+            // Hide meshes BEFORE any render if we're going to animate
+            const shouldAnimate = animate && !soft && this.molecule.atoms.length > 0 && this.molecule.atoms.length < 5000;
+            if (shouldAnimate) {
+                if (this.molecule.instancedMesh) {
+                    this.molecule.instancedMesh.visible = false;
+                }
+                if (this.molecule.bondGroup?.children[0]) {
+                    this.molecule.bondGroup.children[0].visible = false;
+                }
+            }
+
+            // Trigger animation
+            if (shouldAnimate) {
+                setTimeout(() => {
+                    if (typeof animateImplosion === 'function') {
+                        animateImplosion();
+                    }
+                }, 10);
+            }
         }
 
         this.molecule.updateBonds(this.mode);
+
+        // Hide bonds too if animating (updateBonds may recreate them)
+        const shouldAnimate = animate && !soft && !useRibbonMode && this.molecule.atoms.length > 0 && this.molecule.atoms.length < 5000;
+        if (shouldAnimate && this.molecule.bondGroup?.children[0]) {
+            this.molecule.bondGroup.children[0].visible = false;
+        }
 
         // Labels only work in normal mode
         if (!useRibbonMode && labelMode && this.molecule.atoms && this.molecule.atoms.length > 0) {
@@ -298,6 +324,7 @@ export default class Main {
         }
 
         render();
+        // ... rest of the function
         window.endMeasurement = performance.now();
         const loadTimeMs = window.endMeasurement - window.startMeasurement;
         const loadTimeSec = loadTimeMs / 1000;
@@ -717,6 +744,333 @@ function triggerExplosion() {
     animateExplosion();
 }
 
+// Implosion assembly animation with overshoot bounce, rotation, and fade-in
+let assemblyAnimating = false;
+
+function animateImplosion() {
+    if (!main.molecule || !main.molecule.atoms || main.molecule.atoms.length === 0) return;
+    if (assemblyAnimating) return;
+
+    assemblyAnimating = true;
+
+    const instancedMesh = main.molecule.instancedMesh;
+    const atoms = main.molecule.atoms;
+    const atomCount = atoms.length;
+
+    const bondMesh = main.molecule.bondGroup?.children[0];
+    const isStyledBonds = bondMesh && bondMesh.isInstancedMesh;
+    const isFastBonds = bondMesh && bondMesh.isLineSegments;
+
+    const matrix = new THREE.Matrix4();
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+
+    // Store original material settings and enable transparency
+    const atomMat = instancedMesh.material;
+    const originalAtomOpacity = atomMat.opacity;
+    const originalAtomTransparent = atomMat.transparent;
+    atomMat.transparent = true;
+    atomMat.opacity = 0;
+
+    let bondMat = null;
+    let originalBondOpacity = 1;
+    let originalBondTransparent = false;
+    if (bondMesh) {
+        bondMat = bondMesh.material;
+        originalBondOpacity = bondMat.opacity;
+        originalBondTransparent = bondMat.transparent;
+        bondMat.transparent = true;
+        bondMat.opacity = 0;
+    }
+
+    // Calculate molecule center and size
+    const boundingBox = main.molecule.getBoundingBox();
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    boundingBox.getCenter(center);
+    boundingBox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const explosionRadius = maxDim * 4;
+
+    // Store final atom states
+    const atomStates = [];
+    for (let i = 0; i < atomCount; i++) {
+        instancedMesh.getMatrixAt(i, matrix);
+        matrix.decompose(pos, quat, scale);
+
+        const direction = new THREE.Vector3().subVectors(pos, center);
+        if (direction.lengthSq() < 0.001) {
+            direction.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+        }
+        direction.normalize();
+        direction.x += (Math.random() - 0.5) * 0.5;
+        direction.y += (Math.random() - 0.5) * 0.5;
+        direction.z += (Math.random() - 0.5) * 0.5;
+        direction.normalize();
+
+        const distance = explosionRadius * (0.7 + Math.random() * 0.6);
+
+        const spinAxis = new THREE.Vector3(
+            Math.random() - 0.5,
+            Math.random() - 0.5,
+            Math.random() - 0.5
+        ).normalize();
+        const spinAmount = (Math.random() * 4 + 2) * Math.PI;
+
+        atomStates.push({
+            startPos: pos.clone().add(direction.clone().multiplyScalar(distance)),
+            endPos: pos.clone(),
+            endQuat: quat.clone(),
+            scale: scale.clone(),
+            spinAxis: spinAxis,
+            spinAmount: spinAmount
+        });
+    }
+
+    // Store final bond states
+    const bondStates = [];
+    let bondCount = 0;
+
+    if (isStyledBonds) {
+        bondCount = bondMesh.count;
+        for (let i = 0; i < bondCount; i++) {
+            bondMesh.getMatrixAt(i, matrix);
+            matrix.decompose(pos, quat, scale);
+
+            const direction = new THREE.Vector3().subVectors(pos, center);
+            if (direction.lengthSq() < 0.001) {
+                direction.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+            }
+            direction.normalize();
+            direction.x += (Math.random() - 0.5) * 0.5;
+            direction.y += (Math.random() - 0.5) * 0.5;
+            direction.z += (Math.random() - 0.5) * 0.5;
+            direction.normalize();
+
+            const distance = explosionRadius * (0.7 + Math.random() * 0.6);
+
+            const spinAxis = new THREE.Vector3(
+                Math.random() - 0.5,
+                Math.random() - 0.5,
+                Math.random() - 0.5
+            ).normalize();
+            const spinAmount = (Math.random() * 6 + 3) * Math.PI;
+
+            bondStates.push({
+                startPos: pos.clone().add(direction.clone().multiplyScalar(distance)),
+                endPos: pos.clone(),
+                endQuat: quat.clone(),
+                scale: scale.clone(),
+                spinAxis: spinAxis,
+                spinAmount: spinAmount
+            });
+        }
+    }
+
+    let finalBondPositions = null;
+    const fastBondStates = [];
+    if (isFastBonds) {
+        finalBondPositions = new Float32Array(bondMesh.geometry.attributes.position.array);
+        bondCount = finalBondPositions.length / 6;
+
+        for (let i = 0; i < bondCount; i++) {
+            const idx = i * 6;
+
+            const p1 = new THREE.Vector3(
+                finalBondPositions[idx],
+                finalBondPositions[idx + 1],
+                finalBondPositions[idx + 2]
+            );
+            const p2 = new THREE.Vector3(
+                finalBondPositions[idx + 3],
+                finalBondPositions[idx + 4],
+                finalBondPositions[idx + 5]
+            );
+
+            const bondCenter = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+            const bondHalfVec = new THREE.Vector3().subVectors(p2, bondCenter);
+
+            const direction = new THREE.Vector3().subVectors(bondCenter, center);
+            if (direction.lengthSq() < 0.001) {
+                direction.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+            }
+            direction.normalize();
+            direction.x += (Math.random() - 0.5) * 0.5;
+            direction.y += (Math.random() - 0.5) * 0.5;
+            direction.z += (Math.random() - 0.5) * 0.5;
+            direction.normalize();
+
+            const distance = explosionRadius * (0.7 + Math.random() * 0.6);
+
+            const spinAxis = new THREE.Vector3(
+                Math.random() - 0.5,
+                Math.random() - 0.5,
+                Math.random() - 0.5
+            ).normalize();
+            const spinAmount = (Math.random() * 6 + 3) * Math.PI;
+
+            fastBondStates.push({
+                startOffset: direction.clone().multiplyScalar(distance),
+                bondCenter: bondCenter,
+                bondHalfVec: bondHalfVec,
+                spinAxis: spinAxis,
+                spinAmount: spinAmount
+            });
+        }
+    }
+
+    // Set initial scattered positions
+    for (let i = 0; i < atomCount; i++) {
+        const state = atomStates[i];
+        const startQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, state.spinAmount);
+        matrix.compose(state.startPos, startQuat.multiply(state.endQuat), state.scale);
+        instancedMesh.setMatrixAt(i, matrix);
+    }
+    instancedMesh.instanceMatrix.needsUpdate = true;
+
+    if (isStyledBonds) {
+        for (let i = 0; i < bondCount; i++) {
+            const state = bondStates[i];
+            const startQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, state.spinAmount);
+            matrix.compose(state.startPos, startQuat.multiply(state.endQuat.clone()), state.scale);
+            bondMesh.setMatrixAt(i, matrix);
+        }
+        bondMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    if (isFastBonds) {
+        const positions = bondMesh.geometry.attributes.position.array;
+        for (let i = 0; i < bondCount; i++) {
+            const state = fastBondStates[i];
+            const idx = i * 6;
+
+            const spinQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, state.spinAmount);
+            const rotatedHalf = state.bondHalfVec.clone().applyQuaternion(spinQuat);
+
+            const newCenter = state.bondCenter.clone().add(state.startOffset);
+            const newP1 = newCenter.clone().sub(rotatedHalf);
+            const newP2 = newCenter.clone().add(rotatedHalf);
+
+            positions[idx] = newP1.x;
+            positions[idx + 1] = newP1.y;
+            positions[idx + 2] = newP1.z;
+            positions[idx + 3] = newP2.x;
+            positions[idx + 4] = newP2.y;
+            positions[idx + 5] = newP2.z;
+        }
+        bondMesh.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Now make visible (scattered positions, 0 opacity)
+    instancedMesh.visible = true;
+    if (bondMesh) bondMesh.visible = true;
+
+    // Animation
+    const duration = 1200;
+    const startTime = performance.now();
+
+    const backOut = (t) => {
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
+        return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    };
+
+    function animate() {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = backOut(progress);
+        const spinProgress = 1 - Math.pow(1 - progress, 3);
+
+        const fadeProgress = Math.min(progress / 0.4, 1);
+        const opacity = fadeProgress * fadeProgress;
+
+        atomMat.opacity = opacity * originalAtomOpacity;
+        if (bondMat) {
+            bondMat.opacity = opacity * originalBondOpacity;
+        }
+
+        for (let i = 0; i < atomCount; i++) {
+            const state = atomStates[i];
+
+            const currentPos = new THREE.Vector3().lerpVectors(state.startPos, state.endPos, eased);
+
+            const currentSpinAngle = state.spinAmount * (1 - spinProgress);
+            const spinQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, currentSpinAngle);
+            const currentQuat = spinQuat.multiply(state.endQuat.clone());
+
+            matrix.compose(currentPos, currentQuat, state.scale);
+            instancedMesh.setMatrixAt(i, matrix);
+        }
+        instancedMesh.instanceMatrix.needsUpdate = true;
+
+        if (isStyledBonds) {
+            for (let i = 0; i < bondCount; i++) {
+                const state = bondStates[i];
+
+                const currentPos = new THREE.Vector3().lerpVectors(state.startPos, state.endPos, eased);
+
+                const currentSpinAngle = state.spinAmount * (1 - spinProgress);
+                const spinQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, currentSpinAngle);
+                const currentQuat = spinQuat.multiply(state.endQuat.clone());
+
+                matrix.compose(currentPos, currentQuat, state.scale);
+                bondMesh.setMatrixAt(i, matrix);
+            }
+            bondMesh.instanceMatrix.needsUpdate = true;
+        }
+
+        if (isFastBonds) {
+            const positions = bondMesh.geometry.attributes.position.array;
+
+            for (let i = 0; i < bondCount; i++) {
+                const state = fastBondStates[i];
+                const idx = i * 6;
+
+                const factor = 1 - eased;
+                const currentOffset = state.startOffset.clone().multiplyScalar(factor);
+                const currentCenter = state.bondCenter.clone().add(currentOffset);
+
+                const currentSpinAngle = state.spinAmount * (1 - spinProgress);
+                const spinQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, currentSpinAngle);
+                const rotatedHalf = state.bondHalfVec.clone().applyQuaternion(spinQuat);
+
+                const newP1 = currentCenter.clone().sub(rotatedHalf);
+                const newP2 = currentCenter.clone().add(rotatedHalf);
+
+                positions[idx] = newP1.x;
+                positions[idx + 1] = newP1.y;
+                positions[idx + 2] = newP1.z;
+                positions[idx + 3] = newP2.x;
+                positions[idx + 4] = newP2.y;
+                positions[idx + 5] = newP2.z;
+            }
+            bondMesh.geometry.attributes.position.needsUpdate = true;
+        }
+
+        render();
+
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            atomMat.opacity = originalAtomOpacity;
+            atomMat.transparent = originalAtomTransparent;
+            if (bondMat) {
+                bondMat.opacity = originalBondOpacity;
+                bondMat.transparent = originalBondTransparent;
+            }
+
+            assemblyAnimating = false;
+            render();
+        }
+    }
+
+    requestAnimationFrame(animate);
+}
+
+window.animateImplosion = animateImplosion;
+
+window.animateImplosion = animateImplosion;
 
 window.addEventListener('keydown', function (e) {
     if (isLPressed && e.key === 'Enter') {
