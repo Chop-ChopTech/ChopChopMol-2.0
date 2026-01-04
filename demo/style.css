@@ -1192,12 +1192,12 @@ input[type="range"]:focus {
 }
 
 #signInButton {
-    background-color: #2196F3;
+    background-color: #2195f300;
 }
 
 #signOutButton {
 
-    background-color: #8e1acd;
+    background-color: #8e1acd00;
 }
 
 #userStatus {
