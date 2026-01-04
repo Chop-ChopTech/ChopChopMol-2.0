@@ -74,6 +74,7 @@ let rotationState = {
 };
 let orthoCamera = null;
 let useOrthographic = false;
+window.sillyMode = null;
 
 window.fragments = fragments;
 let editingMolecule = true;
@@ -95,6 +96,7 @@ let labelMode = false; // Track label mode
 
 const switchModeButton = document.getElementById('switchMode');
 const toggleLabelsButton = document.getElementById('toggleLabels');
+const toggleSillyButton = document.getElementById('toggleSilly');
 const saveImageButton = document.getElementById('captureScreen');
 const analyzeMoleculeButton = document.getElementById('analyze-molecule');
 const editMoleculePanel = document.getElementById('editMoleculePanel');
@@ -290,7 +292,13 @@ export default class Main {
             enableAtomInteractions();
 
             // Hide meshes BEFORE any render if we're going to animate
-            const shouldAnimate = animate && !soft && this.molecule.atoms.length > 0 && this.molecule.atoms.length < 5000;
+            const shouldAnimate = animate && !soft && this.molecule.atoms.length > 0 && this.molecule.atoms.length < 5000 && window.sillyMode;
+            if (this.molecule.instancedMesh) {
+                this.molecule.instancedMesh.visible = true;
+            }
+            if (this.molecule.bondGroup?.children[0]) {
+                this.molecule.bondGroup.children[0].visible = true;
+            }
             if (shouldAnimate) {
                 if (this.molecule.instancedMesh) {
                     this.molecule.instancedMesh.visible = false;
@@ -313,7 +321,7 @@ export default class Main {
         this.molecule.updateBonds(this.mode);
 
         // Hide bonds too if animating (updateBonds may recreate them)
-        const shouldAnimate = animate && !soft && !useRibbonMode && this.molecule.atoms.length > 0 && this.molecule.atoms.length < 5000;
+        const shouldAnimate = animate && !soft && !useRibbonMode && this.molecule.atoms.length > 0 && this.molecule.atoms.length < 5000 && window.sillyMode;
         if (shouldAnimate && this.molecule.bondGroup?.children[0]) {
             this.molecule.bondGroup.children[0].visible = false;
         }
@@ -744,7 +752,7 @@ function triggerExplosion() {
     animateExplosion();
 }
 
-// Implosion assembly animation with overshoot bounce, rotation, and fade-in
+// Enhanced implosion assembly animation with wave effect from left to right: elements on the left assemble first, propagating to the right with overshoot bounce on position and scale, varied rotation, fade-in, and per-element randomization
 let assemblyAnimating = false;
 
 function animateImplosion() {
@@ -793,8 +801,18 @@ function animateImplosion() {
     const maxDim = Math.max(size.x, size.y, size.z);
     const explosionRadius = maxDim * 4;
 
-    // Store final atom states
+    // Store final atom states with added randomization for bounce strength
     const atomStates = [];
+    let maxDelay = 0;
+    let minX = Infinity;
+    let maxX = -Infinity;
+    for (let i = 0; i < atomCount; i++) {
+        instancedMesh.getMatrixAt(i, matrix);
+        matrix.decompose(pos, quat, scale);
+
+        minX = Math.min(minX, pos.x);
+        maxX = Math.max(maxX, pos.x);
+    }
     for (let i = 0; i < atomCount; i++) {
         instancedMesh.getMatrixAt(i, matrix);
         matrix.decompose(pos, quat, scale);
@@ -816,19 +834,25 @@ function animateImplosion() {
             Math.random() - 0.5,
             Math.random() - 0.5
         ).normalize();
-        const spinAmount = (Math.random() * 4 + 2) * Math.PI;
+        const spinAmount = (Math.random() * 4 + 2) * Math.PI * (Math.random() < 0.5 ? 1 : -1); // Random direction for spin
+
+        const normX = maxX > minX ? (pos.x - minX) / (maxX - minX) : 0;
+        const delay = normX * 600 + Math.random() * 200; // Wave from left (small x, small delay) to right (large x, large delay)
+        maxDelay = Math.max(maxDelay, delay);
 
         atomStates.push({
             startPos: pos.clone().add(direction.clone().multiplyScalar(distance)),
             endPos: pos.clone(),
             endQuat: quat.clone(),
-            scale: scale.clone(),
+            endScale: scale.clone(),
             spinAxis: spinAxis,
-            spinAmount: spinAmount
+            spinAmount: spinAmount,
+            delay: delay,
+            bounceC1: 1.70158 + Math.random() * 1.5 // Vary bounce strength for more dynamic feel
         });
     }
 
-    // Store final bond states
+    // Store final bond states with similar enhancements
     const bondStates = [];
     let bondCount = 0;
 
@@ -855,15 +879,21 @@ function animateImplosion() {
                 Math.random() - 0.5,
                 Math.random() - 0.5
             ).normalize();
-            const spinAmount = (Math.random() * 6 + 3) * Math.PI;
+            const spinAmount = (Math.random() * 6 + 3) * Math.PI * (Math.random() < 0.5 ? 1 : -1);
+
+            const normX = maxX > minX ? (pos.x - minX) / (maxX - minX) : 0;
+            const delay = normX * 600 + Math.random() * 200;
+            maxDelay = Math.max(maxDelay, delay);
 
             bondStates.push({
                 startPos: pos.clone().add(direction.clone().multiplyScalar(distance)),
                 endPos: pos.clone(),
                 endQuat: quat.clone(),
-                scale: scale.clone(),
+                endScale: scale.clone(),
                 spinAxis: spinAxis,
-                spinAmount: spinAmount
+                spinAmount: spinAmount,
+                delay: delay,
+                bounceC1: 1.70158 + Math.random() * 1.5
             });
         }
     }
@@ -908,23 +938,30 @@ function animateImplosion() {
                 Math.random() - 0.5,
                 Math.random() - 0.5
             ).normalize();
-            const spinAmount = (Math.random() * 6 + 3) * Math.PI;
+            const spinAmount = (Math.random() * 6 + 3) * Math.PI * (Math.random() < 0.5 ? 1 : -1);
+
+            const normX = maxX > minX ? (bondCenter.x - minX) / (maxX - minX) : 0;
+            const delay = normX * 600 + Math.random() * 200;
+            maxDelay = Math.max(maxDelay, delay);
 
             fastBondStates.push({
                 startOffset: direction.clone().multiplyScalar(distance),
                 bondCenter: bondCenter,
                 bondHalfVec: bondHalfVec,
                 spinAxis: spinAxis,
-                spinAmount: spinAmount
+                spinAmount: spinAmount,
+                delay: delay,
+                bounceC1: 1.70158 + Math.random() * 1.5
             });
         }
     }
 
-    // Set initial scattered positions
+    // Set initial scattered positions with near-zero scale for dramatic reveal
     for (let i = 0; i < atomCount; i++) {
         const state = atomStates[i];
         const startQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, state.spinAmount);
-        matrix.compose(state.startPos, startQuat.multiply(state.endQuat), state.scale);
+        const startScale = state.endScale.clone().multiplyScalar(0.01); // Start tiny
+        matrix.compose(state.startPos, startQuat.multiply(state.endQuat), startScale);
         instancedMesh.setMatrixAt(i, matrix);
     }
     instancedMesh.instanceMatrix.needsUpdate = true;
@@ -933,7 +970,8 @@ function animateImplosion() {
         for (let i = 0; i < bondCount; i++) {
             const state = bondStates[i];
             const startQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, state.spinAmount);
-            matrix.compose(state.startPos, startQuat.multiply(state.endQuat.clone()), state.scale);
+            const startScale = state.endScale.clone().multiplyScalar(0.01);
+            matrix.compose(state.startPos, startQuat.multiply(state.endQuat.clone()), startScale);
             bondMesh.setMatrixAt(i, matrix);
         }
         bondMesh.instanceMatrix.needsUpdate = true;
@@ -946,7 +984,7 @@ function animateImplosion() {
             const idx = i * 6;
 
             const spinQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, state.spinAmount);
-            const rotatedHalf = state.bondHalfVec.clone().applyQuaternion(spinQuat);
+            const rotatedHalf = state.bondHalfVec.clone().applyQuaternion(spinQuat).multiplyScalar(0.01);
 
             const newCenter = state.bondCenter.clone().add(state.startOffset);
             const newP1 = newCenter.clone().sub(rotatedHalf);
@@ -962,28 +1000,27 @@ function animateImplosion() {
         bondMesh.geometry.attributes.position.needsUpdate = true;
     }
 
-    // Now make visible (scattered positions, 0 opacity)
+    // Now make visible (scattered positions, tiny scale, 0 opacity)
     instancedMesh.visible = true;
     if (bondMesh) bondMesh.visible = true;
 
-    // Animation
+    // Animation with delays for wave effect
     const duration = 1200;
+    const totalDuration = duration + maxDelay;
     const startTime = performance.now();
 
-    const backOut = (t) => {
-        const c1 = 1.70158;
+    function backOut(t, c1) {
         const c3 = c1 + 1;
         return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-    };
+    }
 
     function animate() {
         const elapsed = performance.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = backOut(progress);
-        const spinProgress = 1 - Math.pow(1 - progress, 3);
+        const globalProgress = Math.min(elapsed / totalDuration, 1);
 
-        const fadeProgress = Math.min(progress / 0.4, 1);
-        const opacity = fadeProgress * fadeProgress;
+        // Global fade based on overall progress for simplicity (since materials are shared)
+        const fadeProgress = Math.min(globalProgress / 0.3, 1);
+        const opacity = fadeProgress * fadeProgress * fadeProgress; // Cubic for smoother start
 
         atomMat.opacity = opacity * originalAtomOpacity;
         if (bondMat) {
@@ -992,14 +1029,21 @@ function animateImplosion() {
 
         for (let i = 0; i < atomCount; i++) {
             const state = atomStates[i];
+            const effectiveElapsed = elapsed - state.delay;
+            const progress = Math.max(0, Math.min(effectiveElapsed / duration, 1));
+            const posEased = backOut(progress, state.bounceC1);
+            const spinProgress = 1 - Math.pow(1 - progress, 3);
+            const scaleFactor = backOut(progress, state.bounceC1); // Overshoot bounce on scale too
 
-            const currentPos = new THREE.Vector3().lerpVectors(state.startPos, state.endPos, eased);
+            const currentPos = new THREE.Vector3().lerpVectors(state.startPos, state.endPos, posEased);
 
             const currentSpinAngle = state.spinAmount * (1 - spinProgress);
             const spinQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, currentSpinAngle);
             const currentQuat = spinQuat.multiply(state.endQuat.clone());
 
-            matrix.compose(currentPos, currentQuat, state.scale);
+            const currentScale = state.endScale.clone().multiplyScalar(scaleFactor);
+
+            matrix.compose(currentPos, currentQuat, currentScale);
             instancedMesh.setMatrixAt(i, matrix);
         }
         instancedMesh.instanceMatrix.needsUpdate = true;
@@ -1007,14 +1051,21 @@ function animateImplosion() {
         if (isStyledBonds) {
             for (let i = 0; i < bondCount; i++) {
                 const state = bondStates[i];
+                const effectiveElapsed = elapsed - state.delay;
+                const progress = Math.max(0, Math.min(effectiveElapsed / duration, 1));
+                const posEased = backOut(progress, state.bounceC1);
+                const spinProgress = 1 - Math.pow(1 - progress, 3);
+                const scaleFactor = backOut(progress, state.bounceC1);
 
-                const currentPos = new THREE.Vector3().lerpVectors(state.startPos, state.endPos, eased);
+                const currentPos = new THREE.Vector3().lerpVectors(state.startPos, state.endPos, posEased);
 
                 const currentSpinAngle = state.spinAmount * (1 - spinProgress);
                 const spinQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, currentSpinAngle);
                 const currentQuat = spinQuat.multiply(state.endQuat.clone());
 
-                matrix.compose(currentPos, currentQuat, state.scale);
+                const currentScale = state.endScale.clone().multiplyScalar(scaleFactor);
+
+                matrix.compose(currentPos, currentQuat, currentScale);
                 bondMesh.setMatrixAt(i, matrix);
             }
             bondMesh.instanceMatrix.needsUpdate = true;
@@ -1025,15 +1076,19 @@ function animateImplosion() {
 
             for (let i = 0; i < bondCount; i++) {
                 const state = fastBondStates[i];
-                const idx = i * 6;
+                const effectiveElapsed = elapsed - state.delay;
+                const progress = Math.max(0, Math.min(effectiveElapsed / duration, 1));
+                const posEased = backOut(progress, state.bounceC1);
+                const spinProgress = 1 - Math.pow(1 - progress, 3);
+                const scaleFactor = backOut(progress, state.bounceC1);
 
-                const factor = 1 - eased;
+                const factor = 1 - posEased;
                 const currentOffset = state.startOffset.clone().multiplyScalar(factor);
                 const currentCenter = state.bondCenter.clone().add(currentOffset);
 
                 const currentSpinAngle = state.spinAmount * (1 - spinProgress);
                 const spinQuat = new THREE.Quaternion().setFromAxisAngle(state.spinAxis, currentSpinAngle);
-                const rotatedHalf = state.bondHalfVec.clone().applyQuaternion(spinQuat);
+                const rotatedHalf = state.bondHalfVec.clone().applyQuaternion(spinQuat).multiplyScalar(scaleFactor);
 
                 const newP1 = currentCenter.clone().sub(rotatedHalf);
                 const newP2 = currentCenter.clone().add(rotatedHalf);
@@ -1050,7 +1105,7 @@ function animateImplosion() {
 
         render();
 
-        if (progress < 1) {
+        if (globalProgress < 1) {
             requestAnimationFrame(animate);
         } else {
             atomMat.opacity = originalAtomOpacity;
@@ -1067,8 +1122,6 @@ function animateImplosion() {
 
     requestAnimationFrame(animate);
 }
-
-window.animateImplosion = animateImplosion;
 
 window.animateImplosion = animateImplosion;
 
@@ -1107,7 +1160,9 @@ switchModeButton.addEventListener('click', (e) => {
     e.stopPropagation();
     styleSelector.classList.remove('on');
 });
-
+toggleSillyButton.addEventListener('click', (e) => {
+    window.sillyMode = !window.sillyMode;
+});
 // closeStyleSelectorButton.addEventListener('click', () => {
 //     styleSelector.classList.add('on');
 // });

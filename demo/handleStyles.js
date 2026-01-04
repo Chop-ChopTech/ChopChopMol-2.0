@@ -21,6 +21,7 @@ export async function saveStylePreferences(userId) {
             toggleStyleChanges: document.getElementById('toggleStyleChanges').checked,
             labelsToggled: document.getElementById('toggleLabels').checked,
             toggleLabels: document.getElementById('toggleLabels').checked,
+            sillyMode: document.getElementById('toggleSilly').checked,
             lastUpdated: new Date().toISOString()
         };
 
@@ -127,6 +128,12 @@ export function applyStylePreferences(prefs, renderer) {
         if (renderer && renderer.antialias !== prefs.antialias) {
             window.recreateRenderer(prefs.antialias);
         }
+    }
+
+    if (prefs.sillyMode !== undefined) {
+        console.log('Silly mode:', prefs.sillyMode);
+        document.getElementById('toggleSilly').checked = prefs.sillyMode;
+        window.sillyMode = prefs.sillyMode;
     }
 
     // Apply background color
@@ -254,6 +261,7 @@ export function resetToDefaults() {
     document.getElementById('style6').value = 17;   // Resolution
     document.getElementById('style7').checked = true; // Antialias
     document.getElementById('style8').value = '#01101f'; // Background (dark blue)
+    document.getElementById('toggleSilly').checked = false; // Silly
     document.getElementById('toggleStyleChanges').checked = false;
     document.getElementById('toggleLabels').checked = false;
 
