@@ -19,8 +19,6 @@ export async function saveStylePreferences(userId) {
             antialias: document.getElementById('style7').checked,
             backgroundColor: document.getElementById('style8').value,
             toggleStyleChanges: document.getElementById('toggleStyleChanges').checked,
-            labelsToggled: document.getElementById('toggleLabels').checked,
-            toggleLabels: document.getElementById('toggleLabels').checked,
             sillyMode: document.getElementById('toggleSilly').checked,
             lastUpdated: new Date().toISOString()
         };
@@ -113,11 +111,6 @@ export function applyStylePreferences(prefs, renderer) {
         main.resolution = prefs.resolution;
     }
 
-    if (prefs.labelsToggled !== undefined) {
-        document.getElementById('toggleLabels').checked = prefs.labelsToggled;
-        main.labelsToggled = prefs.labelsToggled;
-        main.toggleLabels(main.labelsToggled);
-    }
 
     // Apply antialias
     if (prefs.antialias !== undefined) {
@@ -264,7 +257,6 @@ export function resetToDefaults() {
     document.getElementById('style8').value = '#01101f'; // Background (dark blue)
     document.getElementById('toggleSilly').checked = false; // Silly
     document.getElementById('toggleStyleChanges').checked = false;
-    document.getElementById('toggleLabels').checked = false;
 
     // Reset main object values
     main.roughness = 0.17;

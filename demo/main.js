@@ -95,7 +95,6 @@ let antialiasToggled = false
 let labelMode = false; // Track label mode
 
 const switchModeButton = document.getElementById('switchMode');
-const toggleLabelsButton = document.getElementById('toggleLabels');
 const toggleSillyButton = document.getElementById('toggleSilly');
 const saveImageButton = document.getElementById('captureScreen');
 const analyzeMoleculeButton = document.getElementById('analyze-molecule');
@@ -1106,10 +1105,6 @@ toggleSillyButton.addEventListener('click', (e) => {
 //     styleSelector.classList.add('on');
 // });
 
-toggleLabelsButton.addEventListener('change', () => {
-    main.toggleLabels(toggleLabelsButton.checked);
-    render();
-});
 
 window.addEventListener('replyUpdated', (event) => {
     const newReply = event.detail;
@@ -6017,10 +6012,10 @@ function updateLabelMode() {
         return;
     }
 
-    if (labelMode) {
-        main.molecule.toggleLabels(true, window.showElements, window.showIndices);
-        render();
-    }
+    const shouldShowLabels = window.showElements || window.showIndices;
+    labelMode = shouldShowLabels;
+    main.molecule.toggleLabels(shouldShowLabels, window.showElements, window.showIndices);
+    render();
 }
 
 render();
