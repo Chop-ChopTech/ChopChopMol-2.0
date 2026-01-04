@@ -228,6 +228,7 @@ export function showNotification(message, type) {
         z-index: 10000;
         animation: slideIn 0.3s ease-out;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
+        backdrop-filter: blur(10px);
         ${type === 'success' ? 'background: linear-gradient(135deg, #00c851 0%, #00ff00 100%);' : ''}
         ${type === 'error' ? 'background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);' : ''}
         ${type === 'info' ? 'background-color:rgba(0, 13, 43, 0);' : ''}
