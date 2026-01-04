@@ -1237,11 +1237,12 @@ input[type="range"]:focus {
     left: 50%;
     transform: translateX(-50%);
     z-index: -999999999999999;
-    border-radius: 20px;
+    border-radius: 10px;
     padding: 3px 10px;
     transition: opacity 0.3s ease;
     background-repeat: no-repeat !important;
     perspective: 1000px;
+    background-color: #5d5d5d57;
 }
 
 #fragmentList {
@@ -4351,7 +4352,7 @@ input[type="range"]:focus {
     top: 10px;
     right: 100%;
     margin-right: 10px;
-    width: 194px;
+    width: 375px;
     z-index: 9999;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -4395,6 +4396,56 @@ input[type="range"]:focus {
     overflow: hidden;
     padding: 0 12px;
     transition: max-height 0.3s ease, padding 0.3s ease;
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+}
+
+.style-sliders-col,
+.style-checkboxes-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.style-sliders-col {
+    flex: 1;
+    min-width: 150px;
+    gap: 3px;
+}
+
+.style-checkboxes-col {
+    flex: 0 0 auto;
+    min-width: 110px;
+    gap: 0px;
+}
+
+.style-panel-content {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 12px;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.style-save-btn {
+    width: 100%;
+    padding: 6px 0;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 15px;
+}
+
+.style-save-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .style-panel.open .style-panel-content {
@@ -4403,9 +4454,9 @@ input[type="range"]:focus {
 }
 
 #style8 {
-    width: 100%;
+    width: 60%;
     padding: none;
-    border: 3px solid white;
+    border: 1px solid white;
 }
 
 input[type="color"] {
@@ -4445,13 +4496,13 @@ input[type="color"]::-moz-color-swatch {
 
 .compact-style-row label {
     flex: 0 0 70px;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .compact-style-row input[type="range"] {
     flex: 1;
     height: 4px;
-    max-width: 100px;
+    max-width: 128px;
 }
 
 .compact-style-row input[type="color"] {

@@ -492,87 +492,55 @@ export default class Molecule {
         }
     }
 
-    createLabelAtlas(useIndices = false) {
-        if (useIndices) {
-            // Index mode
-            const numAtoms = this.atoms.length;
-            const size = 64;
-            const cols = Math.ceil(Math.sqrt(numAtoms));
-            const rows = Math.ceil(numAtoms / cols);
+    createLabelAtlas(showElements = true, showIndices = false) {
+        const numAtoms = this.atoms.length;
+        const size = 64;
+        const cols = Math.ceil(Math.sqrt(numAtoms));
+        const rows = Math.ceil(numAtoms / cols);
 
-            const canvas = document.createElement('canvas');
-            canvas.width = size * cols;
-            canvas.height = size * rows;
-            const ctx = canvas.getContext('2d');
+        const canvas = document.createElement('canvas');
+        canvas.width = size * cols;
+        canvas.height = size * rows;
+        const ctx = canvas.getContext('2d');
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 32px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
-            this.atomTypeMap = {};
+        this.atomTypeMap = {};
 
-            for (let i = 0; i < numAtoms; i++) {
-                const col = i % cols;
-                const row = Math.floor(i / cols);
-                const x = col * size + size / 2;
-                const y = row * size + size / 2;
+        for (let i = 0; i < numAtoms; i++) {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const x = col * size + size / 2;
+            const y = row * size + size / 2;
 
-                // CHANGED: Use originalIndex instead of i+1
-                const displayIndex = this.atoms[i].originalIndex + 1;
-                ctx.fillText(displayIndex.toString(), x, y);
+            const atom = this.atoms[i];
+            const displayIndex = atom.originalIndex !== undefined ? atom.originalIndex + 1 : i + 1;
 
-                this.atomTypeMap[i] = {
-                    uMin: col / cols,
-                    vMin: 1.0 - (row + 1) / rows,
-                    uMax: (col + 1) / cols,
-                    vMax: 1.0 - row / rows
-                };
+            let labelText = '';
+            if (showElements && showIndices) {
+                labelText = `${atom.type} ${displayIndex}`;
+            } else if (showElements) {
+                labelText = atom.type;
+            } else if (showIndices) {
+                labelText = `${displayIndex}`;
             }
 
-            this.labelAtlas = new THREE.CanvasTexture(canvas);
-            this.labelAtlas.needsUpdate = true;
-        } else {
-            // Element mode - keep original code
-            const types = Object.keys(this.atomSettings).sort();
-            const size = 64;
-            const cols = Math.ceil(Math.sqrt(types.length));
-            const rows = Math.ceil(types.length / cols);
+            ctx.fillText(labelText, x, y);
 
-            const canvas = document.createElement('canvas');
-            canvas.width = size * cols;
-            canvas.height = size * rows;
-            const ctx = canvas.getContext('2d');
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 40px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            this.atomTypeMap = {};
-
-            types.forEach((type, i) => {
-                const col = i % cols;
-                const row = Math.floor(i / cols);
-                const x = col * size + size / 2;
-                const y = row * size + size / 2;
-
-                ctx.fillText(type, x, y);
-
-                this.atomTypeMap[type] = {
-                    uMin: col / cols,
-                    vMin: 1.0 - (row + 1) / rows,
-                    uMax: (col + 1) / cols,
-                    vMax: 1.0 - row / rows
-                };
-            });
-
-            this.labelAtlas = new THREE.CanvasTexture(canvas);
-            this.labelAtlas.needsUpdate = true;
+            this.atomTypeMap[i] = {
+                uMin: col / cols,
+                vMin: 1.0 - (row + 1) / rows,
+                uMax: (col + 1) / cols,
+                vMax: 1.0 - row / rows
+            };
         }
+
+        this.labelAtlas = new THREE.CanvasTexture(canvas);
+        this.labelAtlas.needsUpdate = true;
     }
 
     createLabelTexture(text, color) {
@@ -595,7 +563,7 @@ export default class Molecule {
         return texture;
     }
 
-    toggleLabels(show, useIndices = false) {
+    toggleLabels(show, showElements = true, showIndices = false) {
         if (!show) {
             if (this.labelInstancedMesh) this.labelInstancedMesh.visible = false;
             return;
@@ -611,7 +579,7 @@ export default class Molecule {
             this.labelAtlas.dispose();
             this.labelAtlas = null;
         }
-        this.createLabelAtlas(useIndices);
+        this.createLabelAtlas(showElements, showIndices);
 
         if (!this.labelInstancedMesh) {
             const geometry = new THREE.PlaneGeometry(1, 1);
@@ -664,7 +632,7 @@ export default class Molecule {
             const uvBounds = new Float32Array(this.atoms.length * 4);
 
             this.atoms.forEach((atom, i) => {
-                const bounds = useIndices ? this.atomTypeMap[i] : this.atomTypeMap[atom.type];
+                const bounds = this.atomTypeMap[i];
                 if (!bounds) {
                     console.warn(`No bounds found for ${useIndices ? 'index' : 'atom type'}: ${useIndices ? i : atom.type}`);
                     return;
@@ -686,7 +654,7 @@ export default class Molecule {
 
             const uvBounds = new Float32Array(this.atoms.length * 4);
             this.atoms.forEach((atom, i) => {
-                const bounds = useIndices ? this.atomTypeMap[i] : this.atomTypeMap[atom.type];
+                const bounds = this.atomTypeMap[i];
                 if (!bounds) return;
                 const idx = i * 4;
                 uvBounds[idx] = bounds.uMin;

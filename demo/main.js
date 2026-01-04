@@ -345,7 +345,7 @@ export default class Main {
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
         if (this.molecule && this.molecule.atoms && this.molecule.atoms.length > 0) {
-            this.molecule.toggleLabels(labelMode, window.labelIndexMode);
+            this.molecule.toggleLabels(labelMode, window.showElements, window.showIndices);
         }
         render();
     }
@@ -6001,23 +6001,28 @@ window.toggleRibbon = toggleRibbon;
         document.addEventListener('mouseup', onMouseUp);
     })();
 })();
-window.labelIndexMode = false;
 
-// ADD this event listener (put it with other DOM event listeners):
-document.getElementById('labelModeBtn').addEventListener('click', () => {
+window.labelIndexMode = false;
+window.showElements = true;
+window.showIndices = false;
+
+document.getElementById('showElements').addEventListener('change', updateLabelMode);
+document.getElementById('showIndices').addEventListener('change', updateLabelMode);
+
+function updateLabelMode() {
+    window.showElements = document.getElementById('showElements').checked;
+    window.showIndices = document.getElementById('showIndices').checked;
+
     if (!main.molecule || !main.molecule.atoms || main.molecule.atoms.length === 0) {
         return;
     }
 
-    window.labelIndexMode = !window.labelIndexMode;
-    document.getElementById('labelModeBtn').textContent =
-        `Mode: ${window.labelIndexMode ? 'Indices' : 'Elements'}`;
-
     if (labelMode) {
-        main.toggleLabels(true);
+        main.molecule.toggleLabels(true, window.showElements, window.showIndices);
         render();
     }
-});
+}
+
 render();
 controls.addEventListener('change', () => {
     render();
