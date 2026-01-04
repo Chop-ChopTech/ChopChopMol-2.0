@@ -892,6 +892,11 @@ input[type="range"]:focus {
         opacity 200ms ease,
         transform 200ms ease,
         box-shadow 200ms ease;
+    visibility: hidden;
+}
+
+.db-search-panel:not(.active) * {
+    pointer-events: none !important;
 }
 
 .db-search-table .col-desc {
@@ -927,6 +932,16 @@ input[type="range"]:focus {
     pointer-events: all;
     user-select: all;
     transform: translateY(0);
+    visibility: visible;
+}
+
+.dropdown:not(.active) .dropdown-content {
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+
+.dropdown:not(.active) .dropdown-content * {
+    pointer-events: none !important;
 }
 
 /* Panel Header */
