@@ -894,7 +894,7 @@
 
             <button class="dropdown-icon dropdown"
                 onclick="document.getElementById('stylePanel').classList.toggle('open')" style="border: none;">
-                <i class="fa-solid fa-palette"></i>
+                <i class="fa-solid fa-gear"></i>
             </button>
             <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant" style="border: none; display: none;">
                 <i class="fa-solid fa-comment-dots"></i>
@@ -911,29 +911,20 @@
             <button class="dropdown-icon dropdown" id="startTutorialBtn" style="border: none;">
                 <i class="fa-solid fa-book-open"></i></button>
             <div class="dropdown" id="settingsGear">
-                <span class="dropdown-icon"><i class="fa-solid fa-gear"></i></span>
+                <span class="dropdown-icon"><i class="fa-solid fa-user"></i></span>
                 <div class="dropdown-content shine" id="settingsDropdown" style="min-width: 200px;">
 
-                    <!-- Account Sub-dropdown -->
-                    <div class="settings-submenu">
-                        <div class="submenu-header" onclick="toggleSubmenu('accountSubmenu')">
-                            <span id="accountIcon"><i class="fa-solid fa-user"></i></span>
-                            <span id="accountLabel">Account</span>
-                            <i class="fa-solid fa-chevron-down submenu-arrow"></i>
-                        </div>
-                        <div class="submenu-content" id="accountSubmenu">
-                            <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign
-                                In</button>
-                            <button class="fancy-button" id="signOutButton" style="display: none;"><i
-                                    class="fas fa-sign-out-alt"></i> Sign
-                                Out</button>
-                            <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
-                                onclick="showPremiumModal()">Subscription</button>
-                            <button class="donate-btn fancy-button" onclick="openDonateModal()"><i
-                                    class="fas fa-heart"></i>
-                                Donation</button>
-                        </div>
-                    </div>
+
+                    <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign
+                        In</button>
+                    <button class="fancy-button" id="signOutButton" style="display: none;"><i
+                            class="fas fa-sign-out-alt"></i> Sign
+                        Out</button>
+                    <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
+                        onclick="showPremiumModal()">Subscription</button>
+                    <button class="donate-btn fancy-button" onclick="openDonateModal()"><i class="fas fa-heart"></i>
+                        Donation</button>
+
                 </div>
             </div>
         </div>
