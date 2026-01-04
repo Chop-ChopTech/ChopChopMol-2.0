@@ -505,7 +505,7 @@ export default class Molecule {
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = 'white';
-        ctx.font = 'bold 32px Arial';
+        ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
@@ -522,7 +522,7 @@ export default class Molecule {
 
             let labelText = '';
             if (showElements && showIndices) {
-                labelText = `${atom.type} ${displayIndex}`;
+                labelText = `${atom.type}${displayIndex}`;
             } else if (showElements) {
                 labelText = atom.type;
             } else if (showIndices) {
@@ -603,6 +603,9 @@ export default class Molecule {
                         // Transform instance position to view space
                         vec4 mvPosition = modelViewMatrix * vec4(instancePos, 1.0);
                         
+                        // Push label toward camera (negative z in view space)
+                        mvPosition.z += scaleX * 0.6;
+                        
                         // Add the billboard offset in view space (always facing camera)
                         mvPosition.xy += position.xy * vec2(scaleX, scaleY);
                         
@@ -620,7 +623,7 @@ export default class Molecule {
                     }
                 `,
                 transparent: true,
-                depthTest: false,
+                depthTest: true,
                 depthWrite: false,
                 side: THREE.DoubleSide
             });
