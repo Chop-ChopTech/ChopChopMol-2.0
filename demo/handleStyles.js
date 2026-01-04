@@ -20,6 +20,8 @@ export async function saveStylePreferences(userId) {
             backgroundColor: document.getElementById('style8').value,
             toggleStyleChanges: document.getElementById('toggleStyleChanges').checked,
             sillyMode: document.getElementById('toggleSilly').checked,
+            showElements: document.getElementById('showElements').checked,
+            showIndices: document.getElementById('showIndices').checked,
             lastUpdated: new Date().toISOString()
         };
 
@@ -127,6 +129,24 @@ export function applyStylePreferences(prefs, renderer) {
         console.log('Silly mode:', prefs.sillyMode);
         document.getElementById('toggleSilly').checked = prefs.sillyMode;
         window.sillyMode = prefs.sillyMode;
+    }
+
+    if (prefs.showElements !== undefined) {
+        document.getElementById('showElements').checked = prefs.showElements;
+        window.showElements = prefs.showElements;
+    }
+
+    if (prefs.showIndices !== undefined) {
+        document.getElementById('showIndices').checked = prefs.showIndices;
+        window.showIndices = prefs.showIndices;
+    }
+
+    // Actually update labels display
+    const shouldShowLabels = window.showElements || window.showIndices;
+    window.labelMode = shouldShowLabels;
+    if (hasMolecule && window.main.molecule) {
+        window.main.molecule.toggleLabels(shouldShowLabels, window.showElements, window.showIndices);
+        if (window.render) window.render();
     }
 
     // Apply background color
@@ -257,6 +277,11 @@ export function resetToDefaults() {
     document.getElementById('style8').value = '#01101f'; // Background (dark blue)
     document.getElementById('toggleSilly').checked = false; // Silly
     document.getElementById('toggleStyleChanges').checked = false;
+    document.getElementById('showElements').checked = true;
+    document.getElementById('showIndices').checked = false;
+    window.showElements = true;
+    window.showIndices = false;
+    window.labelMode = false;
 
     // Reset main object values
     main.roughness = 0.17;
