@@ -4345,6 +4345,89 @@ input[type="range"]:focus {
     transform: rotate(180deg);
 }
 
+/* Floating Style Panel - stuck to file explorer */
+.style-panel {
+    position: absolute;
+    top: 10px;
+    right: 100%;
+    margin-right: 10px;
+    width: 194px;
+    z-index: 9999;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+}
+
+.style-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    transition: background 0.2s;
+}
+
+.style-panel-header:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.style-panel-arrow {
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+.style-panel.open .style-panel-arrow {
+    transform: rotate(180deg);
+}
+
+.style-panel-content {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 12px;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.style-panel.open .style-panel-content {
+    max-height: 400px;
+    padding: 8px 12px 12px;
+}
+
+#style8 {
+    width: 100%;
+    padding: none;
+    border: 3px solid white;
+}
+
+input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    background: none;
+    cursor: pointer;
+}
+
+/* Chrome / Safari */
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border: none;
+}
+
+/* Firefox */
+input[type="color"]::-moz-color-swatch {
+    border: none;
+}
+
 /* Compact style controls */
 .compact-style-row {
     display: flex;
