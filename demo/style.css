@@ -1258,6 +1258,7 @@ input[type="range"]:focus {
     background-repeat: no-repeat !important;
     perspective: 1000px;
     background-color: #5d5d5d57;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 #fragmentList {
@@ -1459,12 +1460,12 @@ input[type="range"]:focus {
 .donate-btn {
     background: rgba(0, 0, 0, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #FFD700;
+    color: #29be00;
 }
 
 .donate-btn:hover {
-    background: rgba(255, 215, 0, 0.1);
-    border-color: #FFD700;
+    background-color: rgba(255, 215, 0, 0.1);
+    color: yellow;
     transform: translateY(-2px);
 }
 
@@ -4370,7 +4371,7 @@ input[type="range"]:focus {
     width: 367px;
     z-index: 9999;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     backdrop-filter: blur(10px);
     overflow: hidden;
