@@ -4358,6 +4358,11 @@ input[type="range"]:focus {
     border-radius: 10px;
     backdrop-filter: blur(10px);
     overflow: hidden;
+    opacity: 0;
+}
+
+.style-panel.open {
+    opacity: 1;
 }
 
 .style-panel-header {

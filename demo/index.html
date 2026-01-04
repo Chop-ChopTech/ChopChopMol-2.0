@@ -892,7 +892,10 @@
             <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"
                 style="display: none;"><i class="fas fa-ruler"></i></button>
 
-
+            <button class="dropdown-icon dropdown"
+                onclick="document.getElementById('stylePanel').classList.toggle('open')" style="border: none;">
+                <i class="fa-solid fa-palette"></i>
+            </button>
             <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant" style="border: none; display: none;">
                 <i class="fa-solid fa-comment-dots"></i>
             </button>
@@ -1732,10 +1735,7 @@
 
     <div id="fileExplorerPanel" class="file-explorer-panel open">
         <div id="stylePanel" class="style-panel">
-            <div class="style-panel-header" onclick="document.getElementById('stylePanel').classList.toggle('open')">
-                <i class="fa-solid fa-palette"></i>
-                <i class="fa-solid fa-chevron-down style-panel-arrow"></i>
-            </div>
+
             <div class="style-panel-content">
                 <div class="compact-style-row">
                     <label>Roughness</label>
