@@ -3,7 +3,7 @@
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[0] || backendUrl[0],
+    backendUrl: backendUrl[1] || backendUrl[0],
     sessionId: crypto.randomUUID(),
     model: 'gpt-5-mini',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
@@ -1164,10 +1164,36 @@ const FUNCTIONS = {
     toggle_labels: {
         execute: (params) => {
             if (!window.main?.molecule) return { success: false, message: "No molecule loaded" };
-            if (params.showIndices !== undefined) window.labelIndexMode = params.showIndices;
-            window.main.toggleLabels(params.show);
+
+            // Update the flags based on parameters
+            if (params.showElements !== undefined) {
+                window.showElements = params.showElements;
+            }
+            if (params.showIndices !== undefined) {
+                window.showIndices = params.showIndices;
+            }
+
+            // Determine if labels should be shown (either elements OR indices)
+            const shouldShowLabels = window.showElements || window.showIndices;
+            window.labelMode = shouldShowLabels;
+
+            // Call toggleLabels with all three parameters
+            window.main.molecule.toggleLabels(shouldShowLabels, window.showElements, window.showIndices);
+
             if (typeof window.render === 'function') window.render();
-            return { success: true, message: params.show ? "Labels shown" : "Labels hidden" };
+
+            // Build descriptive message
+            let message = "Labels ";
+            if (shouldShowLabels) {
+                const parts = [];
+                if (window.showElements) parts.push("elements");
+                if (window.showIndices) parts.push("indices");
+                message += `shown (${parts.join(" + ")})`;
+            } else {
+                message += "hidden";
+            }
+
+            return { success: true, message };
         }
     },
 
