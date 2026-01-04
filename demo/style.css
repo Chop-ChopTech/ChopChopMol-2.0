@@ -4546,7 +4546,12 @@ input[type="color"]::-moz-color-swatch {
 }
 
 #settingsGear .dropdown-content {
-    min-width: 220px;
+    padding: 10px;
+}
+
+#settingsDropdown {
+    width: fit-content !important;
+    width: 90px;
     padding: 10px;
 }
 
