@@ -651,14 +651,26 @@ body {
 }
 
 #createFragment {
-    background-color: rgb(114, 201, 0);
-    margin: 15px;
-    display: none;
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: fit-content;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    border: none;
+    border-radius: 0px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    background-color: #001d4e;
+    will-change: transform;
+}
 
+#createFragment:hover {
+    cursor: pointer;
+    font-size: 14px;
 }
 
 #styleSelector.on {
@@ -1264,35 +1276,40 @@ input[type="range"]:focus {
 #fragmentList {
     list-style: none;
     padding: 0;
-    margin-top: 7px;
+    margin-top: 0px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 300px;
+    width: 100%;
     color: white;
     max-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
-    padding-top: 35px;
-    padding-bottom: 35px;
+    padding-top: 0px;
+    padding-bottom: 0px;
     justify-content: center;
-    /* background-color: #0056b3; */
+    background-color: none;
 }
 
 #fragmentListContainer {
+
     display: flex;
     align-items: center;
     justify-content: top;
     flex-direction: column;
     width: 190px;
-    height: auto;
+    height: 100vh;
     padding: 10px 0;
     position: absolute;
-    top: 0;
-    right: 8px;
+    top: -20px;
+    left: 0;
     margin-right: 0px;
     margin-top: 10px;
-    /* background-color: chartreuse; */
+    right: 0px;
+    background-color: rgba(0, 24, 55, 0.237);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.227);
+    backdrop-filter: blur(10px);
+    transition: all 0.2s ease-in-out;
 }
 
 #fragmentListTitle {

@@ -2546,7 +2546,9 @@ function updateFragmentList(fragmentList) {
             background-color: rgb(64, 215, 64);
             padding: 8px 12px;
             font-size: 13px;
-            width: 50px%;
+            width: 100%;
+            box-shadow: none;
+            border-radius: 0;
             z-index: 10000000000000000000!important;
         `;
         showAllBtn.addEventListener('click', restoreOriginalMolecule);
@@ -2580,17 +2582,17 @@ function updateFragmentList(fragmentList) {
     }
     fragments.forEach((fragment, index) => {
         const listItem = document.createElement('li');
-        const color = hexToRGBA(fragmentColors[index % fragmentColors.length], 0.3);
+        const color = hexToRGBA(fragmentColors[index % fragmentColors.length], 0.8);
         listItem.innerHTML = '';
         listItem.textContent = `Fragment ${index + 1}`;
         listItem.style.cursor = 'pointer';
         listItem.style.padding = '7px';
-        listItem.style.margin = '2px';
-        listItem.style.borderRadius = '20px';
+        listItem.style.margin = '0px';
+        listItem.style.borderRadius = '0px';
         listItem.style.transition = 'all ease-in-out 0.3s';
         listItem.style.paddingLeft = '20px';
         listItem.style.paddingRight = '20px';
-        listItem.style.boxShadow = `0 4px 10px rgba(0, 0, 0, 0.513), inset 1px 1px 5px rgba(145, 145, 145, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.07)`;
+        listItem.style.width = '100%';
         listItem.style.backgroundColor = color;
         listItem.dataset.fragmentIndex = index;
 
@@ -2611,11 +2613,12 @@ function updateFragmentList(fragmentList) {
             isolateBtn.className = 'fancy-button';
             isolateBtn.style.cssText = `
                 flex: 1;
-                background-color: rgb(255, 140, 0);
+                background-color: ${hexToRGBA(fragmentColors[index % fragmentColors.length], 0.7)};
                 padding: 5px 10px;
                 font-size: 12px;
                 width: fit-content;
-
+                box-shadow: none;
+                border-radius: 0px;
             `;
 
             isolateBtn.addEventListener('click', (e) => {
@@ -5450,6 +5453,10 @@ function updateRendererSize() {
     if (toolbarBg) {
         toolbarBg.style.left = (leftOffset + width / 2) + 'px';
         toolbarBg.style.transform = 'translateX(-50%)';
+    }
+    const fragmentListContainer = document.getElementById('fragmentListContainer');
+    if (fragmentListContainer) {
+        fragmentListContainer.style.left = (leftOffset) + 'px';
     }
     render();
 }
