@@ -651,13 +651,12 @@ body {
 }
 
 #createFragment {
-    padding: 8px 16px;
-    font-size: 13px;
-    font-weight: 600;
+    padding: 9.5px 9px;
+    font-size: 14px;
     color: #fff;
     border: none;
+    font-weight: 600;
     border-radius: 0px;
-    text-transform: uppercase;
     cursor: pointer;
     position: relative;
     overflow: hidden;
@@ -666,11 +665,13 @@ body {
     width: 100%;
     background-color: #001d4e;
     will-change: transform;
+    text-align: left;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #createFragment:hover {
     cursor: pointer;
-    font-size: 14px;
+    background: #364d76;
 }
 
 #styleSelector.on {
@@ -1297,19 +1298,26 @@ input[type="range"]:focus {
     align-items: center;
     justify-content: top;
     flex-direction: column;
-    width: 190px;
+    width: 140px;
     height: 100vh;
     padding: 10px 0;
     position: absolute;
     top: -20px;
-    left: 0;
+    left: 242px;
     margin-right: 0px;
     margin-top: 10px;
     right: 0px;
     background-color: rgba(0, 24, 55, 0.237);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.227);
     backdrop-filter: blur(10px);
-    transition: all 0.2s ease-in-out;
+    transition: all 0.2s ease;
+    max-height: 0px;
+    opacity: 0;
+}
+
+#fragmentListContainer.open {
+    max-height: 100vh;
+    opacity: 1;
 }
 
 #fragmentListTitle {
@@ -1317,12 +1325,6 @@ input[type="range"]:focus {
     position: relative;
 }
 
-#fragmentList li {
-    margin: 5px 0;
-    text-align: center;
-    width: fit-content;
-    padding: 16px 10px;
-}
 
 #selectionBox {
     position: absolute;
@@ -2520,6 +2522,7 @@ input[type="range"]:focus {
     text-align: left;
     line-height: 1;
     width: 100px;
+    font-weight: 600;
 }
 
 .ai-header-btn i {

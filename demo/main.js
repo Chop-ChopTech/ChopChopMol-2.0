@@ -2582,19 +2582,20 @@ function updateFragmentList(fragmentList) {
     }
     fragments.forEach((fragment, index) => {
         const listItem = document.createElement('li');
-        const color = hexToRGBA(fragmentColors[index % fragmentColors.length], 0.8);
+        const color = hexToRGBA(fragmentColors[index % fragmentColors.length], 0.2);
         listItem.innerHTML = '';
         listItem.textContent = `Fragment ${index + 1}`;
         listItem.style.cursor = 'pointer';
-        listItem.style.padding = '7px';
+        listItem.style.padding = '6px 8px';
         listItem.style.margin = '0px';
         listItem.style.borderRadius = '0px';
         listItem.style.transition = 'all ease-in-out 0.3s';
-        listItem.style.paddingLeft = '20px';
-        listItem.style.paddingRight = '20px';
-        listItem.style.width = '100%';
+        listItem.style.width = '124px';
+        listItem.style.fontSize = '14px';
         listItem.style.backgroundColor = color;
         listItem.dataset.fragmentIndex = index;
+        listItem.style.textAlign = 'left';
+        listItem.style.border = '1px solid rgb(255, 255, 255);'
 
 
         // Check if this fragment is currently selected
