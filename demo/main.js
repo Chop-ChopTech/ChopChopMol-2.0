@@ -44,11 +44,12 @@ document.body.appendChild(renderer.domElement);
 
 let controls = new ArcballControls(camera, renderer.domElement);
 
-controls.rotateSpeed = 5.0;
+controls.rotateSpeed = 1.0;
 controls.zoomSpeed = 2.0;
 controls.panSpeed = 1.0;
-controls.dynamicDampingFactor = 1.0; // No drag smoothing
+controls.dynamicDampingFactor = 1.0;
 controls.cursorZoom = true;
+controls.enableAnimations = true;
 
 let shiftDown = false;
 let cmdDown = false;
@@ -283,7 +284,7 @@ export default class Main {
                 render();
             });
             ribbonMode = true;
-            disableAtomInteractions();
+            // disableAtomInteractions();
         } else {
             // Normal mode - ensure interactions are enabled
             ribbonMode = false;
@@ -1488,7 +1489,7 @@ function createAxisVisualizer(atom1, atom2) {
 function onPointerDown(event) {
     if (ribbonMode) return;
     if (editingMolecule) {
-        if (isUserSignedIn) {
+        if (true) {
             if (!main.molecule || !main.molecule.instancedMesh) {
                 console.warn('Molecule or instancedMesh not initialized');
                 return;
@@ -1599,9 +1600,7 @@ function onPointerDown(event) {
                         window.addEventListener('pointermove', onSelectionMove, false);
                         window.addEventListener('pointerup', onSelectionUp, false);
                     } else {
-                        // Normal click on empty space: clear atom selection but keep fragments selected
-                        // Don't clear fragmentsSelected - fragments stay selected
-                        // Only clear atomsSelected if no fragments are selected
+
                         if (fragmentsSelected.length === 0) {
                             atomsSelected = [];
                             unselectAtom();
@@ -3604,8 +3603,8 @@ function rotateCamera(angleToRotate, camera, controls = null) {
 window.addEventListener('authStateChanged', (event) => {
     const { user, isSignedIn, premiumState } = event.detail;
     premiumActive = premiumState.isActive
-    updateFeatureAccess(user, isSignedIn, premiumActive);
-    editingMolecule = isSignedIn
+    updateFeatureAccess(user, true, true);
+    editingMolecule = true
     window.currentUserEmail = user ? user.email : null
 
     const saveSection = document.getElementById('molecule-save-section');

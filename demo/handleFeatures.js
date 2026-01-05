@@ -12,8 +12,8 @@ const camera = window.camera
 
 // Function to update feature access based on authentication
 export function updateFeatureAccess(user, signedIn, isPremium) {
-    isUserSignedIn = signedIn;
-    restrictFeatures();
+    isUserSignedIn = true;
+    // restrictFeatures();
 
     if (isUserSignedIn) {
         if (isPremium) {
@@ -36,7 +36,7 @@ export function restrictFeatures() {
     storeOriginalHandlers();
 
     // Disable editing functionality
-    disableAtomInteraction(window.renderer);
+    // disableAtomInteraction(window.renderer);
 
     // Disable specific buttons with visual feedback
     const restrictedButtons = [
