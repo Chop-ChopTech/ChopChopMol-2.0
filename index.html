@@ -928,7 +928,7 @@
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
             border-radius: 16px;
-            padding: 3rem;
+            padding: 10px;
             text-align: center;
             min-width: 280px;
         }
@@ -1385,7 +1385,7 @@
         </div>
         <div class="mace-container">
             <div class="mace-content">
-                <h3>Uses <span>MACE-MP</span></h3>
+                <h3 style="font-size: 34px;">Uses <span>MACE-MP</span></h3>
                 <p>Calculate molecular energies and optimize geometries using foundation models trained on millions of
                     DFT
                     calculations.</p>
@@ -1424,14 +1424,14 @@
             </div>
             <div class="mace-visual">
                 <div class="energy-display">
-                    <div class="energy-label">Energy</div>
-                    <div class="energy-value">-156.42 <span>eV</span></div>
-                    <div class="energy-kcal">-3,607.8 kcal/mol</div>
+                    <div class="energy-value" style="margin-bottom: 10px;">Torsional scan graph</div>
+                    <img src="energy.png" width="870px"
+                        style="border-radius: 10px; box-shadow:0px 0px 10px 0px rgba(0, 0, 0, 0.5);" alt="Energy Arrow">
                 </div>
             </div>
         </div>
     </section>
-    <section class="section pricing-section" id="pricing">
+    <section class="section pricing-section" id="pricing" style="display: none;">
         <div class="section-header">
             <span class="section-tag">Simple Pricing</span>
             <h2 class="section-title">Start Free, Go Pro</h2>
