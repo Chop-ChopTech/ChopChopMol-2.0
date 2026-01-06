@@ -1508,6 +1508,8 @@ const FUNCTIONS = {
             if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
 
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+            const stretch = molecule.stretch || 4;
+            const offset = molecule.offset || { x: 0, y: 0, z: 0 };
 
             try {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/optimize`, {
@@ -1515,15 +1517,63 @@ const FUNCTIONS = {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         atoms,
-                        model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a',
+                        model: params.model || AI_CONFIG.maceModel || 'medium',
                         fmax: params.fmax || 0.05,
                         maxSteps: params.maxSteps || 100
                     })
                 });
                 const result = await res.json();
 
+                if (!result.success) {
+                    return { success: false, message: result.error || "Optimization failed" };
+                }
+
+                // Convert trajectory to frame format
+                if (result.trajectory && result.trajectory.length > 0) {
+                    const parsedFrames = result.trajectory.map((frame, idx) => {
+                        const atomData = frame.positions.map((pos, i) => ({
+                            element: atoms[i].element,
+                            x: pos[0],
+                            y: pos[1],
+                            z: pos[2]
+                        }));
+
+                        return {
+                            atomData,
+                            numAtoms: atomData.length,
+                            comment: `step=${idx} energy=${frame.energy_eV.toFixed(4)}eV fmax=${frame.max_force.toFixed(4)}eV/Å`
+                        };
+                    });
+
+                    // Store frames globally
+                    window.xyzFrames = parsedFrames;
+
+                    // Show frame slider
+                    const frameSliderContainer = document.getElementById('frameSliderContainer');
+                    if (frameSliderContainer) {
+                        frameSliderContainer.style.display = 'flex';
+                        const slider = document.getElementById('frameSlider');
+                        const label = document.getElementById('frameLabel');
+                        if (slider) {
+                            slider.max = parsedFrames.length - 1;
+                            slider.value = parsedFrames.length - 1; // Start at final frame
+                        }
+                        if (label) {
+                            label.textContent = `Frame ${parsedFrames.length} / ${parsedFrames.length}`;
+                        }
+                    }
+
+                    // Update molecule to final frame
+                    window.undoManager?.saveState?.();
+                    const targetPositions = {};
+                    result.positions.forEach(p => {
+                        targetPositions[p.index] = { x: p.x * 4, y: p.y * 4, z: p.z * 4 };
+                    });
+                    await animateAtomPositions(result.positions.map(p => p.index), targetPositions, 500);
+                }
+
                 // Auto-save extxyz to local folder if open
-                if (result.success && window.fileExplorer?.directoryHandle) {
+                if (window.fileExplorer?.directoryHandle) {
                     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
                     const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
                     const props = 'Properties=species:S:1:pos:R:3';
@@ -1537,17 +1587,11 @@ const FUNCTIONS = {
                     await window.fileExplorer.createFile(`mace_opt_${timestamp}.extxyz`, extxyz);
                 }
 
-                if (result.success && result.positions) {
-                    window.undoManager?.saveState?.();
-
-                    const targetPositions = {};
-                    result.positions.forEach(p => {
-                        targetPositions[p.index] = { x: p.x * 4, y: p.y * 4, z: p.z * 4 };
-                    });
-
-                    await animateAtomPositions(result.positions.map(p => p.index), targetPositions, 500);
-                }
-                return result;
+                return {
+                    success: true,
+                    message: `Optimization ${result.converged ? 'converged' : 'completed'} in ${result.steps} steps. Final energy: ${result.energy_eV.toFixed(4)} eV. Use frame slider to view trajectory.`,
+                    ...result
+                };
             } catch (e) {
                 return { success: false, message: e.message };
             }
