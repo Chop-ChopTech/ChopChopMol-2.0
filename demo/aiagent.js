@@ -1548,6 +1548,18 @@ const FUNCTIONS = {
                     // Store frames globally
                     window.xyzFrames = parsedFrames;
 
+                    window.lastMaceResults = {
+                        frameCount: result.trajectory.length,
+                        energies: result.trajectory.map((frame, idx) => ({
+                            frame: idx,
+                            energy_eV: frame.energy_eV,
+                            energy_kcal: frame.energy_eV * 23.0609,
+                            max_force_eV_A: frame.max_force
+                        })),
+                        lowestEnergyFrame: 0,  // Will be recalculated if needed
+                        highestEnergyFrame: result.trajectory.length - 1
+                    };
+
                     // Show frame slider
                     const frameSliderContainer = document.getElementById('frameSliderContainer');
                     if (frameSliderContainer) {
