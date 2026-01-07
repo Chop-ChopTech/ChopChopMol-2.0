@@ -239,6 +239,13 @@
             font-size: 1.1rem;
         }
 
+        span.highlight {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
         .hero {
             min-height: 100vh;
             display: flex;
@@ -373,10 +380,11 @@
 
         .section-title {
             font-family: 'Outfit', sans-serif;
-            font-size: clamp(2rem, 4vw, 3rem);
+            font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 1rem;
         }
+
 
         .section-subtitle {
             color: var(--text-muted);
@@ -1180,11 +1188,10 @@
             <li><a href="#ai">AI Assistant</a></li>
             <li><a href="#formats">Formats</a></li>
             <li><a href="#mace">MLIP</a></li>
-            <li><a href="#pricing">Pricing</a></li>
         </ul>
         <div class="nav-cta">
-            <a href="#" class="btn btn-ghost">Sign In</a>
-            <a href="#" class="btn btn-primary">Launch App</a>
+            <!-- <a href="#" class="btn btn-ghost">Sign In</a>
+            <a href="#" class="btn btn-primary">Launch App</a> -->
         </div>
         <button class="mobile-menu-btn"><span></span><span></span><span></span></button>
     </nav>
@@ -1228,12 +1235,15 @@
 
     <section class="section" id="features">
         <div class="section-header">
-            <span class="section-tag">Powerful Features</span>
-            <h2 class="section-title">Everything You Need for Effortless Editing and Simulation</h2>
-            <p class="section-subtitle">From simple visualization to complex editing, ChopChopMol provides
+            <span class="section-tag">AI-Powered</span>
+
+            <h1 class="section-title">Effortless Molecular Editing and Simulation Using <span class="highlight">Natural
+                    Language</span></h1>
+            <p class="section-subtitle">From simple visualization to complex editing and simulations ChopChopMol
+                provides
                 professional-grade tools accessible from your browser.</p>
         </div>
-        <div class="features-grid">
+        <!-- <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon"><svg viewBox="0 0 24 24">
                         <path
@@ -1294,10 +1304,7 @@
                 <p class="feature-desc">Work with multiple molecules simultaneously. Drag-and-drop files directly into
                     the application for instant viewing.</p>
             </div>
-        </div>
-    </section>
-
-    <section class="section ai-section" id="ai">
+        </div> -->
         <div class="ai-container">
             <div class="ai-visual">
                 <div class="ai-chat-demo">
@@ -1326,8 +1333,6 @@
                 </div>
             </div>
             <div class="ai-content">
-                <span class="section-tag">AI-Powered</span>
-                <h3>Edit Molecules with <span>Natural Language</span></h3>
                 <p>Simply tell the AI what you want to do. Rotate fragments, add functional groups, measure properties,
                     or transform entire structures using plain English commands.</p>
                 <div class="ai-features">
@@ -1357,6 +1362,10 @@
         </div>
     </section>
 
+    <!-- <section class="section ai-section" id="ai">
+
+    </section> -->
+
     <section class="section formats-section" id="formats">
         <div class="section-header">
             <span class="section-tag">Compatibility</span>
@@ -1364,21 +1373,21 @@
             <p class="section-subtitle">Import and export molecules in the formats you already use.</p>
         </div>
         <div class="formats-grid">
-            <span class="format-badge">.PDB</span>
-            <span class="format-badge">.XYZ</span>
-            <span class="format-badge">.MOL / .SDF</span>
-            <span class="format-badge">.mmCIF</span>
-            <span class="format-badge">.MOL2</span>
-            <span class="format-badge">.PQR</span>
-            <span class="format-badge">.GRO</span>
-            <span class="format-badge">.CML</span>
+            <span class="format-badge">PDB</span>
+            <span class="format-badge">XYZ</span>
+            <span class="format-badge">MOL / SDF</span>
+            <span class="format-badge">mmCIF</span>
+            <span class="format-badge">MOL2</span>
+            <span class="format-badge">PQR</span>
+            <span class="format-badge">GRO</span>
+            <span class="format-badge">CML</span>
         </div>
     </section>
 
     <section class="section mace-section" id="mace">
         <div class="section-header">
             <span class="section-tag">ML Potentials</span>
-            <h2 class="section-title">MLIP for molecular simulation</h2>
+            <h2 class="section-title">MLIPs for Molecular Simulations</h2>
             <p class="section-subtitle">State-of-the-art machine learning potentials for accurate energy calculations
                 and
                 geometry optimization.</p>
@@ -1417,9 +1426,9 @@
                     </div>
                 </div>
                 <div class="mace-models">
-                    <span class="mace-model">mace-mp-0a</span>
+                    <!-- <span class="mace-model">mace-mp-0a</span>
                     <span class="mace-model">mace-mp-0b3</span>
-                    <span class="mace-model">mace-mpa-0</span>
+                    <span class="mace-model">mace-mpa-0</span> -->
                 </div>
             </div>
             <div class="mace-visual">
