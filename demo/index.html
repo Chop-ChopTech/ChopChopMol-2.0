@@ -1698,6 +1698,15 @@
             }
         }
 
+        function stopPlayback() {
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+                const icon = document.getElementById('playFrames')?.querySelector('i');
+                if (icon) icon.className = 'fa-solid fa-play';
+            }
+        }
+
         // Play animation
         let frameInterval = null;
         document.getElementById('playFrames')?.addEventListener('click', function () {
@@ -1741,6 +1750,7 @@
 
             chart.update('none'); // 'none' = no animation for snappy response
         });
+        document.getElementById('frameSlider')?.addEventListener('mousedown', stopPlayback);
     </script>
 
     <!-- AI Chat Panel -->
@@ -2714,6 +2724,7 @@
                     maintainAspectRatio: false,
                     onClick: (e, elements) => {
                         if (elements.length && window.xyzFrames) {
+                            stopPlayback();
                             const idx = elements[0].index;
                             const slider = document.getElementById('frameSlider');
                             slider.value = idx;

@@ -37,6 +37,7 @@ const toolStatusMap = {
     rotational_scan: 'Running rotational scan',
     translation_scan: 'Running translation scan',
     angle_scan: 'Running angle scan',
+    run_md: 'Running MD simulation',
 };
 // ALL functions the AI can execute (kept on frontend - they manipulate DOM/Three.js)
 const FUNCTIONS = {
@@ -1158,6 +1159,123 @@ const FUNCTIONS = {
                 success: true,
                 message: `Generated ${steps} frames (${startDistance}Å to ${startDistance + (steps - 1) * increment * direction}Å in ${increment}Å steps). Use frame slider to play.`
             };
+        }
+    },
+
+    run_md: {
+        execute: async (params) => {
+            const molecule = window.main?.molecule;
+            if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
+
+            const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+
+            try {
+                const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/md`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        atoms,
+                        model: params.model || AI_CONFIG.maceModel || 'medium',
+                        temperature: params.temperature || 300,
+                        steps: params.steps || 500,
+                        timestep: params.timestep || 1.0,
+                        friction: params.friction || 0.01,
+                        saveInterval: params.saveInterval || 10
+                    })
+                });
+                const result = await res.json();
+
+                if (!result.success) {
+                    return { success: false, message: result.error || "MD simulation failed" };
+                }
+
+                // Convert trajectory to frame format
+                if (result.trajectory && result.trajectory.length > 0) {
+                    const parsedFrames = result.trajectory.map((frame, idx) => {
+                        const atomData = frame.positions.map((pos, i) => ({
+                            element: atoms[i].element,
+                            x: pos[0],
+                            y: pos[1],
+                            z: pos[2]
+                        }));
+
+                        return {
+                            atomData,
+                            numAtoms: atomData.length,
+                            comment: `step=${frame.step} T=${frame.temperature_K.toFixed(1)}K E=${frame.total_eV.toFixed(4)}eV`
+                        };
+                    });
+
+                    window.xyzFrames = parsedFrames;
+
+                    // Cache energies for plotting
+                    window.lastMaceResults = {
+                        frameCount: result.trajectory.length,
+                        energies: result.trajectory.map((frame, idx) => ({
+                            frame: idx,
+                            step: frame.step,
+                            energy_eV: frame.energy_eV,
+                            kinetic_eV: frame.kinetic_eV,
+                            total_eV: frame.total_eV,
+                            temperature_K: frame.temperature_K
+                        })),
+                        lowestEnergyFrame: 0,
+                        highestEnergyFrame: result.trajectory.length - 1
+                    };
+
+                    // Show frame slider
+                    const frameSliderContainer = document.getElementById('frameSliderContainer');
+                    if (frameSliderContainer) {
+                        frameSliderContainer.style.display = 'flex';
+                        const slider = document.getElementById('frameSlider');
+                        const label = document.getElementById('frameLabel');
+                        if (slider) {
+                            slider.max = parsedFrames.length - 1;
+                            slider.value = parsedFrames.length - 1;
+                        }
+                        if (label) {
+                            label.textContent = `Frame ${parsedFrames.length} / ${parsedFrames.length}`;
+                        }
+                    }
+
+                    // Update molecule to final frame
+                    window.undoManager?.saveState?.();
+                    const targetPositions = {};
+                    result.positions.forEach(p => {
+                        targetPositions[p.index] = { x: p.x * 4, y: p.y * 4, z: p.z * 4 };
+                    });
+                    await animateAtomPositions(result.positions.map(p => p.index), targetPositions, 500);
+                }
+
+                // Auto-save trajectory if folder open
+                if (window.fileExplorer?.directoryHandle) {
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                    const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
+                    const props = 'Properties=species:S:1:pos:R:3';
+
+                    let extxyz = '';
+                    result.trajectory.forEach((frame, idx) => {
+                        const comment = `${lattice} ${props} energy=${frame.energy_eV} temperature=${frame.temperature_K} step=${frame.step} pbc="F F F"`;
+                        extxyz += `${atoms.length}\n${comment}\n`;
+                        frame.positions.forEach((pos, i) => {
+                            extxyz += `${atoms[i].element.padEnd(4)} ${pos[0].toFixed(8).padStart(14)} ${pos[1].toFixed(8).padStart(14)} ${pos[2].toFixed(8).padStart(14)}\n`;
+                        });
+                    });
+
+                    await window.fileExplorer.createFile(`mace_md_${timestamp}.extxyz`, extxyz);
+                }
+
+                return {
+                    success: true,
+                    message: `MD completed: ${result.steps} steps at ${result.temperature_K}K. Generated ${result.frameCount} frames. Final E = ${result.energy_eV.toFixed(4)} eV`,
+                    frameCount: result.frameCount,
+                    temperature_K: result.temperature_K,
+                    energy_eV: result.energy_eV
+                };
+
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
         }
     },
 
