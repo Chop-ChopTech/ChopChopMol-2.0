@@ -1,10 +1,9 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'jsm/controls/OrbitControls.js';
-import { TrackballControls } from 'jsm/controls/TrackballControls.js';
 import { ArcballControls } from 'jsm/controls/ArcballControls.js';
 
 import Molecule from './atom/molecule.js';
 import FileHandler from './utils/fileHandler.js';
+import { reattachButtonHandler } from './utils/domUtils.js';
 import {
     hideRestrictionMessage,
     showRestrictionMessage,
@@ -1107,10 +1106,6 @@ switchModeButton.addEventListener('click', (e) => {
 toggleSillyButton.addEventListener('click', (e) => {
     window.sillyMode = !window.sillyMode;
 });
-// closeStyleSelectorButton.addEventListener('click', () => {
-//     styleSelector.classList.add('on');
-// });
-
 
 window.addEventListener('replyUpdated', (event) => {
     const newReply = event.detail;
@@ -1869,212 +1864,137 @@ function attachButtonEventListeners() {
     const isolateBtn = document.getElementById('isolateFragmentBtn');
 
     // Clone and replace to remove all existing event listeners
-    if (changeBtn) {
-        const newChangeBtn = changeBtn.cloneNode(true);
-        changeBtn.parentNode.replaceChild(newChangeBtn, changeBtn);
-
-        newChangeBtn.addEventListener('click', () => {
-            if (atomsSelected.length > 0) {
-                const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
-                if (replacingMolecule && replacingMolecule.trim()) {
-                    const element = replacingMolecule.trim();
-                    // Validate it's a known element
-                    if (!main.molecule.atomSettings[element]) {
-                        alert(`Unknown element: ${element}`);
-                        return;
-                    }
-                    // Update all selected atoms
-                    atomsSelected.forEach(idx => {
-                        main.data.atomData[idx].element = replacingMolecule;
-                    });
-                    main.newMolecule(main.data,
-                        main.mode,
-                        true,
-                        true,
-                        false
-                    );
+    reattachButtonHandler('changeAtom', () => {
+        if (atomsSelected.length > 0) {
+            const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
+            if (replacingMolecule && replacingMolecule.trim()) {
+                const element = replacingMolecule.trim();
+                // Validate it's a known element
+                if (!main.molecule.atomSettings[element]) {
+                    alert(`Unknown element: ${element}`);
+                    return;
                 }
+                // Update all selected atoms
+                atomsSelected.forEach(idx => {
+                    main.data.atomData[idx].element = replacingMolecule;
+                });
+                main.newMolecule(main.data,
+                    main.mode,
+                    true,
+                    true,
+                    false
+                );
             }
+        }
+    });
+
+    reattachButtonHandler('removeAtom', () => {
+        // Remove all selected atoms (in reverse order to maintain indices)
+        const sortedIndices = [...atomsSelected].sort((a, b) => b - a);
+        sortedIndices.forEach(idx => {
+            main.data.atomData.splice(idx, 1);
         });
-    }
+        main.data.numAtoms = main.data.atomData.length;  // Use actual length instead
+        atomsSelected = [];
+        main.newMolecule(
+            main.data,
+            main.mode,
+            true,
+            true,
+            false
+        );
+    });
 
-    if (removeBtn) {
-        const newRemoveBtn = removeBtn.cloneNode(true);
-        removeBtn.parentNode.replaceChild(newRemoveBtn, removeBtn);
+    reattachButtonHandler('createFragment', () => {
+        // Create a copy of the selected atoms for the new fragment
+        const newFragment = [...atomsSelected];
 
-        newRemoveBtn.addEventListener('click', () => {
-            // Remove all selected atoms (in reverse order to maintain indices)
-            const sortedIndices = [...atomsSelected].sort((a, b) => b - a);
-            sortedIndices.forEach(idx => {
-                main.data.atomData.splice(idx, 1);
-            });
-            main.data.numAtoms = main.data.atomData.length;  // Use actual length instead
-            atomsSelected = [];
-            main.newMolecule(
-                main.data,
-                main.mode,
-                true,
-                true,
-                false
-            );
-        });
+        // Get all atom indices in the molecule
+        const totalAtoms = main.molecule.atoms.length;
+        const allAtomIndices = Array.from({ length: totalAtoms }, (_, i) => i);
 
-    }
+        // Process existing fragments to remove atoms that are now in the new fragment
+        let updatedFragments = fragments.map(fragment => {
+            // Remove atoms from existing fragments if they're in the new fragment
+            return fragment.filter(atomIndex => !newFragment.includes(atomIndex));
+        }).filter(fragment => fragment.length > 0); // Remove empty fragments
 
-    if (fragmentBtn) {
-        const newFragmentBtn = fragmentBtn.cloneNode(true);
-        fragmentBtn.parentNode.replaceChild(newFragmentBtn, fragmentBtn);
+        // Find all atoms that are not in any fragment (including the new one)
+        const atomsInFragments = new Set([
+            ...newFragment,
+            ...updatedFragments.flat()
+        ]);
 
-        newFragmentBtn.addEventListener('click', () => {
-            // Create a copy of the selected atoms for the new fragment
-            const newFragment = [...atomsSelected];
+        const unassignedAtoms = allAtomIndices.filter(index => !atomsInFragments.has(index));
 
-            // Get all atom indices in the molecule
-            const totalAtoms = main.molecule.atoms.length;
-            const allAtomIndices = Array.from({ length: totalAtoms }, (_, i) => i);
+        // Create a new fragment for unassigned atoms if there are any
+        if (unassignedAtoms.length > 0) {
+            // Check if there's already an "unassigned" fragment (could be from previous operations)
+            // If not, create one
+            updatedFragments.push(unassignedAtoms);
+        }
 
-            // Process existing fragments to remove atoms that are now in the new fragment
-            let updatedFragments = fragments.map(fragment => {
-                // Remove atoms from existing fragments if they're in the new fragment
-                return fragment.filter(atomIndex => !newFragment.includes(atomIndex));
-            }).filter(fragment => fragment.length > 0); // Remove empty fragments
+        // Add the new fragment
+        updatedFragments.push(newFragment);
 
-            // Find all atoms that are not in any fragment (including the new one)
-            const atomsInFragments = new Set([
-                ...newFragment,
-                ...updatedFragments.flat()
-            ]);
+        // Update the global fragments array
+        fragments = updatedFragments;
 
-            const unassignedAtoms = allAtomIndices.filter(index => !atomsInFragments.has(index));
+        // Log for debugging
+        console.log('Fragment created:', newFragment);
+        console.log('All fragments:', fragments);
+        console.log('Total atoms covered:', fragments.flat().length, '/', totalAtoms);
 
-            // Create a new fragment for unassigned atoms if there are any
-            if (unassignedAtoms.length > 0) {
-                // Check if there's already an "unassigned" fragment (could be from previous operations)
-                // If not, create one
-                updatedFragments.push(unassignedAtoms);
-            }
+        // Update the editing content to show the new fragment list
+        if (atomsSelected.length > 0) {
+            const firstAtom = main.molecule.atoms[atomsSelected[0]];
+            updateEditingContent(firstAtom.type, main.molecule.atomSettings[firstAtom.type].color);
+        }
+    });
 
-            // Add the new fragment
-            updatedFragments.push(newFragment);
+    reattachButtonHandler('isolateFragmentBtn', () => {
+        if (fragmentsSelected.length > 0) {
+            if (fragmentsSelected.length > 1) {
+                // Multiple fragments: create combined isolation
+                const combinedAtomIndices = [];
+                let combinedName = 'Combined: ';
 
-            // Update the global fragments array
-            fragments = updatedFragments;
-
-            // Log for debugging
-            console.log('Fragment created:', newFragment);
-            console.log('All fragments:', fragments);
-            console.log('Total atoms covered:', fragments.flat().length, '/', totalAtoms);
-
-            // Update the editing content to show the new fragment list
-            if (atomsSelected.length > 0) {
-                const firstAtom = main.molecule.atoms[atomsSelected[0]];
-                updateEditingContent(firstAtom.type, main.molecule.atomSettings[firstAtom.type].color);
-            }
-        });
-    }
-
-    if (isolateBtn) {
-        const newIsolateBtn = isolateBtn.cloneNode(true);
-        isolateBtn.parentNode.replaceChild(newIsolateBtn, isolateBtn);
-
-        newIsolateBtn.addEventListener('click', () => {
-            if (fragmentsSelected.length > 0) {
-                if (fragmentsSelected.length > 1) {
-                    // Multiple fragments: create combined isolation
-                    const combinedAtomIndices = [];
-                    let combinedName = 'Combined: ';
-
-                    fragmentsSelected.forEach((fragIdx, i) => {
-                        if (fragIdx < fragments.length) {
-                            combinedAtomIndices.push(...fragments[fragIdx]);
-                            combinedName += `F${fragIdx + 1}${i < fragmentsSelected.length - 1 ? '+' : ''}`;
-                        }
-                    });
-
-                    storeOriginalMolecule();
-
-                    if (!isInIsolationMode) {
-                        originalFragments = JSON.parse(JSON.stringify(fragments));
+                fragmentsSelected.forEach((fragIdx, i) => {
+                    if (fragIdx < fragments.length) {
+                        combinedAtomIndices.push(...fragments[fragIdx]);
+                        combinedName += `F${fragIdx + 1}${i < fragmentsSelected.length - 1 ? '+' : ''}`;
                     }
+                });
 
-                    // FIX: Map indices for nested isolations
-                    let mappedCombinedIndices;
-                    if (isInIsolationMode && currentIsolationIndex >= 0) {
-                        const currentIsolation = isolationHistory[currentIsolationIndex];
-                        mappedCombinedIndices = combinedAtomIndices.map(localIdx => {
-                            if (localIdx < currentIsolation.originalIndices.length) {
-                                return currentIsolation.originalIndices[localIdx];
-                            }
-                            return null;
-                        }).filter(idx => idx !== null);
-                    } else {
-                        mappedCombinedIndices = combinedAtomIndices;
-                    }
-
-                    const newData = generateDataFromAtoms(combinedAtomIndices);
-
-                    const isolationEntry = {
-                        name: combinedName,
-                        atomCount: combinedAtomIndices.length,
-                        data: newData,
-                        fragmentIndices: [...fragmentsSelected],
-                        originalIndices: mappedCombinedIndices, // Use mapped indices
-                        localIndices: combinedAtomIndices, // Keep local indices
-                        timestamp: Date.now()
-                    };
-
-                    isolationHistory.push(isolationEntry);
-                    currentIsolationIndex = isolationHistory.length - 1;
-
-                    atomsSelected = [];
-                    fragmentsSelected = [];
-                    fragments = [];
-
-                    isInIsolationMode = true;
-
-                    main.newMolecule(
-                        newData,
-                        main.mode,
-                        true,
-                        true,
-                        false
-                    );
-                    main.data = newData;
-
-                    updateIsolationModeUI();
-                } else {
-                    // Single fragment
-                    isolateFragment(fragmentsSelected[0]);
-                }
-            } else if (atomsSelected.length > 0) {
                 storeOriginalMolecule();
 
                 if (!isInIsolationMode) {
                     originalFragments = JSON.parse(JSON.stringify(fragments));
                 }
 
-                // FIX: Map atom selection indices for nested isolations
-                let mappedAtomIndices;
+                // FIX: Map indices for nested isolations
+                let mappedCombinedIndices;
                 if (isInIsolationMode && currentIsolationIndex >= 0) {
                     const currentIsolation = isolationHistory[currentIsolationIndex];
-                    mappedAtomIndices = atomsSelected.map(localIdx => {
+                    mappedCombinedIndices = combinedAtomIndices.map(localIdx => {
                         if (localIdx < currentIsolation.originalIndices.length) {
                             return currentIsolation.originalIndices[localIdx];
                         }
                         return null;
                     }).filter(idx => idx !== null);
                 } else {
-                    mappedAtomIndices = [...atomsSelected];
+                    mappedCombinedIndices = combinedAtomIndices;
                 }
 
-                const newData = generateDataFromAtoms(atomsSelected);
+                const newData = generateDataFromAtoms(combinedAtomIndices);
 
                 const isolationEntry = {
-                    name: `${atomsSelected.length} Selected Atoms`,
-                    atomCount: atomsSelected.length,
+                    name: combinedName,
+                    atomCount: combinedAtomIndices.length,
                     data: newData,
-                    originalIndices: mappedAtomIndices, // Use mapped indices
-                    localIndices: [...atomsSelected], // Keep local indices
+                    fragmentIndices: [...fragmentsSelected],
+                    originalIndices: mappedCombinedIndices, // Use mapped indices
+                    localIndices: combinedAtomIndices, // Keep local indices
                     timestamp: Date.now()
                 };
 
@@ -2097,18 +2017,72 @@ function attachButtonEventListeners() {
                 main.data = newData;
 
                 updateIsolationModeUI();
-                console.log(`Isolated ${isolationEntry.atomCount} selected atoms`);
+            } else {
+                // Single fragment
+                isolateFragment(fragmentsSelected[0]);
+            }
+        } else if (atomsSelected.length > 0) {
+            storeOriginalMolecule();
+
+            if (!isInIsolationMode) {
+                originalFragments = JSON.parse(JSON.stringify(fragments));
             }
 
-            // Update UI
-            const editMoleculePanel = document.getElementById('editMoleculePanel');
-            if (editMoleculePanel) {
-                editMoleculePanel.classList.add('on');
+            // FIX: Map atom selection indices for nested isolations
+            let mappedAtomIndices;
+            if (isInIsolationMode && currentIsolationIndex >= 0) {
+                const currentIsolation = isolationHistory[currentIsolationIndex];
+                mappedAtomIndices = atomsSelected.map(localIdx => {
+                    if (localIdx < currentIsolation.originalIndices.length) {
+                        return currentIsolation.originalIndices[localIdx];
+                    }
+                    return null;
+                }).filter(idx => idx !== null);
+            } else {
+                mappedAtomIndices = [...atomsSelected];
             }
-            updateEditingContent();
-            render();
-        });
-    }
+
+            const newData = generateDataFromAtoms(atomsSelected);
+
+            const isolationEntry = {
+                name: `${atomsSelected.length} Selected Atoms`,
+                atomCount: atomsSelected.length,
+                data: newData,
+                originalIndices: mappedAtomIndices, // Use mapped indices
+                localIndices: [...atomsSelected], // Keep local indices
+                timestamp: Date.now()
+            };
+
+            isolationHistory.push(isolationEntry);
+            currentIsolationIndex = isolationHistory.length - 1;
+
+            atomsSelected = [];
+            fragmentsSelected = [];
+            fragments = [];
+
+            isInIsolationMode = true;
+
+            main.newMolecule(
+                newData,
+                main.mode,
+                true,
+                true,
+                false
+            );
+            main.data = newData;
+
+            updateIsolationModeUI();
+            console.log(`Isolated ${isolationEntry.atomCount} selected atoms`);
+        }
+
+        // Update UI
+        const editMoleculePanel = document.getElementById('editMoleculePanel');
+        if (editMoleculePanel) {
+            editMoleculePanel.classList.add('on');
+        }
+        updateEditingContent();
+        render();
+    });
 
 
     if (closeEditing) {
@@ -6032,13 +6006,13 @@ function updateLabelMode() {
 
 // Force arrows toggle
 window.forceArrowScale = 1.0;
-document.getElementById('toggleForceArrows').addEventListener('change', function() {
+document.getElementById('toggleForceArrows').addEventListener('change', function () {
     if (!main.molecule) return;
     main.molecule.toggleForceArrows(this.checked, window.forceArrowScale);
     render();
 });
 
-document.getElementById('forceScaleSlider').addEventListener('input', function() {
+document.getElementById('forceScaleSlider').addEventListener('input', function () {
     window.forceArrowScale = parseFloat(this.value);
     document.getElementById('forceScaleValue').textContent = window.forceArrowScale.toFixed(1);
     if (!main.molecule) return;
@@ -6049,7 +6023,7 @@ document.getElementById('forceScaleSlider').addEventListener('input', function()
 });
 
 // Function to show/hide force arrow controls based on data availability
-window.updateForceArrowControls = function() {
+window.updateForceArrowControls = function () {
     const molecule = main.molecule;
     const hasForces = molecule && molecule.hasForceData();
     const statusEl = document.getElementById('forceArrowsStatus');

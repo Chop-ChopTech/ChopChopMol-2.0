@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { reattachButtonHandler, togglePanel } from './utils/domUtils.js';
 
 export let isUserSignedIn = false;
 export let originalEventHandlers = {};
@@ -281,106 +282,49 @@ export function enableAtomInteraction(renderer) {
 // Function to restore original event handlers
 export function restoreOriginalHandlers() {
     // Re-attach AI Generate button
-    const aiGenerateButton = document.getElementById('aiGenerate');
-    if (aiGenerateButton) {
-        const newButton = aiGenerateButton.cloneNode(true);
-        aiGenerateButton.parentNode.replaceChild(newButton, aiGenerateButton);
-
-        newButton.addEventListener('click', () => {
-            const aiGeneratePanel = document.getElementById('chatContainer');
-            const smilesPanel = document.getElementById('smilesContainer');
-            const jsonPanel = document.getElementById('jsonContainer');
-
-            if (aiGeneratePanel) aiGeneratePanel.classList.toggle('on');
-            if (smilesPanel) smilesPanel.classList.remove('on');
-            if (jsonPanel) jsonPanel.classList.remove('on');
-        });
-    }
+    reattachButtonHandler('aiGenerate', () => {
+        togglePanel('chatContainer', ['smilesContainer', 'jsonContainer']);
+    });
 
     // Re-attach SMILES button
-    const smilesButton = document.getElementById('import-smiles');
-    if (smilesButton) {
-        const newButton = smilesButton.cloneNode(true);
-        smilesButton.parentNode.replaceChild(newButton, smilesButton);
-
-        newButton.addEventListener('click', () => {
-            const smilesPanel = document.getElementById('smilesContainer');
-            const aiGeneratePanel = document.getElementById('chatContainer');
-            const jsonPanel = document.getElementById('jsonContainer');
-
-            if (smilesPanel) smilesPanel.classList.toggle('on');
-            if (aiGeneratePanel) aiGeneratePanel.classList.remove('on');
-            if (jsonPanel) jsonPanel.classList.remove('on');
-        });
-    }
+    reattachButtonHandler('import-smiles', () => {
+        togglePanel('smilesContainer', ['chatContainer', 'jsonContainer']);
+    });
 
     // Re-attach JSON button
-    const jsonButton = document.getElementById('import-json');
-    if (jsonButton) {
-        const newButton = jsonButton.cloneNode(true);
-        jsonButton.parentNode.replaceChild(newButton, jsonButton);
-
-        newButton.addEventListener('click', () => {
-            const jsonPanel = document.getElementById('jsonContainer');
-            const smilesPanel = document.getElementById('smilesContainer');
-            const aiGeneratePanel = document.getElementById('chatContainer');
-
-            if (jsonPanel) jsonPanel.classList.toggle('on');
-            if (smilesPanel) smilesPanel.classList.remove('on');
-            if (aiGeneratePanel) aiGeneratePanel.classList.remove('on');
-        });
-    }
+    reattachButtonHandler('import-json', () => {
+        togglePanel('jsonContainer', ['smilesContainer', 'chatContainer']);
+    });
 
     // Re-attach analyze molecule button
-    const analyzeMoleculeButton = document.getElementById('analyze-molecule');
-    if (analyzeMoleculeButton) {
-        const newButton = analyzeMoleculeButton.cloneNode(true);
-        analyzeMoleculeButton.parentNode.replaceChild(newButton, analyzeMoleculeButton);
-
-        newButton.addEventListener('click', () => {
-            const images = [];
-            const numImages = 3;
-            for (let i = 0; i < numImages; i++) {
-                if (typeof getScreenUrl === 'function') {
-                    const imgData = getScreenUrl();
-                    images.push(imgData);
-                }
-                if (typeof rotateCamera === 'function' && typeof window.camera !== 'undefined' && typeof controls !== 'undefined') {
-                    rotateCamera(Math.PI / (numImages / 2), window.camera, controls);
-                }
+    reattachButtonHandler('analyze-molecule', () => {
+        const images = [];
+        const numImages = 3;
+        for (let i = 0; i < numImages; i++) {
+            if (typeof getScreenUrl === 'function') {
+                const imgData = getScreenUrl();
+                images.push(imgData);
             }
-            if (typeof window.main !== 'undefined' && window.main.data) {
-                window.imgToAnalyze = { images: JSON.stringify(images), coordinates: window.main.data };
+            if (typeof rotateCamera === 'function' && typeof window.camera !== 'undefined' && typeof controls !== 'undefined') {
+                rotateCamera(Math.PI / (numImages / 2), window.camera, controls);
             }
-        });
-    }
+        }
+        if (typeof window.main !== 'undefined' && window.main.data) {
+            window.imgToAnalyze = { images: JSON.stringify(images), coordinates: window.main.data };
+        }
+    });
 
     // Re-attach clear canvas button
-    const clearSceneButton = document.getElementById('clear-canvas');
-    if (clearSceneButton) {
-        const newButton = clearSceneButton.cloneNode(true);
-        clearSceneButton.parentNode.replaceChild(newButton, clearSceneButton);
-
-        newButton.addEventListener('click', () => {
-            if (typeof window.main !== 'undefined' && typeof window.main.reset === 'function') {
-                window.main.reset();
-            }
-        });
-    }
+    reattachButtonHandler('clear-canvas', () => {
+        if (typeof window.main !== 'undefined' && typeof window.main.reset === 'function') {
+            window.main.reset();
+        }
+    });
 
     // Re-attach switch mode button
-    const switchModeButton = document.getElementById('switchMode');
-    if (switchModeButton) {
-        const newButton = switchModeButton.cloneNode(true);
-        switchModeButton.parentNode.replaceChild(newButton, switchModeButton);
-
-        newButton.addEventListener('click', () => {
-            const styleSelector = document.getElementById('styleSelector');
-            if (styleSelector) {
-                styleSelector.classList.toggle('on');
-            }
-        });
-    }
+    reattachButtonHandler('switchMode', () => {
+        togglePanel('styleSelector');
+    });
 }
 
 // Function to show sign-in prompt

@@ -1,5 +1,3 @@
-// const main = window.main;
-
 let antialiasToggled = false;
 
 export async function saveStylePreferences(userId) {
