@@ -827,49 +827,69 @@ export default class FileHandler {
     }
 
     parseOutToJson(text) {
-        // Parser for ORCA output files (.out)
+        // Parser for ORCA output files (.out) - handles multiple frames
         const lines = text.split(/\r?\n|\r/);
-        const atomData = [];
-        let inCoordinateSection = false;
+        const frames = [];
+        let frameNumber = 0;
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
 
             // Look for the Cartesian coordinates section
             if (line.includes('CARTESIAN COORDINATES (ANGSTROEM)')) {
-                inCoordinateSection = true;
+                frameNumber++;
+                const atomData = [];
                 i++; // Skip the dashes line
-                continue;
-            }
 
-            // Stop at the next section (usually another dashes line or blank line after coordinates)
-            if (inCoordinateSection && (line.trim() === '' || line.match(/^-{3,}/))) {
-                break;
-            }
+                // Parse coordinate lines until we hit the next section
+                while (i < lines.length) {
+                    i++;
+                    const coordLine = lines[i];
 
-            // Parse coordinate lines
-            if (inCoordinateSection && line.trim()) {
-                const parts = line.trim().split(/\s+/);
-                // Format: Element X Y Z
-                if (parts.length >= 4) {
-                    const element = parts[0];
-                    const x = parseFloat(parts[1]);
-                    const y = parseFloat(parts[2]);
-                    const z = parseFloat(parts[3]);
-
-                    // Validate element symbol (should start with a letter)
-                    if (/^[A-Z][a-z]?$/.test(element) && !isNaN(x) && !isNaN(y) && !isNaN(z)) {
-                        atomData.push({ element, x, y, z });
+                    // Stop at the next section (dashes or blank line)
+                    if (!coordLine || coordLine.trim() === '' || coordLine.match(/^-{3,}/)) {
+                        break;
                     }
+
+                    // Parse coordinate line: Element X Y Z
+                    const parts = coordLine.trim().split(/\s+/);
+                    if (parts.length >= 4) {
+                        const element = parts[0];
+                        const x = parseFloat(parts[1]);
+                        const y = parseFloat(parts[2]);
+                        const z = parseFloat(parts[3]);
+
+                        // Validate element symbol (should start with a letter)
+                        if (/^[A-Z][a-z]?$/.test(element) && !isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                            atomData.push({ element, x, y, z });
+                        }
+                    }
+                }
+
+                // Add this frame if it has atoms
+                if (atomData.length > 0) {
+                    frames.push({
+                        atomData,
+                        numAtoms: atomData.length,
+                        comment: `ORCA Frame ${frameNumber}`
+                    });
                 }
             }
         }
 
-        if (atomData.length === 0) {
+        if (frames.length === 0) {
             throw new Error('No valid coordinates found in ORCA output file');
         }
 
-        return { atomData, numAtoms: atomData.length };
+        // Store frames globally for slider access (same as XYZ parser)
+        window.xyzFrames = frames.length > 1 ? frames : null;
+        window._pendingChartData = null; // Clear AI chart when loading new molecule
+
+        // Return first frame data (no circular reference)
+        return {
+            atomData: frames[0].atomData,
+            numAtoms: frames[0].numAtoms
+        };
     }
 
     parseJSON() {
