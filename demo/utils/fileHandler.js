@@ -182,11 +182,12 @@ export default class FileHandler {
                 }
             }
 
-            // Find species and pos column indices
-            let colIdx = 0, speciesIdx = 0, posIdx = 1;
+            // Find species, pos, and forces column indices
+            let colIdx = 0, speciesIdx = 0, posIdx = 1, forcesIdx = -1;
             for (let c = 0; c < columns.length; c++) {
                 if (columns[c].name === 'species') speciesIdx = colIdx;
                 if (columns[c].name === 'pos') posIdx = colIdx;
+                if (columns[c].name === 'forces' || columns[c].name === 'force') forcesIdx = colIdx;
                 colIdx += columns[c].count;
             }
 
@@ -202,8 +203,17 @@ export default class FileHandler {
                 const y = parseFloat(parts[posIdx + 1]);
                 const z = parseFloat(parts[posIdx + 2]);
 
+                const atom = { element, x, y, z };
+
+                // Extract forces if available
+                if (forcesIdx >= 0 && parts.length >= forcesIdx + 3) {
+                    atom.fx = parseFloat(parts[forcesIdx]);
+                    atom.fy = parseFloat(parts[forcesIdx + 1]);
+                    atom.fz = parseFloat(parts[forcesIdx + 2]);
+                }
+
                 if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-                    atomData.push({ element, x, y, z });
+                    atomData.push(atom);
                 }
             }
 

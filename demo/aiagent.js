@@ -24,6 +24,7 @@ const toolStatusMap = {
     save_xyz: 'Saving file',
     save_image: 'Saving image',
     toggle_labels: 'Toggling labels',
+    toggle_force_arrows: 'Toggling force arrows',
     calculate_energy: 'Calculating energy',
     calculate_all_energies: 'Calculating all frame energies',
     get_cached_energies: 'Retrieving cached energies',
@@ -1168,6 +1169,7 @@ const FUNCTIONS = {
             if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
 
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+            const includeForces = params.includeForces || false;
 
             try {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/md`, {
@@ -1180,7 +1182,8 @@ const FUNCTIONS = {
                         steps: params.steps || 500,
                         timestep: params.timestep || 1.0,
                         friction: params.friction || 0.01,
-                        saveInterval: params.saveInterval || 10
+                        saveInterval: params.saveInterval || 10,
+                        includeForces
                     })
                 });
                 const result = await res.json();
@@ -1192,12 +1195,21 @@ const FUNCTIONS = {
                 // Convert trajectory to frame format
                 if (result.trajectory && result.trajectory.length > 0) {
                     const parsedFrames = result.trajectory.map((frame, idx) => {
-                        const atomData = frame.positions.map((pos, i) => ({
-                            element: atoms[i].element,
-                            x: pos[0],
-                            y: pos[1],
-                            z: pos[2]
-                        }));
+                        const atomData = frame.positions.map((pos, i) => {
+                            const atom = {
+                                element: atoms[i].element,
+                                x: pos[0],
+                                y: pos[1],
+                                z: pos[2]
+                            };
+                            // Include forces if available
+                            if (frame.forces && frame.forces[i]) {
+                                atom.fx = frame.forces[i][0];
+                                atom.fy = frame.forces[i][1];
+                                atom.fz = frame.forces[i][2];
+                            }
+                            return atom;
+                        });
 
                         return {
                             atomData,
@@ -1247,18 +1259,31 @@ const FUNCTIONS = {
                     await animateAtomPositions(result.positions.map(p => p.index), targetPositions, 500);
                 }
 
+                // Store final forces for visualization if included
+                if (result.forces) {
+                    molecule.setForcesFromCalculation(result.forces);
+                    if (window.updateForceArrowControls) window.updateForceArrowControls();
+                }
+
                 // Auto-save trajectory if folder open
                 if (window.fileExplorer?.directoryHandle) {
                     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
                     const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
-                    const props = 'Properties=species:S:1:pos:R:3';
+                    // Check if any frame has forces
+                    const hasForces = result.trajectory.some(f => f.forces && f.forces.length > 0);
+                    const props = hasForces ? 'Properties=species:S:1:pos:R:3:forces:R:3' : 'Properties=species:S:1:pos:R:3';
 
                     let extxyz = '';
                     result.trajectory.forEach((frame, idx) => {
                         const comment = `${lattice} ${props} energy=${frame.energy_eV} temperature=${frame.temperature_K} step=${frame.step} pbc="F F F"`;
                         extxyz += `${atoms.length}\n${comment}\n`;
                         frame.positions.forEach((pos, i) => {
-                            extxyz += `${atoms[i].element.padEnd(4)} ${pos[0].toFixed(8).padStart(14)} ${pos[1].toFixed(8).padStart(14)} ${pos[2].toFixed(8).padStart(14)}\n`;
+                            let line = `${atoms[i].element.padEnd(4)} ${pos[0].toFixed(8).padStart(14)} ${pos[1].toFixed(8).padStart(14)} ${pos[2].toFixed(8).padStart(14)}`;
+                            if (hasForces && frame.forces && frame.forces[i]) {
+                                const f = frame.forces[i];
+                                line += ` ${f[0].toFixed(8).padStart(14)} ${f[1].toFixed(8).padStart(14)} ${f[2].toFixed(8).padStart(14)}`;
+                            }
+                            extxyz += line + '\n';
                         });
                     });
 
@@ -1312,6 +1337,48 @@ const FUNCTIONS = {
             }
 
             return { success: true, message };
+        }
+    },
+
+    toggle_force_arrows: {
+        execute: (params) => {
+            const molecule = window.main?.molecule;
+            if (!molecule) return { success: false, message: "No molecule loaded" };
+
+            // Check if force data is available
+            if (!molecule.hasForceData()) {
+                return {
+                    success: false,
+                    message: "No force data available. Run an energy calculation with includeForces: true first."
+                };
+            }
+
+            // Determine whether to show or hide (toggle if not specified)
+            const show = params.show !== undefined ? params.show : !molecule.forceArrowGroup?.visible;
+            const scale = params.scale || window.forceArrowScale || 1.0;
+
+            // Update the scale
+            window.forceArrowScale = scale;
+
+            // Toggle the force arrows
+            molecule.toggleForceArrows(show, scale);
+
+            // Sync the UI checkbox
+            const checkbox = document.getElementById('toggleForceArrows');
+            if (checkbox) checkbox.checked = show;
+
+            // Update scale slider display
+            const scaleSlider = document.getElementById('forceScaleSlider');
+            const scaleValue = document.getElementById('forceScaleValue');
+            if (scaleSlider) scaleSlider.value = scale;
+            if (scaleValue) scaleValue.textContent = scale.toFixed(1);
+
+            if (typeof window.render === 'function') window.render();
+
+            return {
+                success: true,
+                message: show ? `Force arrows shown (scale: ${scale.toFixed(1)}x)` : "Force arrows hidden"
+            };
         }
     },
 
@@ -1586,6 +1653,7 @@ const FUNCTIONS = {
             const model = params.model || AI_CONFIG.maceModel || 'mace-mp-0a';
             AI_CONFIG.maceModel = model;
             localStorage.setItem('chopchop_mace_model', model);
+            const includeForces = params.includeForces || false;
 
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
 
@@ -1593,21 +1661,32 @@ const FUNCTIONS = {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ atoms, model })
+                    body: JSON.stringify({ atoms, model, includeForces })
                 });
                 const result = await res.json();
+
+                // Store forces in molecule for visualization if included
+                if (result.success && result.forces) {
+                    molecule.setForcesFromCalculation(result.forces);
+                    if (window.updateForceArrowControls) window.updateForceArrowControls();
+                }
 
                 // Auto-save extxyz to local folder if open
                 if (result.success && window.fileExplorer?.directoryHandle) {
                     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
                     const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
-                    const props = 'Properties=species:S:1:pos:R:3:forces:R:3';
+                    const hasForces = result.forces && result.forces.length > 0;
+                    const props = hasForces ? 'Properties=species:S:1:pos:R:3:forces:R:3' : 'Properties=species:S:1:pos:R:3';
                     const comment = `${lattice} ${props} energy=${result.energy_eV} pbc="F F F"`;
 
                     let extxyz = `${atoms.length}\n${comment}\n`;
                     atoms.forEach((a, i) => {
-                        const f = result.forces[i];
-                        extxyz += `${a.element.padEnd(4)} ${a.x.toFixed(8).padStart(14)} ${a.y.toFixed(8).padStart(14)} ${a.z.toFixed(8).padStart(14)} ${f[0].toFixed(8).padStart(14)} ${f[1].toFixed(8).padStart(14)} ${f[2].toFixed(8).padStart(14)}\n`;
+                        let line = `${a.element.padEnd(4)} ${a.x.toFixed(8).padStart(14)} ${a.y.toFixed(8).padStart(14)} ${a.z.toFixed(8).padStart(14)}`;
+                        if (hasForces) {
+                            const f = result.forces[i];
+                            line += ` ${f[0].toFixed(8).padStart(14)} ${f[1].toFixed(8).padStart(14)} ${f[2].toFixed(8).padStart(14)}`;
+                        }
+                        extxyz += line + '\n';
                     });
 
                     await window.fileExplorer.createFile(`mace_energy_${timestamp}.extxyz`, extxyz);
@@ -1628,6 +1707,7 @@ const FUNCTIONS = {
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
             const stretch = molecule.stretch || 4;
             const offset = molecule.offset || { x: 0, y: 0, z: 0 };
+            const includeForces = params.includeForces || false;
 
             try {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/optimize`, {
@@ -1637,7 +1717,8 @@ const FUNCTIONS = {
                         atoms,
                         model: params.model || AI_CONFIG.maceModel || 'medium',
                         fmax: params.fmax || 0.05,
-                        maxSteps: params.maxSteps || 100
+                        maxSteps: params.maxSteps || 100,
+                        includeForces
                     })
                 });
                 const result = await res.json();
@@ -1649,12 +1730,21 @@ const FUNCTIONS = {
                 // Convert trajectory to frame format
                 if (result.trajectory && result.trajectory.length > 0) {
                     const parsedFrames = result.trajectory.map((frame, idx) => {
-                        const atomData = frame.positions.map((pos, i) => ({
-                            element: atoms[i].element,
-                            x: pos[0],
-                            y: pos[1],
-                            z: pos[2]
-                        }));
+                        const atomData = frame.positions.map((pos, i) => {
+                            const atom = {
+                                element: atoms[i].element,
+                                x: pos[0],
+                                y: pos[1],
+                                z: pos[2]
+                            };
+                            // Include forces if available
+                            if (frame.forces && frame.forces[i]) {
+                                atom.fx = frame.forces[i][0];
+                                atom.fy = frame.forces[i][1];
+                                atom.fz = frame.forces[i][2];
+                            }
+                            return atom;
+                        });
 
                         return {
                             atomData,
@@ -1702,16 +1792,28 @@ const FUNCTIONS = {
                     await animateAtomPositions(result.positions.map(p => p.index), targetPositions, 500);
                 }
 
+                // Store final forces for visualization if included
+                if (result.forces) {
+                    molecule.setForcesFromCalculation(result.forces);
+                    if (window.updateForceArrowControls) window.updateForceArrowControls();
+                }
+
                 // Auto-save extxyz to local folder if open
                 if (window.fileExplorer?.directoryHandle) {
                     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
                     const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
-                    const props = 'Properties=species:S:1:pos:R:3';
+                    const hasForces = result.forces && result.forces.length > 0;
+                    const props = hasForces ? 'Properties=species:S:1:pos:R:3:forces:R:3' : 'Properties=species:S:1:pos:R:3';
                     const comment = `${lattice} ${props} energy=${result.energy_eV} pbc="F F F" config_type="optimized"`;
 
                     let extxyz = `${atoms.length}\n${comment}\n`;
                     result.positions.forEach((p, i) => {
-                        extxyz += `${atoms[i].element.padEnd(4)} ${p.x.toFixed(8).padStart(14)} ${p.y.toFixed(8).padStart(14)} ${p.z.toFixed(8).padStart(14)}\n`;
+                        let line = `${atoms[i].element.padEnd(4)} ${p.x.toFixed(8).padStart(14)} ${p.y.toFixed(8).padStart(14)} ${p.z.toFixed(8).padStart(14)}`;
+                        if (hasForces) {
+                            const f = result.forces[i];
+                            line += ` ${f[0].toFixed(8).padStart(14)} ${f[1].toFixed(8).padStart(14)} ${f[2].toFixed(8).padStart(14)}`;
+                        }
+                        extxyz += line + '\n';
                     });
 
                     await window.fileExplorer.createFile(`mace_opt_${timestamp}.extxyz`, extxyz);
@@ -1733,6 +1835,7 @@ const FUNCTIONS = {
             const model = params.model || AI_CONFIG.maceModel || 'mace-mp-0a';
             AI_CONFIG.maceModel = model;
             localStorage.setItem('chopchop_mace_model', model);
+            const includeForces = params.includeForces || false;
             const frames = window.xyzFrames;
             if (window.lastMaceResults && window.lastMaceResults.frameCount !== (frames?.length || 1)) {
                 window.lastMaceResults = null;
@@ -1746,7 +1849,7 @@ const FUNCTIONS = {
                     const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ atoms, model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a' })
+                        body: JSON.stringify({ atoms, model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a', includeForces })
                     });
                     const result = await res.json();
                     return { success: true, frameCount: 1, energies: [result] };
@@ -1761,24 +1864,59 @@ const FUNCTIONS = {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy-batch`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ frames: allFrames, model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a' })
+                    body: JSON.stringify({ frames: allFrames, model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a', includeForces })
                 });
                 const result = await res.json();
                 if (result.success) window.lastMaceResults = result;
+
+                // Merge forces back into window.xyzFrames so they persist across frame changes
+                if (result.success && result.energies && includeForces) {
+                    result.energies.forEach((energyResult, frameIdx) => {
+                        if (energyResult.forces && window.xyzFrames[frameIdx]) {
+                            // Add force data to each atom in the frame
+                            window.xyzFrames[frameIdx].atomData.forEach((atom, atomIdx) => {
+                                const force = energyResult.forces[atomIdx];
+                                if (force) {
+                                    atom.fx = force[0];
+                                    atom.fy = force[1];
+                                    atom.fz = force[2];
+                                }
+                            });
+                        }
+                    });
+
+                    // Update the current frame's molecule with force data
+                    const currentFrameIdx = parseInt(document.getElementById('frameSlider')?.value || 0);
+                    if (window.xyzFrames[currentFrameIdx]) {
+                        const molecule = window.main?.molecule;
+                        if (molecule) {
+                            molecule.setForcesFromFrame(window.xyzFrames[currentFrameIdx]);
+                            if (window.updateForceArrowControls) window.updateForceArrowControls();
+                        }
+                    }
+                }
 
                 // Auto-save multi-frame extxyz to local folder if open
                 if (result.success && window.fileExplorer?.directoryHandle) {
                     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
                     const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
-                    const props = 'Properties=species:S:1:pos:R:3';
+                    // Check if any frame has forces
+                    const hasForces = result.energies.some(e => e.forces && e.forces.length > 0);
+                    const props = hasForces ? 'Properties=species:S:1:pos:R:3:forces:R:3' : 'Properties=species:S:1:pos:R:3';
 
                     let extxyz = '';
                     allFrames.forEach((frameAtoms, i) => {
                         const energy = result.energies[i].energy_eV;
+                        const forces = result.energies[i].forces;
                         const comment = `${lattice} ${props} energy=${energy} pbc="F F F" frame=${i}`;
                         extxyz += `${frameAtoms.length}\n${comment}\n`;
-                        frameAtoms.forEach(a => {
-                            extxyz += `${a.element.padEnd(4)} ${a.x.toFixed(8).padStart(14)} ${a.y.toFixed(8).padStart(14)} ${a.z.toFixed(8).padStart(14)}\n`;
+                        frameAtoms.forEach((a, j) => {
+                            let line = `${a.element.padEnd(4)} ${a.x.toFixed(8).padStart(14)} ${a.y.toFixed(8).padStart(14)} ${a.z.toFixed(8).padStart(14)}`;
+                            if (hasForces && forces && forces[j]) {
+                                const f = forces[j];
+                                line += ` ${f[0].toFixed(8).padStart(14)} ${f[1].toFixed(8).padStart(14)} ${f[2].toFixed(8).padStart(14)}`;
+                            }
+                            extxyz += line + '\n';
                         });
                     });
 

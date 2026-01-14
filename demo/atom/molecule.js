@@ -17,6 +17,8 @@ export default class Molecule {
         this.stretch = 4;
         this.overlay = overlay;
         this.bondGroup = new THREE.Group();
+        this.forceArrowGroup = new THREE.Group();
+        this.forceData = null;
     }
 
     init(data, mode, center, ribbonMode = false) {
@@ -47,6 +49,9 @@ export default class Molecule {
 
         // NORMAL MODE: Create atoms and bonds
         const bondThreshold = 1;
+
+        // Store force data for later visualization
+        this.forceData = data.atomData.some(a => a.fx !== undefined) ? data.atomData : null;
 
         this.createAtoms(data, mode);
         this.centerMolecule(!center);
@@ -476,6 +481,19 @@ export default class Molecule {
             this.bondGroup = new THREE.Group();
         }
 
+        // Clear force arrows
+        if (this.forceArrowGroup) {
+            while (this.forceArrowGroup.children.length > 0) {
+                const child = this.forceArrowGroup.children[0];
+                this.forceArrowGroup.remove(child);
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+            }
+            this.main.scene.remove(this.forceArrowGroup);
+            this.forceArrowGroup = new THREE.Group();
+        }
+        this.forceData = null;
+
         // Clear labels properly
         this.clearLabels();
     }
@@ -759,5 +777,120 @@ export default class Molecule {
     getBoundingBox() {
         if (!this.instancedMesh) return null;
         return new THREE.Box3().setFromObject(this.instancedMesh);
+    }
+
+    // Create force arrows from force data
+    createForceArrows(scale = 1.0, colorPositive = 0xff4444, colorNegative = 0x4444ff) {
+        if (!this.forceData || !this.atoms.length) return;
+
+        // Clear existing arrows
+        while (this.forceArrowGroup.children.length > 0) {
+            const child = this.forceArrowGroup.children[0];
+            this.forceArrowGroup.remove(child);
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+        }
+
+        const stretch = this.stretch;
+
+        for (let i = 0; i < this.atoms.length && i < this.forceData.length; i++) {
+            const atom = this.atoms[i];
+            const forceAtom = this.forceData[i];
+
+            if (forceAtom.fx === undefined) continue;
+
+            const fx = forceAtom.fx * scale * stretch;
+            const fy = forceAtom.fy * scale * stretch;
+            const fz = forceAtom.fz * scale * stretch;
+
+            const forceMag = Math.sqrt(fx * fx + fy * fy + fz * fz);
+            if (forceMag < 0.001) continue;
+
+            const dir = new THREE.Vector3(fx, fy, fz).normalize();
+            const origin = atom.position.clone().sub(this.offset);
+
+            // Color based on force magnitude or direction
+            const color = new THREE.Color().setHSL(0.0, 0.8, 0.5); // Red-ish
+
+            const arrow = new THREE.ArrowHelper(
+                dir,
+                origin,
+                forceMag,
+                color,
+                forceMag * 0.3, // headLength
+                forceMag * 0.15  // headWidth
+            );
+
+            this.forceArrowGroup.add(arrow);
+        }
+
+        this.main.scene.add(this.forceArrowGroup);
+        this.forceArrowGroup.visible = true;
+    }
+
+    // Toggle force arrows visibility
+    toggleForceArrows(show, scale = 1.0) {
+        if (show) {
+            if (this.forceArrowGroup.children.length === 0 && this.forceData) {
+                this.createForceArrows(scale);
+            }
+            this.forceArrowGroup.visible = true;
+        } else {
+            this.forceArrowGroup.visible = false;
+        }
+    }
+
+    // Check if force data is available
+    hasForceData() {
+        return this.forceData !== null && this.forceData.length > 0 && this.forceData.some(a => a.fx !== undefined);
+    }
+
+    // Update force arrows with new scale
+    updateForceArrows(scale) {
+        if (this.forceArrowGroup.visible) {
+            this.createForceArrows(scale);
+        }
+    }
+
+    // Set force data from external calculation (e.g., MACE backend)
+    // forces: array of [fx, fy, fz] arrays, one per atom
+    setForcesFromCalculation(forces) {
+        if (!forces || !Array.isArray(forces) || forces.length === 0) {
+            this.forceData = null;
+            return false;
+        }
+
+        // Store forces matched to current atoms
+        this.forceData = this.atoms.map((atom, i) => {
+            const f = forces[i] || [0, 0, 0];
+            return {
+                element: atom.type,
+                x: atom.position.x / this.stretch,
+                y: atom.position.y / this.stretch,
+                z: atom.position.z / this.stretch,
+                fx: f[0],
+                fy: f[1],
+                fz: f[2]
+            };
+        });
+
+        return true;
+    }
+
+    // Get current forces for a specific frame (from stored frame data)
+    setForcesFromFrame(frameData) {
+        if (!frameData || !frameData.atomData) {
+            this.forceData = null;
+            return false;
+        }
+
+        const hasForces = frameData.atomData.some(a => a.fx !== undefined);
+        if (!hasForces) {
+            this.forceData = null;
+            return false;
+        }
+
+        this.forceData = frameData.atomData;
+        return true;
     }
 }

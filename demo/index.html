@@ -1670,6 +1670,16 @@
                 }, window.main.mode, false, true);
                 document.getElementById('frameLabel').textContent =
                     `Frame ${frameIndex + 1} / ${window.xyzFrames.length}`;
+
+                // Update force arrows if the frame has force data
+                if (window.main.molecule && frame.atomData.some(a => a.fx !== undefined)) {
+                    window.main.molecule.setForcesFromFrame(frame);
+                    if (window.updateForceArrowControls) window.updateForceArrowControls();
+                    // If force arrows are visible, recreate them for new frame
+                    if (window.main.molecule.forceArrowGroup?.visible) {
+                        window.main.molecule.createForceArrows(window.forceArrowScale || 1.0);
+                    }
+                }
             }
         });
 
@@ -1809,6 +1819,15 @@
                     <div class="compact-style-row checkbox-row">
                         <label><input type="checkbox" id="showIndices"> Indices</label>
                     </div>
+                    <div class="compact-style-row checkbox-row" id="forceArrowsRow">
+                        <label><input type="checkbox" id="toggleForceArrows"> Force Arrows <span id="forceArrowsStatus" style="font-size: 10px; color: #888;"></span></label>
+                    </div>
+                </div>
+
+                <div class="compact-style-row" id="forceScaleRow">
+                    <label>Force Scale</label>
+                    <input type="range" id="forceScaleSlider" min="0.1" max="10" step="0.1" value="1">
+                    <span id="forceScaleValue">1.0</span>
                 </div>
 
                 <button id="makeDefaultButton" class="style-save-btn" title="Save as Default">Make Default</button>

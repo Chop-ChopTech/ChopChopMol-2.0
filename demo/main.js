@@ -341,6 +341,11 @@ export default class Main {
         window.startMeasurement = null;
         window.endMeasurement = null;
         this.data = data;
+
+        // Update force arrow controls visibility
+        if (window.updateForceArrowControls) {
+            window.updateForceArrowControls();
+        }
     }
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
@@ -6024,6 +6029,59 @@ function updateLabelMode() {
     main.molecule.toggleLabels(shouldShowLabels, window.showElements, window.showIndices);
     render();
 }
+
+// Force arrows toggle
+window.forceArrowScale = 1.0;
+document.getElementById('toggleForceArrows').addEventListener('change', function() {
+    if (!main.molecule) return;
+    main.molecule.toggleForceArrows(this.checked, window.forceArrowScale);
+    render();
+});
+
+document.getElementById('forceScaleSlider').addEventListener('input', function() {
+    window.forceArrowScale = parseFloat(this.value);
+    document.getElementById('forceScaleValue').textContent = window.forceArrowScale.toFixed(1);
+    if (!main.molecule) return;
+    if (document.getElementById('toggleForceArrows').checked) {
+        main.molecule.updateForceArrows(window.forceArrowScale);
+        render();
+    }
+});
+
+// Function to show/hide force arrow controls based on data availability
+window.updateForceArrowControls = function() {
+    const molecule = main.molecule;
+    const hasForces = molecule && molecule.hasForceData();
+    const statusEl = document.getElementById('forceArrowsStatus');
+    const checkbox = document.getElementById('toggleForceArrows');
+
+    console.log('[ForceArrows] updateForceArrowControls called');
+    console.log('[ForceArrows] molecule exists:', !!molecule);
+    console.log('[ForceArrows] hasForceData():', hasForces);
+    if (molecule) {
+        console.log('[ForceArrows] forceData:', molecule.forceData);
+        console.log('[ForceArrows] forceData length:', molecule.forceData?.length);
+        if (molecule.forceData && molecule.forceData.length > 0) {
+            console.log('[ForceArrows] First force entry:', molecule.forceData[0]);
+        }
+    }
+
+    if (statusEl) {
+        if (hasForces) {
+            const count = molecule.forceData?.length || 0;
+            statusEl.textContent = `(${count} atoms)`;
+            statusEl.style.color = '#4CAF50';
+        } else {
+            statusEl.textContent = '(no data)';
+            statusEl.style.color = '#888';
+        }
+    }
+
+    checkbox.disabled = !hasForces;
+    if (!hasForces) {
+        checkbox.checked = false;
+    }
+};
 
 render();
 controls.addEventListener('change', () => {
