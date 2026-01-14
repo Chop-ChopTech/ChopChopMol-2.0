@@ -1,6 +1,6 @@
 // fileExplorer.js - File Explorer for ChopChopMol
 
-const MOLECULE_EXTENSIONS = ['xyz', 'pdb', 'mol', 'sdf', 'cif', 'mol2', 'pqr', 'gro', 'cml', 'extxyz'];
+const MOLECULE_EXTENSIONS = ['xyz', 'pdb', 'mol', 'sdf', 'cif', 'mol2', 'pqr', 'gro', 'cml', 'extxyz', 'out'];
 class FileExplorer {
     constructor() {
         this.directoryHandle = null;
