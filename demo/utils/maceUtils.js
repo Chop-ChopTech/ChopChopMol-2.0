@@ -1,0 +1,240 @@
+// MACE backend API utilities and extxyz file generation
+
+/**
+ * Configuration for MACE API
+ */
+export const MACE_CONFIG = {
+    lattice: 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"',
+    pbc: 'pbc="F F F"'
+};
+
+/**
+ * Generates a timestamp string for file naming
+ * @returns {string} Timestamp in ISO format with safe characters
+ */
+export function generateTimestamp() {
+    return new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+}
+
+/**
+ * Generates extxyz property string based on whether forces are included
+ * @param {boolean} hasForces - Whether force data is included
+ * @returns {string} Properties string for extxyz format
+ */
+export function getExtxyzProperties(hasForces) {
+    return hasForces
+        ? 'Properties=species:S:1:pos:R:3:forces:R:3'
+        : 'Properties=species:S:1:pos:R:3';
+}
+
+/**
+ * Formats a single atom line for extxyz format
+ * @param {Object} atom - Atom data {element, x, y, z}
+ * @param {Array|null} force - Force vector [fx, fy, fz] or null
+ * @returns {string} Formatted atom line
+ */
+export function formatAtomLine(atom, force = null) {
+    let line = `${atom.element.padEnd(4)} ${atom.x.toFixed(8).padStart(14)} ${atom.y.toFixed(8).padStart(14)} ${atom.z.toFixed(8).padStart(14)}`;
+
+    if (force) {
+        line += ` ${force[0].toFixed(8).padStart(14)} ${force[1].toFixed(8).padStart(14)} ${force[2].toFixed(8).padStart(14)}`;
+    }
+
+    return line;
+}
+
+/**
+ * Generates extxyz content for a single frame
+ * @param {Array} atoms - Array of atom data
+ * @param {number} energy - Energy in eV
+ * @param {Array|null} forces - Array of force vectors or null
+ * @param {Object} extraProps - Additional properties for comment line
+ * @returns {string} Extxyz file content
+ */
+export function generateSingleFrameExtxyz(atoms, energy, forces = null, extraProps = {}) {
+    const hasForces = forces && forces.length > 0;
+    const props = getExtxyzProperties(hasForces);
+
+    const extraPropsStr = Object.entries(extraProps)
+        .map(([key, val]) => `${key}=${val}`)
+        .join(' ');
+
+    const comment = `${MACE_CONFIG.lattice} ${props} energy=${energy} ${MACE_CONFIG.pbc}${extraPropsStr ? ' ' + extraPropsStr : ''}`;
+
+    let extxyz = `${atoms.length}\n${comment}\n`;
+
+    atoms.forEach((atom, i) => {
+        const force = hasForces ? forces[i] : null;
+        extxyz += formatAtomLine(atom, force) + '\n';
+    });
+
+    return extxyz;
+}
+
+/**
+ * Generates extxyz content for multiple frames
+ * @param {Array} frames - Array of frame data, each with {atoms, energy, forces?, ...}
+ * @returns {string} Multi-frame extxyz file content
+ */
+export function generateMultiFrameExtxyz(frames) {
+    const hasForces = frames.some(f => f.forces && f.forces.length > 0);
+    const props = getExtxyzProperties(hasForces);
+
+    let extxyz = '';
+
+    frames.forEach((frame, frameIndex) => {
+        const extraProps = { ...frame.extraProps, frame: frameIndex };
+        const extraPropsStr = Object.entries(extraProps)
+            .map(([key, val]) => `${key}=${val}`)
+            .join(' ');
+
+        const comment = `${MACE_CONFIG.lattice} ${props} energy=${frame.energy} ${MACE_CONFIG.pbc} ${extraPropsStr}`;
+
+        extxyz += `${frame.atoms.length}\n${comment}\n`;
+
+        frame.atoms.forEach((atom, atomIndex) => {
+            const force = hasForces && frame.forces && frame.forces[atomIndex]
+                ? frame.forces[atomIndex]
+                : null;
+            extxyz += formatAtomLine(atom, force) + '\n';
+        });
+    });
+
+    return extxyz;
+}
+
+/**
+ * Calls MACE energy endpoint
+ * @param {string} backendUrl - Backend URL
+ * @param {Array} atoms - Array of atom data
+ * @param {string} model - Model name
+ * @param {boolean} includeForces - Whether to include forces
+ * @returns {Promise<Object>} API response
+ */
+export async function callMaceEnergy(backendUrl, atoms, model, includeForces = false) {
+    const res = await fetch(`${backendUrl}/ai/mace/energy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ atoms, model, includeForces })
+    });
+    return await res.json();
+}
+
+/**
+ * Calls MACE energy-batch endpoint
+ * @param {string} backendUrl - Backend URL
+ * @param {Array} frames - Array of frame atom data
+ * @param {string} model - Model name
+ * @param {boolean} includeForces - Whether to include forces
+ * @returns {Promise<Object>} API response
+ */
+export async function callMaceEnergyBatch(backendUrl, frames, model, includeForces = false) {
+    const res = await fetch(`${backendUrl}/ai/mace/energy-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frames, model, includeForces })
+    });
+    return await res.json();
+}
+
+/**
+ * Calls MACE optimize endpoint
+ * @param {string} backendUrl - Backend URL
+ * @param {Array} atoms - Array of atom data
+ * @param {string} model - Model name
+ * @param {Object} options - Optimization options {fmax, maxSteps, includeForces}
+ * @returns {Promise<Object>} API response
+ */
+export async function callMaceOptimize(backendUrl, atoms, model, options = {}) {
+    const { fmax = 0.05, maxSteps = 100, includeForces = false } = options;
+
+    const res = await fetch(`${backendUrl}/ai/mace/optimize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ atoms, model, fmax, maxSteps, includeForces })
+    });
+    return await res.json();
+}
+
+/**
+ * Calls MACE MD endpoint
+ * @param {string} backendUrl - Backend URL
+ * @param {Array} atoms - Array of atom data
+ * @param {string} model - Model name
+ * @param {Object} options - MD options {temperature_K, timestep_fs, steps, includeForces}
+ * @returns {Promise<Object>} API response
+ */
+export async function callMaceMD(backendUrl, atoms, model, options = {}) {
+    const {
+        temperature_K = 300,
+        timestep_fs = 1.0,
+        steps = 100,
+        includeForces = false
+    } = options;
+
+    const res = await fetch(`${backendUrl}/ai/mace/md`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ atoms, model, temperature_K, timestep_fs, steps, includeForces })
+    });
+    return await res.json();
+}
+
+/**
+ * Saves extxyz file to file explorer if available
+ * @param {string} filename - File name
+ * @param {string} content - File content
+ * @returns {Promise<boolean>} Success status
+ */
+export async function saveExtxyzFile(filename, content) {
+    if (!window.fileExplorer?.directoryHandle) {
+        return false;
+    }
+
+    try {
+        await window.fileExplorer.createFile(filename, content);
+        return true;
+    } catch (error) {
+        console.error('Error saving extxyz file:', error);
+        return false;
+    }
+}
+
+/**
+ * Merges force data into window.xyzFrames
+ * @param {Array} energyResults - Array of energy results with forces
+ * @param {boolean} includeForces - Whether forces should be merged
+ */
+export function mergeForcesIntoFrames(energyResults, includeForces) {
+    if (!includeForces || !window.xyzFrames) return;
+
+    energyResults.forEach((energyResult, frameIdx) => {
+        if (energyResult.forces && window.xyzFrames[frameIdx]) {
+            window.xyzFrames[frameIdx].atomData.forEach((atom, atomIdx) => {
+                const force = energyResult.forces[atomIdx];
+                if (force) {
+                    atom.fx = force[0];
+                    atom.fy = force[1];
+                    atom.fz = force[2];
+                }
+            });
+        }
+    });
+}
+
+/**
+ * Updates current molecule with force data from current frame
+ */
+export function updateCurrentFrameForces() {
+    const currentFrameIdx = parseInt(document.getElementById('frameSlider')?.value || 0);
+
+    if (window.xyzFrames && window.xyzFrames[currentFrameIdx]) {
+        const molecule = window.main?.molecule;
+        if (molecule) {
+            molecule.setForcesFromFrame(window.xyzFrames[currentFrameIdx]);
+            if (window.updateForceArrowControls) {
+                window.updateForceArrowControls();
+            }
+        }
+    }
+}

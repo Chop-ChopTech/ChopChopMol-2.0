@@ -1,9 +1,24 @@
 // aiAgent.js - AI Agent for ChopChopMol (Backend Version)
 
+import { buildAdjacencyList, findConnectedFragment, findFragmentAvoidingVertex } from './utils/graphUtils.js';
+import { setupFrameSlider, loadFrames, getCurrentFrameIndex } from './utils/frameUtils.js';
+import {
+    callMaceEnergy,
+    callMaceEnergyBatch,
+    callMaceOptimize,
+    callMaceMD,
+    generateSingleFrameExtxyz,
+    generateMultiFrameExtxyz,
+    generateTimestamp,
+    saveExtxyzFile,
+    mergeForcesIntoFrames,
+    updateCurrentFrameForces
+} from './utils/maceUtils.js';
+
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[0] || backendUrl[0],
+    backendUrl: backendUrl[1] || backendUrl[0],
     sessionId: crypto.randomUUID(),
     model: 'gpt-5-mini',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
@@ -135,36 +150,9 @@ const FUNCTIONS = {
             const atoms = window.main.molecule.atoms;
             const bonds = window.main.molecule.bonds;
 
-            // Build adjacency list
-            const adj = new Map();
-            for (let i = 0; i < atoms.length; i++) adj.set(i, []);
-            bonds.forEach(bond => {
-                const i1 = atoms.indexOf(bond.atom1);
-                const i2 = atoms.indexOf(bond.atom2);
-                if (i1 !== -1 && i2 !== -1) {
-                    adj.get(i1).push(i2);
-                    adj.get(i2).push(i1);
-                }
-            });
-
-            // Find fragment connected to atom1, excluding vertex atom2
-            const findFragment = (start, exclude) => {
-                const visited = new Set([start]);
-                const queue = [start];
-                while (queue.length > 0) {
-                    const current = queue.shift();
-                    for (const neighbor of (adj.get(current) || [])) {
-                        if (current === start && neighbor === exclude) continue;
-                        if (!visited.has(neighbor)) {
-                            visited.add(neighbor);
-                            queue.push(neighbor);
-                        }
-                    }
-                }
-                return Array.from(visited);
-            };
-
-            const atomsToMove = findFragment(idx1, idx2);
+            // Build adjacency list and find fragment
+            const adj = buildAdjacencyList(atoms, bonds);
+            const atomsToMove = findConnectedFragment(idx1, idx2, adj);
 
             // Calculate current angle
             const a1 = atoms[idx1], a2 = atoms[idx2], a3 = atoms[idx3];
@@ -231,36 +219,9 @@ const FUNCTIONS = {
             if (!a1 || !a2 || !a3) return { success: false, message: "Invalid atom indices" };
             if (increment <= 0) return { success: false, message: "Increment must be positive" };
 
-            // Build adjacency list
-            const adj = new Map();
-            for (let i = 0; i < allAtoms.length; i++) adj.set(i, []);
-            bonds.forEach(bond => {
-                const i1 = allAtoms.indexOf(bond.atom1);
-                const i2 = allAtoms.indexOf(bond.atom2);
-                if (i1 !== -1 && i2 !== -1) {
-                    adj.get(i1).push(i2);
-                    adj.get(i2).push(i1);
-                }
-            });
-
-            // Find fragment connected to atom1, NEVER crossing through vertex (atom2)
-            const findFragment = (start, vertex) => {
-                const visited = new Set([start]);
-                const queue = [start];
-                while (queue.length > 0) {
-                    const current = queue.shift();
-                    for (const neighbor of (adj.get(current) || [])) {
-                        if (neighbor === vertex) continue;
-                        if (!visited.has(neighbor)) {
-                            visited.add(neighbor);
-                            queue.push(neighbor);
-                        }
-                    }
-                }
-                return Array.from(visited);
-            };
-
-            const atomsToMove = params.atomsToMove || findFragment(atom1, atom2);
+            // Build adjacency list and find fragment
+            const adj = buildAdjacencyList(allAtoms, bonds);
+            const atomsToMove = params.atomsToMove || findFragmentAvoidingVertex(atom1, atom2, adj);
             if (atomsToMove.length === 0) return { success: false, message: "No atoms to move" };
 
             const range = endAngle - startAngle;
@@ -313,21 +274,7 @@ const FUNCTIONS = {
                 parsedFrames.push({ atomData, numAtoms: atomData.length, comment: `angle=${angle}` });
             }
 
-            window.xyzFrames = parsedFrames;
-
-            const frameSliderContainer = document.getElementById('frameSliderContainer');
-            if (frameSliderContainer) {
-                frameSliderContainer.style.display = 'flex';
-                const slider = document.getElementById('frameSlider');
-                const label = document.getElementById('frameLabel');
-                if (slider) {
-                    slider.max = parsedFrames.length - 1;
-                    slider.value = 0;
-                }
-                if (label) {
-                    label.textContent = `Frame 1 / ${parsedFrames.length}`;
-                }
-            }
+            loadFrames(parsedFrames, 0);
 
             return {
                 success: true,
@@ -453,37 +400,11 @@ const FUNCTIONS = {
             const bonds = window.main.molecule.bonds;
 
             // Build adjacency list
-            const adj = new Map();
-            for (let i = 0; i < atoms.length; i++) adj.set(i, []);
-            bonds.forEach(bond => {
-                const i1 = atoms.indexOf(bond.atom1);
-                const i2 = atoms.indexOf(bond.atom2);
-                if (i1 !== -1 && i2 !== -1) {
-                    adj.get(i1).push(i2);
-                    adj.get(i2).push(i1);
-                }
-            });
-
-            // Find connected atoms (BFS excluding the bond between idx1-idx2)
-            const findFragment = (start, exclude) => {
-                const visited = new Set([start]);
-                const queue = [start];
-                while (queue.length > 0) {
-                    const current = queue.shift();
-                    for (const neighbor of (adj.get(current) || [])) {
-                        if (current === start && neighbor === exclude) continue;
-                        if (!visited.has(neighbor)) {
-                            visited.add(neighbor);
-                            queue.push(neighbor);
-                        }
-                    }
-                }
-                return Array.from(visited);
-            };
+            const adj = buildAdjacencyList(atoms, bonds);
 
             // Find fragments on each side (works whether bonded or not)
-            const frag1 = findFragment(idx1, idx2);
-            const frag2 = findFragment(idx2, idx1);
+            const frag1 = findConnectedFragment(idx1, idx2, adj);
+            const frag2 = findConnectedFragment(idx2, idx1, adj);
             let atomsToMove, anchorIdx;
 
             if (frag2.length <= frag1.length) {
@@ -1058,21 +979,7 @@ const FUNCTIONS = {
                 parsedFrames.push({ atomData, numAtoms: atomData.length, comment: `angle=${angle}` });
             }
 
-            window.xyzFrames = parsedFrames;
-
-            const frameSliderContainer = document.getElementById('frameSliderContainer');
-            if (frameSliderContainer) {
-                frameSliderContainer.style.display = 'flex';
-                const slider = document.getElementById('frameSlider');
-                const label = document.getElementById('frameLabel');
-                if (slider) {
-                    slider.max = parsedFrames.length - 1;
-                    slider.value = 0;
-                }
-                if (label) {
-                    label.textContent = `Frame 1 / ${parsedFrames.length}`;
-                }
-            }
+            loadFrames(parsedFrames, 0);
 
             return {
                 success: true,
@@ -1140,21 +1047,7 @@ const FUNCTIONS = {
                 parsedFrames.push({ atomData, numAtoms: atomData.length, comment: `dist=${dist.toFixed(2)}` });
             }
 
-            window.xyzFrames = parsedFrames;
-
-            const frameSliderContainer = document.getElementById('frameSliderContainer');
-            if (frameSliderContainer) {
-                frameSliderContainer.style.display = 'flex';
-                const slider = document.getElementById('frameSlider');
-                const label = document.getElementById('frameLabel');
-                if (slider) {
-                    slider.max = parsedFrames.length - 1;
-                    slider.value = 0;
-                }
-                if (label) {
-                    label.textContent = `Frame 1 / ${parsedFrames.length}`;
-                }
-            }
+            loadFrames(parsedFrames, 0);
 
             return {
                 success: true,
@@ -1658,12 +1551,7 @@ const FUNCTIONS = {
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
 
             try {
-                const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ atoms, model, includeForces })
-                });
-                const result = await res.json();
+                const result = await callMaceEnergy(AI_CONFIG.backendUrl, atoms, model, includeForces);
 
                 // Store forces in molecule for visualization if included
                 if (result.success && result.forces) {
@@ -1672,24 +1560,9 @@ const FUNCTIONS = {
                 }
 
                 // Auto-save extxyz to local folder if open
-                if (result.success && window.fileExplorer?.directoryHandle) {
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                    const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
-                    const hasForces = result.forces && result.forces.length > 0;
-                    const props = hasForces ? 'Properties=species:S:1:pos:R:3:forces:R:3' : 'Properties=species:S:1:pos:R:3';
-                    const comment = `${lattice} ${props} energy=${result.energy_eV} pbc="F F F"`;
-
-                    let extxyz = `${atoms.length}\n${comment}\n`;
-                    atoms.forEach((a, i) => {
-                        let line = `${a.element.padEnd(4)} ${a.x.toFixed(8).padStart(14)} ${a.y.toFixed(8).padStart(14)} ${a.z.toFixed(8).padStart(14)}`;
-                        if (hasForces) {
-                            const f = result.forces[i];
-                            line += ` ${f[0].toFixed(8).padStart(14)} ${f[1].toFixed(8).padStart(14)} ${f[2].toFixed(8).padStart(14)}`;
-                        }
-                        extxyz += line + '\n';
-                    });
-
-                    await window.fileExplorer.createFile(`mace_energy_${timestamp}.extxyz`, extxyz);
+                if (result.success) {
+                    const extxyz = generateSingleFrameExtxyz(atoms, result.energy_eV, result.forces);
+                    await saveExtxyzFile(`mace_energy_${generateTimestamp()}.extxyz`, extxyz);
                 }
 
                 return result;
@@ -1861,66 +1734,26 @@ const FUNCTIONS = {
             const allFrames = frames.map(f => f.atomData);
 
             try {
-                const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy-batch`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ frames: allFrames, model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a', includeForces })
-                });
-                const result = await res.json();
+                const result = await callMaceEnergyBatch(AI_CONFIG.backendUrl, allFrames, params.model || AI_CONFIG.maceModel || 'mace-mp-0a', includeForces);
+
                 if (result.success) window.lastMaceResults = result;
 
-                // Merge forces back into window.xyzFrames so they persist across frame changes
-                if (result.success && result.energies && includeForces) {
-                    result.energies.forEach((energyResult, frameIdx) => {
-                        if (energyResult.forces && window.xyzFrames[frameIdx]) {
-                            // Add force data to each atom in the frame
-                            window.xyzFrames[frameIdx].atomData.forEach((atom, atomIdx) => {
-                                const force = energyResult.forces[atomIdx];
-                                if (force) {
-                                    atom.fx = force[0];
-                                    atom.fy = force[1];
-                                    atom.fz = force[2];
-                                }
-                            });
-                        }
-                    });
-
-                    // Update the current frame's molecule with force data
-                    const currentFrameIdx = parseInt(document.getElementById('frameSlider')?.value || 0);
-                    if (window.xyzFrames[currentFrameIdx]) {
-                        const molecule = window.main?.molecule;
-                        if (molecule) {
-                            molecule.setForcesFromFrame(window.xyzFrames[currentFrameIdx]);
-                            if (window.updateForceArrowControls) window.updateForceArrowControls();
-                        }
-                    }
+                // Merge forces back into window.xyzFrames and update current frame
+                if (result.success && result.energies) {
+                    mergeForcesIntoFrames(result.energies, includeForces);
+                    updateCurrentFrameForces();
                 }
 
                 // Auto-save multi-frame extxyz to local folder if open
-                if (result.success && window.fileExplorer?.directoryHandle) {
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                    const lattice = 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"';
-                    // Check if any frame has forces
-                    const hasForces = result.energies.some(e => e.forces && e.forces.length > 0);
-                    const props = hasForces ? 'Properties=species:S:1:pos:R:3:forces:R:3' : 'Properties=species:S:1:pos:R:3';
-
-                    let extxyz = '';
-                    allFrames.forEach((frameAtoms, i) => {
-                        const energy = result.energies[i].energy_eV;
-                        const forces = result.energies[i].forces;
-                        const comment = `${lattice} ${props} energy=${energy} pbc="F F F" frame=${i}`;
-                        extxyz += `${frameAtoms.length}\n${comment}\n`;
-                        frameAtoms.forEach((a, j) => {
-                            let line = `${a.element.padEnd(4)} ${a.x.toFixed(8).padStart(14)} ${a.y.toFixed(8).padStart(14)} ${a.z.toFixed(8).padStart(14)}`;
-                            if (hasForces && forces && forces[j]) {
-                                const f = forces[j];
-                                line += ` ${f[0].toFixed(8).padStart(14)} ${f[1].toFixed(8).padStart(14)} ${f[2].toFixed(8).padStart(14)}`;
-                            }
-                            extxyz += line + '\n';
-                        });
-                    });
-
-                    await window.fileExplorer.createFile(`mace_batch_${timestamp}.extxyz`, extxyz);
+                if (result.success) {
+                    const frameData = allFrames.map((atoms, i) => ({
+                        atoms,
+                        energy: result.energies[i].energy_eV,
+                        forces: result.energies[i].forces,
+                        extraProps: {}
+                    }));
+                    const extxyz = generateMultiFrameExtxyz(frameData);
+                    await saveExtxyzFile(`mace_batch_${generateTimestamp()}.extxyz`, extxyz);
                 }
 
                 return result;
@@ -2219,3 +2052,11 @@ window.addEventListener('beforeunload', () => {
         navigator.sendBeacon(`${AI_CONFIG.backendUrl}/ai/clear`, blob);
     }
 });
+
+// Export utility functions for global access
+window.buildAdjacencyList = buildAdjacencyList;
+window.findConnectedFragment = findConnectedFragment;
+window.findFragmentAvoidingVertex = findFragmentAvoidingVertex;
+window.setupFrameSlider = setupFrameSlider;
+window.loadFrames = loadFrames;
+window.getCurrentFrameIndex = getCurrentFrameIndex;
