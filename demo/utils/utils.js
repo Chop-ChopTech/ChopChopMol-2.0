@@ -74,6 +74,7 @@ function findFileType(file) {
     if (name.endsWith('.pqr')) return 'pqr';
     if (name.endsWith('.gro')) return 'gro';
     if (name.endsWith('.cml')) return 'cml';
+    if (name.endsWith('.out')) return 'out';
     return 'mol';
 }
 function alignMolecules(movingMolecule, fixedMolecule) {

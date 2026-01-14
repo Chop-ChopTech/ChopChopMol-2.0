@@ -42,6 +42,8 @@ export default class FileHandler {
                     parsedData = this.parseGroToJson(text);
                 } else if (fileType === 'cml') {
                     parsedData = this.parseCmlToJson(text);
+                } else if (fileType === 'out') {
+                    parsedData = this.parseOutToJson(text);
                 }
 
                 if (overlay) {
@@ -79,6 +81,20 @@ export default class FileHandler {
                     }
                 }
                 window.resetCamera();
+
+                // Update force arrow controls and auto-enable if force data exists
+                if (window.updateForceArrowControls) {
+                    window.updateForceArrowControls();
+
+                    // Auto-enable force arrows if force data is present
+                    if (this.main.molecule && this.main.molecule.hasForceData()) {
+                        const checkbox = document.getElementById('toggleForceArrows');
+                        if (checkbox && !checkbox.checked) {
+                            checkbox.checked = true;
+                            this.main.molecule.toggleForceArrows(true, window.forceArrowScale || 1.0);
+                        }
+                    }
+                }
 
             } catch (error) {
                 console.error("Error parsing file:", error);
@@ -809,6 +825,53 @@ export default class FileHandler {
         }
         return { atomData, numAtoms: atomData.length };
     }
+
+    parseOutToJson(text) {
+        // Parser for ORCA output files (.out)
+        const lines = text.split(/\r?\n|\r/);
+        const atomData = [];
+        let inCoordinateSection = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            // Look for the Cartesian coordinates section
+            if (line.includes('CARTESIAN COORDINATES (ANGSTROEM)')) {
+                inCoordinateSection = true;
+                i++; // Skip the dashes line
+                continue;
+            }
+
+            // Stop at the next section (usually another dashes line or blank line after coordinates)
+            if (inCoordinateSection && (line.trim() === '' || line.match(/^-{3,}/))) {
+                break;
+            }
+
+            // Parse coordinate lines
+            if (inCoordinateSection && line.trim()) {
+                const parts = line.trim().split(/\s+/);
+                // Format: Element X Y Z
+                if (parts.length >= 4) {
+                    const element = parts[0];
+                    const x = parseFloat(parts[1]);
+                    const y = parseFloat(parts[2]);
+                    const z = parseFloat(parts[3]);
+
+                    // Validate element symbol (should start with a letter)
+                    if (/^[A-Z][a-z]?$/.test(element) && !isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                        atomData.push({ element, x, y, z });
+                    }
+                }
+            }
+        }
+
+        if (atomData.length === 0) {
+            throw new Error('No valid coordinates found in ORCA output file');
+        }
+
+        return { atomData, numAtoms: atomData.length };
+    }
+
     parseJSON() {
         return fetch('./utils/atomSettings.json')
             .then(response => {
