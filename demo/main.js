@@ -3674,6 +3674,7 @@ window.initializeRotationSystem = initializeRotationSystem;
 window.rotationState = rotationState;
 window.startMeasurement = null;
 window.endMeasurement = null;
+window.fileName = "";
 
 // Auto-initialize if the script is loaded after DOM is ready
 if (document.readyState === 'loading') {

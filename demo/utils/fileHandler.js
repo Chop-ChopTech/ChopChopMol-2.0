@@ -8,6 +8,8 @@ export default class FileHandler {
 
     handleFile(event, overlayOn) {
         const file = event.target.files[0];
+        const fileName = file.name;
+        window.fileName = fileName || "";
         const overlay = overlayOn;
         let rotation = { x: 0, y: 0, z: 0 };
         let translation = { x: 0, y: 0, z: 0 };
@@ -132,7 +134,7 @@ export default class FileHandler {
 
             // Try to extract energy from comment line (formats: "energy=-123.456" or just "-123.456")
             const energyMatch = comment.match(/energy\s*=\s*(-?[\d.eE+-]+)/i) ||
-                               comment.match(/^(-?[\d.eE+-]+)$/);
+                comment.match(/^(-?[\d.eE+-]+)$/);
             if (energyMatch) {
                 energy = parseFloat(energyMatch[1]);
             }
