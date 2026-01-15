@@ -111,6 +111,7 @@ export default class FileHandler {
         }
 
         const frames = [];
+        const frameEnergies = [];
         let i = 0;
 
         while (i < lines.length) {
@@ -125,8 +126,17 @@ export default class FileHandler {
                 break;
             }
 
-            // Comment line
+            // Comment line - try to extract energy if present
             const comment = lines[i + 1] ? lines[i + 1].trim() : '';
+            let energy = null;
+
+            // Try to extract energy from comment line (formats: "energy=-123.456" or just "-123.456")
+            const energyMatch = comment.match(/energy\s*=\s*(-?[\d.eE+-]+)/i) ||
+                               comment.match(/^(-?[\d.eE+-]+)$/);
+            if (energyMatch) {
+                energy = parseFloat(energyMatch[1]);
+            }
+            frameEnergies.push(energy);
 
             const atomData = [];
             const startLine = i + 2;
@@ -153,9 +163,13 @@ export default class FileHandler {
             i = startLine + numAtoms;
         }
 
-        // Store frames globally for slider access
+        // Store frames and energies globally for slider access
         window.xyzFrames = frames.length > 1 ? frames : null;
+        window.frameEnergies = frameEnergies;
         window._pendingChartData = null; // Clear AI chart when loading new molecule
+
+        // Update energy chart button if available
+        window.updateEnergyChartButton?.();
 
         // Return first frame data (no circular reference)
         if (frames.length === 0) {
@@ -271,6 +285,7 @@ export default class FileHandler {
     parsePdbToJson(pdbText) {
         const lines = pdbText.split(/\r?\n|\r/);
         const atomData = [];
+        let energy = null;
 
         // RIBBON DATA STRUCTURES
         const backboneAtoms = [];
@@ -304,7 +319,7 @@ export default class FileHandler {
             'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR'
         ]);
 
-        // FIRST PASS: Parse HELIX and SHEET records
+        // FIRST PASS: Parse HELIX, SHEET, and REMARK records
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             if (!line) continue;
@@ -324,6 +339,13 @@ export default class FileHandler {
                 const endRes = parseInt(line.substring(33, 37).trim());
                 if (!isNaN(startRes) && !isNaN(endRes)) {
                     sheets.push({ chain: chainId, start: startRes, end: endRes });
+                }
+            } else if (recordType === 'REMARK' && energy === null) {
+                // Try to extract energy from REMARK lines
+                // Common formats: "ENERGY = -123.456" or "TOTAL ENERGY: -123.456"
+                const energyMatch = line.match(/energy\s*[:=]\s*(-?[\d.eE+-]+)/i);
+                if (energyMatch) {
+                    energy = parseFloat(energyMatch[1]);
                 }
             }
         }
@@ -452,6 +474,13 @@ export default class FileHandler {
 
             atomData.push({ element, x, y, z });
         }
+
+        // Store energy globally if found (single frame for PDB)
+        window.frameEnergies = energy !== null ? [energy] : [null];
+        window._pendingChartData = null; // Clear AI chart when loading new molecule
+
+        // Update energy chart button if available
+        window.updateEnergyChartButton?.();
 
         const result = {
             atomData: atomData,
@@ -685,6 +714,10 @@ export default class FileHandler {
             }
         });
 
+        // Set frameEnergies for consistency (CIF typically doesn't have energy data)
+        window.frameEnergies = [null];
+        window._pendingChartData = null;
+
         const result = {
             atomData: atomData,
             numAtoms: atomData.length
@@ -755,6 +788,11 @@ export default class FileHandler {
                 }
             }
         }
+
+        // Set frameEnergies for consistency (MOL2 typically doesn't have energy data)
+        window.frameEnergies = [null];
+        window._pendingChartData = null;
+
         return { atomData, numAtoms: atomData.length };
     }
 
@@ -775,6 +813,11 @@ export default class FileHandler {
                 }
             }
         }
+
+        // Set frameEnergies for consistency (PQR typically doesn't have energy data)
+        window.frameEnergies = [null];
+        window._pendingChartData = null;
+
         return { atomData, numAtoms: atomData.length };
     }
 
@@ -802,6 +845,11 @@ export default class FileHandler {
                 }
             }
         }
+
+        // Set frameEnergies for consistency (GRO typically doesn't have energy data)
+        window.frameEnergies = [null];
+        window._pendingChartData = null;
+
         return { atomData, numAtoms: atomData.length };
     }
 
@@ -823,13 +871,19 @@ export default class FileHandler {
                 atomData.push({ element, x, y, z });
             }
         }
+
+        // Set frameEnergies for consistency (CML typically doesn't have energy data)
+        window.frameEnergies = [null];
+        window._pendingChartData = null;
+
         return { atomData, numAtoms: atomData.length };
     }
 
     parseOutToJson(text) {
-        // Parser for ORCA output files (.out) - handles multiple frames
+        // Parser for ORCA output files (.out) - handles multiple frames with energy and forces
         const lines = text.split(/\r?\n|\r/);
         const frames = [];
+        const frameEnergies = [];
         let frameNumber = 0;
 
         for (let i = 0; i < lines.length; i++) {
@@ -866,6 +920,51 @@ export default class FileHandler {
                     }
                 }
 
+                // Now look ahead for energy and forces for this frame
+                let energy = null;
+                let j = i;
+
+                // Search for the next FINAL SINGLE POINT ENERGY
+                while (j < lines.length && j < i + 500) { // Limit search to next 500 lines
+                    if (lines[j].includes('FINAL SINGLE POINT ENERGY')) {
+                        const energyMatch = lines[j].match(/FINAL SINGLE POINT ENERGY\s+(-?[\d.]+)/);
+                        if (energyMatch) {
+                            energy = parseFloat(energyMatch[1]);
+                        }
+                        break;
+                    }
+                    j++;
+                }
+                frameEnergies.push(energy);
+
+                // Search for the next CARTESIAN GRADIENT section to extract forces
+                j = i;
+                while (j < lines.length && j < i + 500) {
+                    if (lines[j].includes('CARTESIAN GRADIENT')) {
+                        j += 2; // Skip header and dashes
+
+                        // Parse gradient lines (note: gradients are negative forces)
+                        for (let atomIdx = 0; atomIdx < atomData.length && j < lines.length; atomIdx++) {
+                            const gradLine = lines[j];
+                            if (!gradLine || gradLine.trim() === '' || gradLine.includes('Difference')) {
+                                break;
+                            }
+
+                            // Format: atom_number element : fx fy fz
+                            const gradParts = gradLine.trim().split(/\s+/);
+                            if (gradParts.length >= 5 && gradParts[2] === ':') {
+                                // Gradients are negative forces, so negate them
+                                atomData[atomIdx].fx = -parseFloat(gradParts[3]);
+                                atomData[atomIdx].fy = -parseFloat(gradParts[4]);
+                                atomData[atomIdx].fz = -parseFloat(gradParts[5]);
+                            }
+                            j++;
+                        }
+                        break;
+                    }
+                    j++;
+                }
+
                 // Add this frame if it has atoms
                 if (atomData.length > 0) {
                     frames.push({
@@ -881,9 +980,13 @@ export default class FileHandler {
             throw new Error('No valid coordinates found in ORCA output file');
         }
 
-        // Store frames globally for slider access (same as XYZ parser)
+        // Store frames and energies globally (consistent with extxyz parser)
         window.xyzFrames = frames.length > 1 ? frames : null;
+        window.frameEnergies = frameEnergies;
         window._pendingChartData = null; // Clear AI chart when loading new molecule
+
+        // Update energy chart button if available
+        window.updateEnergyChartButton?.();
 
         // Return first frame data (no circular reference)
         return {
