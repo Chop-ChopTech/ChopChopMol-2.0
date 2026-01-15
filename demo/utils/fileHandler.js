@@ -128,17 +128,44 @@ export default class FileHandler {
                 break;
             }
 
-            // Comment line - try to extract energy if present
+            // Comment line - try to extract energy and other metadata if present
             const comment = lines[i + 1] ? lines[i + 1].trim() : '';
             let energy = null;
+            const metadata = {};
 
-            // Try to extract energy from comment line (formats: "energy=-123.456" or just "-123.456")
-            const energyMatch = comment.match(/energy\s*=\s*(-?[\d.eE+-]+)/i) ||
-                comment.match(/^(-?[\d.eE+-]+)$/);
-            if (energyMatch) {
-                energy = parseFloat(energyMatch[1]);
+            // Try to extract energy from comment line (various formats)
+            // Format 1: "energy=-123.456" or "Energy = -123.456"
+            // Format 2: Just a number "-123.456"
+            // Format 3: "E = -123.456"
+            // Format 4: "Total energy: -123.456"
+            const energyPatterns = [
+                /energy\s*[:=]\s*(-?[\d.eE+-]+)/i,
+                /^(-?[\d.eE+-]+)$/,
+                /\bE\s*[:=]\s*(-?[\d.eE+-]+)/,
+                /total\s+energy\s*[:=]?\s*(-?[\d.eE+-]+)/i,
+                /potential\s+energy\s*[:=]?\s*(-?[\d.eE+-]+)/i
+            ];
+            for (const pattern of energyPatterns) {
+                const match = comment.match(pattern);
+                if (match) {
+                    energy = parseFloat(match[1]);
+                    break;
+                }
             }
             frameEnergies.push(energy);
+
+            // Try to extract lattice from comment (some XYZ variants include this)
+            const latticeMatch = comment.match(/Lattice\s*=\s*"([^"]+)"/i);
+            if (latticeMatch) {
+                const vals = latticeMatch[1].trim().split(/\s+/).map(parseFloat);
+                if (vals.length === 9 && vals.every(v => !isNaN(v))) {
+                    metadata.lattice = {
+                        a: [vals[0], vals[1], vals[2]],
+                        b: [vals[3], vals[4], vals[5]],
+                        c: [vals[6], vals[7], vals[8]]
+                    };
+                }
+            }
 
             const atomData = [];
             const startLine = i + 2;
@@ -146,6 +173,18 @@ export default class FileHandler {
             if (lines.length < startLine + numAtoms) {
                 throw new Error('Invalid XYZ format: Insufficient atom lines');
             }
+
+            // Detect number of columns from first atom line to determine what extra data might be present
+            const firstAtomLine = lines[startLine] ? lines[startLine].trim().split(/\s+/) : [];
+            const numCols = firstAtomLine.length;
+
+            // Common column layouts:
+            // 4 cols: element x y z
+            // 5 cols: element x y z charge OR element x y z label
+            // 6 cols: element x y z charge label OR element x y z vx vy vz (rarely)
+            // 7 cols: element x y z fx fy fz
+            // 8 cols: element x y z fx fy fz charge
+            // 9+ cols: various combinations
 
             for (let j = startLine; j < startLine + numAtoms; j++) {
                 const parts = lines[j].trim().split(/\s+/);
@@ -156,12 +195,57 @@ export default class FileHandler {
                 const y = parseFloat(parts[2]);
                 const z = parseFloat(parts[3]);
 
-                if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-                    atomData.push({ element, x, y, z });
+                if (isNaN(x) || isNaN(y) || isNaN(z)) continue;
+
+                const atom = { element, x, y, z };
+
+                // Handle extra columns based on count
+                if (numCols >= 7) {
+                    // Likely forces in columns 4-6 (0-indexed: parts[4], parts[5], parts[6])
+                    const fx = parseFloat(parts[4]);
+                    const fy = parseFloat(parts[5]);
+                    const fz = parseFloat(parts[6]);
+                    if (!isNaN(fx) && !isNaN(fy) && !isNaN(fz)) {
+                        atom.fx = fx;
+                        atom.fy = fy;
+                        atom.fz = fz;
+                    }
+                    // Check for charge in column 7
+                    if (numCols >= 8) {
+                        const charge = parseFloat(parts[7]);
+                        if (!isNaN(charge)) {
+                            atom.charge = charge;
+                        }
+                    }
+                } else if (numCols === 5) {
+                    // Could be charge or label - try parsing as number
+                    const val = parseFloat(parts[4]);
+                    if (!isNaN(val)) {
+                        // Likely a charge if it's a small number
+                        if (Math.abs(val) <= 10) {
+                            atom.charge = val;
+                        }
+                    }
+                } else if (numCols === 6) {
+                    // Could be charge + something else, or velocities
+                    const v1 = parseFloat(parts[4]);
+                    const v2 = parseFloat(parts[5]);
+                    if (!isNaN(v1) && !isNaN(v2)) {
+                        // If both are numbers, assume charge is first
+                        if (Math.abs(v1) <= 10) {
+                            atom.charge = v1;
+                        }
+                    }
                 }
+
+                atomData.push(atom);
             }
 
-            frames.push({ atomData, numAtoms: atomData.length, comment });
+            const frameData = { atomData, numAtoms: atomData.length, comment };
+            if (Object.keys(metadata).length > 0) {
+                frameData.metadata = metadata;
+            }
+            frames.push(frameData);
             i = startLine + numAtoms;
         }
 
@@ -188,6 +272,7 @@ export default class FileHandler {
         const lines = content.trim().split('\n');
         const frames = [];
         const frameEnergies = [];
+        const frameMetadata = []; // Store per-frame metadata (lattice, virial, stress, pbc, etc.)
         let i = 0;
 
         while (i < lines.length) {
@@ -203,45 +288,157 @@ export default class FileHandler {
             if (energyMatch) energy = parseFloat(energyMatch[1]);
             frameEnergies.push(energy);
 
+            // Parse frame-level metadata from comment line
+            const metadata = {};
+
+            // Parse Lattice (3x3 cell matrix in Fortran column-major order)
+            // Format: Lattice="ax ay az bx by bz cx cy cz"
+            const latticeMatch = commentLine.match(/Lattice\s*=\s*"([^"]+)"/i);
+            if (latticeMatch) {
+                const vals = latticeMatch[1].trim().split(/\s+/).map(parseFloat);
+                if (vals.length === 9 && vals.every(v => !isNaN(v))) {
+                    // Fortran column-major: a=(0,1,2), b=(3,4,5), c=(6,7,8)
+                    metadata.lattice = {
+                        a: [vals[0], vals[1], vals[2]],
+                        b: [vals[3], vals[4], vals[5]],
+                        c: [vals[6], vals[7], vals[8]]
+                    };
+                }
+            }
+
+            // Parse virial tensor (3x3 in eV, Fortran order)
+            // Format: virial="vxx vxy vxz vyx vyy vyz vzx vzy vzz"
+            const virialMatch = commentLine.match(/virial\s*=\s*"([^"]+)"/i);
+            if (virialMatch) {
+                const vals = virialMatch[1].trim().split(/\s+/).map(parseFloat);
+                if (vals.length === 9 && vals.every(v => !isNaN(v))) {
+                    metadata.virial = [
+                        [vals[0], vals[1], vals[2]],
+                        [vals[3], vals[4], vals[5]],
+                        [vals[6], vals[7], vals[8]]
+                    ];
+                }
+            }
+
+            // Parse stress tensor (3x3 in eV/Å³, Fortran order)
+            // Format: stress="sxx sxy sxz syx syy syz szx szy szz"
+            const stressMatch = commentLine.match(/stress\s*=\s*"([^"]+)"/i);
+            if (stressMatch) {
+                const vals = stressMatch[1].trim().split(/\s+/).map(parseFloat);
+                if (vals.length === 9 && vals.every(v => !isNaN(v))) {
+                    metadata.stress = [
+                        [vals[0], vals[1], vals[2]],
+                        [vals[3], vals[4], vals[5]],
+                        [vals[6], vals[7], vals[8]]
+                    ];
+                }
+            }
+
+            // Parse periodic boundary conditions
+            // Format: pbc="T T T" or pbc="T T F" etc.
+            const pbcMatch = commentLine.match(/pbc\s*=\s*"([^"]+)"/i);
+            if (pbcMatch) {
+                const pbcVals = pbcMatch[1].trim().split(/\s+/);
+                metadata.pbc = pbcVals.map(v => v.toUpperCase() === 'T' || v === '1' || v.toLowerCase() === 'true');
+            }
+
+            // Parse free energy if available
+            const freeEnergyMatch = commentLine.match(/free_energy\s*=\s*(-?[\d.eE+-]+)/i);
+            if (freeEnergyMatch) {
+                metadata.freeEnergy = parseFloat(freeEnergyMatch[1]);
+            }
+
+            // Parse config_type if available (e.g., "bulk", "surface", "isolated")
+            const configTypeMatch = commentLine.match(/config_type\s*=\s*"?([^"\s]+)"?/i);
+            if (configTypeMatch) {
+                metadata.configType = configTypeMatch[1];
+            }
+
+            // Parse cutoff if available
+            const cutoffMatch = commentLine.match(/cutoff\s*=\s*(-?[\d.eE+-]+)/i);
+            if (cutoffMatch) {
+                metadata.cutoff = parseFloat(cutoffMatch[1]);
+            }
+
+            frameMetadata.push(metadata);
+
             // Parse Properties to find column layout (default: species:S:1:pos:R:3)
             let columns = [{ name: 'species', type: 'S', count: 1 }, { name: 'pos', type: 'R', count: 3 }];
-            const propsMatch = commentLine.match(/Properties\s*=\s*"?([^"]+)"?/i);
+            const propsMatch = commentLine.match(/Properties\s*=\s*"?([^"\s]+)"?/i);
             if (propsMatch) {
                 columns = [];
                 const parts = propsMatch[1].split(':');
                 for (let p = 0; p < parts.length; p += 3) {
-                    columns.push({ name: parts[p], type: parts[p + 1], count: parseInt(parts[p + 2]) || 1 });
+                    if (parts[p] && parts[p + 1] && parts[p + 2]) {
+                        columns.push({ name: parts[p], type: parts[p + 1], count: parseInt(parts[p + 2]) || 1 });
+                    }
                 }
             }
 
-            // Find species, pos, and forces column indices
-            let colIdx = 0, speciesIdx = 0, posIdx = 1, forcesIdx = -1;
+            // Build column index map for all properties
+            const columnMap = {};
+            let colIdx = 0;
             for (let c = 0; c < columns.length; c++) {
-                if (columns[c].name === 'species') speciesIdx = colIdx;
-                if (columns[c].name === 'pos') posIdx = colIdx;
-                if (columns[c].name === 'forces' || columns[c].name === 'force') forcesIdx = colIdx;
+                columnMap[columns[c].name.toLowerCase()] = { idx: colIdx, count: columns[c].count, type: columns[c].type };
                 colIdx += columns[c].count;
             }
+
+            // Find essential column indices
+            const speciesCol = columnMap['species'] || columnMap['element'] || columnMap['symbol'] || { idx: 0, count: 1 };
+            const posCol = columnMap['pos'] || columnMap['position'] || columnMap['positions'] || { idx: 1, count: 3 };
+            const forcesCol = columnMap['forces'] || columnMap['force'] || columnMap['frc'] || null;
+            const velCol = columnMap['velocities'] || columnMap['velocity'] || columnMap['vel'] || null;
+            const chargeCol = columnMap['charges'] || columnMap['charge'] || columnMap['q'] || null;
+            const massCol = columnMap['masses'] || columnMap['mass'] || null;
+            const magmomCol = columnMap['magmoms'] || columnMap['magmom'] || columnMap['magnetic_moments'] || null;
+            const tagCol = columnMap['tags'] || columnMap['tag'] || null;
 
             const atomData = [];
             const startLine = i + 2;
 
             for (let j = startLine; j < startLine + numAtoms && j < lines.length; j++) {
                 const parts = lines[j].trim().split(/\s+/);
-                if (parts.length < posIdx + 3) continue;
+                if (parts.length < posCol.idx + 3) continue;
 
-                const element = parts[speciesIdx];
-                const x = parseFloat(parts[posIdx]);
-                const y = parseFloat(parts[posIdx + 1]);
-                const z = parseFloat(parts[posIdx + 2]);
+                const element = parts[speciesCol.idx];
+                const x = parseFloat(parts[posCol.idx]);
+                const y = parseFloat(parts[posCol.idx + 1]);
+                const z = parseFloat(parts[posCol.idx + 2]);
 
                 const atom = { element, x, y, z };
 
                 // Extract forces if available
-                if (forcesIdx >= 0 && parts.length >= forcesIdx + 3) {
-                    atom.fx = parseFloat(parts[forcesIdx]);
-                    atom.fy = parseFloat(parts[forcesIdx + 1]);
-                    atom.fz = parseFloat(parts[forcesIdx + 2]);
+                if (forcesCol && parts.length >= forcesCol.idx + 3) {
+                    atom.fx = parseFloat(parts[forcesCol.idx]);
+                    atom.fy = parseFloat(parts[forcesCol.idx + 1]);
+                    atom.fz = parseFloat(parts[forcesCol.idx + 2]);
+                }
+
+                // Extract velocities if available
+                if (velCol && parts.length >= velCol.idx + 3) {
+                    atom.vx = parseFloat(parts[velCol.idx]);
+                    atom.vy = parseFloat(parts[velCol.idx + 1]);
+                    atom.vz = parseFloat(parts[velCol.idx + 2]);
+                }
+
+                // Extract charge if available
+                if (chargeCol && parts.length >= chargeCol.idx + 1) {
+                    atom.charge = parseFloat(parts[chargeCol.idx]);
+                }
+
+                // Extract mass if available
+                if (massCol && parts.length >= massCol.idx + 1) {
+                    atom.mass = parseFloat(parts[massCol.idx]);
+                }
+
+                // Extract magnetic moment if available
+                if (magmomCol && parts.length >= magmomCol.idx + 1) {
+                    atom.magmom = parseFloat(parts[magmomCol.idx]);
+                }
+
+                // Extract tag if available
+                if (tagCol && parts.length >= tagCol.idx + 1) {
+                    atom.tag = parseInt(parts[tagCol.idx]);
                 }
 
                 if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
@@ -249,17 +446,22 @@ export default class FileHandler {
                 }
             }
 
-            frames.push({ atomData, numAtoms: atomData.length });
+            frames.push({ atomData, numAtoms: atomData.length, metadata });
             i = startLine + numAtoms;
         }
 
         window.xyzFrames = frames.length > 1 ? frames : null;
         window.frameEnergies = frameEnergies;
+        window.frameMetadata = frameMetadata; // Store metadata globally
         window._pendingChartData = null; // Clear AI chart when loading new molecule
 
         window.updateEnergyChartButton?.();
 
-        return frames.length > 0 ? frames[0] : { atomData: [], numAtoms: 0 };
+        const result = frames.length > 0 ? { atomData: frames[0].atomData, numAtoms: frames[0].numAtoms } : { atomData: [], numAtoms: 0 };
+        if (frames.length > 0 && frames[0].metadata) {
+            result.metadata = frames[0].metadata;
+        }
+        return result;
     }
 
     parseMolToJson(molText) {
@@ -286,13 +488,6 @@ export default class FileHandler {
     }
     parsePdbToJson(pdbText) {
         const lines = pdbText.split(/\r?\n|\r/);
-        const atomData = [];
-        let energy = null;
-
-        // RIBBON DATA STRUCTURES
-        const backboneAtoms = [];
-        const helices = [];
-        const sheets = [];
 
         const AVAILABLE_ELEMENTS = new Set([
             'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
@@ -321,180 +516,333 @@ export default class FileHandler {
             'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR'
         ]);
 
-        // FIRST PASS: Parse HELIX, SHEET, and REMARK records
+        // Global metadata
+        let cellParams = null;  // CRYST1 unit cell
+        const helices = [];
+        const sheets = [];
+        const conectRecords = []; // Connectivity records
+        const anisouData = {};   // ANISOU keyed by atom serial
+        let energy = null;
+
+        // Multi-model support
+        const models = [];
+        let currentModelAtoms = [];
+        let currentModelBackbone = [];
+        let inModel = false;
+        let modelNumber = 0;
+
+        // Helper to parse element from atom record
+        const parseElement = (line, atomName, fullAtomName, residueName, recordType) => {
+            let element = null;
+
+            // Strategy 1: Try element column (77-78)
+            if (line.length >= 78) {
+                let elementField = line.substring(76, 78).trim();
+                if (elementField) {
+                    if (AVAILABLE_ELEMENTS.has(elementField)) {
+                        return elementField;
+                    }
+                    elementField = elementField.toUpperCase();
+                    if (CAPITALIZATION_MAP[elementField]) {
+                        return CAPITALIZATION_MAP[elementField];
+                    }
+                    if (AVAILABLE_ELEMENTS.has(elementField)) {
+                        return elementField;
+                    }
+                    if (elementField.length === 2) {
+                        const properCap = elementField.charAt(0) + elementField.charAt(1).toLowerCase();
+                        if (AVAILABLE_ELEMENTS.has(properCap)) {
+                            return properCap;
+                        }
+                    }
+                }
+            }
+
+            // Strategy 2: Parse from atom name
+            if (!atomName) return 'C';
+
+            if (/^\d/.test(atomName)) {
+                element = atomName.charAt(1).toUpperCase();
+                if (element === 'H') return 'H';
+            }
+
+            if (atomName === 'CA') {
+                if (fullAtomName.charAt(0) === ' ' && AMINO_ACIDS.has(residueName)) {
+                    return 'C';
+                } else if (recordType === 'HETATM') {
+                    return 'Ca';
+                } else if (AMINO_ACIDS.has(residueName)) {
+                    return 'C';
+                }
+                return 'Ca';
+            }
+
+            if (atomName.length >= 2 && fullAtomName.charAt(0) !== ' ') {
+                let twoChar = atomName.substring(0, 2);
+                if (CAPITALIZATION_MAP[twoChar]) {
+                    return CAPITALIZATION_MAP[twoChar];
+                }
+                const properCap = twoChar.charAt(0) + twoChar.charAt(1).toLowerCase();
+                if (AVAILABLE_ELEMENTS.has(properCap)) {
+                    return properCap;
+                }
+            }
+
+            const firstChar = atomName.charAt(0);
+            if (AVAILABLE_ELEMENTS.has(firstChar)) {
+                return firstChar;
+            }
+
+            if (atomName.startsWith('C')) return 'C';
+            if (atomName.startsWith('N')) return 'N';
+            if (atomName.startsWith('O')) return 'O';
+            if (atomName.startsWith('S')) return 'S';
+            if (atomName.startsWith('P')) return 'P';
+            if (atomName.startsWith('H')) return 'H';
+            return 'C';
+        };
+
+        // Single pass through all lines
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             if (!line) continue;
 
             const recordType = line.substring(0, 6).trim();
 
-            if (recordType === 'HELIX') {
+            // CRYST1 - Unit cell parameters
+            // Format: CRYST1    a      b      c     alpha  beta   gamma sGroup Z
+            if (recordType === 'CRYST1' && line.length >= 54) {
+                const a = parseFloat(line.substring(6, 15).trim());
+                const b = parseFloat(line.substring(15, 24).trim());
+                const c = parseFloat(line.substring(24, 33).trim());
+                const alpha = parseFloat(line.substring(33, 40).trim());
+                const beta = parseFloat(line.substring(40, 47).trim());
+                const gamma = parseFloat(line.substring(47, 54).trim());
+                const spaceGroup = line.length >= 66 ? line.substring(55, 66).trim() : '';
+                const z = line.length >= 70 ? parseInt(line.substring(66, 70).trim()) : null;
+
+                if (!isNaN(a) && !isNaN(b) && !isNaN(c)) {
+                    cellParams = { a, b, c, alpha, beta, gamma, spaceGroup, z };
+                }
+            }
+
+            // MODEL - Start of a new model (multi-frame)
+            else if (recordType === 'MODEL') {
+                inModel = true;
+                modelNumber = parseInt(line.substring(10, 14).trim()) || models.length + 1;
+                currentModelAtoms = [];
+                currentModelBackbone = [];
+            }
+
+            // ENDMDL - End of current model
+            else if (recordType === 'ENDMDL') {
+                if (currentModelAtoms.length > 0) {
+                    models.push({
+                        atomData: currentModelAtoms,
+                        numAtoms: currentModelAtoms.length,
+                        backbone: currentModelBackbone,
+                        modelNumber
+                    });
+                }
+                currentModelAtoms = [];
+                currentModelBackbone = [];
+                inModel = false;
+            }
+
+            // HELIX record
+            else if (recordType === 'HELIX') {
                 const chainId = line.charAt(19);
                 const startRes = parseInt(line.substring(21, 25).trim());
                 const endRes = parseInt(line.substring(33, 37).trim());
+                const helixClass = line.length >= 40 ? parseInt(line.substring(38, 40).trim()) : 1;
                 if (!isNaN(startRes) && !isNaN(endRes)) {
-                    helices.push({ chain: chainId, start: startRes, end: endRes });
+                    helices.push({ chain: chainId, start: startRes, end: endRes, helixClass });
                 }
-            } else if (recordType === 'SHEET') {
+            }
+
+            // SHEET record
+            else if (recordType === 'SHEET') {
                 const chainId = line.charAt(21);
                 const startRes = parseInt(line.substring(22, 26).trim());
                 const endRes = parseInt(line.substring(33, 37).trim());
+                const sense = line.length >= 39 ? parseInt(line.substring(38, 39).trim()) : 0;
                 if (!isNaN(startRes) && !isNaN(endRes)) {
-                    sheets.push({ chain: chainId, start: startRes, end: endRes });
+                    sheets.push({ chain: chainId, start: startRes, end: endRes, sense });
                 }
-            } else if (recordType === 'REMARK' && energy === null) {
-                // Try to extract energy from REMARK lines
-                // Common formats: "ENERGY = -123.456" or "TOTAL ENERGY: -123.456"
-                const energyMatch = line.match(/energy\s*[:=]\s*(-?[\d.eE+-]+)/i);
+            }
+
+            // CONECT - Connectivity records
+            else if (recordType === 'CONECT') {
+                const serialNum = parseInt(line.substring(6, 11).trim());
+                const bonded = [];
+                // Up to 4 bonded atoms per CONECT record
+                for (let col = 11; col < 31 && col + 5 <= line.length; col += 5) {
+                    const bondedSerial = parseInt(line.substring(col, col + 5).trim());
+                    if (!isNaN(bondedSerial) && bondedSerial > 0) {
+                        bonded.push(bondedSerial);
+                    }
+                }
+                if (!isNaN(serialNum) && bonded.length > 0) {
+                    conectRecords.push({ serial: serialNum, bonded });
+                }
+            }
+
+            // ANISOU - Anisotropic temperature factors
+            else if (recordType === 'ANISOU' && line.length >= 70) {
+                const serial = parseInt(line.substring(6, 11).trim());
+                const u11 = parseInt(line.substring(28, 35).trim());
+                const u22 = parseInt(line.substring(35, 42).trim());
+                const u33 = parseInt(line.substring(42, 49).trim());
+                const u12 = parseInt(line.substring(49, 56).trim());
+                const u13 = parseInt(line.substring(56, 63).trim());
+                const u23 = parseInt(line.substring(63, 70).trim());
+                if (!isNaN(serial)) {
+                    // ANISOU values are in units of 10^-4 Å²
+                    anisouData[serial] = {
+                        u11: u11 / 10000, u22: u22 / 10000, u33: u33 / 10000,
+                        u12: u12 / 10000, u13: u13 / 10000, u23: u23 / 10000
+                    };
+                }
+            }
+
+            // REMARK - Extract energy and other info
+            else if (recordType === 'REMARK' && energy === null) {
+                const energyMatch = line.match(/energy\s*[:=]\s*(-?[\d.eE+-]+)/i) ||
+                    line.match(/total\s+energy\s*[:=]?\s*(-?[\d.eE+-]+)/i) ||
+                    line.match(/potential\s+energy\s*[:=]?\s*(-?[\d.eE+-]+)/i);
                 if (energyMatch) {
                     energy = parseFloat(energyMatch[1]);
                 }
             }
-        }
 
-        // SECOND PASS: Parse atoms
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
+            // ATOM and HETATM records
+            else if ((recordType === 'ATOM' || recordType === 'HETATM') && line.length >= 54) {
+                const serial = parseInt(line.substring(6, 11).trim());
+                const fullAtomName = line.substring(12, 16);
+                const atomName = fullAtomName.trim().toUpperCase();
+                const altLoc = line.charAt(16);
+                const residueName = line.substring(17, 20).trim().toUpperCase();
+                const chainId = line.charAt(21);
+                const resSeq = parseInt(line.substring(22, 26).trim());
+                const iCode = line.charAt(26);
+                const x = parseFloat(line.substring(30, 38));
+                const y = parseFloat(line.substring(38, 46));
+                const z = parseFloat(line.substring(46, 54));
 
-            if (!line || line.length < 54) continue;
+                // Occupancy (columns 55-60) and B-factor/tempFactor (columns 61-66)
+                const occupancy = line.length >= 60 ? parseFloat(line.substring(54, 60).trim()) : 1.0;
+                const bFactor = line.length >= 66 ? parseFloat(line.substring(60, 66).trim()) : 0.0;
 
-            const recordType = line.substring(0, 6).trim();
-            if (recordType !== 'ATOM' && recordType !== 'HETATM') continue;
-
-            const x = parseFloat(line.substring(30, 38));
-            const y = parseFloat(line.substring(38, 46));
-            const z = parseFloat(line.substring(46, 54));
-
-            if (isNaN(x) || isNaN(y) || isNaN(z)) continue;
-
-            let element = null;
-
-            // Extract atom metadata for CA detection and ribbon
-            const fullAtomName = line.substring(12, 16);
-            const atomName = fullAtomName.trim().toUpperCase();
-            const chainId = line.charAt(21);
-            const resSeq = parseInt(line.substring(22, 26).trim());
-            const residueName = line.length >= 20 ? line.substring(17, 20).trim().toUpperCase() : '';
-
-            // CAPTURE CA ATOMS FOR RIBBON
-            if (atomName === 'CA' && fullAtomName.charAt(0) === ' ' && AMINO_ACIDS.has(residueName)) {
-                backboneAtoms.push({
-                    x: x,
-                    y: y,
-                    z: z,
-                    chain: chainId,
-                    resSeq: resSeq,
-                    residue: residueName
-                });
-            }
-
-            // Strategy 1: Try element column (77-78)
-            if (line.length >= 78) {
-                let elementField = line.substring(76, 78).trim();
-
-                if (elementField) {
-                    if (AVAILABLE_ELEMENTS.has(elementField)) {
-                        element = elementField;
-                    } else {
-                        elementField = elementField.toUpperCase();
-                        if (CAPITALIZATION_MAP[elementField]) {
-                            element = CAPITALIZATION_MAP[elementField];
-                        } else if (AVAILABLE_ELEMENTS.has(elementField)) {
-                            element = elementField;
-                        } else if (elementField.length === 2) {
-                            const properCap = elementField.charAt(0) + elementField.charAt(1).toLowerCase();
-                            if (AVAILABLE_ELEMENTS.has(properCap)) {
-                                element = properCap;
-                            }
+                // Charge (columns 79-80, format like "2+" or "1-")
+                let charge = null;
+                if (line.length >= 80) {
+                    const chargeStr = line.substring(78, 80).trim();
+                    if (chargeStr) {
+                        const chargeMatch = chargeStr.match(/(\d)([+-])/);
+                        if (chargeMatch) {
+                            charge = parseInt(chargeMatch[1]) * (chargeMatch[2] === '+' ? 1 : -1);
                         }
                     }
-
-                    if (element) {
-                        atomData.push({ element, x, y, z });
-                        continue;
-                    }
                 }
-            }
 
-            // Strategy 2: Parse from atom name
-            if (!atomName) continue;
+                if (isNaN(x) || isNaN(y) || isNaN(z)) continue;
 
-            if (/^\d/.test(atomName)) {
-                element = atomName.charAt(1).toUpperCase();
-                if (element === 'H') {
-                    atomData.push({ element, x, y, z });
-                    continue;
+                const element = parseElement(line, atomName, fullAtomName, residueName, recordType);
+
+                const atom = {
+                    element, x, y, z,
+                    serial,
+                    atomName: atomName,
+                    residueName,
+                    chainId,
+                    resSeq,
+                    occupancy: isNaN(occupancy) ? 1.0 : occupancy,
+                    bFactor: isNaN(bFactor) ? 0.0 : bFactor
+                };
+
+                if (charge !== null) {
+                    atom.charge = charge;
                 }
-            }
 
-            if (atomName === 'CA') {
-                if (fullAtomName.charAt(0) === ' ' && AMINO_ACIDS.has(residueName)) {
-                    element = 'C';
-                } else if (recordType === 'HETATM') {
-                    element = 'Ca';
-                } else if (AMINO_ACIDS.has(residueName)) {
-                    element = 'C';
-                } else {
-                    element = 'Ca';
+                // Check for anisotropic data
+                if (anisouData[serial]) {
+                    atom.anisou = anisouData[serial];
                 }
-                atomData.push({ element, x, y, z });
-                continue;
-            }
 
-            if (atomName.length >= 2 && fullAtomName.charAt(0) !== ' ') {
-                let twoChar = atomName.substring(0, 2);
-
-                if (CAPITALIZATION_MAP[twoChar]) {
-                    element = CAPITALIZATION_MAP[twoChar];
-                } else {
-                    const properCap = twoChar.charAt(0) + twoChar.charAt(1).toLowerCase();
-                    if (AVAILABLE_ELEMENTS.has(properCap)) {
-                        element = properCap;
+                // Capture CA atoms for ribbon
+                if (atomName === 'CA' && fullAtomName.charAt(0) === ' ' && AMINO_ACIDS.has(residueName)) {
+                    const backboneAtom = {
+                        x, y, z,
+                        chain: chainId,
+                        resSeq,
+                        residue: residueName
+                    };
+                    if (inModel) {
+                        currentModelBackbone.push(backboneAtom);
+                    } else {
+                        currentModelBackbone.push(backboneAtom);
                     }
                 }
 
-                if (element) {
-                    atomData.push({ element, x, y, z });
-                    continue;
+                if (inModel) {
+                    currentModelAtoms.push(atom);
+                } else {
+                    currentModelAtoms.push(atom);
                 }
             }
-
-            const firstChar = atomName.charAt(0);
-            if (AVAILABLE_ELEMENTS.has(firstChar)) {
-                element = firstChar;
-                atomData.push({ element, x, y, z });
-                continue;
-            }
-
-            if (atomName.startsWith('C')) element = 'C';
-            else if (atomName.startsWith('N')) element = 'N';
-            else if (atomName.startsWith('O')) element = 'O';
-            else if (atomName.startsWith('S')) element = 'S';
-            else if (atomName.startsWith('P')) element = 'P';
-            else if (atomName.startsWith('H')) element = 'H';
-            else element = 'C';
-
-            atomData.push({ element, x, y, z });
         }
 
-        // Store energy globally if found (single frame for PDB)
-        window.frameEnergies = energy !== null ? [energy] : [null];
-        window._pendingChartData = null; // Clear AI chart when loading new molecule
+        // If we never saw MODEL/ENDMDL, treat all atoms as one model
+        if (models.length === 0 && currentModelAtoms.length > 0) {
+            models.push({
+                atomData: currentModelAtoms,
+                numAtoms: currentModelAtoms.length,
+                backbone: currentModelBackbone,
+                modelNumber: 1
+            });
+        }
 
-        // Update energy chart button if available
+        // Handle multi-model as frames
+        if (models.length > 1) {
+            window.xyzFrames = models.map((m, idx) => ({
+                atomData: m.atomData,
+                numAtoms: m.numAtoms,
+                comment: `PDB Model ${m.modelNumber}`
+            }));
+            window.frameEnergies = models.map(() => energy); // Same energy for all if only one given
+        } else {
+            window.xyzFrames = null;
+            window.frameEnergies = energy !== null ? [energy] : [null];
+        }
+        window._pendingChartData = null;
         window.updateEnergyChartButton?.();
 
+        // Build result from first model
+        const firstModel = models[0] || { atomData: [], numAtoms: 0, backbone: [] };
+
         const result = {
-            atomData: atomData,
-            numAtoms: atomData.length
+            atomData: firstModel.atomData,
+            numAtoms: firstModel.numAtoms
         };
 
+        // Add metadata
+        const metadata = {};
+        if (cellParams) {
+            metadata.cell = cellParams;
+        }
+        if (conectRecords.length > 0) {
+            metadata.conect = conectRecords;
+        }
+        if (Object.keys(metadata).length > 0) {
+            result.metadata = metadata;
+        }
+
         // Add ribbon data if protein backbone found
-        if (backboneAtoms.length > 0) {
+        if (firstModel.backbone && firstModel.backbone.length > 0) {
             result.ribbonData = {
-                backbone: backboneAtoms,
-                helices: helices,
-                sheets: sheets
+                backbone: firstModel.backbone,
+                helices,
+                sheets
             };
         }
 
@@ -882,12 +1230,216 @@ export default class FileHandler {
     }
 
     parseOutToJson(text) {
-        // Parser for ORCA output files (.out) - handles multiple frames with energy and forces
+        // Enhanced parser for ORCA output files (.out)
+        // Handles: coordinates, energy, forces, frequencies, dipole, charges, thermodynamics
         const lines = text.split(/\r?\n|\r/);
         const frames = [];
         const frameEnergies = [];
         let frameNumber = 0;
 
+        // Global metadata to be parsed from anywhere in the file
+        const metadata = {
+            vibrations: [],       // Vibrational frequencies
+            dipole: null,         // Dipole moment (x, y, z, total)
+            mullikenCharges: [],  // Per-atom Mulliken charges
+            loewdinCharges: [],   // Per-atom Loewdin charges
+            thermodynamics: null, // Thermodynamic data
+            orbitalEnergies: null, // HOMO/LUMO energies
+            scfEnergies: [],      // SCF energies for convergence tracking
+            multiplicity: null,
+            charge: null
+        };
+
+        // First pass: Extract global metadata
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            // Multiplicity and charge
+            if (line.includes('Multiplicity') && line.includes('Mult')) {
+                const multMatch = line.match(/Mult\s*\.+\s*(\d+)/);
+                if (multMatch) metadata.multiplicity = parseInt(multMatch[1]);
+            }
+            if (line.includes('Total Charge') && line.includes('Charge')) {
+                const chargeMatch = line.match(/Charge\s*\.+\s*(-?\d+)/);
+                if (chargeMatch) metadata.charge = parseInt(chargeMatch[1]);
+            }
+
+            // Dipole moment
+            if (line.includes('DIPOLE MOMENT') && !line.includes('RELAXED')) {
+                // Skip to the magnitude line
+                for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
+                    if (lines[j].includes('Magnitude (Debye)')) {
+                        const dipoleMatch = lines[j].match(/Magnitude \(Debye\)\s*:\s*(-?[\d.]+)/);
+                        if (dipoleMatch) {
+                            metadata.dipole = { total: parseFloat(dipoleMatch[1]) };
+                        }
+                    }
+                    if (lines[j].includes('X') && lines[j].includes('Y') && lines[j].includes('Z') && !metadata.dipole?.x) {
+                        const parts = lines[j].trim().split(/\s+/);
+                        if (parts.length >= 6) {
+                            metadata.dipole = {
+                                ...metadata.dipole,
+                                x: parseFloat(parts[1]),
+                                y: parseFloat(parts[3]),
+                                z: parseFloat(parts[5])
+                            };
+                        }
+                    }
+                }
+            }
+
+            // Vibrational frequencies
+            if (line.includes('VIBRATIONAL FREQUENCIES')) {
+                // Skip header lines
+                let j = i + 2;
+                while (j < lines.length) {
+                    const freqLine = lines[j].trim();
+                    if (freqLine === '' || freqLine.startsWith('---') || freqLine.includes('NORMAL MODES')) {
+                        break;
+                    }
+                    // Format: index: frequency cm**-1
+                    const freqMatch = freqLine.match(/^\s*(\d+):\s+(-?[\d.]+)\s+cm\*\*-1/);
+                    if (freqMatch) {
+                        const freq = parseFloat(freqMatch[2]);
+                        if (!isNaN(freq) && Math.abs(freq) > 0.01) { // Skip near-zero frequencies
+                            metadata.vibrations.push({
+                                mode: parseInt(freqMatch[1]),
+                                frequency: freq,
+                                unit: 'cm^-1'
+                            });
+                        }
+                    }
+                    j++;
+                }
+            }
+
+            // IR intensities (if available, associate with frequencies)
+            if (line.includes('IR SPECTRUM')) {
+                let j = i + 3; // Skip headers
+                while (j < lines.length && metadata.vibrations.length > 0) {
+                    const irLine = lines[j].trim();
+                    if (irLine === '' || irLine.startsWith('---')) break;
+                    // Format: mode freq intensity
+                    const irMatch = irLine.match(/^\s*(\d+):\s+([\d.]+)\s+([\d.]+)/);
+                    if (irMatch) {
+                        const mode = parseInt(irMatch[1]);
+                        const intensity = parseFloat(irMatch[3]);
+                        const vib = metadata.vibrations.find(v => v.mode === mode);
+                        if (vib) {
+                            vib.irIntensity = intensity;
+                        }
+                    }
+                    j++;
+                }
+            }
+
+            // Mulliken charges
+            if (line.includes('MULLIKEN ATOMIC CHARGES')) {
+                let j = i + 2;
+                while (j < lines.length) {
+                    const chargeLine = lines[j].trim();
+                    if (chargeLine === '' || chargeLine.includes('Sum of atomic charges')) break;
+                    // Format: atom_idx: element charge
+                    const chargeMatch = chargeLine.match(/^\s*(\d+)\s+([A-Za-z]+)\s*:\s*(-?[\d.]+)/);
+                    if (chargeMatch) {
+                        metadata.mullikenCharges.push({
+                            index: parseInt(chargeMatch[1]),
+                            element: chargeMatch[2],
+                            charge: parseFloat(chargeMatch[3])
+                        });
+                    }
+                    j++;
+                }
+            }
+
+            // Loewdin charges
+            if (line.includes('LOEWDIN ATOMIC CHARGES')) {
+                let j = i + 2;
+                while (j < lines.length) {
+                    const chargeLine = lines[j].trim();
+                    if (chargeLine === '' || chargeLine.includes('---')) break;
+                    const chargeMatch = chargeLine.match(/^\s*(\d+)\s+([A-Za-z]+)\s*:\s*(-?[\d.]+)/);
+                    if (chargeMatch) {
+                        metadata.loewdinCharges.push({
+                            index: parseInt(chargeMatch[1]),
+                            element: chargeMatch[2],
+                            charge: parseFloat(chargeMatch[3])
+                        });
+                    }
+                    j++;
+                }
+            }
+
+            // Orbital energies (HOMO/LUMO)
+            if (line.includes('ORBITAL ENERGIES')) {
+                let homoEnergy = null, lumoEnergy = null;
+                let lastOccupied = null;
+                let j = i + 4; // Skip headers
+                while (j < lines.length) {
+                    const orbLine = lines[j].trim();
+                    if (orbLine === '' || orbLine.includes('---')) break;
+                    // Format: NO OCC E(Eh) E(eV)
+                    const orbMatch = orbLine.match(/^\s*(\d+)\s+([\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)/);
+                    if (orbMatch) {
+                        const occ = parseFloat(orbMatch[2]);
+                        const energyEv = parseFloat(orbMatch[4]);
+                        if (occ > 0.5) {
+                            lastOccupied = energyEv;
+                        } else if (lastOccupied !== null && lumoEnergy === null) {
+                            homoEnergy = lastOccupied;
+                            lumoEnergy = energyEv;
+                        }
+                    }
+                    j++;
+                }
+                if (homoEnergy !== null && lumoEnergy !== null) {
+                    metadata.orbitalEnergies = {
+                        homo: homoEnergy,
+                        lumo: lumoEnergy,
+                        gap: lumoEnergy - homoEnergy,
+                        unit: 'eV'
+                    };
+                }
+            }
+
+            // Thermodynamics
+            if (line.includes('THERMOCHEMISTRY')) {
+                metadata.thermodynamics = {};
+                for (let j = i; j < Math.min(i + 50, lines.length); j++) {
+                    const thermLine = lines[j];
+                    if (thermLine.includes('Temperature')) {
+                        const tempMatch = thermLine.match(/Temperature\s*\.+\s*([\d.]+)\s*K/);
+                        if (tempMatch) metadata.thermodynamics.temperature = parseFloat(tempMatch[1]);
+                    }
+                    if (thermLine.includes('Total enthalpy')) {
+                        const hMatch = thermLine.match(/Total enthalpy\s*\.+\s*(-?[\d.]+)\s*Eh/);
+                        if (hMatch) metadata.thermodynamics.enthalpy = parseFloat(hMatch[1]);
+                    }
+                    if (thermLine.includes('Total entropy correction')) {
+                        const sMatch = thermLine.match(/Total entropy correction\s*\.+\s*(-?[\d.]+)\s*Eh/);
+                        if (sMatch) metadata.thermodynamics.entropyCorrection = parseFloat(sMatch[1]);
+                    }
+                    if (thermLine.includes('Final Gibbs free energy')) {
+                        const gMatch = thermLine.match(/Final Gibbs free energy\s*\.+\s*(-?[\d.]+)\s*Eh/);
+                        if (gMatch) metadata.thermodynamics.gibbsFreeEnergy = parseFloat(gMatch[1]);
+                    }
+                    if (thermLine.includes('Zero point energy')) {
+                        const zpeMatch = thermLine.match(/Zero point energy\s*\.+\s*(-?[\d.]+)\s*Eh/);
+                        if (zpeMatch) metadata.thermodynamics.zeroPointEnergy = parseFloat(zpeMatch[1]);
+                    }
+                }
+            }
+
+            // SCF energies for convergence tracking
+            if (line.includes('TOTAL SCF ENERGY')) {
+                const scfMatch = line.match(/TOTAL SCF ENERGY\s+=\s+(-?[\d.]+)/);
+                if (scfMatch) {
+                    metadata.scfEnergies.push(parseFloat(scfMatch[1]));
+                }
+            }
+        }
+
+        // Second pass: Extract coordinates and per-frame data
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
 
@@ -917,7 +1469,15 @@ export default class FileHandler {
 
                         // Validate element symbol (should start with a letter)
                         if (/^[A-Z][a-z]?$/.test(element) && !isNaN(x) && !isNaN(y) && !isNaN(z)) {
-                            atomData.push({ element, x, y, z });
+                            const atom = { element, x, y, z };
+
+                            // Add Mulliken charge if available for this atom
+                            const atomIdx = atomData.length;
+                            if (metadata.mullikenCharges[atomIdx]) {
+                                atom.charge = metadata.mullikenCharges[atomIdx].charge;
+                            }
+
+                            atomData.push(atom);
                         }
                     }
                 }
@@ -927,7 +1487,7 @@ export default class FileHandler {
                 let j = i;
 
                 // Search for the next FINAL SINGLE POINT ENERGY
-                while (j < lines.length && j < i + 500) { // Limit search to next 500 lines
+                while (j < lines.length && j < i + 500) {
                     if (lines[j].includes('FINAL SINGLE POINT ENERGY')) {
                         const energyMatch = lines[j].match(/FINAL SINGLE POINT ENERGY\s+(-?[\d.]+)/);
                         if (energyMatch) {
@@ -985,16 +1545,36 @@ export default class FileHandler {
         // Store frames and energies globally (consistent with extxyz parser)
         window.xyzFrames = frames.length > 1 ? frames : null;
         window.frameEnergies = frameEnergies;
-        window._pendingChartData = null; // Clear AI chart when loading new molecule
+        window._pendingChartData = null;
+
+        // Store metadata globally
+        window.orcaMetadata = metadata;
 
         // Update energy chart button if available
         window.updateEnergyChartButton?.();
 
-        // Return first frame data (no circular reference)
-        return {
+        // Return first frame data with metadata
+        const result = {
             atomData: frames[0].atomData,
             numAtoms: frames[0].numAtoms
         };
+
+        // Clean up metadata - only include non-empty fields
+        const cleanMetadata = {};
+        if (metadata.vibrations.length > 0) cleanMetadata.vibrations = metadata.vibrations;
+        if (metadata.dipole) cleanMetadata.dipole = metadata.dipole;
+        if (metadata.mullikenCharges.length > 0) cleanMetadata.mullikenCharges = metadata.mullikenCharges;
+        if (metadata.loewdinCharges.length > 0) cleanMetadata.loewdinCharges = metadata.loewdinCharges;
+        if (metadata.thermodynamics) cleanMetadata.thermodynamics = metadata.thermodynamics;
+        if (metadata.orbitalEnergies) cleanMetadata.orbitalEnergies = metadata.orbitalEnergies;
+        if (metadata.multiplicity !== null) cleanMetadata.multiplicity = metadata.multiplicity;
+        if (metadata.charge !== null) cleanMetadata.charge = metadata.charge;
+
+        if (Object.keys(cleanMetadata).length > 0) {
+            result.metadata = cleanMetadata;
+        }
+
+        return result;
     }
 
     parseJSON() {
