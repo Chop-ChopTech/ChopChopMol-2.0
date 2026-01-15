@@ -1875,6 +1875,14 @@ const FUNCTIONS = {
 function getMoleculeState() {
     const hasAtoms = !!window.main?.molecule?.atoms?.length;
     const frames = window.xyzFrames || [];
+    const energies = window.frameEnergies || [];
+    const metadata = window.frameMetadata || [];
+
+    // Check if current atoms have forces
+    const currentAtoms = window.main?.molecule?.atoms || [];
+    const hasForces = currentAtoms.some(atom =>
+        atom.fx !== undefined || atom.fy !== undefined || atom.fz !== undefined
+    );
 
     return {
         hasAtoms,
@@ -1895,8 +1903,15 @@ function getMoleculeState() {
             index: i,
             atomCount: f.numAtoms,
             comment: f.comment || '',
-            atoms: f.atomData  // Full atom data for each frame
+            atoms: f.atomData,  // Full atom data for each frame (includes fx, fy, fz if present)
+            energy: energies[i] !== undefined ? energies[i] : null,
+            metadata: metadata[i] || null
         })),
+        // Energy and force data
+        hasEnergies: energies.some(e => e !== null && e !== undefined),
+        energies: energies,
+        hasForces: hasForces,
+        hasMetadata: metadata.length > 0,
         maceModel: AI_CONFIG.maceModel || null,
         aiModel: AI_CONFIG.model,
         currentFileName: window.fileName

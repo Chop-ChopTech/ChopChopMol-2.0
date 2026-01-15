@@ -810,16 +810,18 @@ export default class Molecule {
             const origin = atom.position.clone().sub(this.offset);
 
             // Color based on force magnitude or direction
-            const color = new THREE.Color().setHSL(0.0, 0.8, 0.5); // Red-ish
+            const color = new THREE.Color(0x00ff00); // Red-ish
 
             const arrow = new THREE.ArrowHelper(
                 dir,
                 origin,
                 forceMag,
                 color,
-                forceMag * 0.3, // headLength
-                forceMag * 0.15  // headWidth
+                forceMag * 0.1, // headLength
+                forceMag * 0.07  // headWidth
             );
+
+
 
             this.forceArrowGroup.add(arrow);
         }
