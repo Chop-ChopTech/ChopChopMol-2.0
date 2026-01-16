@@ -6116,6 +6116,40 @@ window.updateForceArrowControls = function () {
     }
 };
 
+// Transition settings
+window.transitionSettings = {
+    enabled: false,
+    duration: 300
+};
+
+const toggleTransitions = document.getElementById('toggleTransitions');
+const transitionDuration = document.getElementById('transitionDuration');
+const transitionDurationValue = document.getElementById('transitionDurationValue');
+const transitionDurationRow = document.getElementById('transitionDurationRow');
+
+if (toggleTransitions) {
+    toggleTransitions.addEventListener('change', function () {
+        window.transitionSettings.enabled = this.checked;
+        if (transitionDurationRow) {
+            transitionDurationRow.style.opacity = this.checked ? '1' : '0.5';
+        }
+    });
+}
+
+if (transitionDuration) {
+    transitionDuration.addEventListener('input', function () {
+        window.transitionSettings.duration = parseInt(this.value);
+        if (transitionDurationValue) {
+            transitionDurationValue.textContent = this.value + 'ms';
+        }
+    });
+}
+
+// Initialize transition duration row opacity
+if (transitionDurationRow) {
+    transitionDurationRow.style.opacity = '0.5';
+}
+
 render();
 controls.addEventListener('change', () => {
     render();

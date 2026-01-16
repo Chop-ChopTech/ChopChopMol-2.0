@@ -897,6 +897,133 @@ export default class Molecule {
     }
 
     /**
+     * Animate atom positions to target frame data with smooth interpolation.
+     * @param {Object} frameData - { atomData: [{element, x, y, z}, ...], numAtoms }
+     * @param {number} duration - Animation duration in milliseconds
+     * @param {string} easing - Easing function: 'linear', 'easeInOut', 'easeOut'
+     * @returns {Promise} Resolves when animation completes
+     */
+    animateToFrame(frameData, duration = 300, easing = 'easeInOut') {
+        return new Promise((resolve) => {
+            if (!this.instancedMesh || !this.atoms.length || !frameData?.atomData) {
+                resolve(false);
+                return;
+            }
+
+            // Verify atom count matches
+            if (frameData.numAtoms !== this.atoms.length) {
+                resolve(false);
+                return;
+            }
+
+            // Cancel any ongoing animation
+            if (this._animationId) {
+                cancelAnimationFrame(this._animationId);
+                this._animationId = null;
+            }
+
+            const stretch = this.stretch;
+            const startPositions = this.atoms.map(atom => atom.position.clone());
+            const targetPositions = frameData.atomData.map(a =>
+                new THREE.Vector3(a.x * stretch, a.y * stretch, a.z * stretch)
+            );
+
+            const startTime = performance.now();
+            const matrix = new THREE.Matrix4();
+            const atomSize = this.main.mode?.atomSize || 1;
+
+            // Easing functions
+            const easingFns = {
+                linear: t => t,
+                easeInOut: t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
+                easeOut: t => 1 - Math.pow(1 - t, 3),
+                easeIn: t => t * t * t
+            };
+            const easeFn = easingFns[easing] || easingFns.easeInOut;
+
+            const animate = (currentTime) => {
+                const elapsed = currentTime - startTime;
+                const rawProgress = Math.min(elapsed / duration, 1);
+                const progress = easeFn(rawProgress);
+
+                // Interpolate positions
+                for (let i = 0; i < this.atoms.length; i++) {
+                    const atom = this.atoms[i];
+                    const start = startPositions[i];
+                    const target = targetPositions[i];
+
+                    // Lerp position
+                    atom.position.lerpVectors(start, target, progress);
+                    atom.x = atom.position.x;
+                    atom.y = atom.position.y;
+                    atom.z = atom.position.z;
+
+                    // Update matrix
+                    const settings = this.atomSettings[atom.type];
+                    const radius = (settings?.realRadius || 0.67) * 1.5 * atomSize;
+                    matrix.makeScale(radius, radius, radius);
+                    matrix.setPosition(atom.position);
+                    this.instancedMesh.setMatrixAt(i, matrix);
+                }
+
+                this.instancedMesh.instanceMatrix.needsUpdate = true;
+
+                // Update bonds during animation
+                this.updateBonds(this.main.mode);
+
+                // Update labels if visible
+                if (this.labelInstancedMesh && this.labelInstancedMesh.visible) {
+                    this.updateLabels();
+                }
+
+                // Render
+                if (this.main.render) {
+                    this.main.render();
+                } else if (window.render) {
+                    window.render();
+                }
+
+                if (rawProgress < 1) {
+                    this._animationId = requestAnimationFrame(animate);
+                } else {
+                    this._animationId = null;
+                    // Sync main.data at the end
+                    this.main.data.atomData = frameData.atomData.map(a => ({
+                        element: a.element,
+                        x: a.x,
+                        y: a.y,
+                        z: a.z,
+                        fx: a.fx,
+                        fy: a.fy,
+                        fz: a.fz
+                    }));
+                    resolve(true);
+                }
+            };
+
+            this._animationId = requestAnimationFrame(animate);
+        });
+    }
+
+    /**
+     * Check if an animation is currently running
+     * @returns {boolean}
+     */
+    isAnimating() {
+        return this._animationId !== null;
+    }
+
+    /**
+     * Cancel any ongoing animation
+     */
+    cancelAnimation() {
+        if (this._animationId) {
+            cancelAnimationFrame(this._animationId);
+            this._animationId = null;
+        }
+    }
+
+    /**
      * Update atom positions from frame data without rebuilding the mesh.
      * Ideal for animation playback where atoms are the same but positions differ.
      * @param {Object} frameData - { atomData: [{element, x, y, z}, ...], numAtoms }

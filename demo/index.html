@@ -1664,38 +1664,59 @@
             const frameIndex = parseInt(this.value);
             if (window.xyzFrames && window.xyzFrames[frameIndex]) {
                 const frame = window.xyzFrames[frameIndex];
-
-                // Try to update positions in-place first (more efficient for animation playback)
-                const updated = window.main.molecule?.updateFromFrame({
+                const frameData = {
                     atomData: frame.atomData,
                     numAtoms: frame.numAtoms
-                });
+                };
 
-                if (!updated) {
-                    // Fallback to full rebuild if atom count changed
-                    window.main.newMolecule({
-                        atomData: frame.atomData,
-                        numAtoms: frame.numAtoms
-                    }, window.main.mode, false, true);
+                // Check if transitions are enabled
+                const transitionsEnabled = window.transitionSettings?.enabled;
+                const duration = window.transitionSettings?.duration || 300;
+
+                if (transitionsEnabled && window.main.molecule?.animateToFrame) {
+                    // Cancel any ongoing animation first
+                    if (window.main.molecule.cancelAnimation) {
+                        window.main.molecule.cancelAnimation();
+                    }
+                    // Use animated transition
+                    window.main.molecule.animateToFrame(frameData, duration, 'easeInOut').then(success => {
+                        if (!success) {
+                            // Fallback to instant update or rebuild
+                            const updated = window.main.molecule?.updateFromFrame(frameData);
+                            if (!updated) {
+                                window.main.newMolecule(frameData, window.main.mode, false, true);
+                            }
+                        }
+                        // Update force arrows after animation completes
+                        updateFrameForceArrows(frame);
+                    });
                 } else {
-                    // Render after position update
-                    if (window.render) window.render();
+                    // Instant update (no animation)
+                    const updated = window.main.molecule?.updateFromFrame(frameData);
+                    if (!updated) {
+                        window.main.newMolecule(frameData, window.main.mode, false, true);
+                    } else {
+                        if (window.render) window.render();
+                    }
+                    // Update force arrows immediately
+                    updateFrameForceArrows(frame);
                 }
 
                 document.getElementById('frameLabel').textContent =
                     `Frame ${frameIndex + 1} / ${window.xyzFrames.length}`;
-
-                // Update force arrows if the frame has force data
-                if (window.main.molecule && frame.atomData.some(a => a.fx !== undefined)) {
-                    window.main.molecule.setForcesFromFrame(frame);
-                    if (window.updateForceArrowControls) window.updateForceArrowControls();
-                    // If force arrows are visible, recreate them for new frame
-                    if (window.main.molecule.forceArrowGroup?.visible) {
-                        window.main.molecule.createForceArrows(window.forceArrowScale || 1.0);
-                    }
-                }
             }
         });
+
+        // Helper function to update force arrows for a frame
+        function updateFrameForceArrows(frame) {
+            if (window.main.molecule && frame.atomData.some(a => a.fx !== undefined)) {
+                window.main.molecule.setForcesFromFrame(frame);
+                if (window.updateForceArrowControls) window.updateForceArrowControls();
+                if (window.main.molecule.forceArrowGroup?.visible) {
+                    window.main.molecule.createForceArrows(window.forceArrowScale || 1.0);
+                }
+            }
+        }
 
         // Sync slider and number input
         document.getElementById('frameSpeed')?.addEventListener('input', function () {
@@ -1842,6 +1863,17 @@
                     <label>Force Scale</label>
                     <input type="range" id="forceScaleSlider" min="0.1" max="10" step="0.1" value="1">
                     <span id="forceScaleValue">1.0</span>
+                </div>
+
+                <div class="transition-settings" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px;">
+                    <div class="compact-style-row checkbox-row">
+                        <label><input type="checkbox" id="toggleTransitions"> Animate Transitions</label>
+                    </div>
+                    <div class="compact-style-row" id="transitionDurationRow">
+                        <label>Duration</label>
+                        <input type="range" id="transitionDuration" min="50" max="1000" step="10" value="300">
+                        <span id="transitionDurationValue">300ms</span>
+                    </div>
                 </div>
 
                 <button id="makeDefaultButton" class="style-save-btn" title="Save as Default">Make Default</button>

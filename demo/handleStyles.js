@@ -20,6 +20,8 @@ export async function saveStylePreferences(userId) {
             sillyMode: document.getElementById('toggleSilly').checked,
             showElements: document.getElementById('showElements').checked,
             showIndices: document.getElementById('showIndices').checked,
+            transitionsEnabled: document.getElementById('toggleTransitions')?.checked || false,
+            transitionDuration: parseInt(document.getElementById('transitionDuration')?.value) || 300,
             lastUpdated: new Date().toISOString()
         };
 
@@ -137,6 +139,35 @@ export function applyStylePreferences(prefs, renderer) {
     if (prefs.showIndices !== undefined) {
         document.getElementById('showIndices').checked = prefs.showIndices;
         window.showIndices = prefs.showIndices;
+    }
+
+    // Apply transition settings
+    if (prefs.transitionsEnabled !== undefined) {
+        const toggleTransitions = document.getElementById('toggleTransitions');
+        if (toggleTransitions) {
+            toggleTransitions.checked = prefs.transitionsEnabled;
+        }
+        if (window.transitionSettings) {
+            window.transitionSettings.enabled = prefs.transitionsEnabled;
+        }
+        const transitionDurationRow = document.getElementById('transitionDurationRow');
+        if (transitionDurationRow) {
+            transitionDurationRow.style.opacity = prefs.transitionsEnabled ? '1' : '0.5';
+        }
+    }
+
+    if (prefs.transitionDuration !== undefined) {
+        const transitionDuration = document.getElementById('transitionDuration');
+        const transitionDurationValue = document.getElementById('transitionDurationValue');
+        if (transitionDuration) {
+            transitionDuration.value = prefs.transitionDuration;
+        }
+        if (transitionDurationValue) {
+            transitionDurationValue.textContent = prefs.transitionDuration + 'ms';
+        }
+        if (window.transitionSettings) {
+            window.transitionSettings.duration = prefs.transitionDuration;
+        }
     }
 
     // Actually update labels display
