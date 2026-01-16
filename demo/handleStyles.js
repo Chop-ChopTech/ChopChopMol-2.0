@@ -196,8 +196,13 @@ export function applyStylePreferences(prefs, renderer) {
                     }
                 }
             } else if (targetMode !== 0) {
-                // If we're already in the correct mode, just update material properties
-                if (window.updateStyles) {
+                // If we're already in the correct mode, try to update material properties in-place
+                const updated = main.molecule.updateMaterialProperties(window.mode);
+                if (updated) {
+                    // Material updated in-place, update bonds too
+                    main.molecule.updateBonds(window.mode);
+                } else if (window.updateStyles) {
+                    // Fallback to full update if needed
                     window.updateStyles();
                 }
             }

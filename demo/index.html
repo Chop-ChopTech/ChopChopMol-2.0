@@ -1664,10 +1664,24 @@
             const frameIndex = parseInt(this.value);
             if (window.xyzFrames && window.xyzFrames[frameIndex]) {
                 const frame = window.xyzFrames[frameIndex];
-                window.main.newMolecule({
+
+                // Try to update positions in-place first (more efficient for animation playback)
+                const updated = window.main.molecule?.updateFromFrame({
                     atomData: frame.atomData,
                     numAtoms: frame.numAtoms
-                }, window.main.mode, false, true);
+                });
+
+                if (!updated) {
+                    // Fallback to full rebuild if atom count changed
+                    window.main.newMolecule({
+                        atomData: frame.atomData,
+                        numAtoms: frame.numAtoms
+                    }, window.main.mode, false, true);
+                } else {
+                    // Render after position update
+                    if (window.render) window.render();
+                }
+
                 document.getElementById('frameLabel').textContent =
                     `Frame ${frameIndex + 1} / ${window.xyzFrames.length}`;
 

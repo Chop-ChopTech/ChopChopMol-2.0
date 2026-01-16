@@ -24,7 +24,7 @@ import {
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[1] || backendUrl[0],
+    backendUrl: backendUrl[0] || backendUrl[0],
     sessionId: crypto.randomUUID(),
     model: 'gpt-5-mini',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
@@ -142,10 +142,21 @@ const FUNCTIONS = {
                 y = params.y ?? 0;
                 z = params.z ?? 0;
             }
-            window.main.data.atomData.push({ element: params.element.toUpperCase(), x, y, z });
-            window.main.data.numAtoms++;
-            window.main.newMolecule(window.main.data, window.main.mode, true, true);
-            return { success: true, message: `Added ${params.element}` };
+            // Use the new addAtom method which rebuilds mesh efficiently
+            const newIndex = window.main.molecule.addAtom(
+                { element: params.element.toUpperCase(), x, y, z },
+                window.main.mode
+            );
+            if (newIndex >= 0) {
+                if (typeof window.saveUndoState === 'function') {
+                    window.saveUndoState("Add Atom");
+                }
+                if (typeof window.render === 'function') {
+                    window.render();
+                }
+                return { success: true, message: `Added ${params.element}` };
+            }
+            return { success: false, message: "Failed to add atom" };
         }
     },
     set_angle: {
@@ -809,10 +820,25 @@ const FUNCTIONS = {
         execute: (params) => {
             if (!window.main?.data?.atomData) return { success: false, message: "No molecule loaded" };
             if (!window.atomsSelected?.length) return { success: false, message: "No atoms selected" };
+            const element = params.element.toUpperCase();
+            // Validate element
+            if (!window.main.molecule.atomSettings[element]) {
+                return { success: false, message: `Unknown element: ${element}` };
+            }
+            // Update atoms in place using the new method (no rebuild needed)
+            window.main.molecule.updateAtomElement(window.atomsSelected, element);
+            // Update data array to match
             window.atomsSelected.forEach(idx => {
-                if (window.main.data.atomData[idx]) window.main.data.atomData[idx].element = params.element.toUpperCase();
+                if (window.main.data.atomData[idx]) window.main.data.atomData[idx].element = element;
             });
-            window.main.newMolecule(window.main.data, window.main.mode, true, true);
+            // Update bonds since radii may change
+            window.main.molecule.updateBonds(window.main.mode);
+            if (typeof window.saveUndoState === 'function') {
+                window.saveUndoState("Change Element");
+            }
+            if (typeof window.render === 'function') {
+                window.render();
+            }
             return { success: true, message: `Changed ${window.atomsSelected.length} atom(s) to ${params.element}` };
         }
     },
@@ -821,12 +847,16 @@ const FUNCTIONS = {
         execute: () => {
             if (!window.main?.data?.atomData) return { success: false, message: "No molecule loaded" };
             if (!window.atomsSelected?.length) return { success: false, message: "No atoms selected" };
-            const sorted = [...window.atomsSelected].sort((a, b) => b - a);
-            sorted.forEach(idx => window.main.data.atomData.splice(idx, 1));
-            window.main.data.numAtoms -= window.atomsSelected.length;
             const removed = window.atomsSelected.length;
+            // Use the new removeAtoms method which rebuilds mesh efficiently
+            window.main.molecule.removeAtoms(window.atomsSelected, window.main.mode);
             window.atomsSelected = [];
-            window.main.newMolecule(window.main.data, window.main.mode, true, true);
+            if (typeof window.saveUndoState === 'function') {
+                window.saveUndoState("Remove Atoms");
+            }
+            if (typeof window.render === 'function') {
+                window.render();
+            }
             return { success: true, message: `Removed ${removed} atom(s)` };
         }
     },

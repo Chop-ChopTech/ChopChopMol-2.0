@@ -491,26 +491,35 @@ function updateStyles() {
 
     mode = main.setNewMode(true);
 
-    main.newMolecule(main.data,
-        main.mode,
-        true,
-        true,
-        false
-    );
+    // Try to update material properties in-place first
+    const updated = main.molecule.updateMaterialProperties(main.mode);
 
-    // Restore selection after molecule is recreated
-    atomsSelected = previousSelection;
+    if (!updated) {
+        // Material type changed (basic <-> standard), need full rebuild
+        main.newMolecule(main.data,
+            main.mode,
+            true,
+            true,
+            false
+        );
 
-    // Re-apply visual selection
-    if (atomsSelected.length > 0) {
-        atomsSelected.forEach(idx => {
-            selectAtom(idx, false);
-        });
+        // Restore selection after molecule is recreated
+        atomsSelected = previousSelection;
 
-        // Update UI
-        const element = main.molecule.atoms[atomsSelected[0]].type;
-        updateEditingContent(element, main.molecule.atomSettings[element].color);
-        attachButtonEventListeners();
+        // Re-apply visual selection
+        if (atomsSelected.length > 0) {
+            atomsSelected.forEach(idx => {
+                selectAtom(idx, false);
+            });
+
+            // Update UI
+            const element = main.molecule.atoms[atomsSelected[0]].type;
+            updateEditingContent(element, main.molecule.atomSettings[element].color);
+            attachButtonEventListeners();
+        }
+    } else {
+        // Material updated in-place, also update bonds with new sizes
+        main.molecule.updateBonds(main.mode);
     }
 
     render();
@@ -1921,41 +1930,37 @@ function attachButtonEventListeners() {
         if (atomsSelected.length > 0) {
             const replacingMolecule = window.prompt("Enter the element you want to replace the current atom with");
             if (replacingMolecule && replacingMolecule.trim()) {
-                const element = replacingMolecule.trim();
+                const element = replacingMolecule.trim().toUpperCase();
                 // Validate it's a known element
                 if (!main.molecule.atomSettings[element]) {
                     alert(`Unknown element: ${element}`);
                     return;
                 }
-                // Update all selected atoms
+                // Update all selected atoms in place (no rebuild needed)
+                main.molecule.updateAtomElement(atomsSelected, element);
+                // Update data array to match
                 atomsSelected.forEach(idx => {
-                    main.data.atomData[idx].element = replacingMolecule;
+                    main.data.atomData[idx].element = element;
                 });
-                main.newMolecule(main.data,
-                    main.mode,
-                    true,
-                    true,
-                    false
-                );
+                // Update bonds since bond lengths may change with different atom radii
+                main.molecule.updateBonds(main.mode);
+                if (typeof saveUndoState === 'function') {
+                    saveUndoState("Change Element");
+                }
+                render();
             }
         }
     });
 
     reattachButtonHandler('removeAtom', () => {
-        // Remove all selected atoms (in reverse order to maintain indices)
-        const sortedIndices = [...atomsSelected].sort((a, b) => b - a);
-        sortedIndices.forEach(idx => {
-            main.data.atomData.splice(idx, 1);
-        });
-        main.data.numAtoms = main.data.atomData.length;  // Use actual length instead
+        if (atomsSelected.length === 0) return;
+        // Use the new removeAtoms method which rebuilds mesh efficiently
+        main.molecule.removeAtoms(atomsSelected, main.mode);
         atomsSelected = [];
-        main.newMolecule(
-            main.data,
-            main.mode,
-            true,
-            true,
-            false
-        );
+        if (typeof saveUndoState === 'function') {
+            saveUndoState("Remove Atoms");
+        }
+        render();
     });
 
     reattachButtonHandler('createFragment', () => {

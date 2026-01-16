@@ -895,4 +895,268 @@ export default class Molecule {
         this.forceData = frameData.atomData;
         return true;
     }
+
+    /**
+     * Update atom positions from frame data without rebuilding the mesh.
+     * Ideal for animation playback where atoms are the same but positions differ.
+     * @param {Object} frameData - { atomData: [{element, x, y, z}, ...], numAtoms }
+     * @returns {boolean} True if update succeeded
+     */
+    updateFromFrame(frameData) {
+        if (!this.instancedMesh || !this.atoms.length || !frameData?.atomData) return false;
+
+        // Verify atom count matches
+        if (frameData.numAtoms !== this.atoms.length) {
+            return false; // Atom count changed, need rebuild
+        }
+
+        const stretch = this.stretch;
+        const matrix = new THREE.Matrix4();
+        const atomSize = this.main.mode?.atomSize || 1;
+
+        for (let i = 0; i < this.atoms.length; i++) {
+            const atomData = frameData.atomData[i];
+            const atom = this.atoms[i];
+
+            // Update position
+            const x = atomData.x * stretch;
+            const y = atomData.y * stretch;
+            const z = atomData.z * stretch;
+
+            atom.position.set(x, y, z);
+            atom.x = atom.position.x;
+            atom.y = atom.position.y;
+            atom.z = atom.position.z;
+
+            // Update matrix
+            const settings = this.atomSettings[atom.type];
+            const radius = (settings?.realRadius || 0.67) * 1.5 * atomSize;
+            matrix.makeScale(radius, radius, radius);
+            matrix.setPosition(atom.position);
+            this.instancedMesh.setMatrixAt(i, matrix);
+        }
+
+        this.instancedMesh.instanceMatrix.needsUpdate = true;
+
+        // Update bonds
+        this.updateBonds(this.main.mode);
+
+        // Update labels if visible
+        if (this.labelInstancedMesh && this.labelInstancedMesh.visible) {
+            this.updateLabels();
+        }
+
+        // Sync main.data
+        this.main.data.atomData = frameData.atomData.map(a => ({
+            element: a.element,
+            x: a.x,
+            y: a.y,
+            z: a.z,
+            fx: a.fx,
+            fy: a.fy,
+            fz: a.fz
+        }));
+
+        return true;
+    }
+
+    /**
+     * Update material properties in place without rebuilding the mesh.
+     * This can update roughness, metalness, opacity, and atom size.
+     * Note: Cannot switch between MeshBasicMaterial (mode 0) and MeshStandardMaterial.
+     * @param {Object} mode - The new mode settings
+     * @returns {boolean} True if update succeeded, false if rebuild is needed
+     */
+    updateMaterialProperties(mode) {
+        if (!this.instancedMesh || !this.instancedMesh.material) return false;
+
+        const material = this.instancedMesh.material;
+        const isBasicMaterial = material.type === 'MeshBasicMaterial';
+        const newModeIsBasic = mode === 0 || mode == 0;
+
+        // If switching between basic and standard material types, we need a full rebuild
+        if (isBasicMaterial !== newModeIsBasic) {
+            return false; // Signal that rebuild is needed
+        }
+
+        // Update standard material properties if applicable
+        if (!isBasicMaterial && mode && typeof mode === 'object') {
+            if (mode.roughness !== undefined) material.roughness = mode.roughness;
+            if (mode.metalness !== undefined) material.metalness = mode.metalness;
+            if (mode.opacity !== undefined) {
+                material.opacity = mode.opacity;
+                material.transparent = mode.opacity < 1;
+            }
+            material.needsUpdate = true;
+        }
+
+        // Update atom sizes if atomSize changed
+        if (mode && mode.atomSize !== undefined) {
+            const matrix = new THREE.Matrix4();
+            const atomSize = mode.atomSize;
+
+            this.atoms.forEach((atom, idx) => {
+                const settings = this.atomSettings[atom.type];
+                const radius = (settings?.realRadius || 0.67) * 1.5 * atomSize;
+                matrix.makeScale(radius, radius, radius);
+                matrix.setPosition(atom.position);
+                this.instancedMesh.setMatrixAt(idx, matrix);
+            });
+            this.instancedMesh.instanceMatrix.needsUpdate = true;
+        }
+
+        return true;
+    }
+
+    /**
+     * Update an atom's element type in place without rebuilding the entire molecule.
+     * This changes the color and radius of the specified atom(s).
+     * @param {number|number[]} atomIndices - Single index or array of indices to update
+     * @param {string} newElement - The new element symbol (e.g., 'C', 'O', 'N')
+     */
+    updateAtomElement(atomIndices, newElement) {
+        if (!this.instancedMesh || !this.atoms.length) return false;
+
+        const indices = Array.isArray(atomIndices) ? atomIndices : [atomIndices];
+        const settings = this.atomSettings[newElement];
+        if (!settings) return false;
+
+        const colorAttribute = this.instancedMesh.geometry.getAttribute('color');
+        const newColor = new THREE.Color(settings.color);
+        const newRadius = (settings.realRadius || 0.67) * 1.5;
+        const atomSize = this.main.mode?.atomSize || 1;
+        const scaledRadius = newRadius * atomSize;
+        const matrix = new THREE.Matrix4();
+
+        indices.forEach(idx => {
+            if (idx < 0 || idx >= this.atoms.length) return;
+
+            const atom = this.atoms[idx];
+
+            // Update atom object
+            atom.type = newElement;
+            atom.color = new THREE.Color(settings.color);
+            atom.displayColor = atom.color.clone();
+            atom.realRadius = settings.realRadius || 0.67;
+
+            // Update color in instanced mesh
+            colorAttribute.setXYZ(idx, newColor.r, newColor.g, newColor.b);
+
+            // Update radius/scale in matrix
+            matrix.makeScale(scaledRadius, scaledRadius, scaledRadius);
+            matrix.setPosition(atom.position);
+            this.instancedMesh.setMatrixAt(idx, matrix);
+        });
+
+        colorAttribute.needsUpdate = true;
+        this.instancedMesh.instanceMatrix.needsUpdate = true;
+
+        // Sync data with main.data
+        this.updateMainCoordinates();
+
+        return true;
+    }
+
+    /**
+     * Rebuild the molecule mesh efficiently after atoms have been added or removed.
+     * This recreates just the instanced mesh and bonds, preserving camera state.
+     * @param {Object} data - The molecule data with atomData array
+     * @param {Object} mode - The rendering mode settings
+     */
+    rebuildMesh(data, mode) {
+        if (!data || !data.atomData) return false;
+
+        // Store current offset if exists
+        const currentOffset = this.offset ? this.offset.clone() : null;
+
+        // Clear old mesh but don't reset everything
+        if (this.instancedMesh) {
+            this.main.scene.remove(this.instancedMesh);
+            if (this.instancedMesh.geometry) this.instancedMesh.geometry.dispose();
+            if (this.instancedMesh.material) {
+                if (Array.isArray(this.instancedMesh.material)) {
+                    this.instancedMesh.material.forEach(mat => mat.dispose());
+                } else {
+                    this.instancedMesh.material.dispose();
+                }
+            }
+            this.instancedMesh = null;
+        }
+
+        // Clear atoms array
+        this.atoms = [];
+
+        // Recreate atoms with the new data
+        this.createAtoms(data, mode);
+
+        // Restore offset if we had one (don't re-center)
+        if (currentOffset) {
+            this.offset = currentOffset;
+            this.instancedMesh.position.sub(currentOffset);
+        }
+
+        // Recreate bonds
+        this.updateBonds(mode);
+
+        // Update labels if they were visible
+        if (this.labelInstancedMesh && this.labelInstancedMesh.visible) {
+            this.clearLabels();
+            // Labels will be recreated when toggleLabels is called
+        }
+
+        // Sync main.data
+        this.main.data = data;
+
+        return true;
+    }
+
+    /**
+     * Add an atom to the molecule and rebuild the mesh.
+     * @param {Object} atomData - { element, x, y, z }
+     * @param {Object} mode - The rendering mode
+     * @returns {number} The index of the new atom, or -1 on failure
+     */
+    addAtom(atomData, mode) {
+        if (!this.main.data || !this.main.data.atomData) return -1;
+
+        // Add to data array
+        this.main.data.atomData.push({
+            element: atomData.element.toUpperCase(),
+            x: atomData.x,
+            y: atomData.y,
+            z: atomData.z
+        });
+        this.main.data.numAtoms = this.main.data.atomData.length;
+
+        // Rebuild mesh
+        this.rebuildMesh(this.main.data, mode);
+
+        return this.atoms.length - 1;
+    }
+
+    /**
+     * Remove atoms from the molecule and rebuild the mesh.
+     * @param {number[]} indices - Array of atom indices to remove (will be sorted descending)
+     * @param {Object} mode - The rendering mode
+     * @returns {number} Number of atoms removed
+     */
+    removeAtoms(indices, mode) {
+        if (!this.main.data || !this.main.data.atomData || !indices.length) return 0;
+
+        // Sort indices descending to avoid index shifting issues
+        const sortedIndices = [...indices].sort((a, b) => b - a);
+
+        // Remove atoms from data array
+        sortedIndices.forEach(idx => {
+            if (idx >= 0 && idx < this.main.data.atomData.length) {
+                this.main.data.atomData.splice(idx, 1);
+            }
+        });
+        this.main.data.numAtoms = this.main.data.atomData.length;
+
+        // Rebuild mesh
+        this.rebuildMesh(this.main.data, mode);
+
+        return sortedIndices.length;
+    }
 }
