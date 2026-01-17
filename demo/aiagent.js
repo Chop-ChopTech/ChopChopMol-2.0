@@ -24,9 +24,9 @@ import {
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[1] || backendUrl[0],
+    backendUrl: backendUrl[0] || backendUrl[0],
     sessionId: crypto.randomUUID(),
-    model: localStorage.getItem('chopchop_ai_model') || 'claude-3-5-haiku-20241022', // Haiku is 5x faster than Sonnet
+    model: localStorage.getItem('chopchop_ai_model') || 'claude-haiku-4-5-20251001', // Haiku is 5x faster than Sonnet
     maceModel: localStorage.getItem('chopchop_mace_model') || null
 };
 // Save immediately if new
