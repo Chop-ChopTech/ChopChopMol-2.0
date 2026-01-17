@@ -793,24 +793,40 @@ export default class Molecule {
 
         const stretch = this.stretch;
 
+        // First pass: calculate min/max magnitudes for adaptive coloring
+        let minMag = Infinity, maxMag = 0;
+        const forceInfos = [];
         for (let i = 0; i < this.atoms.length && i < this.forceData.length; i++) {
             const atom = this.atoms[i];
             const forceAtom = this.forceData[i];
-
             if (forceAtom.fx === undefined) continue;
 
             const fx = forceAtom.fx * scale * stretch;
             const fy = forceAtom.fy * scale * stretch;
             const fz = forceAtom.fz * scale * stretch;
-
             const forceMag = Math.sqrt(fx * fx + fy * fy + fz * fz);
             if (forceMag < 0.001) continue;
 
+            minMag = Math.min(minMag, forceMag);
+            maxMag = Math.max(maxMag, forceMag);
+            forceInfos.push({ atom, fx, fy, fz, forceMag });
+        }
+
+        const magRange = maxMag - minMag || 1;
+
+        // Second pass: create arrows with adaptive colors
+        for (const { atom, fx, fy, fz, forceMag } of forceInfos) {
             const dir = new THREE.Vector3(fx, fy, fz).normalize();
             const origin = atom.position.clone().sub(this.offset);
 
-            // Color based on force magnitude or direction
-            const color = new THREE.Color(0x00ff00); // Red-ish
+            // Adaptive color: blue (low) -> green (mid) -> red (high)
+            const t = (forceMag - minMag) / magRange;
+            const color = new THREE.Color();
+            if (t < 0.5) {
+                color.setRGB(0, t * 2, 1 - t * 2); // blue to green
+            } else {
+                color.setRGB((t - 0.5) * 2, 1 - (t - 0.5) * 2, 0); // green to red
+            }
 
             const arrow = new THREE.ArrowHelper(
                 dir,
@@ -820,8 +836,6 @@ export default class Molecule {
                 forceMag * 0.1, // headLength
                 forceMag * 0.07  // headWidth
             );
-
-
 
             this.forceArrowGroup.add(arrow);
         }
@@ -928,6 +942,19 @@ export default class Molecule {
                 new THREE.Vector3(a.x * stretch, a.y * stretch, a.z * stretch)
             );
 
+            // Store force data for interpolation
+            const startForces = this.forceData ? this.forceData.map(f => ({
+                fx: f.fx || 0,
+                fy: f.fy || 0,
+                fz: f.fz || 0
+            })) : null;
+            const targetForces = frameData.atomData.some(a => a.fx !== undefined) ? frameData.atomData.map(a => ({
+                fx: a.fx || 0,
+                fy: a.fy || 0,
+                fz: a.fz || 0
+            })) : null;
+            const shouldAnimateForces = startForces && targetForces && this.forceArrowGroup?.visible;
+
             const startTime = performance.now();
             const matrix = new THREE.Matrix4();
             const atomSize = this.main.mode?.atomSize || 1;
@@ -974,6 +1001,22 @@ export default class Molecule {
                 // Update labels if visible
                 if (this.labelInstancedMesh && this.labelInstancedMesh.visible) {
                     this.updateLabels();
+                }
+
+                // Interpolate and update force arrows if needed
+                if (shouldAnimateForces) {
+                    const interpolatedForces = [];
+                    for (let i = 0; i < this.atoms.length; i++) {
+                        const start = startForces[i];
+                        const target = targetForces[i];
+                        interpolatedForces.push({
+                            fx: start.fx + (target.fx - start.fx) * progress,
+                            fy: start.fy + (target.fy - start.fy) * progress,
+                            fz: start.fz + (target.fz - start.fz) * progress
+                        });
+                    }
+                    this.forceData = interpolatedForces;
+                    this.createForceArrows(window.forceArrowScale || 1.0);
                 }
 
                 // Render

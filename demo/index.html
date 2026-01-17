@@ -1678,9 +1678,7 @@
                     if (window.main.molecule.cancelAnimation) {
                         window.main.molecule.cancelAnimation();
                     }
-                    // Update force arrows immediately so they stay in sync with frame changes
-                    updateFrameForceArrows(frame);
-                    // Use animated transition
+                    // Use animated transition (force arrows will be interpolated during animation)
                     window.main.molecule.animateToFrame(frameData, duration, 'easeInOut').then(success => {
                         if (!success) {
                             // Fallback to instant update or rebuild
@@ -1689,6 +1687,9 @@
                                 window.main.newMolecule(frameData, window.main.mode, false, true);
                             }
                             // Ensure force arrows are applied if we rebuilt the molecule
+                            updateFrameForceArrows(frame);
+                        } else {
+                            // Animation succeeded, finalize force data
                             updateFrameForceArrows(frame);
                         }
                     });
@@ -1857,7 +1858,8 @@
                         <label><input type="checkbox" id="showIndices"> Indices</label>
                     </div>
                     <div class="compact-style-row checkbox-row" id="forceArrowsRow">
-                        <label><input type="checkbox" id="toggleForceArrows"> Force Arrows <span id="forceArrowsStatus" style="font-size: 10px; color: #888;"></span></label>
+                        <label><input type="checkbox" id="toggleForceArrows"> Force Arrows <span id="forceArrowsStatus"
+                                style="font-size: 10px; color: #888;"></span></label>
                     </div>
                 </div>
 
@@ -1867,13 +1869,14 @@
                     <span id="forceScaleValue">1.0</span>
                 </div>
 
-                <div class="transition-settings" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px;">
+                <div class="transition-settings"
+                    style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px;">
                     <div class="compact-style-row checkbox-row">
                         <label><input type="checkbox" id="toggleTransitions"> Animate Transitions</label>
                     </div>
                     <div class="compact-style-row" id="transitionDurationRow">
                         <label>Duration</label>
-                        <input type="range" id="transitionDuration" min="50" max="1000" step="10" value="300">
+                        <input type="range" id="transitionDuration" min="50" max="300" step="10" value="300">
                         <span id="transitionDurationValue">300ms</span>
                     </div>
                 </div>
