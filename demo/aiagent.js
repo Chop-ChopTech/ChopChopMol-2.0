@@ -24,9 +24,9 @@ import {
 const backendUrl = ['https://chopchopmol-ai-backend.onrender.com', 'http://127.0.0.1:10000'];
 
 const AI_CONFIG = {
-    backendUrl: backendUrl[0] || backendUrl[0],
+    backendUrl: backendUrl[1] || backendUrl[0],
     sessionId: crypto.randomUUID(),
-    model: 'gpt-5-mini',
+    model: localStorage.getItem('chopchop_ai_model') || 'claude-3-5-haiku-20241022', // Haiku is 5x faster than Sonnet
     maceModel: localStorage.getItem('chopchop_mace_model') || null
 };
 // Save immediately if new
@@ -2044,9 +2044,10 @@ async function sendToAI(userMessage, onChunk) {
                 }
             }
 
-            // Execute tool calls if any
+            // Execute tool calls if any - IN PARALLEL for speed
             if (toolCalls?.length > 0) {
-                for (const tc of toolCalls) {
+                // Execute all tools in parallel
+                const toolPromises = toolCalls.map(async (tc) => {
                     const fn = tc.function.name;
                     const args = JSON.parse(tc.function.arguments || '{}');
                     console.log('AI calling:', fn, args);
@@ -2056,23 +2057,32 @@ async function sendToAI(userMessage, onChunk) {
                     if (FUNCTIONS[fn]) {
                         const res = await FUNCTIONS[fn].execute(args);
                         console.log('Result:', res);
+
+                        // Compress result - send only essential data
+                        const compressedResult = compressToolResult(fn, res);
+
                         // After executing a tool, check if it's a chart
                         if (fn === 'create_chart' && res.hasChart && window._pendingChartData) {
-                            executed.push({
+                            return {
                                 id: tc.id,
                                 name: fn,
                                 args,
-                                result: res,
+                                result: compressedResult,
                                 chartData: window._pendingChartData
-                            });
-                            window._pendingChartData = null;
+                            };
                         } else {
-                            executed.push({ id: tc.id, name: fn, args, result: res });
+                            return { id: tc.id, name: fn, args, result: compressedResult };
                         }
                     } else {
-                        executed.push({ id: tc.id, name: fn, args, result: { success: false, message: 'Function not found' } });
+                        return { id: tc.id, name: fn, args, result: { success: false, message: 'Function not found' } };
                     }
-                }
+                });
+
+                const results = await Promise.all(toolPromises);
+                executed.push(...results);
+
+                // Clear chart data after all tools
+                if (window._pendingChartData) window._pendingChartData = null;
             } else {
                 break;
             }
@@ -2084,6 +2094,36 @@ async function sendToAI(userMessage, onChunk) {
         console.error('AI Error:', e);
         return { error: e.message };
     }
+}
+
+// Compress tool results to reduce payload size
+function compressToolResult(functionName, result) {
+    // For successful operations, only send minimal confirmation
+    if (result.success) {
+        // Don't send full molecule data back - backend doesn't need it
+        const compressed = { success: true };
+
+        // Only include essential data
+        if (result.message) compressed.message = result.message;
+        if (result.action) compressed.action = result.action;
+        if (result.data && functionName === 'get_molecule_info') {
+            // Keep only essential molecule info
+            compressed.data = {
+                atomCount: result.data.atomCount,
+                elements: result.data.elements
+            };
+        }
+        if (result.data && functionName === 'get_bonded_atoms') {
+            compressed.data = result.data; // This is already minimal
+        }
+        if (result.chartData) compressed.chartData = result.chartData;
+        if (result.hasChart) compressed.hasChart = result.hasChart;
+
+        return compressed;
+    }
+
+    // For errors, send full result
+    return result;
 }
 
 // Add this utility function (put it near the top of aiagent.js or in a utils file)
@@ -2165,6 +2205,34 @@ window.AIAgent = {
     setModel: (m) => { AI_CONFIG.model = m; localStorage.setItem('chopchop_ai_model', m); },
     getModel: () => AI_CONFIG.model
 };
+
+// Warmup cache on page load to make first real request instant
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', warmupCache);
+} else {
+    setTimeout(warmupCache, 2000); // Delay if page already loaded
+}
+
+async function warmupCache() {
+    try {
+        console.log('🔥 Warming up AI cache...');
+        const dummyState = getMoleculeState();
+        const response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat/stream`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sessionId: AI_CONFIG.sessionId,
+                message: 'ping',
+                state: dummyState,
+                model: AI_CONFIG.model
+            })
+        });
+        await response.body?.cancel(); // Cancel immediately, we just want to warm the cache
+        console.log('✅ AI cache warmed');
+    } catch (e) {
+        // Silent fail - warmup is optional
+    }
+}
 
 // Cleanup session on tab/window close
 window.addEventListener('beforeunload', () => {
