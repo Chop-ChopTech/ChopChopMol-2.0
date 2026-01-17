@@ -1678,6 +1678,8 @@
                     if (window.main.molecule.cancelAnimation) {
                         window.main.molecule.cancelAnimation();
                     }
+                    // Update force arrows immediately so they stay in sync with frame changes
+                    updateFrameForceArrows(frame);
                     // Use animated transition
                     window.main.molecule.animateToFrame(frameData, duration, 'easeInOut').then(success => {
                         if (!success) {
@@ -1686,9 +1688,9 @@
                             if (!updated) {
                                 window.main.newMolecule(frameData, window.main.mode, false, true);
                             }
+                            // Ensure force arrows are applied if we rebuilt the molecule
+                            updateFrameForceArrows(frame);
                         }
-                        // Update force arrows after animation completes
-                        updateFrameForceArrows(frame);
                     });
                 } else {
                     // Instant update (no animation)
