@@ -5428,3 +5428,28 @@ input[type="color"]::-moz-color-swatch {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Remote file loading state - same as local but with loading indicator */
+#fileTree .file-item.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+#fileTree .file-item.loading::after {
+    content: '';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    animation: remoteFileSpin 0.8s linear infinite;
+}
+
+@keyframes remoteFileSpin {
+    to { transform: translateY(-50%) rotate(360deg); }
+}

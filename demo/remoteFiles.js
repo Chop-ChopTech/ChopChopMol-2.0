@@ -1,21 +1,27 @@
 /**
  * RemoteFileManager - SSH/SFTP remote file access
- * Integrates into the local file explorer toolbar
+ * Integrates into the existing LOCAL file explorer section
+ * Files look and behave exactly like local files
  */
 
 import { safeFetch } from './utils/apiUtils.js';
+
+const MOLECULE_EXTENSIONS = ['xyz', 'pdb', 'mol', 'sdf', 'cif', 'mol2', 'pqr', 'gro', 'cml', 'extxyz', 'out'];
 
 export class RemoteFileManager {
     constructor() {
         this.sessionId = this.generateSessionId();
         this.connected = false;
         this.currentPath = '.';
+        this.homePath = '.';
         this.host = null;
         this.username = null;
-        this.remoteFiles = [];
         this.backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
             ? 'http://127.0.0.1:10000'
-            : 'http://127.0.0.1:10000';
+            : 'https://chopchopmol-ai-backend.onrender.com';
+
+        // Store local state to restore on disconnect
+        this.savedLocalState = null;
 
         this.init();
     }
@@ -30,10 +36,8 @@ export class RemoteFileManager {
     }
 
     addToolbarButton() {
-        // Find the save button and its parent toolbar
         const saveBtn = document.getElementById('saveLocalBtn');
         if (!saveBtn) {
-            // Wait for DOM and retry
             setTimeout(() => this.addToolbarButton(), 100);
             return;
         }
@@ -41,10 +45,8 @@ export class RemoteFileManager {
         const toolbar = saveBtn.parentElement;
         if (!toolbar) return;
 
-        // Check if button already exists
         if (document.getElementById('remoteConnectBtn')) return;
 
-        // Create remote connect button
         const remoteBtn = document.createElement('button');
         remoteBtn.id = 'remoteConnectBtn';
         remoteBtn.className = 'local-toolbar-button remote-connect-btn';
@@ -52,17 +54,10 @@ export class RemoteFileManager {
         remoteBtn.innerHTML = '<i class="fas fa-plug"></i>';
 
         remoteBtn.addEventListener('click', () => {
-            if (this.connected) {
-                this.showRemoteFilesPanel();
-            } else {
-                this.showConnectionModal();
-            }
+            this.showConnectionModal();
         });
 
-        // Insert before the save button
         toolbar.insertBefore(remoteBtn, saveBtn);
-
-        // Update button state
         this.updateToolbarButton();
     }
 
@@ -72,7 +67,7 @@ export class RemoteFileManager {
 
         if (this.connected) {
             btn.classList.add('connected');
-            btn.title = `Connected to ${this.username}@${this.host} - Click to browse`;
+            btn.title = `Connected to ${this.username}@${this.host} - Click to manage`;
             btn.innerHTML = '<i class="fas fa-server"></i>';
         } else {
             btn.classList.remove('connected');
@@ -151,19 +146,6 @@ export class RemoteFileManager {
 
                         <div class="remote-error" id="remoteError" style="display: none;"></div>
                     </div>
-
-                    <div class="remote-files-browser" id="remoteFilesBrowser" style="display: none;">
-                        <div class="remote-path-bar">
-                            <button class="remote-nav-btn" onclick="window.remoteFileManager.navigateUp()" title="Go up">
-                                <i class="fas fa-level-up-alt"></i>
-                            </button>
-                            <span class="remote-path" id="remoteCurrentPath">~</span>
-                            <button class="remote-nav-btn" onclick="window.remoteFileManager.refreshFiles()" title="Refresh">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
-                        <div class="remote-files-list" id="remoteFilesList"></div>
-                    </div>
                 </div>
 
                 <div class="remote-modal-footer" id="remoteModalFooter">
@@ -215,38 +197,48 @@ export class RemoteFileManager {
         modal.style.display = 'flex';
 
         if (this.connected) {
-            this.showBrowserMode();
+            document.getElementById('remoteStatusBanner').style.display = 'flex';
+            document.getElementById('remoteStatusText').textContent = `${this.username}@${this.host}`;
+            document.getElementById('remoteConnectionForm').style.display = 'none';
+            document.getElementById('remoteModalFooter').style.display = 'none';
         } else {
-            this.showConnectMode();
+            document.getElementById('remoteStatusBanner').style.display = 'none';
+            document.getElementById('remoteConnectionForm').style.display = 'block';
+            document.getElementById('remoteModalFooter').style.display = 'flex';
+            setTimeout(() => document.getElementById('remoteHost').focus(), 100);
         }
-
-        setTimeout(() => document.getElementById('remoteHost').focus(), 100);
-    }
-
-    showConnectMode() {
-        document.getElementById('remoteStatusBanner').style.display = 'none';
-        document.getElementById('remoteConnectionForm').style.display = 'block';
-        document.getElementById('remoteFilesBrowser').style.display = 'none';
-        document.getElementById('remoteModalFooter').style.display = 'flex';
-    }
-
-    showBrowserMode() {
-        document.getElementById('remoteStatusBanner').style.display = 'flex';
-        document.getElementById('remoteStatusText').textContent = `${this.username}@${this.host}`;
-        document.getElementById('remoteConnectionForm').style.display = 'none';
-        document.getElementById('remoteFilesBrowser').style.display = 'flex';
-        document.getElementById('remoteModalFooter').style.display = 'none';
-        this.refreshFiles();
-    }
-
-    showRemoteFilesPanel() {
-        this.showConnectionModal();
-        this.showBrowserMode();
     }
 
     closeConnectionModal() {
         document.getElementById('remoteConnectionModal').style.display = 'none';
         document.getElementById('remoteError').style.display = 'none';
+    }
+
+    saveLocalState() {
+        const fileTree = document.getElementById('fileTree');
+        const headerSpan = document.querySelector('.local-section .section-header span');
+
+        this.savedLocalState = {
+            fileTreeHTML: fileTree.innerHTML,
+            headerHTML: headerSpan.innerHTML,
+            directoryHandle: window.fileExplorer?.directoryHandle
+        };
+    }
+
+    restoreLocalState() {
+        if (!this.savedLocalState) return;
+
+        const fileTree = document.getElementById('fileTree');
+        const headerSpan = document.querySelector('.local-section .section-header span');
+
+        fileTree.innerHTML = this.savedLocalState.fileTreeHTML;
+        headerSpan.innerHTML = this.savedLocalState.headerHTML;
+
+        // Re-enable local buttons
+        document.getElementById('refreshFolderBtn').onclick = () => window.fileExplorer?.refresh();
+        document.getElementById('openFolderBtn').onclick = () => window.fileExplorer?.openFolder();
+
+        this.savedLocalState = null;
     }
 
     async connect() {
@@ -305,10 +297,18 @@ export class RemoteFileManager {
                 this.connected = true;
                 this.host = host;
                 this.username = username;
-                this.currentPath = data.homeDir || '.';
+                this.homePath = data.homeDir || '.';
+                this.currentPath = this.homePath;
 
+                // Save local state before switching
+                this.saveLocalState();
+
+                // Update UI
                 this.updateToolbarButton();
-                this.showBrowserMode();
+                this.closeConnectionModal();
+
+                // Switch file explorer to remote mode
+                this.switchToRemoteMode();
             } else {
                 this.showError(data.error || 'Connection failed');
             }
@@ -339,18 +339,55 @@ export class RemoteFileManager {
         this.host = null;
         this.username = null;
         this.currentPath = '.';
-        this.remoteFiles = [];
 
+        // Restore local state
+        this.restoreLocalState();
         this.updateToolbarButton();
-        this.showConnectMode();
+        this.closeConnectionModal();
+
+        // Re-enable local toolbar buttons
+        const refreshBtn = document.getElementById('refreshFolderBtn');
+        const openBtn = document.getElementById('openFolderBtn');
+        const saveBtn = document.getElementById('saveLocalBtn');
+        const createBtn = document.getElementById('createFolderBtn');
+
+        if (window.fileExplorer?.directoryHandle) {
+            refreshBtn.disabled = false;
+            saveBtn.disabled = false;
+            createBtn.disabled = false;
+        }
+        openBtn.disabled = false;
+    }
+
+    switchToRemoteMode() {
+        // Update header to show remote connection (similar format to local)
+        const headerSpan = document.querySelector('.local-section .section-header span');
+        headerSpan.innerHTML = `<i class="fas fa-server"></i> REMOTE: ${this.host}`;
+
+        // Override refresh button to refresh remote files
+        const refreshBtn = document.getElementById('refreshFolderBtn');
+        refreshBtn.onclick = () => this.refreshFiles();
+        refreshBtn.disabled = false;
+
+        // Disable local-only buttons in remote mode
+        document.getElementById('openFolderBtn').disabled = true;
+        document.getElementById('saveLocalBtn').disabled = true;
+        document.getElementById('createFolderBtn').disabled = true;
+
+        // Load remote files into file tree
+        this.refreshFiles();
     }
 
     async refreshFiles() {
         if (!this.connected) return;
 
-        const list = document.getElementById('remoteFilesList');
-        list.innerHTML = '<div class="remote-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+        const fileTree = document.getElementById('fileTree');
+        fileTree.innerHTML = '<div class="file-tree-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
+        await this.buildRemoteTree(this.homePath, fileTree);
+    }
+
+    async buildRemoteTree(path, container) {
         try {
             const response = await safeFetch(
                 `${this.backendUrl}/api/remote/list`,
@@ -359,7 +396,7 @@ export class RemoteFileManager {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         sessionId: this.sessionId,
-                        path: this.currentPath
+                        path: path
                     })
                 },
                 30000
@@ -367,79 +404,98 @@ export class RemoteFileManager {
 
             const data = await response.json();
 
-            if (data.success) {
-                this.remoteFiles = data.items;
-                this.currentPath = data.path;
-                document.getElementById('remoteCurrentPath').textContent = this.currentPath;
-                this.renderFiles();
-            } else {
-                list.innerHTML = `<div class="remote-error-inline">${data.error || 'Failed to load files'}</div>`;
+            if (!data.success) {
+                container.innerHTML = `<div class="file-tree-empty"><i class="fas fa-exclamation-triangle"></i> ${data.error || 'Failed to load'}</div>`;
+                return;
             }
+
+            container.innerHTML = '';
+
+            const items = data.items;
+
+            // Sort: folders first, then files alphabetically
+            items.sort((a, b) => {
+                if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            for (const entry of items) {
+                const fullPath = entry.path;
+
+                if (entry.isDir) {
+                    // Create folder element - exactly like local
+                    const folderEl = document.createElement('div');
+                    folderEl.className = 'folder-item';
+                    folderEl.dataset.path = fullPath;
+                    folderEl.innerHTML = `
+                        <i class="fas fa-chevron-right chevron"></i>
+                        <span>${entry.name}</span>
+                    `;
+
+                    const contentsEl = document.createElement('div');
+                    contentsEl.className = 'folder-contents';
+
+                    // Click to expand/collapse - lazy load contents
+                    folderEl.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        folderEl.classList.toggle('expanded');
+
+                        // Lazy load contents on first expand
+                        if (folderEl.classList.contains('expanded') && contentsEl.children.length === 0) {
+                            contentsEl.innerHTML = '<div class="file-tree-empty" style="padding: 8px 16px; font-size: 11px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+                            await this.buildRemoteTree(fullPath, contentsEl);
+                        }
+                    });
+
+                    container.appendChild(folderEl);
+                    container.appendChild(contentsEl);
+                } else {
+                    // Filter for molecule files only
+                    const ext = entry.name.split('.').pop().toLowerCase();
+                    if (!MOLECULE_EXTENSIONS.includes(ext) && !['txt', 'log', 'json'].includes(ext)) {
+                        continue;
+                    }
+
+                    // Create file element - exactly like local
+                    const fileEl = document.createElement('div');
+                    fileEl.className = 'file-item';
+                    fileEl.dataset.path = fullPath;
+
+                    const iconClass = this.getFileIcon(ext);
+
+                    fileEl.innerHTML = `
+                        <i class="${iconClass}"></i>
+                        <span>${entry.name}</span>
+                    `;
+
+                    // Click to open file
+                    fileEl.addEventListener('click', (e) => {
+                        // Clear other selections
+                        document.querySelectorAll('.file-item.active').forEach(el => el.classList.remove('active'));
+                        fileEl.classList.add('active');
+                        this.openRemoteFile(fullPath, entry.name);
+                    });
+
+                    container.appendChild(fileEl);
+                }
+            }
+
+            // Show empty message if no items
+            if (container.children.length === 0) {
+                container.innerHTML = '<div class="file-tree-empty" style="padding: 8px 16px; font-size: 11px;">Empty folder</div>';
+            }
+
         } catch (error) {
-            list.innerHTML = `<div class="remote-error-inline">${error.message || 'Failed to load files'}</div>`;
+            container.innerHTML = `<div class="file-tree-empty"><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Failed to load'}</div>`;
         }
     }
 
-    renderFiles() {
-        const list = document.getElementById('remoteFilesList');
-
-        if (this.remoteFiles.length === 0) {
-            list.innerHTML = '<div class="remote-empty">No files in this directory</div>';
-            return;
+    async openRemoteFile(path, filename) {
+        // Find and show loading state on the clicked file
+        const fileEl = document.querySelector(`.file-item[data-path="${path}"]`);
+        if (fileEl) {
+            fileEl.classList.add('loading');
         }
-
-        let html = '';
-
-        // Filter for molecule files and directories
-        const items = this.remoteFiles.filter(f => {
-            if (f.isDir) return true;
-            const ext = f.name.split('.').pop().toLowerCase();
-            return ['xyz', 'pdb', 'mol', 'sdf', 'cif', 'mol2', 'pqr', 'gro', 'cml', 'extxyz', 'out', 'txt', 'log'].includes(ext);
-        });
-
-        items.forEach(file => {
-            const icon = file.isDir ? 'fa-folder' : this.getFileIcon(file.name);
-            const iconClass = file.isDir ? 'folder-icon' : 'file-icon';
-            const size = file.isDir ? '' : this.formatFileSize(file.size);
-
-            html += `
-                <div class="remote-file-item ${file.isDir ? 'is-folder' : ''}"
-                     onclick="window.remoteFileManager.handleItemClick('${file.path}', ${file.isDir})">
-                    <i class="fas ${icon} ${iconClass}"></i>
-                    <span class="remote-file-name">${file.name}</span>
-                    ${size ? `<span class="remote-file-size">${size}</span>` : ''}
-                    ${!file.isDir ? `
-                        <button class="remote-file-action" onclick="event.stopPropagation(); window.remoteFileManager.downloadFile('${file.path}', '${file.name}')" title="Download">
-                            <i class="fas fa-download"></i>
-                        </button>
-                    ` : ''}
-                </div>
-            `;
-        });
-
-        list.innerHTML = html;
-    }
-
-    handleItemClick(path, isDir) {
-        if (isDir) {
-            this.currentPath = path;
-            this.refreshFiles();
-        } else {
-            this.openFile(path);
-        }
-    }
-
-    navigateUp() {
-        const parts = this.currentPath.split('/').filter(p => p);
-        parts.pop();
-        this.currentPath = parts.length > 0 ? '/' + parts.join('/') : '/';
-        this.refreshFiles();
-    }
-
-    async openFile(path) {
-        const list = document.getElementById('remoteFilesList');
-        const originalHtml = list.innerHTML;
-        list.innerHTML = '<div class="remote-loading"><i class="fas fa-spinner fa-spin"></i> Opening file...</div>';
 
         try {
             const response = await safeFetch(
@@ -458,53 +514,23 @@ export class RemoteFileManager {
             const data = await response.json();
 
             if (data.success) {
+                // Create a File object and load it using the existing loader
                 const blob = new Blob([data.content], { type: 'text/plain' });
                 const file = new File([blob], data.filename);
 
                 if (window.main && window.main.loader) {
-                    await window.main.loader.handleFile(file);
-                    this.closeConnectionModal();
+                    await window.main.loader.handleFile({ target: { files: [file] } }, false);
+                    window.showSaveNotification?.(`Loaded: ${filename}`);
                 }
             } else {
-                this.showError(data.error || 'Failed to open file');
-                list.innerHTML = originalHtml;
+                window.showSaveNotification?.(`Error: ${data.error || 'Failed to open file'}`);
             }
         } catch (error) {
-            this.showError(error.message || 'Failed to open file');
-            list.innerHTML = originalHtml;
-        }
-    }
-
-    async downloadFile(path, filename) {
-        try {
-            const response = await safeFetch(
-                `${this.backendUrl}/api/remote/read`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sessionId: this.sessionId,
-                        path: path
-                    })
-                },
-                30000
-            );
-
-            const data = await response.json();
-
-            if (data.success) {
-                const blob = new Blob([data.content], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                a.click();
-                URL.revokeObjectURL(url);
-            } else {
-                this.showError(data.error || 'Failed to download');
+            window.showSaveNotification?.(`Error: ${error.message || 'Failed to open file'}`);
+        } finally {
+            if (fileEl) {
+                fileEl.classList.remove('loading');
             }
-        } catch (error) {
-            this.showError(error.message || 'Failed to download');
         }
     }
 
@@ -515,28 +541,16 @@ export class RemoteFileManager {
         setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
     }
 
-    getFileIcon(filename) {
-        const ext = filename.split('.').pop().toLowerCase();
-        const iconMap = {
-            'xyz': 'fa-atom',
-            'pdb': 'fa-dna',
-            'mol': 'fa-flask',
-            'sdf': 'fa-flask',
-            'cif': 'fa-cube',
-            'mol2': 'fa-flask',
-            'txt': 'fa-file-alt',
-            'log': 'fa-file-alt',
-            'out': 'fa-file-alt'
-        };
-        return iconMap[ext] || 'fa-file';
-    }
-
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
+    getFileIcon(ext) {
+        // Use exact same icons as FileExplorer.getFileIcon
+        if (MOLECULE_EXTENSIONS.includes(ext)) {
+            if (ext === 'pdb') return 'fas fa-dna file-pdb';
+            if (ext === 'xyz') return 'fas fa-atom file-xyz';
+            return 'fas fa-atom file-mol';
+        }
+        if (ext === 'json') return 'fas fa-code file-json';
+        if (['js', 'py', 'html', 'css', 'txt', 'log'].includes(ext)) return 'fas fa-file-code file-text';
+        return 'fas fa-file file-text';
     }
 
     readFileAsText(file) {
@@ -549,16 +563,14 @@ export class RemoteFileManager {
     }
 }
 
-// Initialize after a short delay to ensure file explorer is ready
+// Initialize after DOM is ready
 function initRemoteFileManager() {
-    // Wait for file explorer to be ready
     const checkAndInit = () => {
         const saveBtn = document.getElementById('saveLocalBtn');
         if (saveBtn) {
             window.remoteFileManager = new RemoteFileManager();
             console.log('RemoteFileManager initialized');
         } else {
-            // Retry after short delay
             setTimeout(checkAndInit, 200);
         }
     };
