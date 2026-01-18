@@ -1,7 +1,6 @@
 /**
  * RemoteFileManager - SSH/SFTP remote file access
- * Integrates into the existing LOCAL file explorer section
- * Files look and behave exactly like local files
+ * Creates a separate REMOTE section in the file explorer (alongside LOCAL)
  */
 
 import { safeFetch } from './utils/apiUtils.js';
@@ -12,16 +11,12 @@ export class RemoteFileManager {
     constructor() {
         this.sessionId = this.generateSessionId();
         this.connected = false;
-        this.currentPath = '.';
         this.homePath = '.';
         this.host = null;
         this.username = null;
         this.backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
             ? 'http://127.0.0.1:10000'
             : 'https://chopchopmol-ai-backend.onrender.com';
-
-        // Store local state to restore on disconnect
-        this.savedLocalState = null;
 
         this.init();
     }
@@ -31,8 +26,110 @@ export class RemoteFileManager {
     }
 
     init() {
+        this.createRemoteSection();
         this.createConnectionModal();
         this.addToolbarButton();
+    }
+
+    createRemoteSection() {
+        // Create remote section (hidden by default) - insert after local section
+        const localSection = document.querySelector('.local-section');
+        if (!localSection) {
+            setTimeout(() => this.createRemoteSection(), 100);
+            return;
+        }
+
+        // Check if already created
+        if (document.getElementById('remoteSection')) return;
+
+        // Create the divider first (between local and remote)
+        const divider = document.createElement('div');
+        divider.id = 'remoteDivider';
+        divider.className = 'explorer-divider explorer-divider-resizer';
+        divider.style.display = 'none'; // Hidden until connected
+
+        const remoteSection = document.createElement('div');
+        remoteSection.id = 'remoteSection';
+        remoteSection.className = 'explorer-section remote-section';
+        remoteSection.style.display = 'none'; // Hidden until connected
+        remoteSection.innerHTML = `
+            <div class="section-header" style="gap: 6px; display: flex; flex-direction: row; align-items: center;">
+                <span id="remoteHeaderTitle" style="font-weight: bold"><i class="fa-solid fa-server"></i> REMOTE</span>
+            </div>
+            <div class="explorer-section" style="display: flex; flex-direction: row; padding: 6px; gap: 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                <button id="remoteRefreshBtn" class="local-toolbar-button" title="Refresh Remote Files">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button id="remoteHomeBtn" class="local-toolbar-button" title="Go to Home Directory">
+                    <i class="fas fa-home"></i>
+                </button>
+                <button id="remoteDisconnectBtn" class="local-toolbar-button" title="Disconnect from Remote Host" style="margin-left: auto;">
+                    <i class="fas fa-plug" style="color: #f87171;"></i>
+                </button>
+            </div>
+            <div id="remoteFileTree" class="file-tree">
+                <div class="file-tree-empty">
+                    <i class="fas fa-server"></i>
+                    <p>Loading remote files...</p>
+                </div>
+            </div>
+        `;
+
+        // Insert divider and remote section after local section
+        localSection.parentNode.insertBefore(divider, localSection.nextSibling);
+        divider.parentNode.insertBefore(remoteSection, divider.nextSibling);
+
+        // Add event listeners for remote toolbar buttons
+        document.getElementById('remoteRefreshBtn').addEventListener('click', () => this.refreshFiles());
+        document.getElementById('remoteHomeBtn').addEventListener('click', () => {
+            this.buildRemoteTree(this.homePath, document.getElementById('remoteFileTree'));
+        });
+        document.getElementById('remoteDisconnectBtn').addEventListener('click', () => this.disconnect());
+
+        // Setup divider resize functionality
+        this.setupDividerResize(divider, localSection, remoteSection);
+    }
+
+    setupDividerResize(divider, localSection, remoteSection) {
+        let startY, startLocalHeight, didDrag;
+
+        divider.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            startY = e.clientY;
+            startLocalHeight = localSection.offsetHeight;
+            didDrag = false;
+            divider.classList.add('active');
+            document.addEventListener('mousemove', resizeSections);
+            document.addEventListener('mouseup', stopResizeSections);
+        });
+
+        const resizeSections = (e) => {
+            didDrag = true;
+            localSection.classList.add('resizing');
+            remoteSection.classList.add('resizing');
+            const diff = e.clientY - startY;
+            const parentHeight = localSection.parentElement.offsetHeight;
+            const newHeight = Math.max(50, Math.min(parentHeight - 150, startLocalHeight + diff));
+            localSection.style.height = newHeight + 'px';
+            localSection.style.flex = 'none';
+        };
+
+        const stopResizeSections = () => {
+            localSection.classList.remove('resizing');
+            remoteSection.classList.remove('resizing');
+            divider.classList.remove('active');
+            document.removeEventListener('mousemove', resizeSections);
+            document.removeEventListener('mouseup', stopResizeSections);
+
+            // Click without drag = collapse local section to header
+            if (!didDrag) {
+                const header = localSection.querySelector('.section-header');
+                if (header) {
+                    localSection.style.height = (header.offsetHeight + 40) + 'px'; // header + toolbar
+                    localSection.style.flex = 'none';
+                }
+            }
+        };
     }
 
     addToolbarButton() {
@@ -214,33 +311,6 @@ export class RemoteFileManager {
         document.getElementById('remoteError').style.display = 'none';
     }
 
-    saveLocalState() {
-        const fileTree = document.getElementById('fileTree');
-        const headerSpan = document.querySelector('.local-section .section-header span');
-
-        this.savedLocalState = {
-            fileTreeHTML: fileTree.innerHTML,
-            headerHTML: headerSpan.innerHTML,
-            directoryHandle: window.fileExplorer?.directoryHandle
-        };
-    }
-
-    restoreLocalState() {
-        if (!this.savedLocalState) return;
-
-        const fileTree = document.getElementById('fileTree');
-        const headerSpan = document.querySelector('.local-section .section-header span');
-
-        fileTree.innerHTML = this.savedLocalState.fileTreeHTML;
-        headerSpan.innerHTML = this.savedLocalState.headerHTML;
-
-        // Re-enable local buttons
-        document.getElementById('refreshFolderBtn').onclick = () => window.fileExplorer?.refresh();
-        document.getElementById('openFolderBtn').onclick = () => window.fileExplorer?.openFolder();
-
-        this.savedLocalState = null;
-    }
-
     async connect() {
         const host = document.getElementById('remoteHost').value.trim();
         const port = parseInt(document.getElementById('remotePort').value) || 22;
@@ -298,17 +368,16 @@ export class RemoteFileManager {
                 this.host = host;
                 this.username = username;
                 this.homePath = data.homeDir || '.';
-                this.currentPath = this.homePath;
-
-                // Save local state before switching
-                this.saveLocalState();
 
                 // Update UI
                 this.updateToolbarButton();
                 this.closeConnectionModal();
 
-                // Switch file explorer to remote mode
-                this.switchToRemoteMode();
+                // Show remote section and update header
+                this.showRemoteSection();
+
+                // Load remote files
+                this.refreshFiles();
             } else {
                 this.showError(data.error || 'Connection failed');
             }
@@ -338,50 +407,55 @@ export class RemoteFileManager {
         this.connected = false;
         this.host = null;
         this.username = null;
-        this.currentPath = '.';
 
-        // Restore local state
-        this.restoreLocalState();
+        // Update UI
         this.updateToolbarButton();
         this.closeConnectionModal();
 
-        // Re-enable local toolbar buttons
-        const refreshBtn = document.getElementById('refreshFolderBtn');
-        const openBtn = document.getElementById('openFolderBtn');
-        const saveBtn = document.getElementById('saveLocalBtn');
-        const createBtn = document.getElementById('createFolderBtn');
-
-        if (window.fileExplorer?.directoryHandle) {
-            refreshBtn.disabled = false;
-            saveBtn.disabled = false;
-            createBtn.disabled = false;
-        }
-        openBtn.disabled = false;
+        // Hide remote section
+        this.hideRemoteSection();
     }
 
-    switchToRemoteMode() {
-        // Update header to show remote connection (similar format to local)
-        const headerSpan = document.querySelector('.local-section .section-header span');
-        headerSpan.innerHTML = `<i class="fas fa-server"></i> REMOTE: ${this.host}`;
+    showRemoteSection() {
+        const remoteSection = document.getElementById('remoteSection');
+        const divider = document.getElementById('remoteDivider');
 
-        // Override refresh button to refresh remote files
-        const refreshBtn = document.getElementById('refreshFolderBtn');
-        refreshBtn.onclick = () => this.refreshFiles();
-        refreshBtn.disabled = false;
+        if (remoteSection) {
+            remoteSection.style.display = 'block';
+            // Update header with host info
+            const header = document.getElementById('remoteHeaderTitle');
+            if (header) {
+                header.innerHTML = `<i class="fa-solid fa-server"></i> REMOTE: ${this.host}`;
+            }
+        }
+        if (divider) {
+            divider.style.display = 'block';
+        }
+    }
 
-        // Disable local-only buttons in remote mode
-        document.getElementById('openFolderBtn').disabled = true;
-        document.getElementById('saveLocalBtn').disabled = true;
-        document.getElementById('createFolderBtn').disabled = true;
+    hideRemoteSection() {
+        const remoteSection = document.getElementById('remoteSection');
+        const divider = document.getElementById('remoteDivider');
 
-        // Load remote files into file tree
-        this.refreshFiles();
+        if (remoteSection) {
+            remoteSection.style.display = 'none';
+        }
+        if (divider) {
+            divider.style.display = 'none';
+        }
+
+        // Reset local section height when remote is hidden
+        const localSection = document.querySelector('.local-section');
+        if (localSection) {
+            localSection.style.height = '';
+            localSection.style.flex = '';
+        }
     }
 
     async refreshFiles() {
         if (!this.connected) return;
 
-        const fileTree = document.getElementById('fileTree');
+        const fileTree = document.getElementById('remoteFileTree');
         fileTree.innerHTML = '<div class="file-tree-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
         await this.buildRemoteTree(this.homePath, fileTree);
@@ -420,6 +494,9 @@ export class RemoteFileManager {
             });
 
             for (const entry of items) {
+                // Skip hidden files
+                if (entry.name.startsWith('.')) continue;
+
                 const fullPath = entry.path;
 
                 if (entry.isDir) {
@@ -470,8 +547,8 @@ export class RemoteFileManager {
 
                     // Click to open file
                     fileEl.addEventListener('click', (e) => {
-                        // Clear other selections
-                        document.querySelectorAll('.file-item.active').forEach(el => el.classList.remove('active'));
+                        // Clear other selections in remote tree
+                        document.querySelectorAll('#remoteFileTree .file-item.active').forEach(el => el.classList.remove('active'));
                         fileEl.classList.add('active');
                         this.openRemoteFile(fullPath, entry.name);
                     });
@@ -492,7 +569,7 @@ export class RemoteFileManager {
 
     async openRemoteFile(path, filename) {
         // Find and show loading state on the clicked file
-        const fileEl = document.querySelector(`.file-item[data-path="${path}"]`);
+        const fileEl = document.querySelector(`#remoteFileTree .file-item[data-path="${CSS.escape(path)}"]`);
         if (fileEl) {
             fileEl.classList.add('loading');
         }

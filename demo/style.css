@@ -5429,13 +5429,59 @@ input[type="color"]::-moz-color-swatch {
     cursor: not-allowed;
 }
 
+/* Remote Section in File Explorer */
+.remote-section {
+    flex: 1;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+}
+
+.remote-section .section-header {
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%);
+}
+
+.remote-section #remoteHeaderTitle {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.remote-section #remoteHeaderTitle i {
+    color: #818cf8;
+    margin-right: 6px;
+}
+
+.remote-section .file-tree {
+    flex: 1;
+    overflow-y: auto;
+}
+
+#remoteDisconnectBtn:hover {
+    background: rgba(248, 113, 113, 0.2) !important;
+}
+
+/* Remote divider - same as explorer divider */
+#remoteDivider {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: ns-resize;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+#remoteDivider:hover,
+#remoteDivider.active {
+    background: rgba(99, 102, 241, 0.3);
+}
+
 /* Remote file loading state - same as local but with loading indicator */
+#remoteFileTree .file-item.loading,
 #fileTree .file-item.loading {
     opacity: 0.6;
     pointer-events: none;
     position: relative;
 }
 
+#remoteFileTree .file-item.loading::after,
 #fileTree .file-item.loading::after {
     content: '';
     position: absolute;
