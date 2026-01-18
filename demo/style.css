@@ -4979,3 +4979,452 @@ input[type="color"]::-moz-color-swatch {
     background: rgba(0, 0, 0, 0.6);
     pointer-events: auto;
 }
+/* ============================================================================
+   REMOTE FILE SYSTEM ACCESS - Compact Integration
+   ============================================================================ */
+
+/* Toolbar Button - Connected State */
+.remote-connect-btn.connected {
+    background: rgba(16, 185, 129, 0.2) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    color: #10b981 !important;
+}
+
+.remote-connect-btn.connected:hover {
+    background: rgba(16, 185, 129, 0.3) !important;
+}
+
+/* Modal Overlay */
+.remote-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 10001;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal Container */
+.remote-modal {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(10, 15, 30, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    width: 400px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* Box sizing for all remote elements */
+.remote-modal *,
+.remote-modal *::before,
+.remote-modal *::after {
+    box-sizing: border-box;
+}
+
+/* Modal Header */
+.remote-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.remote-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.remote-modal-title i {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.remote-modal-close {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.remote-modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+/* Modal Body */
+.remote-modal-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    max-height: calc(85vh - 130px);
+}
+
+/* Status Banner */
+.remote-status-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    color: #10b981;
+    font-size: 13px;
+}
+
+.remote-status-banner i {
+    font-size: 14px;
+}
+
+.remote-disconnect-btn {
+    margin-left: auto;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.remote-disconnect-btn:hover {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+/* Form Styles */
+.remote-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.remote-form-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+.remote-form-group {
+    margin-bottom: 14px;
+    width: 100%;
+}
+
+.remote-form-group.flex-1 { flex: 1; min-width: 0; }
+.remote-form-group.flex-3 { flex: 3; min-width: 0; }
+
+.remote-form-group label {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 11px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.remote-form-group input[type="text"],
+.remote-form-group input[type="number"],
+.remote-form-group input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: white;
+    font-size: 13px;
+    transition: border-color 0.2s, background 0.2s;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+.remote-form-group input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.remote-form-group input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Auth Tabs */
+.remote-auth-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    width: 100%;
+}
+
+.remote-auth-tab {
+    flex: 1;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.remote-auth-tab:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.remote-auth-tab.active {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+/* Auth Sections */
+.remote-auth-section {
+    width: 100%;
+}
+
+/* File Input */
+.remote-file-input {
+    position: relative;
+    width: 100%;
+}
+
+.remote-file-input input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.remote-file-label {
+    display: block;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+}
+
+.remote-file-input:hover .remote-file-label {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Error Message */
+.remote-error {
+    padding: 10px 12px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 6px;
+    color: #f87171;
+    font-size: 12px;
+    margin-top: 12px;
+}
+
+/* Files Browser */
+.remote-files-browser {
+    display: flex;
+    flex-direction: column;
+    height: 350px;
+}
+
+.remote-path-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.remote-nav-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 12px;
+}
+
+.remote-nav-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+}
+
+.remote-path {
+    flex: 1;
+    color: rgba(255, 255, 255, 0.8);
+    font-family: monospace;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Files List */
+.remote-files-list {
+    flex: 1;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    padding: 6px;
+}
+
+.remote-file-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+}
+
+.remote-file-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.remote-file-item.is-folder {
+    color: #fbbf24;
+}
+
+.remote-file-item .folder-icon {
+    color: #fbbf24;
+}
+
+.remote-file-item .file-icon {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.remote-file-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.remote-file-size {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+}
+
+.remote-file-action {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 4px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.15s;
+}
+
+.remote-file-item:hover .remote-file-action {
+    opacity: 1;
+}
+
+.remote-file-action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+/* Loading & Empty States */
+.remote-loading,
+.remote-empty,
+.remote-error-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 40px 20px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+}
+
+.remote-error-inline {
+    color: #f87171;
+}
+
+/* Modal Footer */
+.remote-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.remote-btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.remote-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+}
+
+.remote-btn-primary {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.remote-btn-primary:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.remote-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
