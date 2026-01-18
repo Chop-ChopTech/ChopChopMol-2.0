@@ -19,6 +19,14 @@ export default class Molecule {
         this.bondGroup = new THREE.Group();
         this.forceArrowGroup = new THREE.Group();
         this.forceData = null;
+
+        // Orbital visualization
+        this.orbitalGroup = new THREE.Group();
+        this.orbitalPositiveMesh = null;
+        this.orbitalNegativeMesh = null;
+        this.orbitalIsovalue = 0.02;
+        this.orbitalOpacity = 0.7;
+        this.orbitalVisible = false;
     }
 
     init(data, mode, center, ribbonMode = false) {
@@ -493,6 +501,9 @@ export default class Molecule {
             this.forceArrowGroup = new THREE.Group();
         }
         this.forceData = null;
+
+        // Clear orbital visualization
+        this.clearOrbitals();
 
         // Clear labels properly
         this.clearLabels();
@@ -1328,5 +1339,252 @@ export default class Molecule {
         this.rebuildMesh(this.main.data, mode);
 
         return sortedIndices.length;
+    }
+
+    // ========== Orbital Visualization Methods ==========
+
+    /**
+     * Clear all orbital visualization meshes.
+     */
+    clearOrbitals() {
+        if (this.orbitalGroup) {
+            while (this.orbitalGroup.children.length > 0) {
+                const child = this.orbitalGroup.children[0];
+                this.orbitalGroup.remove(child);
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+            }
+            this.main.scene.remove(this.orbitalGroup);
+            this.orbitalGroup = new THREE.Group();
+        }
+        this.orbitalPositiveMesh = null;
+        this.orbitalNegativeMesh = null;
+        this.orbitalVisible = false;
+    }
+
+    /**
+     * Create orbital visualization from cube file data.
+     * @param {number} isovalue - Isosurface threshold value
+     * @param {number} opacity - Material opacity (0-1)
+     * @param {number} positiveColor - Color for positive phase (hex)
+     * @param {number} negativeColor - Color for negative phase (hex)
+     */
+    createOrbitalVisualization(isovalue = null, opacity = 0.7, positiveColor = 0x3366ff, negativeColor = 0xff6633) {
+        // Check if orbital data exists
+        if (!window.orbitalData || !window.orbitalData.volumeData) {
+            console.warn('No orbital data available for visualization');
+            return false;
+        }
+
+        // Clear existing orbitals
+        this.clearOrbitals();
+
+        // Use provided or calculate default isovalue
+        if (isovalue === null) {
+            if (window.calculateDefaultIsovalue) {
+                isovalue = window.calculateDefaultIsovalue(window.orbitalData);
+            } else {
+                isovalue = 0.02;
+            }
+        }
+        this.orbitalIsovalue = isovalue;
+        this.orbitalOpacity = opacity;
+
+        // Generate phase-separated isosurfaces
+        if (!window.generatePhaseSeparatedIsosurface) {
+            console.error('Orbital utils not loaded');
+            return false;
+        }
+
+        const geometries = window.generatePhaseSeparatedIsosurface(window.orbitalData, isovalue);
+
+        // Create materials
+        const materials = window.createOrbitalMaterials ?
+            window.createOrbitalMaterials(opacity, positiveColor, negativeColor) :
+            {
+                positive: new THREE.MeshStandardMaterial({
+                    color: positiveColor,
+                    opacity: opacity,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    roughness: 0.3,
+                    metalness: 0.1,
+                    depthWrite: false
+                }),
+                negative: new THREE.MeshStandardMaterial({
+                    color: negativeColor,
+                    opacity: opacity,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    roughness: 0.3,
+                    metalness: 0.1,
+                    depthWrite: false
+                })
+            };
+
+        // Create positive phase mesh
+        if (geometries.positive) {
+            this.orbitalPositiveMesh = new THREE.Mesh(geometries.positive, materials.positive);
+            this.orbitalPositiveMesh.renderOrder = 1;
+
+            // Apply molecule offset to align with atoms
+            if (this.offset) {
+                // Scale positions to match molecule stretch
+                const scale = this.stretch;
+                this.orbitalPositiveMesh.scale.set(scale, scale, scale);
+                this.orbitalPositiveMesh.position.sub(this.offset);
+            }
+
+            this.orbitalGroup.add(this.orbitalPositiveMesh);
+        }
+
+        // Create negative phase mesh
+        if (geometries.negative) {
+            this.orbitalNegativeMesh = new THREE.Mesh(geometries.negative, materials.negative);
+            this.orbitalNegativeMesh.renderOrder = 1;
+
+            // Apply molecule offset to align with atoms
+            if (this.offset) {
+                const scale = this.stretch;
+                this.orbitalNegativeMesh.scale.set(scale, scale, scale);
+                this.orbitalNegativeMesh.position.sub(this.offset);
+            }
+
+            this.orbitalGroup.add(this.orbitalNegativeMesh);
+        }
+
+        // Add to scene
+        this.main.scene.add(this.orbitalGroup);
+        this.orbitalVisible = true;
+
+        console.log(`Created orbital visualization with isovalue: ${isovalue}`);
+        return true;
+    }
+
+    /**
+     * Toggle orbital visibility.
+     * @param {boolean} show - Whether to show orbitals
+     */
+    toggleOrbitals(show) {
+        if (show && this.orbitalGroup.children.length === 0 && window.orbitalData) {
+            this.createOrbitalVisualization();
+        }
+        this.orbitalGroup.visible = show;
+        this.orbitalVisible = show;
+    }
+
+    /**
+     * Update orbital isovalue and regenerate isosurface.
+     * @param {number} isovalue - New isovalue
+     */
+    updateOrbitalIsovalue(isovalue) {
+        if (!window.orbitalData) return false;
+
+        this.createOrbitalVisualization(
+            isovalue,
+            this.orbitalOpacity,
+            this.orbitalPositiveMesh?.material?.color?.getHex() || 0x3366ff,
+            this.orbitalNegativeMesh?.material?.color?.getHex() || 0xff6633
+        );
+        return true;
+    }
+
+    /**
+     * Update orbital opacity.
+     * @param {number} opacity - New opacity (0-1)
+     */
+    updateOrbitalOpacity(opacity) {
+        this.orbitalOpacity = opacity;
+        if (this.orbitalPositiveMesh && this.orbitalPositiveMesh.material) {
+            this.orbitalPositiveMesh.material.opacity = opacity;
+            this.orbitalPositiveMesh.material.transparent = opacity < 1;
+            this.orbitalPositiveMesh.material.needsUpdate = true;
+        }
+        if (this.orbitalNegativeMesh && this.orbitalNegativeMesh.material) {
+            this.orbitalNegativeMesh.material.opacity = opacity;
+            this.orbitalNegativeMesh.material.transparent = opacity < 1;
+            this.orbitalNegativeMesh.material.needsUpdate = true;
+        }
+    }
+
+    /**
+     * Update orbital colors.
+     * @param {number} positiveColor - Color for positive phase (hex)
+     * @param {number} negativeColor - Color for negative phase (hex)
+     */
+    updateOrbitalColors(positiveColor, negativeColor) {
+        if (this.orbitalPositiveMesh && this.orbitalPositiveMesh.material) {
+            this.orbitalPositiveMesh.material.color.setHex(positiveColor);
+            this.orbitalPositiveMesh.material.needsUpdate = true;
+        }
+        if (this.orbitalNegativeMesh && this.orbitalNegativeMesh.material) {
+            this.orbitalNegativeMesh.material.color.setHex(negativeColor);
+            this.orbitalNegativeMesh.material.needsUpdate = true;
+        }
+    }
+
+    /**
+     * Toggle individual orbital phases.
+     * @param {boolean} showPositive - Show positive phase
+     * @param {boolean} showNegative - Show negative phase
+     */
+    toggleOrbitalPhases(showPositive, showNegative) {
+        if (this.orbitalPositiveMesh) {
+            this.orbitalPositiveMesh.visible = showPositive;
+        }
+        if (this.orbitalNegativeMesh) {
+            this.orbitalNegativeMesh.visible = showNegative;
+        }
+    }
+
+    /**
+     * Check if orbital data is available.
+     * @returns {boolean}
+     */
+    hasOrbitalData() {
+        // Check for cube file data (volumetric)
+        const hasCubeData = !!(window.orbitalData && window.orbitalData.volumeData);
+
+        // Check for molden file data (basis functions + MO coefficients)
+        const hasMoldenData = !!(window.moldenData && window.moldenData.orbitals &&
+                                 window.moldenData.orbitals.length > 0);
+
+        return hasCubeData || hasMoldenData;
+    }
+
+    /**
+     * Get orbital info for UI display.
+     * @returns {Object} Orbital metadata
+     */
+    getOrbitalInfo() {
+        // Check for cube file data
+        if (window.orbitalData && window.orbitalData.volumeData) {
+            return {
+                hasData: true,
+                fileType: 'cube',
+                minValue: window.orbitalData.minValue,
+                maxValue: window.orbitalData.maxValue,
+                gridDimensions: window.orbitalData.gridInfo?.dimensions,
+                currentIsovalue: this.orbitalIsovalue,
+                isVisible: this.orbitalVisible,
+                comment: window.orbitalData.comment
+            };
+        }
+
+        // Check for molden file data
+        if (window.moldenData && window.moldenData.orbitals) {
+            return {
+                hasData: true,
+                fileType: 'molden',
+                numOrbitals: window.moldenData.orbitals.length,
+                homoIndex: window.moldenData.homoIndex,
+                lumoIndex: window.moldenData.lumoIndex,
+                basisFunctions: window.moldenData.basisFunctions?.length || 0,
+                currentIsovalue: this.orbitalIsovalue,
+                isVisible: this.orbitalVisible
+            };
+        }
+
+        return null;
     }
 }

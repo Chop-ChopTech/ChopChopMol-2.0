@@ -16,6 +16,10 @@ export default class FileHandler {
         if (!file) return;
         window.xyzFrames = null;
 
+        // Clear previous orbital data
+        window.orbitalData = null;
+        window.moldenData = null;
+
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
@@ -46,6 +50,10 @@ export default class FileHandler {
                     parsedData = this.parseCmlToJson(text);
                 } else if (fileType === 'out') {
                     parsedData = this.parseOutToJson(text);
+                } else if (fileType === 'cube') {
+                    parsedData = this.parseCubeToJson(text);
+                } else if (fileType === 'molden') {
+                    parsedData = this.parseMoldenToJson(text);
                 }
 
                 if (overlay) {
@@ -96,6 +104,11 @@ export default class FileHandler {
                             this.main.molecule.toggleForceArrows(true, window.forceArrowScale || 1.0);
                         }
                     }
+                }
+
+                // Update orbital controls and enable if orbital data exists
+                if (window.updateOrbitalControls) {
+                    window.updateOrbitalControls();
                 }
 
             } catch (error) {
@@ -1594,6 +1607,402 @@ export default class FileHandler {
                 console.error("Error loading atom settings:", error);
                 return null;
             });
+    }
+
+    /**
+     * Parse Gaussian Cube file format for electron density / orbital visualization.
+     * Cube files contain:
+     * - Lines 1-2: Comment lines
+     * - Line 3: Number of atoms (negative if multiple orbitals), origin (x, y, z) in Bohrs
+     * - Lines 4-6: Voxel count and spanning vectors for X, Y, Z axes
+     * - Atom lines: atomic number, nuclear charge, x, y, z position
+     * - (Optional) Dataset identifiers line if NATOMS is negative
+     * - Volumetric data: up to 6 values per line
+     */
+    parseCubeToJson(text) {
+        const lines = text.split(/\r?\n|\r/);
+        const BOHR_TO_ANGSTROM = 0.529177249;
+
+        // Atomic numbers to element symbols
+        const ATOMIC_SYMBOLS = {
+            1: 'H', 2: 'He', 3: 'Li', 4: 'Be', 5: 'B', 6: 'C', 7: 'N', 8: 'O', 9: 'F', 10: 'Ne',
+            11: 'Na', 12: 'Mg', 13: 'Al', 14: 'Si', 15: 'P', 16: 'S', 17: 'Cl', 18: 'Ar', 19: 'K', 20: 'Ca',
+            21: 'Sc', 22: 'Ti', 23: 'V', 24: 'Cr', 25: 'Mn', 26: 'Fe', 27: 'Co', 28: 'Ni', 29: 'Cu', 30: 'Zn',
+            31: 'Ga', 32: 'Ge', 33: 'As', 34: 'Se', 35: 'Br', 36: 'Kr', 37: 'Rb', 38: 'Sr', 39: 'Y', 40: 'Zr',
+            41: 'Nb', 42: 'Mo', 43: 'Tc', 44: 'Ru', 45: 'Rh', 46: 'Pd', 47: 'Ag', 48: 'Cd', 49: 'In', 50: 'Sn',
+            51: 'Sb', 52: 'Te', 53: 'I', 54: 'Xe', 55: 'Cs', 56: 'Ba', 57: 'La', 58: 'Ce', 59: 'Pr', 60: 'Nd',
+            79: 'Au', 80: 'Hg', 82: 'Pb', 92: 'U'
+        };
+
+        if (lines.length < 6) {
+            throw new Error('Invalid cube file: insufficient header lines');
+        }
+
+        // Lines 1-2: Comment lines
+        const comment1 = lines[0].trim();
+        const comment2 = lines[1].trim();
+
+        // Line 3: Number of atoms, origin (x, y, z)
+        const line3Parts = lines[2].trim().split(/\s+/).map(v => parseFloat(v));
+        let numAtoms = Math.round(line3Parts[0]);
+        const hasMultipleOrbitals = numAtoms < 0;
+        numAtoms = Math.abs(numAtoms);
+        const origin = {
+            x: line3Parts[1] * BOHR_TO_ANGSTROM,
+            y: line3Parts[2] * BOHR_TO_ANGSTROM,
+            z: line3Parts[3] * BOHR_TO_ANGSTROM
+        };
+
+        // Lines 4-6: Voxel counts and spanning vectors
+        // Positive voxel count = data in Bohrs, negative = Angstroms
+        const parseAxisLine = (line) => {
+            const parts = line.trim().split(/\s+/).map(v => parseFloat(v));
+            const n = Math.abs(Math.round(parts[0]));
+            const isAngstrom = parts[0] < 0;
+            const scale = isAngstrom ? 1 : BOHR_TO_ANGSTROM;
+            return {
+                n: n,
+                vector: [parts[1] * scale, parts[2] * scale, parts[3] * scale]
+            };
+        };
+
+        const xAxis = parseAxisLine(lines[3]);
+        const yAxis = parseAxisLine(lines[4]);
+        const zAxis = parseAxisLine(lines[5]);
+
+        // Parse atom lines
+        const atomData = [];
+        let lineIdx = 6;
+
+        for (let i = 0; i < numAtoms && lineIdx < lines.length; i++, lineIdx++) {
+            const parts = lines[lineIdx].trim().split(/\s+/).map(v => parseFloat(v));
+            if (parts.length < 5) continue;
+
+            const atomicNumber = Math.abs(Math.round(parts[0]));
+            const element = ATOMIC_SYMBOLS[atomicNumber] || 'X';
+            const charge = parts[1]; // Nuclear charge (may differ for ECPs)
+
+            atomData.push({
+                element: element,
+                x: parts[2] * BOHR_TO_ANGSTROM,
+                y: parts[3] * BOHR_TO_ANGSTROM,
+                z: parts[4] * BOHR_TO_ANGSTROM,
+                atomicNumber: atomicNumber,
+                nuclearCharge: charge
+            });
+        }
+
+        // Parse orbital indices if multiple orbitals
+        let orbitalIndices = [];
+        let numOrbitals = 1;
+        if (hasMultipleOrbitals && lineIdx < lines.length) {
+            const orbitalLine = lines[lineIdx].trim().split(/\s+/).map(v => parseInt(v));
+            numOrbitals = orbitalLine[0] || 1;
+            orbitalIndices = orbitalLine.slice(1, 1 + numOrbitals);
+            lineIdx++;
+        }
+
+        // Parse volumetric data
+        const totalVoxels = xAxis.n * yAxis.n * zAxis.n * numOrbitals;
+        const volumeData = new Float32Array(totalVoxels);
+        let dataIdx = 0;
+
+        for (; lineIdx < lines.length && dataIdx < totalVoxels; lineIdx++) {
+            const line = lines[lineIdx].trim();
+            if (!line) continue;
+            const values = line.split(/\s+/).map(v => parseFloat(v));
+            for (const val of values) {
+                if (!isNaN(val) && dataIdx < totalVoxels) {
+                    volumeData[dataIdx++] = val;
+                }
+            }
+        }
+
+        // Store volumetric data globally for visualization
+        const gridInfo = {
+            origin: origin,
+            dimensions: [xAxis.n, yAxis.n, zAxis.n],
+            spacing: [
+                Math.sqrt(xAxis.vector[0]**2 + xAxis.vector[1]**2 + xAxis.vector[2]**2),
+                Math.sqrt(yAxis.vector[0]**2 + yAxis.vector[1]**2 + yAxis.vector[2]**2),
+                Math.sqrt(zAxis.vector[0]**2 + zAxis.vector[1]**2 + zAxis.vector[2]**2)
+            ],
+            vectors: {
+                x: xAxis.vector,
+                y: yAxis.vector,
+                z: zAxis.vector
+            },
+            numOrbitals: numOrbitals,
+            orbitalIndices: orbitalIndices
+        };
+
+        // Calculate min/max values for adaptive isosurface defaults
+        let minVal = Infinity, maxVal = -Infinity;
+        for (let i = 0; i < volumeData.length; i++) {
+            if (volumeData[i] < minVal) minVal = volumeData[i];
+            if (volumeData[i] > maxVal) maxVal = volumeData[i];
+        }
+
+        // Store orbital data globally
+        window.orbitalData = {
+            volumeData: volumeData,
+            gridInfo: gridInfo,
+            minValue: minVal,
+            maxValue: maxVal,
+            comment: comment1 + ' ' + comment2,
+            fileType: 'cube'
+        };
+
+        // Set frameEnergies for consistency
+        window.frameEnergies = [null];
+        window._pendingChartData = null;
+
+        console.log('Parsed cube file:', {
+            atoms: numAtoms,
+            grid: `${xAxis.n}x${yAxis.n}x${zAxis.n}`,
+            orbitals: numOrbitals,
+            valueRange: [minVal, maxVal]
+        });
+
+        return {
+            atomData: atomData,
+            numAtoms: atomData.length,
+            metadata: {
+                type: 'cube',
+                gridInfo: gridInfo,
+                hasOrbital: true
+            }
+        };
+    }
+
+    /**
+     * Parse Molden file format for molecular orbitals.
+     * Molden files contain:
+     * - [ATOMS] section: atomic coordinates
+     * - [GTO] section: Gaussian basis functions
+     * - [MO] section: molecular orbital coefficients
+     */
+    parseMoldenToJson(text) {
+        const lines = text.split(/\r?\n|\r/);
+        const atomData = [];
+        const orbitals = [];
+        const basisFunctions = [];
+        let coordUnit = 'angstrom'; // Default to Angstrom
+
+        // State tracking
+        let currentSection = null;
+        let currentAtomGTO = null;
+        let currentShell = null;
+        let currentMO = null;
+
+        // Parse [ATOMS] section
+        // Format: [Atoms] (Angs|AU)
+        //         element_name number atomic_number x y z
+        const parseAtomLine = (line) => {
+            const parts = line.trim().split(/\s+/);
+            if (parts.length < 6) return null;
+
+            const element = parts[0];
+            // Skip if it looks like a keyword
+            if (element.startsWith('[') || element.startsWith('_')) return null;
+
+            const atomNumber = parseInt(parts[1]);
+            const atomicNumber = parseInt(parts[2]);
+            let x = parseFloat(parts[3]);
+            let y = parseFloat(parts[4]);
+            let z = parseFloat(parts[5]);
+
+            // Convert Bohr to Angstrom if needed
+            if (coordUnit === 'au' || coordUnit === 'bohr') {
+                const BOHR_TO_ANG = 0.529177249;
+                x *= BOHR_TO_ANG;
+                y *= BOHR_TO_ANG;
+                z *= BOHR_TO_ANG;
+            }
+
+            if (isNaN(x) || isNaN(y) || isNaN(z)) return null;
+
+            return {
+                element: element,
+                x: x,
+                y: y,
+                z: z,
+                atomNumber: atomNumber,
+                atomicNumber: atomicNumber
+            };
+        };
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const trimmed = line.trim();
+
+            // Skip empty lines
+            if (!trimmed) continue;
+
+            // Detect section headers
+            if (trimmed.startsWith('[')) {
+                const sectionMatch = trimmed.match(/\[(\w+)\]\s*(.*)/i);
+                if (sectionMatch) {
+                    currentSection = sectionMatch[1].toLowerCase();
+                    const sectionArg = sectionMatch[2].toLowerCase();
+
+                    // Check for coordinate units in [ATOMS] section
+                    if (currentSection === 'atoms') {
+                        if (sectionArg.includes('au') || sectionArg.includes('bohr')) {
+                            coordUnit = 'au';
+                        } else {
+                            coordUnit = 'angstrom';
+                        }
+                    }
+                    continue;
+                }
+            }
+
+            // Handle [5D], [7F], [9G] keywords for spherical harmonics
+            if (trimmed === '[5D]' || trimmed === '[5D7F]' || trimmed === '[7F]' || trimmed === '[9G]') {
+                // Store this info for basis function interpretation
+                continue;
+            }
+
+            // Parse based on current section
+            if (currentSection === 'atoms') {
+                const atom = parseAtomLine(line);
+                if (atom) {
+                    atomData.push(atom);
+                }
+            }
+            else if (currentSection === 'gto') {
+                // GTO format:
+                // atom_number 0
+                // shell_type num_primitives 1.00
+                // exponent coefficient [coefficient2 for sp]
+                const parts = trimmed.split(/\s+/);
+
+                if (parts.length === 2 && parts[1] === '0') {
+                    // New atom definition
+                    currentAtomGTO = parseInt(parts[0]);
+                    currentShell = null;
+                } else if (parts.length >= 3 && /^[spdfg]/i.test(parts[0])) {
+                    // Shell definition
+                    currentShell = {
+                        type: parts[0].toLowerCase(),
+                        numPrimitives: parseInt(parts[1]),
+                        primitives: [],
+                        atomNumber: currentAtomGTO
+                    };
+                    basisFunctions.push(currentShell);
+                } else if (currentShell && parts.length >= 2) {
+                    // Primitive exponent and coefficient(s)
+                    const exp = parseFloat(parts[0].replace('D', 'E').replace('d', 'e'));
+                    const coef = parseFloat(parts[1].replace('D', 'E').replace('d', 'e'));
+                    let coef2 = null;
+                    if (parts.length >= 3 && currentShell.type === 'sp') {
+                        coef2 = parseFloat(parts[2].replace('D', 'E').replace('d', 'e'));
+                    }
+                    if (!isNaN(exp) && !isNaN(coef)) {
+                        currentShell.primitives.push({
+                            exponent: exp,
+                            coefficient: coef,
+                            coefficient2: coef2
+                        });
+                    }
+                }
+            }
+            else if (currentSection === 'mo') {
+                // MO format:
+                // Sym= symmetry_label
+                // Ene= energy
+                // Spin= Alpha|Beta
+                // Occup= occupation
+                // ao_index coefficient
+                if (trimmed.startsWith('Sym=') || trimmed.startsWith('sym=')) {
+                    // Start of new MO
+                    if (currentMO && currentMO.coefficients.length > 0) {
+                        orbitals.push(currentMO);
+                    }
+                    currentMO = {
+                        symmetry: trimmed.split('=')[1].trim(),
+                        energy: null,
+                        spin: 'Alpha',
+                        occupation: 0,
+                        coefficients: []
+                    };
+                } else if (trimmed.startsWith('Ene=') || trimmed.startsWith('ene=')) {
+                    if (currentMO) {
+                        currentMO.energy = parseFloat(trimmed.split('=')[1].trim());
+                    }
+                } else if (trimmed.startsWith('Spin=') || trimmed.startsWith('spin=')) {
+                    if (currentMO) {
+                        currentMO.spin = trimmed.split('=')[1].trim();
+                    }
+                } else if (trimmed.startsWith('Occup=') || trimmed.startsWith('occup=')) {
+                    if (currentMO) {
+                        currentMO.occupation = parseFloat(trimmed.split('=')[1].trim());
+                    }
+                } else if (currentMO) {
+                    // AO coefficient line
+                    const parts = trimmed.split(/\s+/);
+                    if (parts.length >= 2) {
+                        const aoIdx = parseInt(parts[0]);
+                        const coef = parseFloat(parts[1]);
+                        if (!isNaN(aoIdx) && !isNaN(coef)) {
+                            currentMO.coefficients.push({
+                                aoIndex: aoIdx,
+                                coefficient: coef
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Don't forget the last MO
+        if (currentMO && currentMO.coefficients.length > 0) {
+            orbitals.push(currentMO);
+        }
+
+        // Find HOMO and LUMO
+        let homoIdx = -1, lumoIdx = -1;
+        for (let i = 0; i < orbitals.length; i++) {
+            if (orbitals[i].occupation > 0.5) {
+                homoIdx = i;
+            } else if (lumoIdx === -1 && orbitals[i].occupation <= 0.5) {
+                lumoIdx = i;
+            }
+        }
+
+        // Store orbital data globally
+        window.moldenData = {
+            orbitals: orbitals,
+            basisFunctions: basisFunctions,
+            homoIndex: homoIdx,
+            lumoIndex: lumoIdx,
+            fileType: 'molden'
+        };
+
+        // Set frameEnergies for consistency
+        window.frameEnergies = [null];
+        window._pendingChartData = null;
+
+        console.log('Parsed Molden file:', {
+            atoms: atomData.length,
+            orbitals: orbitals.length,
+            basisFunctions: basisFunctions.length,
+            homo: homoIdx >= 0 ? homoIdx + 1 : 'N/A',
+            lumo: lumoIdx >= 0 ? lumoIdx + 1 : 'N/A'
+        });
+
+        return {
+            atomData: atomData,
+            numAtoms: atomData.length,
+            metadata: {
+                type: 'molden',
+                numOrbitals: orbitals.length,
+                homoIndex: homoIdx,
+                lumoIndex: lumoIdx,
+                hasOrbital: orbitals.length > 0
+            }
+        };
     }
 
 }

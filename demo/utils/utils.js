@@ -75,6 +75,8 @@ function findFileType(file) {
     if (name.endsWith('.gro')) return 'gro';
     if (name.endsWith('.cml')) return 'cml';
     if (name.endsWith('.out')) return 'out';
+    if (name.endsWith('.cube') || name.endsWith('.cub')) return 'cube';
+    if (name.endsWith('.molden') || name.endsWith('.mold')) return 'molden';
     return 'mol';
 }
 function alignMolecules(movingMolecule, fixedMolecule) {
