@@ -6211,7 +6211,9 @@ async function selectOrbitalFromTable(orbitalIndex) {
                 statusEl.style.color = '#4CAF50';
             }
 
-            // Show the orbital
+            // Regenerate the orbital surface for the newly selected MO
+            const currentIso = parseFloat(document.getElementById('isovalueSlider')?.value || main.molecule.orbitalIsovalue || 0.02);
+            main.molecule.updateOrbitalIsovalue(currentIso);
             main.molecule.toggleOrbitals(true);
             render();
 
@@ -6320,7 +6322,7 @@ window.updateOrbitalControls = function () {
         // Populate the orbital table
         if (orbitalTableBody && info.fileType === 'molden' && window.moldenData) {
             orbitalTableBody.innerHTML = '';
-            const orbitals = window.moldenData.molecularOrbitals || [];
+            const orbitals = window.moldenData.orbitals || window.moldenData.molecularOrbitals || [];
             const homoIndex = info.homoIndex;
             const lumoIndex = info.lumoIndex;
 
