@@ -46,6 +46,8 @@ export default class Molecule {
         this.bondGroup = new THREE.Group();
         this.forceArrowGroup = new THREE.Group();
         this.forceData = null;
+        this.baseAtomColors = null;
+        this.chargeColorsActive = false;
 
         // Orbital visualization
         this.orbitalGroup = new THREE.Group();
@@ -165,9 +167,72 @@ export default class Molecule {
 
         this.instancedMesh.instanceMatrix.needsUpdate = true;
         colorAttribute.needsUpdate = true;
+        this.baseAtomColors = new Float32Array(colorAttribute.array);
+        this.chargeColorsActive = false;
 
 
         this.main.scene.add(this.instancedMesh);
+    }
+
+    applyChargeColors(charges, options = {}) {
+        if (!this.instancedMesh || !this.instancedMesh.geometry) return false;
+        if (!Array.isArray(charges) || charges.length === 0) return false;
+        if (!this.baseAtomColors || this.baseAtomColors.length === 0) return false;
+
+        const colorAttribute = this.instancedMesh.geometry.getAttribute('color');
+        if (!colorAttribute) return false;
+
+        let maxAbs = options.maxAbs;
+        if (!maxAbs || maxAbs <= 0) {
+            maxAbs = 0;
+            for (let i = 0; i < charges.length; i++) {
+                const q = charges[i];
+                if (q === null || q === undefined || Number.isNaN(q)) continue;
+                const abs = Math.abs(q);
+                if (abs > maxAbs) maxAbs = abs;
+            }
+        }
+
+        if (maxAbs <= 0) {
+            this.clearChargeColors();
+            return false;
+        }
+
+        const pos = options.positiveColor || { r: 0.9, g: 0.25, b: 0.25 };
+        const neg = options.negativeColor || { r: 0.25, g: 0.45, b: 0.95 };
+        const base = { r: 1, g: 1, b: 1 };
+
+        for (let i = 0; i < this.atoms.length; i++) {
+            const q = charges[i];
+            if (q === null || q === undefined || Number.isNaN(q)) {
+                const baseIdx = i * 3;
+                colorAttribute.setXYZ(i, this.baseAtomColors[baseIdx], this.baseAtomColors[baseIdx + 1], this.baseAtomColors[baseIdx + 2]);
+                continue;
+            }
+
+            const t = Math.min(1, Math.abs(q) / maxAbs);
+            const target = q >= 0 ? pos : neg;
+            const r = base.r * (1 - t) + target.r * t;
+            const g = base.g * (1 - t) + target.g * t;
+            const b = base.b * (1 - t) + target.b * t;
+            colorAttribute.setXYZ(i, r, g, b);
+        }
+
+        colorAttribute.needsUpdate = true;
+        this.chargeColorsActive = true;
+        return true;
+    }
+
+    clearChargeColors() {
+        if (!this.instancedMesh || !this.instancedMesh.geometry || !this.baseAtomColors) return;
+        const colorAttribute = this.instancedMesh.geometry.getAttribute('color');
+        if (!colorAttribute) return;
+        for (let i = 0; i < this.atoms.length; i++) {
+            const baseIdx = i * 3;
+            colorAttribute.setXYZ(i, this.baseAtomColors[baseIdx], this.baseAtomColors[baseIdx + 1], this.baseAtomColors[baseIdx + 2]);
+        }
+        colorAttribute.needsUpdate = true;
+        this.chargeColorsActive = false;
     }
 
     createBonds(atoms, threshold) {
@@ -557,7 +622,7 @@ export default class Molecule {
         }
     }
 
-    createLabelAtlas(showElements = true, showIndices = false) {
+    createLabelAtlas(showElements = true, showIndices = false, showCharges = false, charges = null) {
         const numAtoms = this.atoms.length;
         const size = 64;
         const cols = Math.ceil(Math.sqrt(numAtoms));
@@ -593,8 +658,30 @@ export default class Molecule {
             } else if (showIndices) {
                 labelText = `${displayIndex}`;
             }
+            let chargeValue = null;
+            if (showCharges) {
+                if (charges && typeof charges[i] === 'number' && !Number.isNaN(charges[i])) {
+                    chargeValue = charges[i];
+                } else if (typeof atom.charge === 'number' && !Number.isNaN(atom.charge)) {
+                    chargeValue = atom.charge;
+                }
+            }
 
-            ctx.fillText(labelText, x, y);
+            const chargeText = chargeValue !== null ? `${chargeValue >= 0 ? '+' : ''}${chargeValue.toFixed(3)}` : '';
+            const hasCharge = chargeText.length > 0;
+
+            if (labelText && hasCharge) {
+                ctx.font = 'bold 22px Arial';
+                ctx.fillText(labelText, x, y - 8);
+                ctx.font = 'bold 16px Arial';
+                ctx.fillText(chargeText, x, y + 12);
+            } else if (labelText) {
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText(labelText, x, y);
+            } else if (hasCharge) {
+                ctx.font = 'bold 18px Arial';
+                ctx.fillText(chargeText, x, y);
+            }
 
             this.atomTypeMap[i] = {
                 uMin: col / cols,
@@ -628,7 +715,7 @@ export default class Molecule {
         return texture;
     }
 
-    toggleLabels(show, showElements = true, showIndices = false) {
+    toggleLabels(show, showElements = true, showIndices = false, showCharges = false, charges = null) {
         if (!show) {
             if (this.labelInstancedMesh) this.labelInstancedMesh.visible = false;
             return;
@@ -644,7 +731,7 @@ export default class Molecule {
             this.labelAtlas.dispose();
             this.labelAtlas = null;
         }
-        this.createLabelAtlas(showElements, showIndices);
+        this.createLabelAtlas(showElements, showIndices, showCharges, charges);
 
         if (!this.labelInstancedMesh) {
             const geometry = new THREE.PlaneGeometry(1, 1); // Centered plane (-0.5 to +0.5)
@@ -1044,6 +1131,9 @@ export default class Molecule {
 
                 // Update bonds during animation
                 this.updateBonds(this.main.mode);
+                if (window.chargeVisualizationEnabled && window.updateBondColorsForDisplay) {
+                    window.updateBondColorsForDisplay();
+                }
 
                 // Update labels if visible
                 if (this.labelInstancedMesh && this.labelInstancedMesh.visible) {
@@ -1157,6 +1247,9 @@ export default class Molecule {
 
         // Update bonds
         this.updateBonds(this.main.mode);
+        if (window.chargeVisualizationEnabled && window.updateBondColorsForDisplay) {
+            window.updateBondColorsForDisplay();
+        }
 
         // Update labels if visible
         if (this.labelInstancedMesh && this.labelInstancedMesh.visible) {

@@ -347,11 +347,15 @@ export default class Main {
         if (window.updateForceArrowControls) {
             window.updateForceArrowControls();
         }
+        if (window.updateChargeControls) {
+            window.updateChargeControls();
+        }
     }
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
         if (this.molecule && this.molecule.atoms && this.molecule.atoms.length > 0) {
-            this.molecule.toggleLabels(labelMode, window.showElements, window.showIndices);
+            const charges = window.showCharges ? getChargeArray(window.chargeVisualizationType) : null;
+            this.molecule.toggleLabels(labelMode, window.showElements, window.showIndices, window.showCharges, charges);
         }
         render();
     }
@@ -1808,9 +1812,8 @@ function onPointerMove2(event) {
             // Reset previous hover
             if (hoveredAtom !== null && !atomsSelected.includes(hoveredAtom)) {
                 const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
-                const atom = main.molecule.atoms[hoveredAtom];
-                if (!atom || !colorAttr) return;
-                const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+                if (!colorAttr) return;
+                const color = getDisplayColorForAtom(hoveredAtom);
                 colorAttr.setXYZ(hoveredAtom, color.r, color.g, color.b);
                 colorAttr.needsUpdate = true;
             }
@@ -1819,8 +1822,7 @@ function onPointerMove2(event) {
             hoveredAtom = instanceId;
             if (!atomsSelected.includes(instanceId)) {
                 const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
-                const atom = main.molecule.atoms[instanceId];
-                const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+                const color = getDisplayColorForAtom(instanceId);
                 // Lighten the color for hover
                 const hoverColor = color.clone().lerp(new THREE.Color(1, 1, 1), 0.3);
                 colorAttr.setXYZ(instanceId, hoverColor.r, hoverColor.g, hoverColor.b);
@@ -1834,12 +1836,11 @@ function onPointerMove2(event) {
         // No hover
         if (hoveredAtom !== null && !atomsSelected.includes(hoveredAtom)) {
             const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
-            const atom = main.molecule.atoms[hoveredAtom];
-            if (!atom || !colorAttr) {
+            if (!colorAttr) {
                 hoveredAtom = null;
                 return;
             }
-            const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+            const color = getDisplayColorForAtom(hoveredAtom);
             colorAttr.setXYZ(hoveredAtom, color.r, color.g, color.b);
             colorAttr.needsUpdate = true;
             render();
@@ -2499,11 +2500,12 @@ function resetFragments() {
     if (!colorAttr) return;
     for (let i = 0; i < colorAttr.count; i++) {
         const atom = main.molecule.atoms[i];
-        const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+        const color = getDisplayColorForAtom(i);
         atom.displayColor = color;
         colorAttr.setXYZ(i, color.r, color.g, color.b);
     }
     colorAttr.needsUpdate = true;
+    updateBondColorsForDisplay();
 
     // Update UI
     if (atomsSelected.length > 0) {
@@ -3387,25 +3389,12 @@ function selectFragment(fragmentAtoms, fragmentIndex) {
     for (let i = 0; i < colorAttr.count; i++) {
         const atom = main.molecule.atoms[i];
         if (!atom) continue;
-        const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+        const color = getDisplayColorForAtom(i);
         atom.displayColor = color;
         colorAttr.setXYZ(i, color.r, color.g, color.b);
     }
 
-    // Reset bond colors
-    if (main.molecule.bonds && main.molecule.bondGroup?.children[0]) {
-        const bondMesh = main.molecule.bondGroup.children[0];
-        const bondColorAttr = bondMesh.geometry.getAttribute('color');
-        if (bondColorAttr) {
-            main.molecule.bonds.forEach((bond, bondIdx) => {
-                const c1 = new THREE.Color(bond.atom1.color);
-                const c2 = new THREE.Color(bond.atom2.color);
-                bondColorAttr.setXYZ(bondIdx * 2, c1.r, c1.g, c1.b);
-                bondColorAttr.setXYZ(bondIdx * 2 + 1, c2.r, c2.g, c2.b);
-            });
-            bondColorAttr.needsUpdate = true;
-        }
-    }
+    updateBondColorsForDisplay();
 
     // Highlight selected fragments
     fragmentsSelected.forEach(fragIdx => {
@@ -3489,10 +3478,11 @@ function selectAtom(index, reset = true) {
     if ((!isSelecting || !cmdDown) && reset) {
         for (let i = 0; i < colorAttr.count; i++) {
             const atom = main.molecule.atoms[i];
-            const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+            const color = getDisplayColorForAtom(i);
             atom.displayColor = color;
             colorAttr.setXYZ(i, color.r, color.g, color.b);
         }
+        updateBondColorsForDisplay();
     }
 
     // Highlight selected atom (yellow)
@@ -3527,35 +3517,22 @@ function unselectAtom(index = null) {
     if (!colorAttr) return;
 
     if (index === null) {
-        // Reset all atoms to their default color
+        // Reset all atoms to their display color
         for (let i = 0; i < colorAttr.count; i++) {
             const atom = main.molecule.atoms[i];
-            const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+            const color = getDisplayColorForAtom(i);
             atom.displayColor = color;
             colorAttr.setXYZ(i, color.r, color.g, color.b);
         }
     } else {
-        // Reset only the specified atom to its default color
+        // Reset only the specified atom to its display color
         const atom = main.molecule.atoms[index];
-        const color = new THREE.Color(main.molecule.atomSettings[atom.type].color);
+        const color = getDisplayColorForAtom(index);
         atom.displayColor = color;
         colorAttr.setXYZ(index, color.r, color.g, color.b);
     }
     colorAttr.needsUpdate = true;
-    // Reset bond colors
-    if (main.molecule.bonds && main.molecule.bondGroup?.children[0]) {
-        const bondMesh = main.molecule.bondGroup.children[0];
-        const bondColorAttr = bondMesh.geometry.getAttribute('color');
-        if (bondColorAttr) {
-            main.molecule.bonds.forEach((bond, bondIdx) => {
-                const c1 = new THREE.Color(bond.atom1.color);
-                const c2 = new THREE.Color(bond.atom2.color);
-                bondColorAttr.setXYZ(bondIdx * 2, c1.r, c1.g, c1.b);
-                bondColorAttr.setXYZ(bondIdx * 2 + 1, c2.r, c2.g, c2.b);
-            });
-            bondColorAttr.needsUpdate = true;
-        }
-    }
+    updateBondColorsForDisplay();
 }
 
 function saveImage() {
@@ -6047,21 +6024,25 @@ window.toggleRibbon = toggleRibbon;
 window.labelIndexMode = false;
 window.showElements = true;
 window.showIndices = false;
+window.showCharges = false;
 
 document.getElementById('showElements').addEventListener('change', updateLabelMode);
 document.getElementById('showIndices').addEventListener('change', updateLabelMode);
+document.getElementById('showCharges').addEventListener('change', updateLabelMode);
 
 function updateLabelMode() {
     window.showElements = document.getElementById('showElements').checked;
     window.showIndices = document.getElementById('showIndices').checked;
+    window.showCharges = document.getElementById('showCharges').checked;
 
     if (!main.molecule || !main.molecule.atoms || main.molecule.atoms.length === 0) {
         return;
     }
 
-    const shouldShowLabels = window.showElements || window.showIndices;
+    const shouldShowLabels = window.showElements || window.showIndices || window.showCharges;
     labelMode = shouldShowLabels;
-    main.molecule.toggleLabels(shouldShowLabels, window.showElements, window.showIndices);
+    const charges = window.showCharges ? getChargeArray(window.chargeVisualizationType) : null;
+    main.molecule.toggleLabels(shouldShowLabels, window.showElements, window.showIndices, window.showCharges, charges);
     render();
 }
 
@@ -6081,6 +6062,150 @@ document.getElementById('forceScaleSlider').addEventListener('input', function (
         main.molecule.updateForceArrows(window.forceArrowScale);
         render();
     }
+});
+
+// Charge visualization controls
+window.chargeVisualizationEnabled = false;
+window.chargeVisualizationType = 'mulliken';
+window.chargeMaxAbs = 0;
+window.chargeColorCache = null;
+
+function getChargeEntries(type) {
+    if (!window.orcaMetadata) return null;
+    if (type === 'loewdin') return window.orcaMetadata.loewdinCharges || [];
+    return window.orcaMetadata.mullikenCharges || [];
+}
+
+function buildChargeArray(entries, atomCount) {
+    if (!entries || entries.length === 0 || !atomCount) return null;
+    let minIndex = Infinity;
+    let maxIndex = -Infinity;
+    entries.forEach(entry => {
+        if (typeof entry.index !== 'number') return;
+        minIndex = Math.min(minIndex, entry.index);
+        maxIndex = Math.max(maxIndex, entry.index);
+    });
+    let offset = 0;
+    if (maxIndex === atomCount && minIndex >= 1) {
+        offset = -1;
+    }
+    const charges = new Array(atomCount).fill(null);
+    entries.forEach(entry => {
+        const idx = entry.index + offset;
+        if (idx >= 0 && idx < atomCount) {
+            charges[idx] = entry.charge;
+        }
+    });
+    return charges;
+}
+
+function getChargeArray(type) {
+    if (!main.molecule) return null;
+    const entries = getChargeEntries(type);
+    return buildChargeArray(entries, main.molecule.atoms.length);
+}
+
+function applyChargeVisualization() {
+    if (!main.molecule) return;
+    if (!window.chargeVisualizationEnabled) {
+        main.molecule.clearChargeColors();
+        window.chargeColorCache = null;
+        window.chargeMaxAbs = 0;
+        updateBondColorsForDisplay();
+        render();
+        return;
+    }
+
+    const charges = getChargeArray(window.chargeVisualizationType);
+    if (!charges) {
+        main.molecule.clearChargeColors();
+        window.chargeColorCache = null;
+        window.chargeMaxAbs = 0;
+        updateBondColorsForDisplay();
+        render();
+        return;
+    }
+
+    let maxAbs = 0;
+    for (let i = 0; i < charges.length; i++) {
+        const q = charges[i];
+        if (q === null || q === undefined || Number.isNaN(q)) continue;
+        const abs = Math.abs(q);
+        if (abs > maxAbs) maxAbs = abs;
+    }
+
+    window.chargeMaxAbs = maxAbs;
+    window.chargeColorCache = buildChargeColorCache(charges, maxAbs);
+    main.molecule.applyChargeColors(charges, { maxAbs });
+    updateBondColorsForDisplay();
+    if (labelMode && window.showCharges) {
+        main.molecule.toggleLabels(true, window.showElements, window.showIndices, true, charges);
+    }
+    render();
+}
+
+function buildChargeColorCache(charges, maxAbs) {
+    if (!charges || charges.length === 0 || !maxAbs) return null;
+    const colors = new Float32Array(charges.length * 3);
+    const pos = { r: 0.9, g: 0.25, b: 0.25 };
+    const neg = { r: 0.25, g: 0.45, b: 0.95 };
+    const base = { r: 1, g: 1, b: 1 };
+
+    for (let i = 0; i < charges.length; i++) {
+        const q = charges[i];
+        let r = base.r;
+        let g = base.g;
+        let b = base.b;
+        if (q !== null && q !== undefined && !Number.isNaN(q)) {
+            const t = Math.min(1, Math.abs(q) / maxAbs);
+            const target = q >= 0 ? pos : neg;
+            r = base.r * (1 - t) + target.r * t;
+            g = base.g * (1 - t) + target.g * t;
+            b = base.b * (1 - t) + target.b * t;
+        }
+        const idx = i * 3;
+        colors[idx] = r;
+        colors[idx + 1] = g;
+        colors[idx + 2] = b;
+    }
+
+    return colors;
+}
+
+function getDisplayColorForAtom(atomIndex) {
+    if (window.chargeVisualizationEnabled && window.chargeColorCache && window.chargeColorCache.length >= (atomIndex * 3 + 3)) {
+        const idx = atomIndex * 3;
+        return new THREE.Color(window.chargeColorCache[idx], window.chargeColorCache[idx + 1], window.chargeColorCache[idx + 2]);
+    }
+    const atom = main.molecule.atoms[atomIndex];
+    return new THREE.Color(main.molecule.atomSettings[atom.type].color);
+}
+
+function updateBondColorsForDisplay() {
+    if (!main.molecule || !main.molecule.bonds || !main.molecule.bondGroup?.children[0]) return;
+    const bondMesh = main.molecule.bondGroup.children[0];
+    const bondColorAttr = bondMesh.geometry.getAttribute('color');
+    if (!bondColorAttr) return;
+    main.molecule.bonds.forEach((bond, bondIdx) => {
+        const atom1Idx = main.molecule.atoms.indexOf(bond.atom1);
+        const atom2Idx = main.molecule.atoms.indexOf(bond.atom2);
+        const c1 = atom1Idx >= 0 ? getDisplayColorForAtom(atom1Idx) : new THREE.Color(bond.atom1.color);
+        const c2 = atom2Idx >= 0 ? getDisplayColorForAtom(atom2Idx) : new THREE.Color(bond.atom2.color);
+        bondColorAttr.setXYZ(bondIdx * 2, c1.r, c1.g, c1.b);
+        bondColorAttr.setXYZ(bondIdx * 2 + 1, c2.r, c2.g, c2.b);
+    });
+    bondColorAttr.needsUpdate = true;
+}
+
+document.getElementById('toggleChargeColors')?.addEventListener('change', function () {
+    window.chargeVisualizationEnabled = this.checked;
+    applyChargeVisualization();
+    window.updateChargeControls?.();
+});
+
+document.getElementById('chargeTypeSelect')?.addEventListener('change', function () {
+    window.chargeVisualizationType = this.value;
+    window.updateChargeControls?.();
 });
 
 // Function to show/hide force arrow controls based on data availability
@@ -6121,12 +6246,88 @@ window.updateForceArrowControls = function () {
     updatePropertiesEmptyState();
 };
 
-// Update properties panel empty state based on available data (now only for forces)
+// Function to show/hide charge controls based on data availability
+window.updateChargeControls = function () {
+    const molecule = main.molecule;
+    const hasMulliken = !!(window.orcaMetadata && window.orcaMetadata.mullikenCharges && window.orcaMetadata.mullikenCharges.length > 0);
+    const hasLoewdin = !!(window.orcaMetadata && window.orcaMetadata.loewdinCharges && window.orcaMetadata.loewdinCharges.length > 0);
+    const hasCharges = !!(molecule && (hasMulliken || hasLoewdin));
+    const statusEl = document.getElementById('chargeStatus');
+    const checkbox = document.getElementById('toggleChargeColors');
+    const select = document.getElementById('chargeTypeSelect');
+    const section = document.getElementById('chargeSection');
+
+    if (section) {
+        section.style.display = hasCharges ? 'flex' : 'none';
+    }
+
+    if (select) {
+        const mullikenOption = select.querySelector('option[value="mulliken"]');
+        const loewdinOption = select.querySelector('option[value="loewdin"]');
+        if (mullikenOption) mullikenOption.disabled = !hasMulliken;
+        if (loewdinOption) loewdinOption.disabled = !hasLoewdin;
+
+        if (window.chargeVisualizationType === 'mulliken' && !hasMulliken && hasLoewdin) {
+            window.chargeVisualizationType = 'loewdin';
+            select.value = 'loewdin';
+        } else if (window.chargeVisualizationType === 'loewdin' && !hasLoewdin && hasMulliken) {
+            window.chargeVisualizationType = 'mulliken';
+            select.value = 'mulliken';
+        }
+    }
+
+    if (statusEl) {
+        if (hasCharges) {
+            const charges = getChargeArray(window.chargeVisualizationType);
+            let maxAbs = 0;
+            let count = 0;
+            if (charges) {
+                charges.forEach(q => {
+                    if (q === null || q === undefined || Number.isNaN(q)) return;
+                    count++;
+                    const abs = Math.abs(q);
+                    if (abs > maxAbs) maxAbs = abs;
+                });
+            }
+            statusEl.textContent = count > 0 ? `(${count} atoms, max ±${maxAbs.toFixed(3)})` : '(no data)';
+            statusEl.style.color = count > 0 ? '#4CAF50' : '#888';
+        } else {
+            statusEl.textContent = '(no data)';
+            statusEl.style.color = '#888';
+        }
+    }
+
+    if (checkbox) {
+        checkbox.disabled = !hasCharges;
+        if (!hasCharges) {
+            checkbox.checked = false;
+            window.chargeVisualizationEnabled = false;
+            main.molecule?.clearChargeColors();
+            window.chargeColorCache = null;
+            window.chargeMaxAbs = 0;
+            updateBondColorsForDisplay();
+            if (labelMode && window.showCharges) {
+                updateLabelMode();
+            }
+        } else if (checkbox.checked) {
+            applyChargeVisualization();
+        }
+    }
+
+    // Update properties panel empty state
+    updatePropertiesEmptyState();
+};
+
+// Update properties panel empty state based on available data
 window.updatePropertiesEmptyState = function() {
     const molecule = main.molecule;
     const hasForces = molecule && molecule.hasForceData();
+    const hasMulliken = !!(window.orcaMetadata && window.orcaMetadata.mullikenCharges && window.orcaMetadata.mullikenCharges.length > 0);
+    const hasLoewdin = !!(window.orcaMetadata && window.orcaMetadata.loewdinCharges && window.orcaMetadata.loewdinCharges.length > 0);
+    const hasCharges = molecule && (hasMulliken || hasLoewdin);
 
     const forceSection = document.getElementById('forceSection');
+    const chargeSection = document.getElementById('chargeSection');
     const emptyState = document.getElementById('propertiesEmpty');
 
     // Show force section if there's force data
@@ -6134,9 +6335,14 @@ window.updatePropertiesEmptyState = function() {
         forceSection.style.display = hasForces ? 'block' : 'none';
     }
 
-    // Show/hide empty state based on force data only
+    // Show charge section if there's charge data
+    if (chargeSection) {
+        chargeSection.style.display = hasCharges ? 'flex' : 'none';
+    }
+
+    // Show/hide empty state based on available data
     if (emptyState) {
-        emptyState.style.display = hasForces ? 'none' : 'flex';
+        emptyState.style.display = (hasForces || hasCharges) ? 'none' : 'flex';
     }
 };
 
@@ -6490,6 +6696,9 @@ window.THREE = THREE;
 // Export functions
 window.selectAtom = selectAtom;
 window.unselectAtom = unselectAtom;
+window.applyChargeVisualization = applyChargeVisualization;
+window.updateBondColorsForDisplay = updateBondColorsForDisplay;
+window.getChargeArray = getChargeArray;
 window.rotateSelectedAtoms = rotateSelectedAtoms;
 window.translateSelectedAtoms = translateSelectedAtoms;
 window.updateEditingContent = updateEditingContent;

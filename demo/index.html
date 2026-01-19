@@ -1744,6 +1744,11 @@
                     window.main.molecule.createForceArrows(window.forceArrowScale || 1.0);
                 }
             }
+            if (window.chargeVisualizationEnabled && window.applyChargeVisualization) {
+                window.applyChargeVisualization();
+            } else if (window.updateBondColorsForDisplay) {
+                window.updateBondColorsForDisplay();
+            }
         }
 
         // Sync slider and number input
@@ -1880,6 +1885,9 @@
                 <div class="compact-style-row checkbox-row">
                     <label><input type="checkbox" id="showIndices"> Indices</label>
                 </div>
+                <div class="compact-style-row checkbox-row">
+                    <label><input type="checkbox" id="showCharges"> Charges</label>
+                </div>
             </div>
 
             <div class="transition-settings"
@@ -1942,7 +1950,7 @@
         <div id="propertiesPanel" class="properties-panel">
             <div class="properties-panel-content">
                 <div class="properties-section-header">
-                    <i class="fa-solid fa-arrows-alt"></i> Forces
+                    <i class="fa-solid fa-sliders"></i> Properties
                 </div>
 
                 <!-- Force Arrows Section -->
@@ -1958,10 +1966,25 @@
                     </div>
                 </div>
 
+                <!-- Charge Visualization Section -->
+                <div class="properties-section" id="chargeSection" style="display: none;">
+                    <div class="compact-style-row checkbox-row" id="chargeColorsRow">
+                        <label><input type="checkbox" id="toggleChargeColors"> Charge Colors <span id="chargeStatus"
+                                style="font-size: 10px; color: #888;"></span></label>
+                    </div>
+                    <div class="compact-style-row" id="chargeTypeRow">
+                        <label>Charge Type</label>
+                        <select id="chargeTypeSelect">
+                            <option value="mulliken">Mulliken</option>
+                            <option value="loewdin">Loewdin</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Placeholder when no data -->
                 <div class="properties-empty" id="propertiesEmpty">
                     <i class="fas fa-info-circle"></i>
-                    <span>Load a molecule with force data to see properties here.</span>
+                    <span>Load a molecule with force or charge data to see properties here.</span>
                 </div>
             </div>
         </div>

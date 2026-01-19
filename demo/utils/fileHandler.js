@@ -19,6 +19,7 @@ export default class FileHandler {
         // Clear previous orbital data
         window.orbitalData = null;
         window.moldenData = null;
+        window.orcaMetadata = null;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -104,6 +105,10 @@ export default class FileHandler {
                             this.main.molecule.toggleForceArrows(true, window.forceArrowScale || 1.0);
                         }
                     }
+                }
+
+                if (window.updateChargeControls) {
+                    window.updateChargeControls();
                 }
 
                 // Update orbital controls and enable if orbital data exists
