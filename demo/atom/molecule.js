@@ -109,7 +109,10 @@ export default class Molecule {
 
     createAtoms(data, mode) {
         const resolution = mode.resolution || 8;
-        const atomGeometry = new THREE.SphereGeometry(1, resolution, resolution);
+        const atomGeometry = this.lodEnabled
+            ? getLODGeometry(resolution)
+            : new THREE.SphereGeometry(1, resolution, resolution);
+
 
         let material;
         if (mode == 0) {
@@ -1580,7 +1583,7 @@ export default class Molecule {
 
         // Check for molden file data (basis functions + MO coefficients)
         const hasMoldenData = !!(window.moldenData && window.moldenData.orbitals &&
-                                 window.moldenData.orbitals.length > 0);
+            window.moldenData.orbitals.length > 0);
 
         return hasCubeData || hasMoldenData;
     }
