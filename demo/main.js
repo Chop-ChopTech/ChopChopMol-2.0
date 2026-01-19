@@ -6183,15 +6183,9 @@ function buildForceColorCache(magnitudes, minMag, maxMag) {
         let b = 1;
         if (mag !== null && mag !== undefined && !Number.isNaN(mag)) {
             const t = Math.min(1, Math.max(0, (mag - minMag) / range));
-            if (t < 0.5) {
-                r = 0;
-                g = t * 2;
-                b = 1 - t * 2;
-            } else {
-                r = (t - 0.5) * 2;
-                g = 1 - (t - 0.5) * 2;
-                b = 0;
-            }
+            r = t;
+            g = 1 - t;
+            b = 0;
         }
         const idx = i * 3;
         colors[idx] = r;

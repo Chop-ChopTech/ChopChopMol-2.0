@@ -953,14 +953,9 @@ export default class Molecule {
             const dir = new THREE.Vector3(fx, fy, fz).normalize();
             const origin = atom.position.clone().sub(this.offset);
 
-            // Adaptive color: blue (low) -> green (mid) -> red (high)
+            // Adaptive color: green (low) -> red (high)
             const t = (forceMag - minMag) / magRange;
-            const color = new THREE.Color();
-            if (t < 0.5) {
-                color.setRGB(0, t * 2, 1 - t * 2); // blue to green
-            } else {
-                color.setRGB((t - 0.5) * 2, 1 - (t - 0.5) * 2, 0); // green to red
-            }
+            const color = new THREE.Color(t, 1 - t, 0);
 
             const arrow = new THREE.ArrowHelper(
                 dir,
