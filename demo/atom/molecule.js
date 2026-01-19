@@ -1131,7 +1131,7 @@ export default class Molecule {
 
                 // Update bonds during animation
                 this.updateBonds(this.main.mode);
-                if (window.chargeVisualizationEnabled && window.updateBondColorsForDisplay) {
+                if ((window.chargeVisualizationEnabled || window.forceVisualizationEnabled) && window.updateBondColorsForDisplay) {
                     window.updateBondColorsForDisplay();
                 }
 
@@ -1247,7 +1247,7 @@ export default class Molecule {
 
         // Update bonds
         this.updateBonds(this.main.mode);
-        if (window.chargeVisualizationEnabled && window.updateBondColorsForDisplay) {
+        if ((window.chargeVisualizationEnabled || window.forceVisualizationEnabled) && window.updateBondColorsForDisplay) {
             window.updateBondColorsForDisplay();
         }
 

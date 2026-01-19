@@ -1744,7 +1744,9 @@
                     window.main.molecule.createForceArrows(window.forceArrowScale || 1.0);
                 }
             }
-            if (window.chargeVisualizationEnabled && window.applyChargeVisualization) {
+            if (window.forceVisualizationEnabled && window.applyForceVisualization) {
+                window.applyForceVisualization();
+            } else if (window.chargeVisualizationEnabled && window.applyChargeVisualization) {
                 window.applyChargeVisualization();
             } else if (window.updateBondColorsForDisplay) {
                 window.updateBondColorsForDisplay();
@@ -1957,6 +1959,10 @@
                 <div class="properties-section" id="forceSection" style="display: none;">
                     <div class="compact-style-row checkbox-row" id="forceArrowsRow">
                         <label><input type="checkbox" id="toggleForceArrows"> Force Arrows <span id="forceArrowsStatus"
+                                style="font-size: 10px; color: #888;"></span></label>
+                    </div>
+                    <div class="compact-style-row checkbox-row" id="forceColorsRow">
+                        <label><input type="checkbox" id="toggleForceColors"> Force Colors <span id="forceColorsStatus"
                                 style="font-size: 10px; color: #888;"></span></label>
                     </div>
                     <div class="compact-style-row" id="forceScaleRow">

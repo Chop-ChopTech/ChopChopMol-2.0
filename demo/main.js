@@ -6064,11 +6064,19 @@ document.getElementById('forceScaleSlider').addEventListener('input', function (
     }
 });
 
+document.getElementById('toggleForceColors')?.addEventListener('change', function () {
+    window.forceVisualizationEnabled = this.checked;
+    applyForceVisualization();
+});
+
 // Charge visualization controls
 window.chargeVisualizationEnabled = false;
 window.chargeVisualizationType = 'mulliken';
 window.chargeMaxAbs = 0;
 window.chargeColorCache = null;
+window.forceVisualizationEnabled = false;
+window.forceMaxMag = 0;
+window.forceColorCache = null;
 
 function getChargeEntries(type) {
     if (!window.orcaMetadata) return null;
@@ -6136,11 +6144,137 @@ function applyChargeVisualization() {
 
     window.chargeMaxAbs = maxAbs;
     window.chargeColorCache = buildChargeColorCache(charges, maxAbs);
-    main.molecule.applyChargeColors(charges, { maxAbs });
-    updateBondColorsForDisplay();
+    if (!window.forceVisualizationEnabled) {
+        main.molecule.applyChargeColors(charges, { maxAbs });
+        updateBondColorsForDisplay();
+    } else {
+        updateBondColorsForDisplay();
+    }
     if (labelMode && window.showCharges) {
         main.molecule.toggleLabels(true, window.showElements, window.showIndices, true, charges);
     }
+    render();
+}
+
+function getForceMagnitudes() {
+    if (!main.molecule || !main.molecule.forceData) return null;
+    const magnitudes = new Array(main.molecule.atoms.length).fill(null);
+    for (let i = 0; i < main.molecule.atoms.length && i < main.molecule.forceData.length; i++) {
+        const force = main.molecule.forceData[i];
+        if (!force || force.fx === undefined || force.fy === undefined || force.fz === undefined) continue;
+        const fx = force.fx;
+        const fy = force.fy;
+        const fz = force.fz;
+        const mag = Math.sqrt(fx * fx + fy * fy + fz * fz);
+        magnitudes[i] = mag;
+    }
+    return magnitudes;
+}
+
+function buildForceColorCache(magnitudes, minMag, maxMag) {
+    if (!magnitudes || magnitudes.length === 0 || maxMag <= 0) return null;
+    const colors = new Float32Array(magnitudes.length * 3);
+    const range = maxMag - minMag || 1;
+
+    for (let i = 0; i < magnitudes.length; i++) {
+        const mag = magnitudes[i];
+        let r = 1;
+        let g = 1;
+        let b = 1;
+        if (mag !== null && mag !== undefined && !Number.isNaN(mag)) {
+            const t = Math.min(1, Math.max(0, (mag - minMag) / range));
+            if (t < 0.5) {
+                r = 0;
+                g = t * 2;
+                b = 1 - t * 2;
+            } else {
+                r = (t - 0.5) * 2;
+                g = 1 - (t - 0.5) * 2;
+                b = 0;
+            }
+        }
+        const idx = i * 3;
+        colors[idx] = r;
+        colors[idx + 1] = g;
+        colors[idx + 2] = b;
+    }
+
+    return colors;
+}
+
+function applyForceVisualization() {
+    if (!main.molecule) return;
+    if (!window.forceVisualizationEnabled) {
+        window.forceColorCache = null;
+        window.forceMaxMag = 0;
+        if (window.chargeVisualizationEnabled) {
+            applyChargeVisualization();
+        } else {
+            main.molecule.clearChargeColors();
+            updateBondColorsForDisplay();
+            render();
+        }
+        return;
+    }
+
+    const magnitudes = getForceMagnitudes();
+    if (!magnitudes) {
+        window.forceColorCache = null;
+        window.forceMaxMag = 0;
+        window.forceVisualizationEnabled = false;
+        const toggle = document.getElementById('toggleForceColors');
+        if (toggle) toggle.checked = false;
+        if (window.chargeVisualizationEnabled) {
+            applyChargeVisualization();
+        } else {
+            main.molecule.clearChargeColors();
+            updateBondColorsForDisplay();
+            render();
+        }
+        return;
+    }
+
+    let minMag = Infinity;
+    let maxMag = 0;
+    for (let i = 0; i < magnitudes.length; i++) {
+        const mag = magnitudes[i];
+        if (mag === null || mag === undefined || Number.isNaN(mag)) continue;
+        minMag = Math.min(minMag, mag);
+        maxMag = Math.max(maxMag, mag);
+    }
+
+    if (!Number.isFinite(minMag) || maxMag <= 0) {
+        window.forceColorCache = null;
+        window.forceMaxMag = 0;
+        window.forceVisualizationEnabled = false;
+        const toggle = document.getElementById('toggleForceColors');
+        if (toggle) toggle.checked = false;
+        if (window.chargeVisualizationEnabled) {
+            applyChargeVisualization();
+        } else {
+            main.molecule.clearChargeColors();
+            updateBondColorsForDisplay();
+            render();
+        }
+        return;
+    }
+
+    window.forceMaxMag = maxMag;
+    window.forceColorCache = buildForceColorCache(magnitudes, minMag, maxMag);
+
+    const colorAttr = main.molecule.instancedMesh?.geometry?.getAttribute('color');
+    if (colorAttr && window.forceColorCache) {
+        for (let i = 0; i < main.molecule.atoms.length; i++) {
+            const idx = i * 3;
+            const r = window.forceColorCache[idx];
+            const g = window.forceColorCache[idx + 1];
+            const b = window.forceColorCache[idx + 2];
+            colorAttr.setXYZ(i, r, g, b);
+            main.molecule.atoms[i].displayColor = new THREE.Color(r, g, b);
+        }
+        colorAttr.needsUpdate = true;
+    }
+    updateBondColorsForDisplay();
     render();
 }
 
@@ -6173,6 +6307,10 @@ function buildChargeColorCache(charges, maxAbs) {
 }
 
 function getDisplayColorForAtom(atomIndex) {
+    if (window.forceVisualizationEnabled && window.forceColorCache && window.forceColorCache.length >= (atomIndex * 3 + 3)) {
+        const idx = atomIndex * 3;
+        return new THREE.Color(window.forceColorCache[idx], window.forceColorCache[idx + 1], window.forceColorCache[idx + 2]);
+    }
     if (window.chargeVisualizationEnabled && window.chargeColorCache && window.chargeColorCache.length >= (atomIndex * 3 + 3)) {
         const idx = atomIndex * 3;
         return new THREE.Color(window.chargeColorCache[idx], window.chargeColorCache[idx + 1], window.chargeColorCache[idx + 2]);
@@ -6213,7 +6351,9 @@ window.updateForceArrowControls = function () {
     const molecule = main.molecule;
     const hasForces = molecule && molecule.hasForceData();
     const statusEl = document.getElementById('forceArrowsStatus');
+    const colorStatusEl = document.getElementById('forceColorsStatus');
     const checkbox = document.getElementById('toggleForceArrows');
+    const colorCheckbox = document.getElementById('toggleForceColors');
 
     console.log('[ForceArrows] updateForceArrowControls called');
     console.log('[ForceArrows] molecule exists:', !!molecule);
@@ -6240,6 +6380,44 @@ window.updateForceArrowControls = function () {
     checkbox.disabled = !hasForces;
     if (!hasForces) {
         checkbox.checked = false;
+    }
+
+    if (colorCheckbox) {
+        colorCheckbox.disabled = !hasForces;
+        if (!hasForces) {
+            colorCheckbox.checked = false;
+            window.forceVisualizationEnabled = false;
+            window.forceColorCache = null;
+            window.forceMaxMag = 0;
+            if (window.chargeVisualizationEnabled) {
+                applyChargeVisualization();
+            } else {
+                main.molecule?.clearChargeColors();
+                updateBondColorsForDisplay();
+            }
+        } else if (colorCheckbox.checked) {
+            applyForceVisualization();
+        }
+    }
+
+    if (colorStatusEl) {
+        if (hasForces) {
+            const magnitudes = getForceMagnitudes();
+            let maxMag = 0;
+            let count = 0;
+            if (magnitudes) {
+                magnitudes.forEach(mag => {
+                    if (mag === null || mag === undefined || Number.isNaN(mag)) return;
+                    count++;
+                    if (mag > maxMag) maxMag = mag;
+                });
+            }
+            colorStatusEl.textContent = count > 0 ? `(${count} atoms, max ${maxMag.toFixed(3)})` : '(no data)';
+            colorStatusEl.style.color = count > 0 ? '#4CAF50' : '#888';
+        } else {
+            colorStatusEl.textContent = '(no data)';
+            colorStatusEl.style.color = '#888';
+        }
     }
 
     // Update properties panel empty state
@@ -6697,6 +6875,7 @@ window.THREE = THREE;
 window.selectAtom = selectAtom;
 window.unselectAtom = unselectAtom;
 window.applyChargeVisualization = applyChargeVisualization;
+window.applyForceVisualization = applyForceVisualization;
 window.updateBondColorsForDisplay = updateBondColorsForDisplay;
 window.getChargeArray = getChargeArray;
 window.rotateSelectedAtoms = rotateSelectedAtoms;
