@@ -6121,15 +6121,12 @@ window.updateForceArrowControls = function () {
     updatePropertiesEmptyState();
 };
 
-// Update properties panel empty state based on available data
+// Update properties panel empty state based on available data (now only for forces)
 window.updatePropertiesEmptyState = function() {
     const molecule = main.molecule;
     const hasForces = molecule && molecule.hasForceData();
-    const hasOrbitals = molecule && molecule.hasOrbitalData();
-    const hasAnyData = hasForces || hasOrbitals;
 
     const forceSection = document.getElementById('forceSection');
-    const orbitalSection = document.getElementById('orbitalSection');
     const emptyState = document.getElementById('propertiesEmpty');
 
     // Show force section if there's force data
@@ -6137,57 +6134,64 @@ window.updatePropertiesEmptyState = function() {
         forceSection.style.display = hasForces ? 'block' : 'none';
     }
 
-    // Show/hide empty state
+    // Show/hide empty state based on force data only
     if (emptyState) {
-        emptyState.style.display = hasAnyData ? 'none' : 'flex';
+        emptyState.style.display = hasForces ? 'none' : 'flex';
     }
 };
 
 // ========== Orbital Visualization Controls ==========
 
-// Orbital visibility toggle
-document.getElementById('toggleOrbitals')?.addEventListener('change', async function () {
+// Track currently selected orbital in the table
+window.selectedOrbitalIndex = -1;
+
+// Function to select and display an orbital from the table
+async function selectOrbitalFromTable(orbitalIndex) {
     if (!main.molecule) return;
 
-    // Check if this is a molden file that needs grid generation
-    if (this.checked && window.moldenData && !window.orbitalData) {
-        console.log('[Orbitals] Molden file detected, generating volumetric grid...');
+    const statusEl = document.getElementById('orbitalStatus');
+    const tableRows = document.querySelectorAll('#orbitalTableBody tr');
 
-        // Get selected orbital index from dropdown
-        const orbitalSelect = document.getElementById('orbitalSelect');
-        const selectedIndex = orbitalSelect ? parseInt(orbitalSelect.value) : -1;
+    // Update selected row visual
+    tableRows.forEach((row, i) => {
+        if (parseInt(row.dataset.index) === orbitalIndex) {
+            row.classList.add('selected');
+        } else {
+            row.classList.remove('selected');
+        }
+    });
 
-        // Show loading indicator
-        const statusEl = document.getElementById('orbitalStatus');
-        const originalStatus = statusEl.textContent;
-        statusEl.textContent = '(generating grid...)';
-        statusEl.style.color = '#FFA500';
+    window.selectedOrbitalIndex = orbitalIndex;
+
+    // For molden files, generate grid for selected orbital
+    if (window.moldenData) {
+        console.log('[Orbitals] Generating grid for orbital', orbitalIndex);
+
+        const originalStatus = statusEl?.textContent || '';
+        if (statusEl) {
+            statusEl.textContent = '(generating...)';
+            statusEl.style.color = '#FFA500';
+        }
 
         try {
-            // Generate volumetric grid from molden data (may take a few seconds)
-            const gridSize = 64; // Good balance of quality vs performance
-            const padding = 5.0; // Angstroms
+            await new Promise(resolve => setTimeout(resolve, 10));
 
             if (!window.generateMoldenOrbitalGrid) {
                 throw new Error('Molden orbital utilities not loaded');
             }
 
-            // Run in next tick to allow UI to update
-            await new Promise(resolve => setTimeout(resolve, 10));
-
             const orbitalData = window.generateMoldenOrbitalGrid(
                 window.moldenData,
                 main.molecule.atoms,
-                selectedIndex,
-                gridSize,
-                padding
+                orbitalIndex,
+                64, // grid size
+                5.0 // padding
             );
 
             if (!orbitalData) {
                 throw new Error('Failed to generate orbital grid');
             }
 
-            // Store as window.orbitalData so existing visualization code works
             window.orbitalData = orbitalData;
 
             console.log('[Orbitals] Grid generation complete:', {
@@ -6195,83 +6199,41 @@ document.getElementById('toggleOrbitals')?.addEventListener('change', async func
                 valueRange: [orbitalData.minValue, orbitalData.maxValue]
             });
 
-            // Restore status
-            statusEl.textContent = originalStatus;
-            statusEl.style.color = '#4CAF50';
+            // Update isovalue if needed
+            if (window.calculateDefaultIsovalue) {
+                const defaultIso = window.calculateDefaultIsovalue(orbitalData);
+                document.getElementById('isovalueSlider').value = defaultIso;
+                document.getElementById('isovalueValue').textContent = defaultIso.toFixed(3);
+            }
 
-            // Now visualize using the generated grid
+            if (statusEl) {
+                statusEl.textContent = `MO ${orbitalIndex + 1}`;
+                statusEl.style.color = '#4CAF50';
+            }
+
+            // Show the orbital
             main.molecule.toggleOrbitals(true);
             render();
 
         } catch (error) {
             console.error('[Orbitals] Error generating grid:', error);
-            statusEl.textContent = originalStatus;
-            statusEl.style.color = '#F44336';
-            alert('Error generating orbital grid: ' + error.message);
-            this.checked = false;
-        }
-
-        return;
-    }
-
-    // Regular cube file visualization
-    main.molecule.toggleOrbitals(this.checked);
-    render();
-});
-
-// Orbital select dropdown
-document.getElementById('orbitalSelect')?.addEventListener('change', async function () {
-    if (!main.molecule) return;
-
-    const selectedIndex = parseInt(this.value);
-
-    // For molden files, regenerate grid with new orbital
-    if (window.moldenData && main.molecule.orbitalVisible) {
-        console.log('[Orbitals] Regenerating grid for orbital', selectedIndex);
-
-        const statusEl = document.getElementById('orbitalStatus');
-        const originalStatus = statusEl.textContent;
-        statusEl.textContent = '(generating grid...)';
-        statusEl.style.color = '#FFA500';
-
-        try {
-            await new Promise(resolve => setTimeout(resolve, 10));
-
-            const orbitalData = window.generateMoldenOrbitalGrid(
-                window.moldenData,
-                main.molecule.atoms,
-                selectedIndex,
-                64, // grid size
-                5.0 // padding
-            );
-
-            if (orbitalData) {
-                window.orbitalData = orbitalData;
-
-                // Regenerate visualization
-                const isovalue = parseFloat(document.getElementById('isovalueSlider').value);
-                main.molecule.updateOrbitalIsovalue(isovalue);
-
-                statusEl.textContent = originalStatus;
-                statusEl.style.color = '#4CAF50';
-                render();
+            if (statusEl) {
+                statusEl.textContent = 'Error';
+                statusEl.style.color = '#F44336';
             }
-        } catch (error) {
-            console.error('[Orbitals] Error regenerating grid:', error);
-            statusEl.textContent = originalStatus;
-            statusEl.style.color = '#F44336';
         }
 
         return;
     }
 
-    // For cube files, just regenerate with current settings
+    // For cube files, just show/update
     if (window.orbitalData) {
         const isovalue = parseFloat(document.getElementById('isovalueSlider').value);
+        main.molecule.toggleOrbitals(true);
         main.molecule.updateOrbitalIsovalue(isovalue);
         render();
     }
-});
+}
 
 // Isovalue slider
 document.getElementById('isovalueSlider')?.addEventListener('input', function () {
@@ -6279,7 +6241,7 @@ document.getElementById('isovalueSlider')?.addEventListener('input', function ()
     document.getElementById('isovalueValue').textContent = isovalue.toFixed(3);
 
     if (!main.molecule) return;
-    if (document.getElementById('toggleOrbitals')?.checked) {
+    if (main.molecule.orbitalVisible) {
         main.molecule.updateOrbitalIsovalue(isovalue);
         render();
     }
@@ -6310,31 +6272,36 @@ document.getElementById('showNegativePhase')?.addEventListener('change', functio
     render();
 });
 
-// Function to show/hide orbital controls based on data availability
+// Function to show/hide orbital table panel based on data availability
 window.updateOrbitalControls = function () {
     const molecule = main.molecule;
     const hasOrbitals = molecule && molecule.hasOrbitalData();
     const statusEl = document.getElementById('orbitalStatus');
-    const checkbox = document.getElementById('toggleOrbitals');
-    const orbitalSection = document.getElementById('orbitalSection');
-    const orbitalSelect = document.getElementById('orbitalSelect');
+    const orbitalTablePanel = document.getElementById('orbitalTablePanel');
+    const orbitalTableBody = document.getElementById('orbitalTableBody');
 
     console.log('[Orbitals] updateOrbitalControls called');
     console.log('[Orbitals] molecule exists:', !!molecule);
     console.log('[Orbitals] hasOrbitalData():', hasOrbitals);
 
-    if (hasOrbitals) {
+    if (hasOrbitals && orbitalTablePanel) {
         const info = molecule.getOrbitalInfo();
         console.log('[Orbitals] Orbital info:', info);
 
+        // Show the orbital table panel
+        orbitalTablePanel.classList.add('open');
+
+        // Update panel position based on file explorer state
+        setTimeout(updateOrbitalPanelPosition, 50);
+
+        // Update status
         if (statusEl) {
             if (info.fileType === 'cube') {
-                // Cube file with volumetric data
                 if (info.gridDimensions) {
                     const [nx, ny, nz] = info.gridDimensions;
-                    statusEl.textContent = `(${nx}×${ny}×${nz} grid)`;
+                    statusEl.textContent = `(${nx}×${ny}×${nz})`;
                 } else {
-                    statusEl.textContent = '(cube data)';
+                    statusEl.textContent = '(cube)';
                 }
                 statusEl.style.color = '#4CAF50';
 
@@ -6345,60 +6312,136 @@ window.updateOrbitalControls = function () {
                     document.getElementById('isovalueValue').textContent = defaultIso.toFixed(3);
                 }
             } else if (info.fileType === 'molden') {
-                // Molden file with MO coefficients
                 statusEl.textContent = `(${info.numOrbitals} MOs)`;
                 statusEl.style.color = '#4CAF50';
-
-                // Populate orbital selector with HOMO/LUMO
-                if (orbitalSelect) {
-                    orbitalSelect.innerHTML = '';
-                    if (info.homoIndex >= 0) {
-                        const opt = document.createElement('option');
-                        opt.value = info.homoIndex;
-                        opt.textContent = `HOMO (${info.homoIndex + 1})`;
-                        orbitalSelect.appendChild(opt);
-                    }
-                    if (info.lumoIndex >= 0) {
-                        const opt = document.createElement('option');
-                        opt.value = info.lumoIndex;
-                        opt.textContent = `LUMO (${info.lumoIndex + 1})`;
-                        orbitalSelect.appendChild(opt);
-                        orbitalSelect.selectedIndex = 1; // Select LUMO by default
-                    }
-                    // Add custom option
-                    for (let i = 0; i < info.numOrbitals; i++) {
-                        if (i !== info.homoIndex && i !== info.lumoIndex) {
-                            const opt = document.createElement('option');
-                            opt.value = i;
-                            opt.textContent = `MO ${i + 1}`;
-                            orbitalSelect.appendChild(opt);
-                        }
-                    }
-                }
             }
         }
+
+        // Populate the orbital table
+        if (orbitalTableBody && info.fileType === 'molden' && window.moldenData) {
+            orbitalTableBody.innerHTML = '';
+            const orbitals = window.moldenData.molecularOrbitals || [];
+            const homoIndex = info.homoIndex;
+            const lumoIndex = info.lumoIndex;
+
+            orbitals.forEach((orbital, i) => {
+                const tr = document.createElement('tr');
+                tr.dataset.index = i;
+
+                // Determine orbital type label
+                let typeLabel = '';
+                let typeClass = '';
+                if (i === homoIndex) {
+                    typeLabel = 'HOMO';
+                    typeClass = 'homo';
+                } else if (i === lumoIndex) {
+                    typeLabel = 'LUMO';
+                    typeClass = 'lumo';
+                } else if (i < homoIndex) {
+                    const diff = homoIndex - i;
+                    typeLabel = `H-${diff}`;
+                } else if (i > lumoIndex) {
+                    const diff = i - lumoIndex;
+                    typeLabel = `L+${diff}`;
+                }
+
+                if (typeClass) tr.classList.add(typeClass);
+
+                const energy = orbital.energy !== undefined ? orbital.energy.toFixed(4) : '-';
+                const occ = orbital.occupation !== undefined ? orbital.occupation.toFixed(1) : '-';
+
+                tr.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td class="orbital-type">${typeLabel}</td>
+                    <td>${occ}</td>
+                    <td class="orbital-energy">${energy}</td>
+                `;
+
+                tr.addEventListener('click', () => selectOrbitalFromTable(i));
+                orbitalTableBody.appendChild(tr);
+            });
+
+            // Auto-scroll to HOMO/LUMO region
+            if (homoIndex >= 0) {
+                const homoRow = orbitalTableBody.querySelector(`tr[data-index="${homoIndex}"]`);
+                if (homoRow) {
+                    setTimeout(() => {
+                        homoRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    }, 100);
+                }
+            }
+        } else if (orbitalTableBody && info.fileType === 'cube') {
+            // For cube files, just show a single entry
+            orbitalTableBody.innerHTML = `
+                <tr data-index="0" class="selected">
+                    <td>1</td>
+                    <td class="orbital-type">Cube</td>
+                    <td>-</td>
+                    <td class="orbital-energy">-</td>
+                </tr>
+            `;
+            orbitalTableBody.querySelector('tr')?.addEventListener('click', () => selectOrbitalFromTable(0));
+        }
     } else {
+        // Hide the orbital table panel
+        if (orbitalTablePanel) {
+            orbitalTablePanel.classList.remove('open');
+        }
         if (statusEl) {
-            statusEl.textContent = '(no data)';
+            statusEl.textContent = '';
             statusEl.style.color = '#888';
         }
     }
 
-    if (checkbox) {
-        checkbox.disabled = !hasOrbitals;
-        if (!hasOrbitals) {
-            checkbox.checked = false;
-        }
-    }
-
-    // Show/hide orbital section
-    if (orbitalSection) {
-        orbitalSection.style.display = hasOrbitals ? 'block' : 'none';
-    }
-
-    // Update properties panel empty state
+    // Update properties panel empty state (now just for forces)
     updatePropertiesEmptyState();
 };
+
+// Track file explorer state to adjust orbital panel position
+window.updateOrbitalPanelPosition = function updateOrbitalPanelPosition() {
+    const fileExplorer = document.getElementById('fileExplorerPanel');
+    const orbitalPanel = document.getElementById('orbitalTablePanel');
+    if (!orbitalPanel) return;
+
+    if (fileExplorer && fileExplorer.classList.contains('open')) {
+        const explorerWidth = fileExplorer.offsetWidth || 244;
+        orbitalPanel.style.right = (explorerWidth + 10) + 'px';
+        orbitalPanel.classList.remove('explorer-closed');
+    } else {
+        orbitalPanel.style.right = '10px';
+        orbitalPanel.classList.add('explorer-closed');
+    }
+}
+
+// Listen for file explorer toggle
+const explorerCollapseToggle = document.getElementById('explorerCollapseToggle');
+if (explorerCollapseToggle) {
+    const originalClickHandler = explorerCollapseToggle.onclick;
+    explorerCollapseToggle.addEventListener('click', () => {
+        setTimeout(updateOrbitalPanelPosition, 350);
+    });
+}
+
+// Also observe mutations on file explorer panel
+const fileExplorerPanel = document.getElementById('fileExplorerPanel');
+if (fileExplorerPanel) {
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.attributeName === 'class' || mutation.attributeName === 'style') {
+                updateOrbitalPanelPosition();
+            }
+        });
+    });
+    observer.observe(fileExplorerPanel, { attributes: true });
+}
+
+// Listen for explorer resize
+const explorerResizer = document.getElementById('explorerResizer');
+if (explorerResizer) {
+    explorerResizer.addEventListener('mouseup', () => {
+        setTimeout(updateOrbitalPanelPosition, 50);
+    });
+}
 
 // Transition settings
 window.transitionSettings = {

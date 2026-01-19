@@ -4598,6 +4598,170 @@ input[type="range"]:focus {
     color: white;
 }
 
+/* Orbital Table Panel - sticks to left of file explorer */
+.orbital-table-panel {
+    position: fixed;
+    top: 10px;
+    right: 254px; /* file explorer width + 10px margin */
+    width: 200px;
+    max-height: calc(100vh - 20px);
+    z-index: 9999;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+    transition: right 0.3s ease, opacity 0.2s ease;
+}
+
+.orbital-table-panel.open {
+    display: flex;
+}
+
+/* Adjust position when file explorer is closed */
+.file-explorer-panel:not(.open) ~ .orbital-table-panel,
+.orbital-table-panel.explorer-closed {
+    right: 10px;
+}
+
+.orbital-table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.orbital-table-header i {
+    color: #60a5fa;
+}
+
+.orbital-table-controls {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.orbital-control-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.orbital-control-row label {
+    min-width: 50px;
+    font-size: 10px;
+}
+
+.orbital-control-row input[type="range"] {
+    flex: 1;
+    max-width: 80px;
+    height: 4px;
+}
+
+.orbital-control-row span {
+    min-width: 32px;
+    text-align: right;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.orbital-phase-toggles {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.orbital-phase-toggles label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.orbital-phase-toggles input[type="checkbox"] {
+    width: 12px;
+    height: 12px;
+}
+
+.orbital-table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+.orbital-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+}
+
+.orbital-table thead {
+    position: sticky;
+    top: 0;
+    background: rgba(15, 23, 42, 0.98);
+    z-index: 1;
+}
+
+.orbital-table th {
+    padding: 6px 4px;
+    text-align: left;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 9px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.orbital-table td {
+    padding: 6px 4px;
+    color: rgba(255, 255, 255, 0.8);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.orbital-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.orbital-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.orbital-table tbody tr.selected {
+    background: rgba(96, 165, 250, 0.25);
+}
+
+.orbital-table tbody tr.homo {
+    color: #4ade80;
+}
+
+.orbital-table tbody tr.lumo {
+    color: #fb923c;
+}
+
+.orbital-table .orbital-type {
+    font-weight: 600;
+    font-size: 9px;
+}
+
+.orbital-table .orbital-energy {
+    font-family: monospace;
+    font-size: 9px;
+}
+
 #style8 {
     width: 60%;
     padding: none;

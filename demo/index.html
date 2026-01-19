@@ -919,8 +919,8 @@
             </button>
             <button class="dropdown-icon dropdown"
                 onclick="document.getElementById('propertiesPanel').classList.toggle('open')" style="border: none;"
-                title="Molecule Properties">
-                <i class="fa-solid fa-wave-square"></i>
+                title="Force Visualization">
+                <i class="fa-solid fa-arrows-alt"></i>
             </button>
             <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant" style="border: none; display: none;">
                 <i class="fa-solid fa-comment-dots"></i>
@@ -1897,19 +1897,56 @@
             <button id="makeDefaultButton" class="style-save-btn" title="Save as Default">Make Default</button>
         </div>
     </div>
+    <!-- Orbital Table Panel (sticks to left of file explorer) -->
+    <div id="orbitalTablePanel" class="orbital-table-panel">
+        <div class="orbital-table-header">
+            <span><i class="fas fa-atom"></i> Orbitals</span>
+            <span id="orbitalStatus" style="font-size: 10px; color: #888;"></span>
+        </div>
+        <div class="orbital-table-controls">
+            <div class="orbital-control-row">
+                <label>Isovalue</label>
+                <input type="range" id="isovalueSlider" min="0.001" max="0.1" step="0.001" value="0.02">
+                <span id="isovalueValue">0.02</span>
+            </div>
+            <div class="orbital-control-row">
+                <label>Opacity</label>
+                <input type="range" id="orbitalOpacitySlider" min="0.1" max="1" step="0.05" value="0.7">
+                <span id="orbitalOpacityValue">0.7</span>
+            </div>
+            <div class="orbital-phase-toggles">
+                <label><input type="checkbox" id="showPositivePhase" checked> +</label>
+                <label><input type="checkbox" id="showNegativePhase" checked> -</label>
+            </div>
+        </div>
+        <div class="orbital-table-wrapper">
+            <table class="orbital-table" id="orbitalTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Type</th>
+                        <th>Occ</th>
+                        <th>Energy</th>
+                    </tr>
+                </thead>
+                <tbody id="orbitalTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div id="fileExplorerPanel" class="file-explorer-panel open">
 
 
-        <!-- Properties Panel (Force, Orbital info) -->
+        <!-- Properties Panel (Forces only) -->
         <div id="propertiesPanel" class="properties-panel">
             <div class="properties-panel-content">
                 <div class="properties-section-header">
-                    <i class="fa-solid fa-wave-square"></i> Molecule Properties
+                    <i class="fa-solid fa-arrows-alt"></i> Forces
                 </div>
 
                 <!-- Force Arrows Section -->
                 <div class="properties-section" id="forceSection" style="display: none;">
-                    <div class="properties-section-title">Forces</div>
                     <div class="compact-style-row checkbox-row" id="forceArrowsRow">
                         <label><input type="checkbox" id="toggleForceArrows"> Force Arrows <span id="forceArrowsStatus"
                                 style="font-size: 10px; color: #888;"></span></label>
@@ -1921,47 +1958,10 @@
                     </div>
                 </div>
 
-                <!-- Orbital Visualization Section -->
-                <div class="properties-section" id="orbitalSection" style="display: none;">
-                    <div class="properties-section-title">Orbitals</div>
-                    <div class="compact-style-row checkbox-row">
-                        <label><input type="checkbox" id="toggleOrbitals"> Show Orbitals <span id="orbitalStatus"
-                                style="font-size: 10px; color: #888;"></span></label>
-                    </div>
-
-                    <div class="compact-style-row" id="orbitalSelectRow">
-                        <label>Orbital</label>
-                        <select id="orbitalSelect">
-                            <option value="homo">HOMO</option>
-                            <option value="lumo">LUMO</option>
-                            <option value="0">Custom</option>
-                        </select>
-                    </div>
-
-                    <div class="compact-style-row" id="isovalueRow">
-                        <label>Isovalue</label>
-                        <input type="range" id="isovalueSlider" min="0.001" max="0.1" step="0.001" value="0.02">
-                        <span id="isovalueValue">0.02</span>
-                    </div>
-
-                    <div class="compact-style-row" id="orbitalOpacityRow">
-                        <label>Opacity</label>
-                        <input type="range" id="orbitalOpacitySlider" min="0.1" max="1" step="0.05" value="0.7">
-                        <span id="orbitalOpacityValue">0.7</span>
-                    </div>
-
-                    <div class="compact-style-row checkbox-row">
-                        <label><input type="checkbox" id="showPositivePhase" checked> Positive Phase</label>
-                    </div>
-                    <div class="compact-style-row checkbox-row">
-                        <label><input type="checkbox" id="showNegativePhase" checked> Negative Phase</label>
-                    </div>
-                </div>
-
                 <!-- Placeholder when no data -->
                 <div class="properties-empty" id="propertiesEmpty">
                     <i class="fas fa-info-circle"></i>
-                    <span>Load a molecule with force or orbital data to see properties here.</span>
+                    <span>Load a molecule with force data to see properties here.</span>
                 </div>
             </div>
         </div>
