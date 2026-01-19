@@ -917,6 +917,11 @@
                 onclick="document.getElementById('stylePanel').classList.toggle('open')" style="border: none;">
                 <i class="fa-solid fa-gear"></i>
             </button>
+            <button class="dropdown-icon dropdown"
+                onclick="document.getElementById('propertiesPanel').classList.toggle('open')" style="border: none;"
+                title="Molecule Properties">
+                <i class="fa-solid fa-wave-square"></i>
+            </button>
             <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant" style="border: none; display: none;">
                 <i class="fa-solid fa-comment-dots"></i>
             </button>
@@ -1551,6 +1556,26 @@
                     e.stopPropagation();
                 });
             });
+
+            // Close style panel and properties panel when clicking outside
+            document.addEventListener('click', function (e) {
+                const stylePanel = document.getElementById('stylePanel');
+                const propertiesPanel = document.getElementById('propertiesPanel');
+                const stylePanelBtn = e.target.closest('button[onclick*="stylePanel"]');
+                const propertiesPanelBtn = e.target.closest('button[onclick*="propertiesPanel"]');
+
+                // Close style panel if clicking outside of it and not on its toggle button
+                if (stylePanel && stylePanel.classList.contains('open') &&
+                    !stylePanel.contains(e.target) && !stylePanelBtn) {
+                    stylePanel.classList.remove('open');
+                }
+
+                // Close properties panel if clicking outside of it and not on its toggle button
+                if (propertiesPanel && propertiesPanel.classList.contains('open') &&
+                    !propertiesPanel.contains(e.target) && !propertiesPanelBtn) {
+                    propertiesPanel.classList.remove('open');
+                }
+            });
         });
         function loadJson() {
             jsonPanel.classList.remove('on');
@@ -1803,75 +1828,102 @@
 
     <!-- AI Chat Panel -->
     <!-- Floating Style Panel -->
+    <div id="stylePanel" class="style-panel">
 
-    <div id="fileExplorerPanel" class="file-explorer-panel open">
-        <div id="stylePanel" class="style-panel">
-
-            <div class="style-panel-content">
-                <div class="style-sliders-col">
-                    <div class="compact-style-row">
-                        <label>Roughness</label>
-                        <input type="range" id="style1" min="0" max="1" step="0.01" value="0.17">
-                    </div>
-                    <div class="compact-style-row">
-                        <label>Metalness</label>
-                        <input type="range" id="style2" min="0" max="1" step="0.01" value="0.3">
-                    </div>
-                    <div class="compact-style-row">
-                        <label>Opacity</label>
-                        <input type="range" id="style3" min="0" max="1" step="0.01" value="1">
-                    </div>
-                    <div class="compact-style-row">
-                        <label>Bonds</label>
-                        <input type="range" min="0.1" max="0.9" step="0.001" value="0.15" id="style4">
-                    </div>
-                    <div class="compact-style-row">
-                        <label>Atom Size</label>
-                        <input type="range" id="style5" min="0.1" max="2" step="0.01">
-                    </div>
-                    <div class="compact-style-row">
-                        <label>Resolution</label>
-                        <input type="range" id="style6" min="1" max="64" step="1">
-                    </div>
-                    <div class="compact-style-row">
-                        <label>Background</label>
-                        <input type="color" id="style8" value="#01101f">
-                    </div>
+        <div class="style-panel-content">
+            <div class="style-sliders-col">
+                <div class="compact-style-row">
+                    <label>Roughness</label>
+                    <input type="range" id="style1" min="0" max="1" step="0.01" value="0.17">
                 </div>
-                <div class="style-checkboxes-col">
-                    <div class="compact-style-row checkbox-row">
-                        <label><input type="checkbox" id="toggleStyleChanges"> Styled Mode</label>
-                    </div>
-                    <div class="compact-style-row checkbox-row">
-                        <label><input type="checkbox" id="style7"> Antialiasing</label>
-                    </div>
-                    <div class="compact-style-row checkbox-row">
-                        <label><input type="checkbox" id="toggleOrtho"> Ortho Camera</label>
-                    </div>
-                    <div class="compact-style-row checkbox-row">
-                        <label><input type="checkbox" id="toggleSilly"> Silly Mode</label>
-                    </div>
-                    <div class="compact-style-row checkbox-row">
-                        <label><input type="checkbox" id="showElements" checked> Atom symbol</label>
-                    </div>
-                    <div class="compact-style-row checkbox-row">
-                        <label><input type="checkbox" id="showIndices"> Indices</label>
-                    </div>
+                <div class="compact-style-row">
+                    <label>Metalness</label>
+                    <input type="range" id="style2" min="0" max="1" step="0.01" value="0.3">
+                </div>
+                <div class="compact-style-row">
+                    <label>Opacity</label>
+                    <input type="range" id="style3" min="0" max="1" step="0.01" value="1">
+                </div>
+                <div class="compact-style-row">
+                    <label>Bonds</label>
+                    <input type="range" min="0.1" max="0.9" step="0.001" value="0.15" id="style4">
+                </div>
+                <div class="compact-style-row">
+                    <label>Atom Size</label>
+                    <input type="range" id="style5" min="0.1" max="2" step="0.01">
+                </div>
+                <div class="compact-style-row">
+                    <label>Resolution</label>
+                    <input type="range" id="style6" min="1" max="64" step="1">
+                </div>
+                <div class="compact-style-row">
+                    <label>Background</label>
+                    <input type="color" id="style8" value="#01101f">
+                </div>
+            </div>
+            <div class="style-checkboxes-col">
+                <div class="compact-style-row checkbox-row">
+                    <label><input type="checkbox" id="toggleStyleChanges"> Styled Mode</label>
+                </div>
+                <div class="compact-style-row checkbox-row">
+                    <label><input type="checkbox" id="style7"> Antialiasing</label>
+                </div>
+                <div class="compact-style-row checkbox-row">
+                    <label><input type="checkbox" id="toggleOrtho"> Ortho Camera</label>
+                </div>
+                <div class="compact-style-row checkbox-row">
+                    <label><input type="checkbox" id="toggleSilly"> Silly Mode</label>
+                </div>
+                <div class="compact-style-row checkbox-row">
+                    <label><input type="checkbox" id="showElements" checked> Atom symbol</label>
+                </div>
+                <div class="compact-style-row checkbox-row">
+                    <label><input type="checkbox" id="showIndices"> Indices</label>
+                </div>
+            </div>
+
+            <div class="transition-settings"
+                style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px;">
+                <div class="compact-style-row checkbox-row">
+                    <label><input type="checkbox" id="toggleTransitions"> Animate Transitions</label>
+                </div>
+                <div class="compact-style-row" id="transitionDurationRow">
+                    <label>Duration</label>
+                    <input type="range" id="transitionDuration" min="50" max="300" step="10" value="300">
+                    <span id="transitionDurationValue">300ms</span>
+                </div>
+            </div>
+
+            <button id="makeDefaultButton" class="style-save-btn" title="Save as Default">Make Default</button>
+        </div>
+    </div>
+    <div id="fileExplorerPanel" class="file-explorer-panel open">
+
+
+        <!-- Properties Panel (Force, Orbital info) -->
+        <div id="propertiesPanel" class="properties-panel">
+            <div class="properties-panel-content">
+                <div class="properties-section-header">
+                    <i class="fa-solid fa-wave-square"></i> Molecule Properties
+                </div>
+
+                <!-- Force Arrows Section -->
+                <div class="properties-section" id="forceSection" style="display: none;">
+                    <div class="properties-section-title">Forces</div>
                     <div class="compact-style-row checkbox-row" id="forceArrowsRow">
                         <label><input type="checkbox" id="toggleForceArrows"> Force Arrows <span id="forceArrowsStatus"
                                 style="font-size: 10px; color: #888;"></span></label>
                     </div>
-                </div>
-
-                <div class="compact-style-row" id="forceScaleRow">
-                    <label>Force Scale</label>
-                    <input type="range" id="forceScaleSlider" min="0.1" max="10" step="0.1" value="1">
-                    <span id="forceScaleValue">1.0</span>
+                    <div class="compact-style-row" id="forceScaleRow">
+                        <label>Force Scale</label>
+                        <input type="range" id="forceScaleSlider" min="0.1" max="10" step="0.1" value="1">
+                        <span id="forceScaleValue">1.0</span>
+                    </div>
                 </div>
 
                 <!-- Orbital Visualization Section -->
-                <div class="orbital-settings"
-                    style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px; display: none;" id="orbitalSection">
+                <div class="properties-section" id="orbitalSection" style="display: none;">
+                    <div class="properties-section-title">Orbitals</div>
                     <div class="compact-style-row checkbox-row">
                         <label><input type="checkbox" id="toggleOrbitals"> Show Orbitals <span id="orbitalStatus"
                                 style="font-size: 10px; color: #888;"></span></label>
@@ -1906,21 +1958,14 @@
                     </div>
                 </div>
 
-                <div class="transition-settings"
-                    style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px;">
-                    <div class="compact-style-row checkbox-row">
-                        <label><input type="checkbox" id="toggleTransitions"> Animate Transitions</label>
-                    </div>
-                    <div class="compact-style-row" id="transitionDurationRow">
-                        <label>Duration</label>
-                        <input type="range" id="transitionDuration" min="50" max="300" step="10" value="300">
-                        <span id="transitionDurationValue">300ms</span>
-                    </div>
+                <!-- Placeholder when no data -->
+                <div class="properties-empty" id="propertiesEmpty">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Load a molecule with force or orbital data to see properties here.</span>
                 </div>
-
-                <button id="makeDefaultButton" class="style-save-btn" title="Save as Default">Make Default</button>
             </div>
         </div>
+
         <div class="panel-resizer panel-resizer-horizontal" id="explorerResizer"></div>
 
         <button class="panel-collapse-toggle" id="explorerCollapseToggle" title="Collapse panel">

@@ -6116,6 +6116,31 @@ window.updateForceArrowControls = function () {
     if (!hasForces) {
         checkbox.checked = false;
     }
+
+    // Update properties panel empty state
+    updatePropertiesEmptyState();
+};
+
+// Update properties panel empty state based on available data
+window.updatePropertiesEmptyState = function() {
+    const molecule = main.molecule;
+    const hasForces = molecule && molecule.hasForceData();
+    const hasOrbitals = molecule && molecule.hasOrbitalData();
+    const hasAnyData = hasForces || hasOrbitals;
+
+    const forceSection = document.getElementById('forceSection');
+    const orbitalSection = document.getElementById('orbitalSection');
+    const emptyState = document.getElementById('propertiesEmpty');
+
+    // Show force section if there's force data
+    if (forceSection) {
+        forceSection.style.display = hasForces ? 'block' : 'none';
+    }
+
+    // Show/hide empty state
+    if (emptyState) {
+        emptyState.style.display = hasAnyData ? 'none' : 'flex';
+    }
 };
 
 // ========== Orbital Visualization Controls ==========
@@ -6370,6 +6395,9 @@ window.updateOrbitalControls = function () {
     if (orbitalSection) {
         orbitalSection.style.display = hasOrbitals ? 'block' : 'none';
     }
+
+    // Update properties panel empty state
+    updatePropertiesEmptyState();
 };
 
 // Transition settings

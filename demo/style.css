@@ -4385,9 +4385,10 @@ input[type="range"]:focus {
 /* Floating Style Panel - stuck to file explorer */
 .style-panel {
     position: absolute;
-    top: 10px;
-    right: 100%;
+    top: 70px;
+    left: 50%;
     margin-right: 10px;
+    transform: translateX(-50%);
     width: 367px;
     z-index: 9999;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
@@ -4396,10 +4397,13 @@ input[type="range"]:focus {
     backdrop-filter: blur(10px);
     overflow: hidden;
     opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
 }
 
 .style-panel.open {
     opacity: 1;
+    pointer-events: auto;
 }
 
 .style-panel-header {
@@ -4487,6 +4491,111 @@ input[type="range"]:focus {
 .style-panel.open .style-panel-content {
     max-height: 400px;
     padding: 8px 12px 12px;
+}
+
+/* Properties Panel - for force and orbital info */
+.properties-panel {
+    position: absolute;
+    top: 70px;
+    right: 100%;
+    margin-right: 397px;
+    width: 250px;
+    z-index: 9998;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.properties-panel.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.properties-panel-content {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.properties-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    font-weight: 600;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.properties-section-header i {
+    color: #60a5fa;
+}
+
+.properties-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.properties-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.properties-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 8px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+    text-align: center;
+}
+
+.properties-empty i {
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+/* Properties panel control adjustments */
+.properties-panel .compact-style-row {
+    margin: 4px 0;
+}
+
+.properties-panel .compact-style-row label {
+    min-width: 80px;
+}
+
+.properties-panel input[type="range"] {
+    flex: 1;
+    max-width: 100px;
+}
+
+.properties-panel select {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: white;
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.properties-panel select option {
+    background: #1e293b;
+    color: white;
 }
 
 #style8 {
@@ -4979,6 +5088,7 @@ input[type="color"]::-moz-color-swatch {
     background: rgba(0, 0, 0, 0.6);
     pointer-events: auto;
 }
+
 /* ============================================================================
    REMOTE FILE SYSTEM ACCESS - Compact Integration
    ============================================================================ */
@@ -5125,8 +5235,15 @@ input[type="color"]::-moz-color-swatch {
     width: 100%;
 }
 
-.remote-form-group.flex-1 { flex: 1; min-width: 0; }
-.remote-form-group.flex-3 { flex: 3; min-width: 0; }
+.remote-form-group.flex-1 {
+    flex: 1;
+    min-width: 0;
+}
+
+.remote-form-group.flex-3 {
+    flex: 3;
+    min-width: 0;
+}
 
 .remote-form-group label {
     display: block;
@@ -5497,5 +5614,7 @@ input[type="color"]::-moz-color-swatch {
 }
 
 @keyframes remoteFileSpin {
-    to { transform: translateY(-50%) rotate(360deg); }
+    to {
+        transform: translateY(-50%) rotate(360deg);
+    }
 }

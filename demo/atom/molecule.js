@@ -3,6 +3,33 @@ import { mergeGeometries } from 'jsm/utils/BufferGeometryUtils.js'
 import Atom from './atom.js';
 import Bond from './bond.js';
 
+// LOD configuration: distance thresholds and corresponding resolutions
+const LOD_LEVELS = [
+    { distance: 0, resolution: 32 },      // Close: high detail
+    { distance: 30, resolution: 16 },     // Medium: balanced
+    { distance: 60, resolution: 8 },      // Far: low detail
+    { distance: 120, resolution: 4 },     // Very far: minimal detail
+];
+
+// Cached sphere geometries for each LOD level
+const lodGeometryCache = new Map();
+
+function getLODGeometry(resolution) {
+    if (!lodGeometryCache.has(resolution)) {
+        lodGeometryCache.set(resolution, new THREE.SphereGeometry(1, resolution, resolution));
+    }
+    return lodGeometryCache.get(resolution);
+}
+
+function getResolutionForDistance(distance) {
+    for (let i = LOD_LEVELS.length - 1; i >= 0; i--) {
+        if (distance >= LOD_LEVELS[i].distance) {
+            return LOD_LEVELS[i].resolution;
+        }
+    }
+    return LOD_LEVELS[0].resolution;
+}
+
 export default class Molecule {
     constructor(main, atomSettings, overlay) {
         this.main = main;
@@ -27,6 +54,12 @@ export default class Molecule {
         this.orbitalIsovalue = 0.02;
         this.orbitalOpacity = 0.7;
         this.orbitalVisible = false;
+
+        // LOD state
+        this.lodEnabled = true;
+        this.currentLODResolution = 8;
+        this.lastLODUpdateTime = 0;
+        this.lodUpdateInterval = 100; // ms between LOD checks
     }
 
     init(data, mode, center, ribbonMode = false) {
