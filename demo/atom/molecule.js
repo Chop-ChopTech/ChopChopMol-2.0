@@ -945,10 +945,6 @@ export default class Molecule {
             forceInfos.push({ atom, fx, fy, fz, forceMag });
         }
 
-        const magRange = (window.forceVisualizationEnabled && window.forceColorMaxAbs > 0)
-            ? window.forceColorMaxAbs
-            : (maxMag || 1);
-
         // Second pass: create arrows with adaptive colors
         for (const { atom, fx, fy, fz, forceMag } of forceInfos) {
             const dir = new THREE.Vector3(fx, fy, fz).normalize();
@@ -1073,7 +1069,7 @@ export default class Molecule {
             );
 
             // Store force data for interpolation
-            const startForces = this.forceData ? this.forceData.map(f => ({
+            let startForces = this.forceData ? this.forceData.map(f => ({
                 fx: f.fx || 0,
                 fy: f.fy || 0,
                 fz: f.fz || 0
@@ -1084,6 +1080,20 @@ export default class Molecule {
                 fz: a.fz || 0
             })) : null;
             const shouldAnimateForces = startForces && targetForces && this.forceArrowGroup?.visible;
+            if (startForces && targetForces) {
+                let startMax = 0;
+                for (let i = 0; i < startForces.length; i++) {
+                    const f = startForces[i];
+                    const mag = Math.sqrt(f.fx * f.fx + f.fy * f.fy + f.fz * f.fz);
+                    if (mag > startMax) startMax = mag;
+                }
+                if (startMax <= 0) {
+                    startForces = targetForces;
+                }
+            }
+            const shouldAnimateForceColors = window.forceVisualizationEnabled && startForces && targetForces;
+            const forceScale = window.forceArrowScale || 1;
+            const forceStretch = this.stretch || 1;
 
             const startTime = performance.now();
             const matrix = new THREE.Matrix4();
@@ -1127,7 +1137,7 @@ export default class Molecule {
 
                 // Update bonds during animation
                 this.updateBonds(this.main.mode);
-                if ((window.chargeVisualizationEnabled || window.forceVisualizationEnabled) && window.updateBondColorsForDisplay) {
+                if ((!shouldAnimateForceColors) && (window.chargeVisualizationEnabled || window.forceVisualizationEnabled) && window.updateBondColorsForDisplay) {
                     window.updateBondColorsForDisplay();
                 }
 
@@ -1150,6 +1160,36 @@ export default class Molecule {
                     }
                     this.forceData = interpolatedForces;
                     this.createForceArrows(window.forceArrowScale || 1.0);
+                }
+
+                if (shouldAnimateForceColors) {
+                    const colorAttr = this.instancedMesh.geometry.getAttribute('color');
+                    if (colorAttr) {
+                        if (!window.forceColorCache || window.forceColorCache.length < this.atoms.length * 3) {
+                            window.forceColorCache = new Float32Array(this.atoms.length * 3);
+                        }
+                        for (let i = 0; i < this.atoms.length; i++) {
+                            const start = startForces[i];
+                            const target = targetForces[i];
+                            const fx = (start.fx + (target.fx - start.fx) * progress) * forceScale * forceStretch;
+                            const fy = (start.fy + (target.fy - start.fy) * progress) * forceScale * forceStretch;
+                            const fz = (start.fz + (target.fz - start.fz) * progress) * forceScale * forceStretch;
+                            const mag = Math.sqrt(fx * fx + fy * fy + fz * fz);
+                            const t = Math.min(1, mag);
+                            const r = t;
+                            const g = 1 - t;
+                            const b = 0;
+                            colorAttr.setXYZ(i, r, g, b);
+                            const idx = i * 3;
+                            window.forceColorCache[idx] = r;
+                            window.forceColorCache[idx + 1] = g;
+                            window.forceColorCache[idx + 2] = b;
+                        }
+                        colorAttr.needsUpdate = true;
+                        if (window.updateBondColorsForDisplay) {
+                            window.updateBondColorsForDisplay();
+                        }
+                    }
                 }
 
                 // Render
