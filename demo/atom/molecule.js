@@ -927,8 +927,8 @@ export default class Molecule {
 
         const stretch = this.stretch;
 
-        // First pass: calculate min/max magnitudes for adaptive coloring
-        let minMag = Infinity, maxMag = 0;
+        // First pass: calculate max magnitude for adaptive coloring
+        let maxMag = 0;
         const forceInfos = [];
         for (let i = 0; i < this.atoms.length && i < this.forceData.length; i++) {
             const atom = this.atoms[i];
@@ -941,12 +941,13 @@ export default class Molecule {
             const forceMag = Math.sqrt(fx * fx + fy * fy + fz * fz);
             if (forceMag < 0.001) continue;
 
-            minMag = Math.min(minMag, forceMag);
             maxMag = Math.max(maxMag, forceMag);
             forceInfos.push({ atom, fx, fy, fz, forceMag });
         }
 
-        const magRange = maxMag - minMag || 1;
+        const magRange = (window.forceVisualizationEnabled && window.forceColorMaxAbs > 0)
+            ? window.forceColorMaxAbs
+            : (maxMag || 1);
 
         // Second pass: create arrows with adaptive colors
         for (const { atom, fx, fy, fz, forceMag } of forceInfos) {
@@ -954,7 +955,7 @@ export default class Molecule {
             const origin = atom.position.clone().sub(this.offset);
 
             // Adaptive color: green (low) -> red (high)
-            const t = (forceMag - minMag) / magRange;
+            const t = Math.min(1, forceMag);
             const color = new THREE.Color(t, 1 - t, 0);
 
             const arrow = new THREE.ArrowHelper(

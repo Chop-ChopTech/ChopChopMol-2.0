@@ -6062,10 +6062,16 @@ document.getElementById('forceScaleSlider').addEventListener('input', function (
         main.molecule.updateForceArrows(window.forceArrowScale);
         render();
     }
+    if (window.forceVisualizationEnabled) {
+        applyForceVisualization();
+    }
 });
 
 document.getElementById('toggleForceColors')?.addEventListener('change', function () {
     window.forceVisualizationEnabled = this.checked;
+    if (this.checked) {
+        window.forceColorMaxAbs = 0;
+    }
     applyForceVisualization();
 });
 
@@ -6077,6 +6083,7 @@ window.chargeColorCache = null;
 window.forceVisualizationEnabled = false;
 window.forceMaxMag = 0;
 window.forceColorCache = null;
+window.forceColorMaxAbs = 0;
 
 function getChargeEntries(type) {
     if (!window.orcaMetadata) return null;
@@ -6156,15 +6163,15 @@ function applyChargeVisualization() {
     render();
 }
 
-function getForceMagnitudes() {
+function getForceMagnitudes(scale = 1, stretch = 1) {
     if (!main.molecule || !main.molecule.forceData) return null;
     const magnitudes = new Array(main.molecule.atoms.length).fill(null);
     for (let i = 0; i < main.molecule.atoms.length && i < main.molecule.forceData.length; i++) {
         const force = main.molecule.forceData[i];
         if (!force || force.fx === undefined || force.fy === undefined || force.fz === undefined) continue;
-        const fx = force.fx;
-        const fy = force.fy;
-        const fz = force.fz;
+        const fx = force.fx * scale * stretch;
+        const fy = force.fy * scale * stretch;
+        const fz = force.fz * scale * stretch;
         const mag = Math.sqrt(fx * fx + fy * fy + fz * fz);
         magnitudes[i] = mag;
     }
@@ -6182,7 +6189,7 @@ function buildForceColorCache(magnitudes, minMag, maxMag) {
         let g = 1;
         let b = 1;
         if (mag !== null && mag !== undefined && !Number.isNaN(mag)) {
-            const t = Math.min(1, Math.max(0, (mag - minMag) / range));
+            const t = Math.min(1, Math.max(0, (mag - minMag)));
             r = t;
             g = 1 - t;
             b = 0;
@@ -6201,6 +6208,7 @@ function applyForceVisualization() {
     if (!window.forceVisualizationEnabled) {
         window.forceColorCache = null;
         window.forceMaxMag = 0;
+        window.forceColorMaxAbs = 0;
         if (window.chargeVisualizationEnabled) {
             applyChargeVisualization();
         } else {
@@ -6211,11 +6219,14 @@ function applyForceVisualization() {
         return;
     }
 
-    const magnitudes = getForceMagnitudes();
+    const scale = window.forceArrowScale || 1;
+    const stretch = main.molecule?.stretch || 1;
+    const magnitudes = getForceMagnitudes(scale, stretch);
     if (!magnitudes) {
         window.forceColorCache = null;
         window.forceMaxMag = 0;
         window.forceVisualizationEnabled = false;
+        window.forceColorMaxAbs = 0;
         const toggle = document.getElementById('toggleForceColors');
         if (toggle) toggle.checked = false;
         if (window.chargeVisualizationEnabled) {
@@ -6228,19 +6239,18 @@ function applyForceVisualization() {
         return;
     }
 
-    let minMag = Infinity;
     let maxMag = 0;
     for (let i = 0; i < magnitudes.length; i++) {
         const mag = magnitudes[i];
         if (mag === null || mag === undefined || Number.isNaN(mag)) continue;
-        minMag = Math.min(minMag, mag);
         maxMag = Math.max(maxMag, mag);
     }
 
-    if (!Number.isFinite(minMag) || maxMag <= 0) {
+    if (maxMag <= 0) {
         window.forceColorCache = null;
         window.forceMaxMag = 0;
         window.forceVisualizationEnabled = false;
+        window.forceColorMaxAbs = 0;
         const toggle = document.getElementById('toggleForceColors');
         if (toggle) toggle.checked = false;
         if (window.chargeVisualizationEnabled) {
@@ -6253,8 +6263,11 @@ function applyForceVisualization() {
         return;
     }
 
+    const minMag = 0;
+    const colorMax = window.forceColorMaxAbs > 0 ? Math.max(window.forceColorMaxAbs, maxMag) : maxMag;
+    window.forceColorMaxAbs = colorMax;
     window.forceMaxMag = maxMag;
-    window.forceColorCache = buildForceColorCache(magnitudes, minMag, maxMag);
+    window.forceColorCache = buildForceColorCache(magnitudes, minMag, colorMax);
 
     const colorAttr = main.molecule.instancedMesh?.geometry?.getAttribute('color');
     if (colorAttr && window.forceColorCache) {
@@ -6383,6 +6396,7 @@ window.updateForceArrowControls = function () {
             window.forceVisualizationEnabled = false;
             window.forceColorCache = null;
             window.forceMaxMag = 0;
+            window.forceColorMaxAbs = 0;
             if (window.chargeVisualizationEnabled) {
                 applyChargeVisualization();
             } else {
@@ -6396,7 +6410,9 @@ window.updateForceArrowControls = function () {
 
     if (colorStatusEl) {
         if (hasForces) {
-            const magnitudes = getForceMagnitudes();
+            const scale = window.forceArrowScale || 1;
+            const stretch = molecule?.stretch || 1;
+            const magnitudes = getForceMagnitudes(scale, stretch);
             let maxMag = 0;
             let count = 0;
             if (magnitudes) {
@@ -6406,7 +6422,8 @@ window.updateForceArrowControls = function () {
                     if (mag > maxMag) maxMag = mag;
                 });
             }
-            colorStatusEl.textContent = count > 0 ? `(${count} atoms, max ${maxMag.toFixed(3)})` : '(no data)';
+            const displayMax = window.forceColorMaxAbs > 0 ? window.forceColorMaxAbs : maxMag;
+            colorStatusEl.textContent = count > 0 ? `(${count} atoms, max ${displayMax.toFixed(3)})` : '(no data)';
             colorStatusEl.style.color = count > 0 ? '#4CAF50' : '#888';
         } else {
             colorStatusEl.textContent = '(no data)';
@@ -6491,7 +6508,7 @@ window.updateChargeControls = function () {
 };
 
 // Update properties panel empty state based on available data
-window.updatePropertiesEmptyState = function() {
+window.updatePropertiesEmptyState = function () {
     const molecule = main.molecule;
     const hasForces = molecule && molecule.hasForceData();
     const hasMulliken = !!(window.orcaMetadata && window.orcaMetadata.mullikenCharges && window.orcaMetadata.mullikenCharges.length > 0);
