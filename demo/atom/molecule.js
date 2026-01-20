@@ -624,20 +624,32 @@ export default class Molecule {
 
     createLabelAtlas(showElements = true, showIndices = false, showCharges = false, charges = null) {
         const numAtoms = this.atoms.length;
-        const size = 64;
+        // Use higher resolution for crisp text (128px base, scaled by device pixel ratio)
+        const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2x for performance
+        const baseSize = 128;
+        const size = baseSize * dpr;
         const cols = Math.ceil(Math.sqrt(numAtoms));
         const rows = Math.ceil(numAtoms / cols);
 
         const canvas = document.createElement('canvas');
         canvas.width = size * cols;
         canvas.height = size * rows;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: true });
+
+        // Enable high-quality text rendering
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = 'white';
-        ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+
+        // Scale font sizes with DPR for sharpness
+        const baseFontLarge = Math.round(48 * dpr);
+        const baseFontMedium = Math.round(44 * dpr);
+        const baseFontSmall = Math.round(32 * dpr);
+        const baseFontCharge = Math.round(36 * dpr);
 
         this.atomTypeMap = {};
 
@@ -670,18 +682,30 @@ export default class Molecule {
             const chargeText = chargeValue !== null ? `${chargeValue >= 0 ? '+' : ''}${chargeValue.toFixed(3)}` : '';
             const hasCharge = chargeText.length > 0;
 
+            // Draw text with shadow for better visibility
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 3 * dpr;
+            ctx.shadowOffsetX = 1 * dpr;
+            ctx.shadowOffsetY = 1 * dpr;
+
             if (labelText && hasCharge) {
-                ctx.font = 'bold 22px Arial';
-                ctx.fillText(labelText, x, y - 8);
-                ctx.font = 'bold 16px Arial';
-                ctx.fillText(chargeText, x, y + 12);
+                ctx.font = `bold ${baseFontMedium}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
+                ctx.fillText(labelText, x, y - 16 * dpr);
+                ctx.font = `bold ${baseFontSmall}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
+                ctx.fillText(chargeText, x, y + 24 * dpr);
             } else if (labelText) {
-                ctx.font = 'bold 24px Arial';
+                ctx.font = `bold ${baseFontLarge}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
                 ctx.fillText(labelText, x, y);
             } else if (hasCharge) {
-                ctx.font = 'bold 18px Arial';
+                ctx.font = `bold ${baseFontCharge}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
                 ctx.fillText(chargeText, x, y);
             }
+
+            // Reset shadow for next iteration
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
 
             this.atomTypeMap[i] = {
                 uMin: col / cols,
@@ -692,26 +716,44 @@ export default class Molecule {
         }
 
         this.labelAtlas = new THREE.CanvasTexture(canvas);
+        // Use linear filtering for smooth scaling
+        this.labelAtlas.minFilter = THREE.LinearFilter;
+        this.labelAtlas.magFilter = THREE.LinearFilter;
+        this.labelAtlas.generateMipmaps = false; // Disable mipmaps for sharper text
         this.labelAtlas.needsUpdate = true;
     }
 
     createLabelTexture(text, color) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const baseSize = 128;
         const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d');
+        canvas.width = baseSize * dpr;
+        canvas.height = baseSize * dpr;
+        const ctx = canvas.getContext('2d', { alpha: true });
+
+        // Enable high-quality text rendering
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
 
         // Set transparent background
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Draw text only
-        ctx.fillStyle = color; // Use atom color for text
-        ctx.font = 'bold 40px arial';
+        // Draw text with shadow for better visibility
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 3 * dpr;
+        ctx.shadowOffsetX = 1 * dpr;
+        ctx.shadowOffsetY = 1 * dpr;
+
+        ctx.fillStyle = color;
+        ctx.font = `bold ${Math.round(72 * dpr)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
         const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.generateMipmaps = false;
         return texture;
     }
 
