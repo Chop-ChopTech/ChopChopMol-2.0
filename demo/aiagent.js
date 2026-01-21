@@ -46,6 +46,7 @@ const toolStatusMap = {
     save_image: 'Saving image',
     toggle_labels: 'Toggling labels',
     toggle_force_arrows: 'Toggling force arrows',
+    toggle_charge_visualization: 'Toggling charge visualization',
     calculate_energy: 'Calculating energy',
     calculate_all_energies: 'Calculating all frame energies',
     get_cached_energies: 'Retrieving cached energies',
@@ -1311,6 +1312,76 @@ const FUNCTIONS = {
             return {
                 success: true,
                 message: show ? `Force arrows shown (scale: ${scale.toFixed(1)}x)` : "Force arrows hidden"
+            };
+        }
+    },
+
+    toggle_charge_visualization: {
+        execute: (params) => {
+            const molecule = window.main?.molecule;
+            if (!molecule) return { success: false, message: "No molecule loaded" };
+
+            // Check if charge data is available
+            const hasCharges = window.getChargeArray?.('mulliken') || window.getChargeArray?.('loewdin');
+            if (!hasCharges) {
+                return {
+                    success: false,
+                    message: "No charge data available. Load a molecule with charge data (e.g., from ORCA .out file)."
+                };
+            }
+
+            // Handle charge type
+            if (params.chargeType !== undefined) {
+                const validTypes = ['mulliken', 'loewdin'];
+                if (validTypes.includes(params.chargeType)) {
+                    window.chargeVisualizationType = params.chargeType;
+                    const select = document.getElementById('chargeTypeSelect');
+                    if (select) select.value = params.chargeType;
+                }
+            }
+
+            // Handle color visualization
+            if (params.showColors !== undefined) {
+                window.chargeVisualizationEnabled = params.showColors;
+                const checkbox = document.getElementById('toggleChargeColors');
+                if (checkbox) checkbox.checked = params.showColors;
+            }
+
+            // Handle charge labels
+            if (params.showLabels !== undefined) {
+                window.showCharges = params.showLabels;
+                const checkbox = document.getElementById('showCharges');
+                if (checkbox) checkbox.checked = params.showLabels;
+
+                // Update label display
+                const shouldShowLabels = window.showElements || window.showIndices || window.showCharges;
+                window.labelMode = shouldShowLabels;
+                const charges = window.showCharges ? window.getChargeArray(window.chargeVisualizationType) : null;
+                molecule.toggleLabels(shouldShowLabels, window.showElements, window.showIndices, window.showCharges, charges);
+            }
+
+            // Apply charge visualization if colors are enabled
+            if (typeof window.applyChargeVisualization === 'function') {
+                window.applyChargeVisualization();
+            }
+
+            if (typeof window.updateChargeControls === 'function') {
+                window.updateChargeControls();
+            }
+
+            if (typeof window.render === 'function') window.render();
+
+            // Build descriptive message
+            const parts = [];
+            if (window.chargeVisualizationEnabled) parts.push("colors ON");
+            else parts.push("colors OFF");
+            if (window.showCharges) parts.push("labels ON");
+            else parts.push("labels OFF");
+            parts.push(`(${window.chargeVisualizationType})`);
+
+            return {
+                success: true,
+                message: `Charge visualization: ${parts.join(', ')}`
             };
         }
     },
