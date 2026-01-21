@@ -3314,7 +3314,7 @@ function recreateRenderer(antialiasEnabled) {
 
     // Recreate controls
     controls = new ArcballControls(camera, renderer.domElement);
-    controls.rotateSpeed = 1.0;
+    controls.rotateSpeed = 2.0;
     controls.zoomSpeed = 2.0;
     controls.panSpeed = 1.0;
     controls.dynamicDampingFactor = 1.0;

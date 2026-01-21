@@ -4494,6 +4494,8 @@ input[type="range"]:focus {
 }
 
 /* Properties Panel - for force and orbital info */
+
+
 .properties-panel {
     position: absolute;
     top: 70px;
@@ -4602,7 +4604,8 @@ input[type="range"]:focus {
 .orbital-table-panel {
     position: fixed;
     top: 10px;
-    right: 254px; /* file explorer width + 10px margin */
+    right: 254px;
+    /* file explorer width + 10px margin */
     width: 200px;
     max-height: calc(100vh - 20px);
     z-index: 9999;
@@ -4621,7 +4624,7 @@ input[type="range"]:focus {
 }
 
 /* Adjust position when file explorer is closed */
-.file-explorer-panel:not(.open) ~ .orbital-table-panel,
+.file-explorer-panel:not(.open)~.orbital-table-panel,
 .orbital-table-panel.explorer-closed {
     right: 10px;
 }

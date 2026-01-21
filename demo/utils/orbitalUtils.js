@@ -306,6 +306,7 @@ const TRI_TABLE = [
 
 /**
  * Generate isosurface mesh from volumetric data using Marching Cubes algorithm.
+ * Uses gradient-based normals for smooth shading.
  * @param {Object} orbitalData - The orbital data containing volumeData and gridInfo
  * @param {number} isoValue - The isosurface threshold value
  * @param {boolean} showPositive - Show positive phase
@@ -321,7 +322,6 @@ export function generateIsosurface(orbitalData, isoValue, showPositive = true, s
     const { volumeData, gridInfo } = orbitalData;
     const [nx, ny, nz] = gridInfo.dimensions;
     const origin = gridInfo.origin;
-    const spacing = gridInfo.spacing;
     const vectors = gridInfo.vectors;
 
     const vertices = [];
@@ -332,44 +332,66 @@ export function generateIsosurface(orbitalData, isoValue, showPositive = true, s
         if (ix < 0 || ix >= nx || iy < 0 || iy >= ny || iz < 0 || iz >= nz) {
             return 0;
         }
-        // Cube file order: Z varies fastest, then Y, then X
         return volumeData[ix * ny * nz + iy * nz + iz];
     };
 
-    // Helper to interpolate between two vertices
-    const interpolate = (p1, p2, v1, v2, iso) => {
-        if (Math.abs(iso - v1) < 1e-10) return p1.slice();
-        if (Math.abs(iso - v2) < 1e-10) return p2.slice();
-        if (Math.abs(v1 - v2) < 1e-10) return p1.slice();
+    // Calculate gradient at a grid point using central differences
+    const getGradient = (ix, iy, iz) => {
+        const gx = (getValue(Math.min(ix + 1, nx - 1), iy, iz) - getValue(Math.max(ix - 1, 0), iy, iz)) /
+                   (ix === 0 || ix === nx - 1 ? 1 : 2);
+        const gy = (getValue(ix, Math.min(iy + 1, ny - 1), iz) - getValue(ix, Math.max(iy - 1, 0), iz)) /
+                   (iy === 0 || iy === ny - 1 ? 1 : 2);
+        const gz = (getValue(ix, iy, Math.min(iz + 1, nz - 1)) - getValue(ix, iy, Math.max(iz - 1, 0))) /
+                   (iz === 0 || iz === nz - 1 ? 1 : 2);
+
+        const len = Math.sqrt(gx * gx + gy * gy + gz * gz);
+        if (len < 1e-10) return [0, 0, 1];
+        return [gx / len, gy / len, gz / len];
+    };
+
+    // Interpolate position and normal between two vertices
+    const interpolateWithNormal = (p1, p2, v1, v2, n1, n2, iso) => {
+        if (Math.abs(iso - v1) < 1e-10) return { pos: p1.slice(), normal: n1.slice() };
+        if (Math.abs(iso - v2) < 1e-10) return { pos: p2.slice(), normal: n2.slice() };
+        if (Math.abs(v1 - v2) < 1e-10) return { pos: p1.slice(), normal: n1.slice() };
 
         const t = (iso - v1) / (v2 - v1);
-        return [
+        const pos = [
             p1[0] + t * (p2[0] - p1[0]),
             p1[1] + t * (p2[1] - p1[1]),
             p1[2] + t * (p2[2] - p1[2])
         ];
-    };
-
-    // Helper to get world position from grid indices
-    const getPosition = (ix, iy, iz) => {
-        return [
-            origin.x + ix * vectors.x[0] + iy * vectors.y[0] + iz * vectors.z[0],
-            origin.y + ix * vectors.x[1] + iy * vectors.y[1] + iz * vectors.z[1],
-            origin.z + ix * vectors.x[2] + iy * vectors.y[2] + iz * vectors.z[2]
+        let normal = [
+            n1[0] + t * (n2[0] - n1[0]),
+            n1[1] + t * (n2[1] - n1[1]),
+            n1[2] + t * (n2[2] - n1[2])
         ];
+        const len = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
+        if (len > 1e-10) normal = [normal[0] / len, normal[1] / len, normal[2] / len];
+        return { pos, normal };
     };
 
-    // Process both positive and negative isosurfaces
-    const isoValues = [];
-    if (showPositive) isoValues.push(isoValue);
-    if (showNegative) isoValues.push(-isoValue);
+    const getPosition = (ix, iy, iz) => [
+        origin.x + ix * vectors.x[0] + iy * vectors.y[0] + iz * vectors.z[0],
+        origin.y + ix * vectors.x[1] + iy * vectors.y[1] + iz * vectors.z[1],
+        origin.z + ix * vectors.x[2] + iy * vectors.y[2] + iz * vectors.z[2]
+    ];
 
-    for (const iso of isoValues) {
-        // March through the volume
+    const edgeVertices = [
+        [0, 1], [1, 2], [2, 3], [3, 0],
+        [4, 5], [5, 6], [6, 7], [7, 4],
+        [0, 4], [1, 5], [2, 6], [3, 7]
+    ];
+
+    // Process isosurfaces
+    const isoValues = [];
+    if (showPositive) isoValues.push({ iso: isoValue, flip: false });
+    if (showNegative) isoValues.push({ iso: -isoValue, flip: true });
+
+    for (const { iso, flip } of isoValues) {
         for (let ix = 0; ix < nx - 1; ix++) {
             for (let iy = 0; iy < ny - 1; iy++) {
                 for (let iz = 0; iz < nz - 1; iz++) {
-                    // Get the 8 corner values of the cube
                     const vals = [
                         getValue(ix, iy, iz),
                         getValue(ix + 1, iy, iz),
@@ -381,16 +403,13 @@ export function generateIsosurface(orbitalData, isoValue, showPositive = true, s
                         getValue(ix, iy + 1, iz + 1)
                     ];
 
-                    // Calculate cube index
                     let cubeIndex = 0;
                     for (let i = 0; i < 8; i++) {
                         if (vals[i] < iso) cubeIndex |= (1 << i);
                     }
 
-                    // Skip if cube is entirely inside or outside
                     if (EDGE_TABLE[cubeIndex] === 0) continue;
 
-                    // Get corner positions
                     const positions = [
                         getPosition(ix, iy, iz),
                         getPosition(ix + 1, iy, iz),
@@ -402,55 +421,51 @@ export function generateIsosurface(orbitalData, isoValue, showPositive = true, s
                         getPosition(ix, iy + 1, iz + 1)
                     ];
 
-                    // Calculate edge vertices
-                    const edgeVerts = new Array(12);
+                    const grads = [
+                        getGradient(ix, iy, iz),
+                        getGradient(ix + 1, iy, iz),
+                        getGradient(ix + 1, iy + 1, iz),
+                        getGradient(ix, iy + 1, iz),
+                        getGradient(ix, iy, iz + 1),
+                        getGradient(ix + 1, iy, iz + 1),
+                        getGradient(ix + 1, iy + 1, iz + 1),
+                        getGradient(ix, iy + 1, iz + 1)
+                    ];
+
+                    const edgeData = new Array(12);
                     const edges = EDGE_TABLE[cubeIndex];
 
-                    if (edges & 1) edgeVerts[0] = interpolate(positions[0], positions[1], vals[0], vals[1], iso);
-                    if (edges & 2) edgeVerts[1] = interpolate(positions[1], positions[2], vals[1], vals[2], iso);
-                    if (edges & 4) edgeVerts[2] = interpolate(positions[2], positions[3], vals[2], vals[3], iso);
-                    if (edges & 8) edgeVerts[3] = interpolate(positions[3], positions[0], vals[3], vals[0], iso);
-                    if (edges & 16) edgeVerts[4] = interpolate(positions[4], positions[5], vals[4], vals[5], iso);
-                    if (edges & 32) edgeVerts[5] = interpolate(positions[5], positions[6], vals[5], vals[6], iso);
-                    if (edges & 64) edgeVerts[6] = interpolate(positions[6], positions[7], vals[6], vals[7], iso);
-                    if (edges & 128) edgeVerts[7] = interpolate(positions[7], positions[4], vals[7], vals[4], iso);
-                    if (edges & 256) edgeVerts[8] = interpolate(positions[0], positions[4], vals[0], vals[4], iso);
-                    if (edges & 512) edgeVerts[9] = interpolate(positions[1], positions[5], vals[1], vals[5], iso);
-                    if (edges & 1024) edgeVerts[10] = interpolate(positions[2], positions[6], vals[2], vals[6], iso);
-                    if (edges & 2048) edgeVerts[11] = interpolate(positions[3], positions[7], vals[3], vals[7], iso);
+                    for (let e = 0; e < 12; e++) {
+                        if (edges & (1 << e)) {
+                            const [v1i, v2i] = edgeVertices[e];
+                            edgeData[e] = interpolateWithNormal(
+                                positions[v1i], positions[v2i],
+                                vals[v1i], vals[v2i],
+                                grads[v1i], grads[v2i],
+                                iso
+                            );
+                        }
+                    }
 
-                    // Create triangles
                     const triList = TRI_TABLE[cubeIndex];
                     for (let i = 0; triList[i] !== -1; i += 3) {
-                        const v1 = edgeVerts[triList[i]];
-                        const v2 = edgeVerts[triList[i + 1]];
-                        const v3 = edgeVerts[triList[i + 2]];
+                        const e1 = edgeData[triList[i]];
+                        const e2 = edgeData[triList[i + 1]];
+                        const e3 = edgeData[triList[i + 2]];
 
-                        if (!v1 || !v2 || !v3) continue;
+                        if (!e1 || !e2 || !e3) continue;
 
-                        // Calculate face normal
-                        const edge1 = [v2[0] - v1[0], v2[1] - v1[1], v2[2] - v1[2]];
-                        const edge2 = [v3[0] - v1[0], v3[1] - v1[1], v3[2] - v1[2]];
-                        let normal = [
-                            edge1[1] * edge2[2] - edge1[2] * edge2[1],
-                            edge1[2] * edge2[0] - edge1[0] * edge2[2],
-                            edge1[0] * edge2[1] - edge1[1] * edge2[0]
-                        ];
+                        vertices.push(...e1.pos, ...e2.pos, ...e3.pos);
 
-                        // Normalize
-                        const len = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
-                        if (len > 0) {
-                            normal = [normal[0] / len, normal[1] / len, normal[2] / len];
+                        if (flip) {
+                            normals.push(
+                                -e1.normal[0], -e1.normal[1], -e1.normal[2],
+                                -e2.normal[0], -e2.normal[1], -e2.normal[2],
+                                -e3.normal[0], -e3.normal[1], -e3.normal[2]
+                            );
+                        } else {
+                            normals.push(...e1.normal, ...e2.normal, ...e3.normal);
                         }
-
-                        // Flip normal for negative phase to ensure correct lighting
-                        if (iso < 0) {
-                            normal = [-normal[0], -normal[1], -normal[2]];
-                        }
-
-                        // Add vertices and normals
-                        vertices.push(...v1, ...v2, ...v3);
-                        normals.push(...normal, ...normal, ...normal);
                     }
                 }
             }
@@ -462,7 +477,6 @@ export function generateIsosurface(orbitalData, isoValue, showPositive = true, s
         return null;
     }
 
-    // Create buffer geometry
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
@@ -492,21 +506,51 @@ export function generatePhaseSeparatedIsosurface(orbitalData, isoValue) {
     const negativeVerts = [];
     const negativeNormals = [];
 
+    // Get value at grid point, clamped to boundaries
     const getValue = (ix, iy, iz) => {
         if (ix < 0 || ix >= nx || iy < 0 || iy >= ny || iz < 0 || iz >= nz) return 0;
         return volumeData[ix * ny * nz + iy * nz + iz];
     };
 
-    const interpolate = (p1, p2, v1, v2, iso) => {
-        if (Math.abs(iso - v1) < 1e-10) return p1.slice();
-        if (Math.abs(iso - v2) < 1e-10) return p2.slice();
-        if (Math.abs(v1 - v2) < 1e-10) return p1.slice();
+    // Calculate gradient at a grid point using central differences
+    // Returns normalized gradient vector (points toward increasing values)
+    const getGradient = (ix, iy, iz) => {
+        // Central differences for interior points, forward/backward at boundaries
+        const gx = (getValue(Math.min(ix + 1, nx - 1), iy, iz) - getValue(Math.max(ix - 1, 0), iy, iz)) /
+                   (ix === 0 || ix === nx - 1 ? 1 : 2);
+        const gy = (getValue(ix, Math.min(iy + 1, ny - 1), iz) - getValue(ix, Math.max(iy - 1, 0), iz)) /
+                   (iy === 0 || iy === ny - 1 ? 1 : 2);
+        const gz = (getValue(ix, iy, Math.min(iz + 1, nz - 1)) - getValue(ix, iy, Math.max(iz - 1, 0))) /
+                   (iz === 0 || iz === nz - 1 ? 1 : 2);
+
+        const len = Math.sqrt(gx * gx + gy * gy + gz * gz);
+        if (len < 1e-10) return [0, 0, 1]; // Default normal if gradient is zero
+
+        return [gx / len, gy / len, gz / len];
+    };
+
+    // Interpolate position and normal between two vertices
+    const interpolateWithNormal = (p1, p2, v1, v2, n1, n2, iso) => {
+        if (Math.abs(iso - v1) < 1e-10) return { pos: p1.slice(), normal: n1.slice() };
+        if (Math.abs(iso - v2) < 1e-10) return { pos: p2.slice(), normal: n2.slice() };
+        if (Math.abs(v1 - v2) < 1e-10) return { pos: p1.slice(), normal: n1.slice() };
+
         const t = (iso - v1) / (v2 - v1);
-        return [
+        const pos = [
             p1[0] + t * (p2[0] - p1[0]),
             p1[1] + t * (p2[1] - p1[1]),
             p1[2] + t * (p2[2] - p1[2])
         ];
+        // Interpolate and normalize the normal
+        let normal = [
+            n1[0] + t * (n2[0] - n1[0]),
+            n1[1] + t * (n2[1] - n1[1]),
+            n1[2] + t * (n2[2] - n1[2])
+        ];
+        const len = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
+        if (len > 1e-10) normal = [normal[0] / len, normal[1] / len, normal[2] / len];
+
+        return { pos, normal };
     };
 
     const getPosition = (ix, iy, iz) => [
@@ -515,10 +559,18 @@ export function generatePhaseSeparatedIsosurface(orbitalData, isoValue) {
         origin.z + ix * vectors.x[2] + iy * vectors.y[2] + iz * vectors.z[2]
     ];
 
-    const processIsosurface = (iso, vertices, normals) => {
+    // Edge to vertex index mapping for gradient interpolation
+    const edgeVertices = [
+        [0, 1], [1, 2], [2, 3], [3, 0],
+        [4, 5], [5, 6], [6, 7], [7, 4],
+        [0, 4], [1, 5], [2, 6], [3, 7]
+    ];
+
+    const processIsosurface = (iso, vertices, normals, flipNormals) => {
         for (let ix = 0; ix < nx - 1; ix++) {
             for (let iy = 0; iy < ny - 1; iy++) {
                 for (let iz = 0; iz < nz - 1; iz++) {
+                    // Get 8 corner values
                     const vals = [
                         getValue(ix, iy, iz),
                         getValue(ix + 1, iy, iz),
@@ -530,6 +582,7 @@ export function generatePhaseSeparatedIsosurface(orbitalData, isoValue) {
                         getValue(ix, iy + 1, iz + 1)
                     ];
 
+                    // Determine cube configuration
                     let cubeIndex = 0;
                     for (let i = 0; i < 8; i++) {
                         if (vals[i] < iso) cubeIndex |= (1 << i);
@@ -537,6 +590,7 @@ export function generatePhaseSeparatedIsosurface(orbitalData, isoValue) {
 
                     if (EDGE_TABLE[cubeIndex] === 0) continue;
 
+                    // Get 8 corner positions
                     const positions = [
                         getPosition(ix, iy, iz),
                         getPosition(ix + 1, iy, iz),
@@ -548,45 +602,56 @@ export function generatePhaseSeparatedIsosurface(orbitalData, isoValue) {
                         getPosition(ix, iy + 1, iz + 1)
                     ];
 
-                    const edgeVerts = new Array(12);
+                    // Get gradients at 8 corners for smooth normals
+                    const grads = [
+                        getGradient(ix, iy, iz),
+                        getGradient(ix + 1, iy, iz),
+                        getGradient(ix + 1, iy + 1, iz),
+                        getGradient(ix, iy + 1, iz),
+                        getGradient(ix, iy, iz + 1),
+                        getGradient(ix + 1, iy, iz + 1),
+                        getGradient(ix + 1, iy + 1, iz + 1),
+                        getGradient(ix, iy + 1, iz + 1)
+                    ];
+
+                    // Calculate edge intersections with interpolated normals
+                    const edgeData = new Array(12);
                     const edges = EDGE_TABLE[cubeIndex];
 
-                    if (edges & 1) edgeVerts[0] = interpolate(positions[0], positions[1], vals[0], vals[1], iso);
-                    if (edges & 2) edgeVerts[1] = interpolate(positions[1], positions[2], vals[1], vals[2], iso);
-                    if (edges & 4) edgeVerts[2] = interpolate(positions[2], positions[3], vals[2], vals[3], iso);
-                    if (edges & 8) edgeVerts[3] = interpolate(positions[3], positions[0], vals[3], vals[0], iso);
-                    if (edges & 16) edgeVerts[4] = interpolate(positions[4], positions[5], vals[4], vals[5], iso);
-                    if (edges & 32) edgeVerts[5] = interpolate(positions[5], positions[6], vals[5], vals[6], iso);
-                    if (edges & 64) edgeVerts[6] = interpolate(positions[6], positions[7], vals[6], vals[7], iso);
-                    if (edges & 128) edgeVerts[7] = interpolate(positions[7], positions[4], vals[7], vals[4], iso);
-                    if (edges & 256) edgeVerts[8] = interpolate(positions[0], positions[4], vals[0], vals[4], iso);
-                    if (edges & 512) edgeVerts[9] = interpolate(positions[1], positions[5], vals[1], vals[5], iso);
-                    if (edges & 1024) edgeVerts[10] = interpolate(positions[2], positions[6], vals[2], vals[6], iso);
-                    if (edges & 2048) edgeVerts[11] = interpolate(positions[3], positions[7], vals[3], vals[7], iso);
+                    for (let e = 0; e < 12; e++) {
+                        if (edges & (1 << e)) {
+                            const [v1i, v2i] = edgeVertices[e];
+                            edgeData[e] = interpolateWithNormal(
+                                positions[v1i], positions[v2i],
+                                vals[v1i], vals[v2i],
+                                grads[v1i], grads[v2i],
+                                iso
+                            );
+                        }
+                    }
 
+                    // Generate triangles
                     const triList = TRI_TABLE[cubeIndex];
                     for (let i = 0; triList[i] !== -1; i += 3) {
-                        const v1 = edgeVerts[triList[i]];
-                        const v2 = edgeVerts[triList[i + 1]];
-                        const v3 = edgeVerts[triList[i + 2]];
+                        const e1 = edgeData[triList[i]];
+                        const e2 = edgeData[triList[i + 1]];
+                        const e3 = edgeData[triList[i + 2]];
 
-                        if (!v1 || !v2 || !v3) continue;
+                        if (!e1 || !e2 || !e3) continue;
 
-                        const edge1 = [v2[0] - v1[0], v2[1] - v1[1], v2[2] - v1[2]];
-                        const edge2 = [v3[0] - v1[0], v3[1] - v1[1], v3[2] - v1[2]];
-                        let normal = [
-                            edge1[1] * edge2[2] - edge1[2] * edge2[1],
-                            edge1[2] * edge2[0] - edge1[0] * edge2[2],
-                            edge1[0] * edge2[1] - edge1[1] * edge2[0]
-                        ];
+                        // Add vertices
+                        vertices.push(...e1.pos, ...e2.pos, ...e3.pos);
 
-                        const len = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
-                        if (len > 0) normal = [normal[0] / len, normal[1] / len, normal[2] / len];
-
-                        if (iso < 0) normal = [-normal[0], -normal[1], -normal[2]];
-
-                        vertices.push(...v1, ...v2, ...v3);
-                        normals.push(...normal, ...normal, ...normal);
+                        // Add normals (flip for negative phase so they point outward)
+                        if (flipNormals) {
+                            normals.push(
+                                -e1.normal[0], -e1.normal[1], -e1.normal[2],
+                                -e2.normal[0], -e2.normal[1], -e2.normal[2],
+                                -e3.normal[0], -e3.normal[1], -e3.normal[2]
+                            );
+                        } else {
+                            normals.push(...e1.normal, ...e2.normal, ...e3.normal);
+                        }
                     }
                 }
             }
@@ -594,8 +659,10 @@ export function generatePhaseSeparatedIsosurface(orbitalData, isoValue) {
     };
 
     // Process positive and negative phases
-    processIsosurface(isoValue, positiveVerts, positiveNormals);
-    processIsosurface(-isoValue, negativeVerts, negativeNormals);
+    // For positive iso: gradient points outward (toward higher values)
+    // For negative iso: we want normals pointing outward from the negative region
+    processIsosurface(isoValue, positiveVerts, positiveNormals, false);
+    processIsosurface(-isoValue, negativeVerts, negativeNormals, true);
 
     const result = { positive: null, negative: null };
 
@@ -613,6 +680,7 @@ export function generatePhaseSeparatedIsosurface(orbitalData, isoValue) {
         result.negative = negGeom;
     }
 
+    console.log(`Generated isosurface: positive=${positiveVerts.length/9} tris, negative=${negativeVerts.length/9} tris`);
     return result;
 }
 

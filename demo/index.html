@@ -897,7 +897,7 @@
                 <i class="fa-solid fa-dna"></i>
             </button>
             <button class="dropdown-icon" id="reset-camera" title="Reset Camera" style="border: none;"
-                onclick="window.resetCamera()"><i class="fa-solid fa-arrows-to-eye"></i></button>
+                onclick="window.resetCamera()"><i class="fa-solid fa-arrows-to-circle"></i></button>
             <button class="dropdown-icon" id="toggleFileExplorer" title="File Explorer"
                 style="border: none; display: none;">
                 <i class="fas fa-folder-tree"></i>
@@ -912,16 +912,21 @@
                     class="fa-solid fa-wand-sparkles"></i></button>
             <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"
                 style="display: none;"><i class="fas fa-ruler"></i></button>
-
-            <button class="dropdown-icon dropdown"
-                onclick="document.getElementById('stylePanel').classList.toggle('open')" style="border: none;">
-                <i class="fa-solid fa-gear"></i>
-            </button>
             <button class="dropdown-icon dropdown"
                 onclick="document.getElementById('propertiesPanel').classList.toggle('open')" style="border: none;"
                 title="Force Visualization">
-                <i class="fa-solid fa-arrows-alt"></i>
+                <i class="fa-solid fa-flask-vial"></i>
             </button>
+            <button class="dropdown-icon dropdown"
+                onclick="document.getElementById('fragmentListContainer').classList.toggle('open')"
+                style="border: none;">
+                <i class="fa-solid fa-puzzle-piece"></i>
+            </button>
+            <button class="dropdown-icon dropdown"
+                onclick="document.getElementById('stylePanel').classList.toggle('open')" style="border: none;">
+                <i class="fa-solid fa-sliders"></i>
+            </button>
+
             <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant" style="border: none; display: none;">
                 <i class="fa-solid fa-comment-dots"></i>
             </button>
@@ -934,11 +939,7 @@
 
                 </div>
             </div>
-            <button class="dropdown-icon dropdown"
-                onclick="document.getElementById('fragmentListContainer').classList.toggle('open')"
-                style="border: none;">
-                <i class="fa-solid fa-puzzle-piece"></i>
-            </button>
+
             <button class="dropdown-icon dropdown" id="startTutorialBtn" style="border: none;">
                 <i class="fa-solid fa-book-open"></i></button>
             <div class="dropdown" id="settingsGear">
@@ -1887,9 +1888,6 @@
                 <div class="compact-style-row checkbox-row">
                     <label><input type="checkbox" id="showIndices"> Indices</label>
                 </div>
-                <div class="compact-style-row checkbox-row">
-                    <label><input type="checkbox" id="showCharges"> Charges</label>
-                </div>
             </div>
 
             <div class="transition-settings"
@@ -1975,8 +1973,10 @@
                 <!-- Charge Visualization Section -->
                 <div class="properties-section" id="chargeSection" style="display: none;">
                     <div class="compact-style-row checkbox-row" id="chargeColorsRow">
-                        <label><input type="checkbox" id="toggleChargeColors"> Charge Colors <span id="chargeStatus"
-                                style="font-size: 10px; color: #888;"></span></label>
+                        <label><input type="checkbox" id="showCharges">Charge Labels</label>
+
+                        <label><input type="checkbox" id="toggleChargeColors"> Charge Colors</label>
+
                     </div>
                     <div class="compact-style-row" id="chargeTypeRow">
                         <label>Charge Type</label>
@@ -1986,6 +1986,7 @@
                         </select>
                     </div>
                 </div>
+
 
                 <!-- Placeholder when no data -->
                 <div class="properties-empty" id="propertiesEmpty">
@@ -3364,7 +3365,7 @@
             // Close style panel when clicking outside
             document.addEventListener('click', (e) => {
                 const stylePanel = document.getElementById('stylePanel');
-                const paletteBtn = e.target.closest('.fa-gear')?.parentElement;
+                const paletteBtn = e.target.closest('.fa-sliders')?.parentElement;
                 if (stylePanel?.classList.contains('open') &&
                     !stylePanel.contains(e.target) &&
                     !paletteBtn) {

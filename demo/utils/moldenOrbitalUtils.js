@@ -5,8 +5,52 @@
  */
 
 /**
- * Evaluate a Gaussian primitive at a given position.
- * Primitive: exp(-alpha * r^2) * (x-Ax)^lx * (y-Ay)^ly * (z-Az)^lz
+ * Double factorial: n!! = n * (n-2) * (n-4) * ... * 1
+ * Special cases: (-1)!! = 0!! = 1
+ * @param {number} n - Input value
+ * @returns {number} Double factorial of n
+ */
+function doubleFactorial(n) {
+    if (n <= 1) return 1;
+    let result = 1;
+    for (let i = n; i > 1; i -= 2) {
+        result *= i;
+    }
+    return result;
+}
+
+/**
+ * Calculate Gaussian primitive normalization factor.
+ * For a Cartesian Gaussian: N = (2α/π)^(3/4) * (4α)^(L/2) / sqrt((2lx-1)!! * (2ly-1)!! * (2lz-1)!!)
+ * where L = lx + ly + lz is the total angular momentum.
+ *
+ * @param {number} alpha - Gaussian exponent
+ * @param {number} lx - Angular momentum in x
+ * @param {number} ly - Angular momentum in y
+ * @param {number} lz - Angular momentum in z
+ * @returns {number} Normalization factor
+ */
+function gaussianNormalization(alpha, lx, ly, lz) {
+    const L = lx + ly + lz;
+
+    // (2α/π)^(3/4)
+    const prefactor = Math.pow(2 * alpha / Math.PI, 0.75);
+
+    // (4α)^(L/2) = (2^L * α^L)^(1/2) = 2^(L/2) * α^(L/2)
+    const angularFactor = Math.pow(4 * alpha, L / 2);
+
+    // sqrt((2lx-1)!! * (2ly-1)!! * (2lz-1)!!)
+    const dfX = doubleFactorial(2 * lx - 1);
+    const dfY = doubleFactorial(2 * ly - 1);
+    const dfZ = doubleFactorial(2 * lz - 1);
+    const denominator = Math.sqrt(dfX * dfY * dfZ);
+
+    return prefactor * angularFactor / denominator;
+}
+
+/**
+ * Evaluate a Gaussian primitive at a given position WITH normalization.
+ * Normalized primitive: N * exp(-alpha * r^2) * (x-Ax)^lx * (y-Ay)^ly * (z-Az)^lz
  *
  * @param {number} alpha - Gaussian exponent
  * @param {Array} center - Atom center [x, y, z]
@@ -14,7 +58,7 @@
  * @param {number} lx - Angular momentum x
  * @param {number} ly - Angular momentum y
  * @param {number} lz - Angular momentum z
- * @returns {number} Primitive value at point
+ * @returns {number} Normalized primitive value at point
  */
 function evaluateGaussianPrimitive(alpha, center, point, lx, ly, lz) {
     const dx = point[0] - center[0];
@@ -29,7 +73,10 @@ function evaluateGaussianPrimitive(alpha, center, point, lx, ly, lz) {
     const angularY = Math.pow(dy, ly);
     const angularZ = Math.pow(dz, lz);
 
-    return gaussian * angularX * angularY * angularZ;
+    // Apply normalization factor
+    const norm = gaussianNormalization(alpha, lx, ly, lz);
+
+    return norm * gaussian * angularX * angularY * angularZ;
 }
 
 /**
