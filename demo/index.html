@@ -2973,54 +2973,95 @@
             const tutorialSteps = [
                 {
                     target: null,
-                    title: 'Welcome to ChopChopMol!',
-                    icon: 'fa-flask',
-                    text: 'This quick tutorial will show you how to visualize, edit, and analyze molecules.',
-                    tip: 'You can restart this tutorial anytime from the toolbar.',
+                    title: 'Welcome to ChopChopMol 2.0!',
+                    icon: 'fa-atom',
+                    text: 'The AI-powered molecular visualization and editing platform. Let\'s take a quick tour of the interface.',
+                    tip: 'Click the book icon in the toolbar anytime to restart this tutorial.',
                     position: 'center'
                 },
                 {
-                    target: '#toolbar-background .dropdown:first-child .dropdown-icon',
-                    title: 'Search Molecules',
+                    target: '#toolbar-background .dropdown:first-child',
+                    title: 'Search & Load Molecules',
                     icon: 'fa-magnifying-glass',
-                    text: 'Search molecular databases like PubChem, ChEMBL, or the Protein Data Bank.',
-                    tip: 'Supported formats: PDB, XYZ, MOL, SDF, CIF, MOL2, GRO',
-                    position: 'bottom'
+                    text: 'Search molecular databases (PubChem, RCSB PDB, ChEMBL) or load files from your computer.',
+                    tip: 'Supports XYZ, PDB, MOL/SDF, CIF, MOL2, GRO, CML, ORCA output files, and more!',
+                    position: 'bottom',
+                    shape: 'rect',
+                    padding: 8
                 },
                 {
                     target: '#reset-camera',
-                    title: 'Reset Camera',
-                    icon: 'fa-arrows-to-eye',
-                    text: 'Lost your molecule? Click here to snap the camera back and center the molecule in view.',
+                    title: 'Reset View',
+                    icon: 'fa-arrows-to-circle',
+                    text: 'Lost your molecule? Click here to reset the camera and center the molecule in view.',
+                    tip: 'You can also use the scroll wheel to zoom and drag to rotate.',
                     position: 'bottom'
                 },
                 {
-                    target: '#settingsGear',
-                    title: 'Settings & Style',
-                    icon: 'fa-gear',
-                    text: 'Customize styles: Adjust atom sizes, bond thickness, colors, background, and rendering quality. System settings also live here.',
-                    tip: 'Try "Styled Mode" for a polished look.',
-                    position: 'bottom'
-                },
-                {
-                    target: '#aiToggleBtn',
-                    title: 'AI Assistant Button',
-                    icon: 'fa-comment-dots',
-                    text: 'Click this button to open or close the AI Assistant panel.',
+                    target: '#toolbar-background button[onclick*="stylePanel"]',
+                    title: 'Style Panel',
+                    icon: 'fa-sliders',
+                    text: 'Customize the visual appearance: atom sizes, bond thickness, colors, and rendering quality.',
                     position: 'bottom',
                     action: () => {
-                        const panel = document.getElementById('aiChatPanel');
+                        const panel = document.getElementById('stylePanel');
                         if (panel && !panel.classList.contains('open')) {
-                            document.getElementById('aiToggleBtn')?.click();
+                            panel.classList.add('open');
                         }
                     }
                 },
                 {
+                    target: '#stylePanel',
+                    title: 'Visual Customization',
+                    icon: 'fa-palette',
+                    text: 'Adjust rendering mode, atom radius, bond thickness, and toggle between basic and styled rendering.',
+                    tip: 'Styled mode adds realistic lighting and shadows for publication-quality images.',
+                    position: 'left',
+                    shape: 'rect',
+                    padding: 0,
+                    requiresOpen: 'stylePanel'
+                },
+                {
+                    target: '#toolbar-background button[onclick*="propertiesPanel"]',
+                    title: 'Properties Panel',
+                    icon: 'fa-flask-vial',
+                    text: 'View molecular properties, visualize forces and charges, and control arrow displays.',
+                    position: 'bottom',
+                    action: () => {
+                        const panel = document.getElementById('propertiesPanel');
+                        if (panel && !panel.classList.contains('open')) {
+                            panel.classList.add('open');
+                        }
+                    }
+                },
+                {
+                    target: '#propertiesPanel',
+                    title: 'Forces & Charges',
+                    icon: 'fa-bolt',
+                    text: 'After running calculations, visualize atomic forces as arrows and charges as colors. Great for understanding molecular behavior.',
+                    tip: 'Use the AI to run energy calculations or geometry optimizations.',
+                    position: 'left',
+                    shape: 'rect',
+                    padding: 0,
+                    requiresOpen: 'propertiesPanel'
+                },
+                {
+                    target: '#fileExplorerPanel',
+                    title: 'File Explorer',
+                    icon: 'fa-folder-tree',
+                    text: 'Manage your molecular files. Connect a local folder or use cloud storage to organize your projects.',
+                    tip: 'Sign in to sync files across devices. Drag and drop to move files between cloud and local storage.',
+                    position: 'left',
+                    shape: 'rect',
+                    padding: 0,
+                    requiresOpen: 'fileExplorerPanel'
+                },
+                {
                     target: '#aiChatPanel',
-                    title: 'AI Assistant Panel',
+                    title: 'AI Assistant',
                     icon: 'fa-robot',
-                    text: 'Your editing helper. Make requests in natural language, edit molecules, do simulations, or get explanations and analyze results.',
-                    tip: 'Try: "Show the atom indices" or "Do a torsion scan with around bond 1,2"',
+                    text: 'Your intelligent molecular editing companion. Ask questions, request modifications, run simulations, and analyze results using natural language.',
+                    tip: 'Try: "Show atom labels", "Rotate the methyl group by 45 degrees", or "Calculate the energy"',
                     position: 'right',
                     shape: 'rect',
                     padding: 0,
@@ -3028,49 +3069,35 @@
                 },
                 {
                     target: '#aiChatInput',
-                    title: 'Chat Box',
+                    title: 'Chat Input',
                     icon: 'fa-keyboard',
-                    text: 'Type your requests or questions here. The AI understands natural language and can perform complex molecular operations.',
-                    tip: 'If you don\'t understand something about the interface or have a question, ask the AI.',
+                    text: 'Type your commands here. The AI understands natural language and can perform complex operations like torsion scans, geometry optimization, and MD simulations.',
+                    tip: 'Press Enter to send, or Shift+Enter for a new line.',
                     position: 'top',
                     shape: 'rect',
                     requiresOpen: 'aiChatPanel'
                 },
                 {
-                    target: '#fileExplorerPanel',
-                    title: 'File Explorer Panel',
-                    icon: 'fa-folder-open',
-                    text: 'Manage all your project files here. Access cloud storage or connect a local folder for seamless file management.',
-                    tip: 'Sign in to sync your molecules across devices. Drag and drop files from cloud to local or vice versa.',
-                    position: 'left',
-                    shape: 'rect',
-                    padding: 0,
-                    requiresOpen: 'fileExplorerPanel'
+                    target: '#settingsGear',
+                    title: 'Account & Settings',
+                    icon: 'fa-user-gear',
+                    text: 'Access your account settings, manage subscriptions, and configure application preferences.',
+                    tip: 'Sign in to unlock cloud storage and sync your work across devices.',
+                    position: 'bottom'
                 },
                 {
-                    target: '#settingsDropdown',
-                    title: 'Edit Mode',
-                    icon: 'fa-wand-sparkles',
-                    text: 'Customize your molecule to look the way you want, and save them for future use.',
-                    position: 'left',
-                    requiresOpen: 'settingsDropdown,styleSubmenu',
-                    shape: 'rect'
-                },
-                {
-                    target: '#settingsDropdown',
-                    title: 'Edit Mode',
-                    icon: 'fa-wand-sparkles',
-                    text: 'Account settings here, and you can also donate, to help the project grow.',
-                    position: 'left',
-                    requiresOpen: 'settingsDropdown,accountSubmenu',
-                    shape: 'rect'
+                    target: '#startTutorialBtn',
+                    title: 'Tutorial Button',
+                    icon: 'fa-book-open',
+                    text: 'You can always come back to this tutorial by clicking the book icon here.',
+                    position: 'bottom'
                 },
                 {
                     target: null,
-                    title: 'You\'re All Set!',
-                    icon: 'fa-check-circle',
-                    text: 'Happy simulating!',
-                    tip: 'Pro tip: Press Ctrl+Z to undo any changes.',
+                    title: 'You\'re Ready!',
+                    icon: 'fa-rocket',
+                    text: 'Start by searching for a molecule or loading a file. Use the AI assistant to help with any task. Happy modeling!',
+                    tip: 'Keyboard shortcuts: Ctrl+Z to undo, Ctrl+Y to redo, Escape to deselect atoms.',
                     position: 'center'
                 }
             ];
@@ -3104,15 +3131,22 @@
             function endTutorial() {
                 overlay.classList.remove('active');
                 localStorage.setItem('tutorialCompleted', 'true');
+                // Clean up dropdown contents
                 document.querySelectorAll('.dropdown-content').forEach(d => {
                     d.style.opacity = '';
                     d.style.pointerEvents = '';
                     d.style.transform = '';
                 });
+                // Clean up submenus
                 document.querySelectorAll('.submenu-content.open').forEach(s => {
                     s.classList.remove('open');
                     s.closest('.settings-submenu')?.classList.remove('open');
                 });
+                // Close tutorial-opened panels (but leave user panels open)
+                const stylePanel = document.getElementById('stylePanel');
+                const propertiesPanel = document.getElementById('propertiesPanel');
+                if (stylePanel) stylePanel.classList.remove('open');
+                if (propertiesPanel) propertiesPanel.classList.remove('open');
             }
 
             function isStepVisible(step) {
@@ -3185,11 +3219,14 @@
                             needsDelay = true;
                         } else if (!panel.classList.contains('open')) {
                             panel.classList.add('open');
+                            // Handle specific panel toggles
                             if (parts[0] === 'aiChatPanel') {
                                 document.getElementById('aiToggleBtn')?.classList.add('active');
                                 document.getElementById('aiCollapseToggle')?.classList.remove('collapsed');
                             } else if (parts[0] === 'fileExplorerPanel') {
                                 document.getElementById('explorerCollapseToggle')?.classList.remove('collapsed');
+                            } else if (parts[0] === 'stylePanel' || parts[0] === 'propertiesPanel') {
+                                // These panels just need the 'open' class which we already added
                             }
                             window.updateRendererSize?.();
                             needsDelay = true;
@@ -3205,7 +3242,7 @@
                         }
                     }
                 } else {
-                    // No requiresOpen - close all dropdowns and submenus
+                    // No requiresOpen - close all dropdowns, submenus, and floating panels
                     document.querySelectorAll('.dropdown-content').forEach(d => {
                         d.style.opacity = '';
                         d.style.pointerEvents = '';
@@ -3215,6 +3252,11 @@
                         s.classList.remove('open');
                         s.closest('.settings-submenu')?.classList.remove('open');
                     });
+                    // Close floating panels that were opened by tutorial
+                    const stylePanel = document.getElementById('stylePanel');
+                    const propertiesPanel = document.getElementById('propertiesPanel');
+                    if (stylePanel) stylePanel.classList.remove('open');
+                    if (propertiesPanel) propertiesPanel.classList.remove('open');
                 }
 
                 // Execute action if present
