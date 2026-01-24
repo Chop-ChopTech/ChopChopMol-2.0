@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { ArcballControls } from 'jsm/controls/ArcballControls.js';
 
-import Molecule from './atom/molecule.js';
-import FileHandler from './utils/fileHandler.js';
-import { reattachButtonHandler } from './utils/domUtils.js';
-import './utils/orbitalUtils.js'; // Orbital visualization utilities
-import './utils/moldenOrbitalUtils.js'; // Molden orbital grid generation
+import Molecule from '/demo/atom/molecule.js';
+import FileHandler from '/demo/utils/fileHandler.js';
+import { reattachButtonHandler } from '/demo/utils/domUtils.js';
+import '/demo/utils/orbitalUtils.js'; // Orbital visualization utilities
+import '/demo/utils/moldenOrbitalUtils.js'; // Molden orbital grid generation
 import {
     hideRestrictionMessage,
     showRestrictionMessage,
@@ -20,7 +20,7 @@ import {
     originalEventHandlers,
     isUserSignedIn
 
-} from './handleFeatures.js';
+} from '/demo/handleFeatures.js';
 
 import {
     saveStylePreferences,
@@ -29,7 +29,7 @@ import {
     showNotification,
     resetToDefaults,
 
-} from './handleStyles.js';
+} from '/demo/handleStyles.js';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000000);
@@ -224,7 +224,7 @@ export default class Main {
 
         // Clear ribbon
         if (ribbonGroup) {
-            import('./utils/ribbon.js').then(module => {
+            import('/demo/utils/ribbon.js').then(module => {
                 module.removeRibbon(ribbonGroup, scene);
                 ribbonGroup = null;
             });
@@ -275,7 +275,7 @@ export default class Main {
 
         // If ribbon mode, create ribbon instead of showing atoms
         if (useRibbonMode && data.ribbonData) {
-            import('./utils/ribbon.js').then(module => {
+            import('/demo/utils/ribbon.js').then(module => {
                 ribbonGroup = module.createRibbon(
                     data.ribbonData,
                     scene,
@@ -1181,7 +1181,7 @@ async function saveAsFile(format = 'xyz') {
     }
 
     // Dynamically import file writer
-    const { saveFile, downloadFile, saveToFileExplorer } = await import('./utils/fileWriter.js');
+    const { saveFile, downloadFile, saveToFileExplorer } = await import('/demo/utils/fileWriter.js');
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `molecule_${timestamp}.${format}`;

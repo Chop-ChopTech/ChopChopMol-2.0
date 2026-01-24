@@ -1596,7 +1596,7 @@ export default class FileHandler {
     }
 
     parseJSON() {
-        return fetch('./utils/atomSettings.json')
+        return fetch('/demo/utils/atomSettings.json')
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`Failed to load JSON: ${response.statusText}`);
@@ -1728,9 +1728,9 @@ export default class FileHandler {
             origin: origin,
             dimensions: [xAxis.n, yAxis.n, zAxis.n],
             spacing: [
-                Math.sqrt(xAxis.vector[0]**2 + xAxis.vector[1]**2 + xAxis.vector[2]**2),
-                Math.sqrt(yAxis.vector[0]**2 + yAxis.vector[1]**2 + yAxis.vector[2]**2),
-                Math.sqrt(zAxis.vector[0]**2 + zAxis.vector[1]**2 + zAxis.vector[2]**2)
+                Math.sqrt(xAxis.vector[0] ** 2 + xAxis.vector[1] ** 2 + xAxis.vector[2] ** 2),
+                Math.sqrt(yAxis.vector[0] ** 2 + yAxis.vector[1] ** 2 + yAxis.vector[2] ** 2),
+                Math.sqrt(zAxis.vector[0] ** 2 + zAxis.vector[1] ** 2 + zAxis.vector[2] ** 2)
             ],
             vectors: {
                 x: xAxis.vector,
