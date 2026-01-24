@@ -24,7 +24,7 @@
 
 <body>
     <script src="https://unpkg.com/undo-manager@1.0.5/lib/undomanager.js"></script>
-    <script src="utils/undo.js"></script>
+    <script src="/demo/utils/undo.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
@@ -1068,7 +1068,7 @@
         <span id="limitMessage">Premium feature</span>
     </div>
     <!-- Scripts -->
-    <script src="utils/utils.js"></script>
+    <script src="/demo/utils/utils.js"></script>
     <script>
         const fileInput = document.getElementById('fileInput');
         const customButton = document.getElementById('customButton');
@@ -3019,7 +3019,13 @@
                     position: 'left',
                     shape: 'rect',
                     padding: 0,
-                    requiresOpen: 'stylePanel'
+                    requiresOpen: 'stylePanel',
+                    action: () => {
+                        const panel = document.getElementById('stylePanel');
+                        if (panel) {
+                            panel.classList.add('open');
+                        }
+                    }
                 },
                 {
                     target: '#toolbar-background button[onclick*="propertiesPanel"]',
@@ -3043,7 +3049,13 @@
                     position: 'left',
                     shape: 'rect',
                     padding: 0,
-                    requiresOpen: 'propertiesPanel'
+                    requiresOpen: 'propertiesPanel',
+                    action: () => {
+                        const panel = document.getElementById('propertiesPanel');
+                        if (panel) {
+                            panel.classList.add('open');
+                        }
+                    }
                 },
                 {
                     target: '#fileExplorerPanel',
@@ -3054,7 +3066,15 @@
                     position: 'left',
                     shape: 'rect',
                     padding: 0,
-                    requiresOpen: 'fileExplorerPanel'
+                    requiresOpen: 'fileExplorerPanel',
+                    action: () => {
+                        const panel = document.getElementById('fileExplorerPanel');
+                        if (panel) {
+                            panel.classList.add('open');
+                        }
+                        document.getElementById('explorerCollapseToggle')?.classList.remove('collapsed');
+                        window.updateRendererSize?.();
+                    }
                 },
                 {
                     target: '#aiChatPanel',
@@ -3065,7 +3085,16 @@
                     position: 'right',
                     shape: 'rect',
                     padding: 0,
-                    requiresOpen: 'aiChatPanel'
+                    requiresOpen: 'aiChatPanel',
+                    action: () => {
+                        const panel = document.getElementById('aiChatPanel');
+                        if (panel) {
+                            panel.classList.add('open');
+                        }
+                        document.getElementById('aiToggleBtn')?.classList.add('active');
+                        document.getElementById('aiCollapseToggle')?.classList.remove('collapsed');
+                        window.updateRendererSize?.();
+                    }
                 },
                 {
                     target: '#aiChatInput',
@@ -3075,7 +3104,16 @@
                     tip: 'Press Enter to send, or Shift+Enter for a new line.',
                     position: 'top',
                     shape: 'rect',
-                    requiresOpen: 'aiChatPanel'
+                    requiresOpen: 'aiChatPanel',
+                    action: () => {
+                        const panel = document.getElementById('aiChatPanel');
+                        if (panel) {
+                            panel.classList.add('open');
+                        }
+                        document.getElementById('aiToggleBtn')?.classList.add('active');
+                        document.getElementById('aiCollapseToggle')?.classList.remove('collapsed');
+                        window.updateRendererSize?.();
+                    }
                 },
                 {
                     target: '#settingsGear',
@@ -3418,12 +3456,12 @@
     </script>
 
     <pre id="output"></pre>
-    <script src="utils/stripe.js"></script>
+    <script src="/demo/utils/stripe.js"></script>
 
-    <script type="module" src="main.js"></script>
-    <script src="fileExplorer.js"></script>
-    <script type="module" src="aiagent.js"></script>
-    <script type="module" src="remoteFiles.js"></script>
+    <script type="module" src="/demo/main.js"></script>
+    <script src="/demo/fileExplorer.js"></script>
+    <script type="module" src="/demo/aiagent.js"></script>
+    <script type="module" src="/demo/remoteFiles.js"></script>
 
 </body>
 

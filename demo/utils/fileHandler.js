@@ -1786,6 +1786,13 @@ export default class FileHandler {
      * - [ATOMS] section: atomic coordinates
      * - [GTO] section: Gaussian basis functions
      * - [MO] section: molecular orbital coefficients
+     *
+     * Reference: https://www.theochem.ru.nl/molden/molden_format.html
+     *
+     * Note: Different quantum chemistry programs produce Molden files with different conventions:
+     * - ORCA: Contraction coefficients include normalization factors (don't renormalize)
+     * - Gaussian: Contraction coefficients are raw (need normalization)
+     * - Psi4, GAMESS, etc.: Various conventions
      */
     parseMoldenToJson(text) {
         const lines = text.split(/\r?\n|\r/);
@@ -1793,6 +1800,32 @@ export default class FileHandler {
         const orbitals = [];
         const basisFunctions = [];
         let coordUnit = 'angstrom'; // Default to Angstrom
+
+        // Detect source program (affects normalization conventions)
+        let sourceProgram = 'unknown';
+        const textLower = text.toLowerCase();
+        if (textLower.includes('orca') || textLower.includes('orca_2mkl')) {
+            sourceProgram = 'orca';
+        } else if (textLower.includes('gaussian') || textLower.includes('g09') || textLower.includes('g16')) {
+            sourceProgram = 'gaussian';
+        } else if (textLower.includes('psi4')) {
+            sourceProgram = 'psi4';
+        } else if (textLower.includes('gamess')) {
+            sourceProgram = 'gamess';
+        } else if (textLower.includes('nwchem')) {
+            sourceProgram = 'nwchem';
+        } else if (textLower.includes('qchem') || textLower.includes('q-chem')) {
+            sourceProgram = 'qchem';
+        } else if (textLower.includes('molpro')) {
+            sourceProgram = 'molpro';
+        } else if (textLower.includes('turbomole')) {
+            sourceProgram = 'turbomole';
+        }
+
+        // Spherical harmonics flags (default is Cartesian)
+        let useSphericalD = false; // [5D] - 5 spherical D instead of 6 Cartesian
+        let useSphericalF = false; // [7F] - 7 spherical F instead of 10 Cartesian
+        let useSphericalG = false; // [9G] - 9 spherical G instead of 15 Cartesian
 
         // State tracking
         let currentSection = null;
@@ -1863,9 +1896,22 @@ export default class FileHandler {
                 }
             }
 
-            // Handle [5D], [7F], [9G] keywords for spherical harmonics
-            if (trimmed === '[5D]' || trimmed === '[5D7F]' || trimmed === '[7F]' || trimmed === '[9G]') {
-                // Store this info for basis function interpretation
+            // Handle spherical harmonics keywords
+            // Default is Cartesian (6D, 10F, 15G)
+            // These keywords switch to spherical harmonics
+            if (trimmed === '[5D]' || trimmed === '[5D7F]' || trimmed === '[5D10F]') {
+                useSphericalD = true;
+                if (trimmed === '[5D7F]') {
+                    useSphericalF = true;
+                }
+                continue;
+            }
+            if (trimmed === '[7F]') {
+                useSphericalF = true;
+                continue;
+            }
+            if (trimmed === '[9G]') {
+                useSphericalG = true;
                 continue;
             }
 
@@ -1949,7 +1995,8 @@ export default class FileHandler {
                     const parts = trimmed.split(/\s+/);
                     if (parts.length >= 2) {
                         const aoIdx = parseInt(parts[0]);
-                        const coef = parseFloat(parts[1]);
+                        // Handle Fortran D-notation in scientific numbers (e.g., 1.234D-05)
+                        const coef = parseFloat(parts[1].replace(/[Dd]/g, 'E'));
                         if (!isNaN(aoIdx) && !isNaN(coef)) {
                             currentMO.coefficients.push({
                                 aoIndex: aoIdx,
@@ -1982,19 +2029,43 @@ export default class FileHandler {
             basisFunctions: basisFunctions,
             homoIndex: homoIdx,
             lumoIndex: lumoIdx,
-            fileType: 'molden'
+            fileType: 'molden',
+            // Spherical harmonics flags
+            useSphericalD: useSphericalD,
+            useSphericalF: useSphericalF,
+            useSphericalG: useSphericalG,
+            // Source program (affects normalization)
+            sourceProgram: sourceProgram
         };
 
         // Set frameEnergies for consistency
         window.frameEnergies = [null];
         window._pendingChartData = null;
 
+        // Warn about spherical harmonics (not yet fully supported)
+        if (useSphericalD || useSphericalF || useSphericalG) {
+            const sphericalTypes = [];
+            if (useSphericalD) sphericalTypes.push('5D');
+            if (useSphericalF) sphericalTypes.push('7F');
+            if (useSphericalG) sphericalTypes.push('9G');
+            console.warn(`Molden file uses spherical harmonics (${sphericalTypes.join(', ')}). ` +
+                'Orbital visualization may be incorrect for orbitals with D, F, or G character. ' +
+                'Cartesian basis functions are fully supported.');
+        }
+
+        // Log source program detection
+        if (sourceProgram !== 'unknown') {
+            console.log(`Detected Molden file from: ${sourceProgram.toUpperCase()}`);
+        }
+
         console.log('Parsed Molden file:', {
             atoms: atomData.length,
             orbitals: orbitals.length,
             basisFunctions: basisFunctions.length,
             homo: homoIdx >= 0 ? homoIdx + 1 : 'N/A',
-            lumo: lumoIdx >= 0 ? lumoIdx + 1 : 'N/A'
+            lumo: lumoIdx >= 0 ? lumoIdx + 1 : 'N/A',
+            spherical: { D: useSphericalD, F: useSphericalF, G: useSphericalG },
+            source: sourceProgram
         });
 
         return {
