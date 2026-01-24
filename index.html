@@ -246,6 +246,14 @@
             background-clip: text;
         }
 
+        span.highlight-bold {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
         .hero {
             min-height: 100vh;
             display: flex;
@@ -1199,8 +1207,9 @@
     <section class="hero">
         <div class="hero-container">
             <div class="hero-content">
-                <h1>Visualize & Edit Molecules <span>in 3D</span></h1>
-                <p>Professional molecular visualization meets AI-powered editing. Build, analyze, and transform
+                <h1 width="100%"><span>AI Powered</span> <br> Platform for Molecular <br> Simulations </span></h1>
+                <p>AI-powered editing and simulation, helping you perform <span class="highlight-bold">end-to-end</span>
+                    workflows effortlessly. Analyze, and transform
                     molecular structures with unprecedented speed and precision.</p>
                 <div class="hero-buttons">
                     <a href="demo" class="btn btn-primary btn-large">
