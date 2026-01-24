@@ -3734,7 +3734,7 @@ function attachMouseWheelRotation() {
 }
 window.attachMouseWheelRotation = attachMouseWheelRotation
 const buttonSound = new Audio()
-buttonSound.src = "Create.wav"
+buttonSound.src = "/demo/Create.wav"
 
 document.querySelectorAll('button').forEach(button => {
     button.addEventListener('click', (event) => {
