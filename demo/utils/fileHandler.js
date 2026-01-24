@@ -1806,6 +1806,8 @@ export default class FileHandler {
         const textLower = text.toLowerCase();
         if (textLower.includes('orca') || textLower.includes('orca_2mkl')) {
             sourceProgram = 'orca';
+        } else if (textLower.includes('pyscf') || textLower.includes('made by pyscf')) {
+            sourceProgram = 'pyscf';
         } else if (textLower.includes('gaussian') || textLower.includes('g09') || textLower.includes('g16')) {
             sourceProgram = 'gaussian';
         } else if (textLower.includes('psi4')) {
@@ -1899,18 +1901,19 @@ export default class FileHandler {
             // Handle spherical harmonics keywords
             // Default is Cartesian (6D, 10F, 15G)
             // These keywords switch to spherical harmonics
-            if (trimmed === '[5D]' || trimmed === '[5D7F]' || trimmed === '[5D10F]') {
+            const upperTrimmed = trimmed.toUpperCase();
+            if (upperTrimmed === '[5D]' || upperTrimmed === '[5D7F]' || upperTrimmed === '[5D10F]') {
                 useSphericalD = true;
-                if (trimmed === '[5D7F]') {
+                if (upperTrimmed === '[5D7F]') {
                     useSphericalF = true;
                 }
                 continue;
             }
-            if (trimmed === '[7F]') {
+            if (upperTrimmed === '[7F]') {
                 useSphericalF = true;
                 continue;
             }
-            if (trimmed === '[9G]') {
+            if (upperTrimmed === '[9G]') {
                 useSphericalG = true;
                 continue;
             }

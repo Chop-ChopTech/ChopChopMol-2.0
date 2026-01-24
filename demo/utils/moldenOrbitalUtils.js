@@ -16,9 +16,17 @@ let useSphericalF = false;
 let useSphericalG = false;
 
 // Source program (affects normalization conventions)
-// ORCA: coefficients already include normalization
+// ORCA: coefficients already include normalization, AND f-orbitals have flipped signs
 // Gaussian/others: coefficients are raw, need normalization
 let sourceProgram = 'unknown';
+
+// Track which shell types need sign correction for ORCA
+// ORCA flips signs for f-orbitals and higher angular momentum
+function needsOrcaSignFlip(shellType) {
+    if (sourceProgram !== 'orca') return false;
+    const type = shellType.toLowerCase();
+    return type === 'f' || type === 'g' || type === 'h' || type === 'i';
+}
 
 // Normalization mode: 'auto', 'always', 'never'
 // 'auto' skips normalization for ORCA files
@@ -33,15 +41,32 @@ let normalizationMode = 'auto';
 // 'bohr' forces Bohr conversion
 let unitMode = 'auto';
 
+// Sign convention mode: 'standard' or 'condon-shortley'
+// 'standard': all positive angular factors (most common in visualization)
+// 'condon-shortley': includes (-1)^m phase for positive m (quantum chemistry convention)
+let signConvention = 'standard';
+
 /**
  * Check if we should skip primitive normalization.
- * ORCA Molden files already include normalization in the contraction coefficients.
+ *
+ * Different programs have different conventions for contraction coefficients:
+ * - ORCA: Coefficients are PRE-MULTIPLIED by primitive normalization (skip)
+ * - PySCF: Coefficients are STANDARD (not pre-multiplied) - need normalization
+ * - Standard Molden: Coefficients are standard - need normalization
+ *
+ * Evidence: Comparing the same basis set between ORCA and PySCF Molden files:
+ *   ORCA s-coeff for α=2266: -1.26  (pre-normalized)
+ *   PySCF s-coeff for α=2266: -0.0054 (standard)
+ *   Ratio ≈ 234 = (2α/π)^0.75 = primitive normalization factor
+ *
  * @returns {boolean} True if normalization should be skipped
  */
 function skipPrimitiveNormalization() {
     if (normalizationMode === 'always') return false;
     if (normalizationMode === 'never') return true;
-    // Auto mode: skip for ORCA
+
+    // Auto mode: only skip for ORCA (which pre-normalizes)
+    // All other programs (including PySCF) use standard coefficients
     return sourceProgram === 'orca';
 }
 
@@ -169,6 +194,16 @@ function getNumAOsForShell(shellType) {
 }
 
 /**
+ * Get Condon-Shortley phase factor (-1)^m for positive m.
+ * @param {number} m - magnetic quantum number (positive)
+ * @returns {number} 1 or -1
+ */
+function condonShortleyPhase(m) {
+    if (signConvention !== 'condon-shortley' || m <= 0) return 1;
+    return (m % 2 === 0) ? 1 : -1;
+}
+
+/**
  * Evaluate spherical harmonic D-function at a point.
  * Real solid harmonics for L=2 (order: d0, d+1, d-1, d+2, d-2)
  * Molden order for 5D: D 0, D+1, D-1, D+2, D-2
@@ -182,17 +217,17 @@ function getNumAOsForShell(shellType) {
  */
 function sphericalD(m, dx, dy, dz, r2) {
     // Real solid harmonics for D-orbitals
-    // Normalization constants for real solid harmonics
+    // With optional Condon-Shortley phase for positive m values
     switch (m) {
-        case 0: // d_z2 = (3z^2 - r^2) / 2 = (2z^2 - x^2 - y^2) / 2
+        case 0: // D 0 (m=0): d_z2 = (2z^2 - x^2 - y^2) / 2
             return (2 * dz * dz - dx * dx - dy * dy) / 2;
-        case 1: // d_xz
-            return Math.sqrt(3) * dx * dz;
-        case 2: // d_yz
+        case 1: // D+1 (m=+1): d_xz
+            return condonShortleyPhase(1) * Math.sqrt(3) * dx * dz;
+        case 2: // D-1 (m=-1): d_yz
             return Math.sqrt(3) * dy * dz;
-        case 3: // d_x2-y2 = (x^2 - y^2) / 2
-            return Math.sqrt(3) / 2 * (dx * dx - dy * dy);
-        case 4: // d_xy
+        case 3: // D+2 (m=+2): d_x2-y2
+            return condonShortleyPhase(2) * Math.sqrt(3) / 2 * (dx * dx - dy * dy);
+        case 4: // D-2 (m=-2): d_xy
             return Math.sqrt(3) * dx * dy;
         default:
             return 0;
@@ -211,25 +246,24 @@ function sphericalD(m, dx, dy, dz, r2) {
  * @returns {number} Angular part of spherical harmonic
  */
 function sphericalF(m, dx, dy, dz, r2) {
-    const sqrt5 = Math.sqrt(5);
-    const sqrt6 = Math.sqrt(6);
-    const sqrt10 = Math.sqrt(10);
     const sqrt15 = Math.sqrt(15);
 
+    // Molden order: F 0, F+1, F-1, F+2, F-2, F+3, F-3
+    // With optional Condon-Shortley phase for positive m values
     switch (m) {
-        case 0: // f_z3: z(5z^2 - 3r^2)/2
+        case 0: // F 0 (m=0): f_z3 = z(5z^2 - 3r^2)/2
             return dz * (5 * dz * dz - 3 * r2) / 2;
-        case 1: // f_xz2: x(5z^2 - r^2)/2 * sqrt(3/2)
-            return Math.sqrt(1.5) * dx * (5 * dz * dz - r2) / 2;
-        case 2: // f_yz2: y(5z^2 - r^2)/2 * sqrt(3/2)
+        case 1: // F+1 (m=+1): f_xz2 = x(5z^2 - r^2) * sqrt(3/8)
+            return condonShortleyPhase(1) * Math.sqrt(1.5) * dx * (5 * dz * dz - r2) / 2;
+        case 2: // F-1 (m=-1): f_yz2 = y(5z^2 - r^2) * sqrt(3/8)
             return Math.sqrt(1.5) * dy * (5 * dz * dz - r2) / 2;
-        case 3: // f_xyz: xyz * sqrt(15)
+        case 3: // F+2 (m=+2): f_z(x2-y2) = z(x^2 - y^2) * sqrt(15/4)
+            return condonShortleyPhase(2) * Math.sqrt(7.5) * dz * (dx * dx - dy * dy) / 2;
+        case 4: // F-2 (m=-2): f_xyz = xyz * sqrt(15)
             return sqrt15 * dx * dy * dz;
-        case 4: // f_z(x2-y2): z(x^2 - y^2)/2 * sqrt(15/2)
-            return Math.sqrt(7.5) * dz * (dx * dx - dy * dy) / 2;
-        case 5: // f_x(x2-3y2): x(x^2 - 3y^2) * sqrt(5/2)/2
-            return Math.sqrt(2.5) * dx * (dx * dx - 3 * dy * dy) / 2;
-        case 6: // f_y(3x2-y2): y(3x^2 - y^2) * sqrt(5/2)/2
+        case 5: // F+3 (m=+3): f_x(x2-3y2) = x(x^2 - 3y^2) * sqrt(5/8)
+            return condonShortleyPhase(3) * Math.sqrt(2.5) * dx * (dx * dx - 3 * dy * dy) / 2;
+        case 6: // F-3 (m=-3): f_y(3x2-y2) = y(3x^2 - y^2) * sqrt(5/8)
             return Math.sqrt(2.5) * dy * (3 * dx * dx - dy * dy) / 2;
         default:
             return 0;
@@ -372,13 +406,14 @@ function evaluateBasisFunction(shell, atomCenter, point, angularMomentum, coeffI
                 const gaussian = Math.exp(-alpha * r2_bohr);
 
                 // Normalization for spherical harmonics (skip if ORCA - already normalized)
+                // Formula: N(α,ℓ) = sqrt[(2α/π)^(3/2) * (4α)^ℓ / (2ℓ-1)!!]
+                //        = (2α/π)^(3/4) * (4α)^(ℓ/2) / sqrt((2ℓ-1)!!)
                 let norm = 1.0;
                 if (!skipPrimitiveNormalization()) {
-                    // N = (2α/π)^(3/4) * (4α)^(L/2) * sqrt(2/(2L+1)!!)
                     const prefactor = Math.pow(2 * alpha / Math.PI, 0.75);
                     const angularFactor = Math.pow(4 * alpha, L / 2);
-                    const sphericalNorm = Math.sqrt(2 / doubleFactorial(2 * L + 1));
-                    norm = prefactor * angularFactor * sphericalNorm;
+                    const sphericalDenom = Math.sqrt(doubleFactorial(2 * L - 1));
+                    norm = prefactor * angularFactor / sphericalDenom;
                 }
 
                 // Get spherical harmonic angular part
@@ -409,7 +444,7 @@ function evaluateBasisFunction(shell, atomCenter, point, angularMomentum, coeffI
  * Build a mapping from AO index to basis function info.
  * @param {Array} basisFunctions - Array of shell objects
  * @param {Array} atoms - Array of atom objects with positions
- * @returns {Array} Array of {shell, atomCenter, angularMomentum, coeffIndex}
+ * @returns {Array} Array of {shell, atomCenter, angularMomentum, coeffIndex, shellType, needsSignFlip}
  */
 function buildAOBasisMap(basisFunctions, atoms) {
     const aoMap = [];
@@ -424,14 +459,19 @@ function buildAOBasisMap(basisFunctions, atoms) {
 
         const atomCenter = [atoms[atomIndex].x, atoms[atomIndex].y, atoms[atomIndex].z];
         const angularMomenta = getAngularMomentum(shell.type);
+        const shellType = shell.type.toLowerCase();
+        // ORCA sign flip for f-orbitals and higher
+        const signFlip = needsOrcaSignFlip(shellType);
 
-        if (shell.type.toLowerCase() === 'sp') {
+        if (shellType === 'sp') {
             // SP shell: first is s with coefficient, rest are p with coefficient2
             aoMap.push({
                 shell: shell,
                 atomCenter: atomCenter,
                 angularMomentum: angularMomenta[0], // s
-                coeffIndex: 0
+                coeffIndex: 0,
+                shellType: 's',
+                needsSignFlip: false
             });
 
             for (let i = 1; i < angularMomenta.length; i++) {
@@ -439,7 +479,9 @@ function buildAOBasisMap(basisFunctions, atoms) {
                     shell: shell,
                     atomCenter: atomCenter,
                     angularMomentum: angularMomenta[i], // px, py, pz
-                    coeffIndex: 1
+                    coeffIndex: 1,
+                    shellType: 'p',
+                    needsSignFlip: false
                 });
             }
         } else {
@@ -449,7 +491,9 @@ function buildAOBasisMap(basisFunctions, atoms) {
                     shell: shell,
                     atomCenter: atomCenter,
                     angularMomentum: am,
-                    coeffIndex: 0
+                    coeffIndex: 0,
+                    shellType: shellType,
+                    needsSignFlip: signFlip
                 });
             }
         }
@@ -476,7 +520,7 @@ function evaluateMOAtPoint(mo, aoMap, point) {
     for (let i = 0; i < mo.coefficients.length; i++) {
         const moCoeff = mo.coefficients[i];
         const aoIndex = moCoeff.aoIndex - 1; // molden uses 1-based
-        const coefficient = moCoeff.coefficient;
+        let coefficient = moCoeff.coefficient;
 
         if (aoIndex < 0 || aoIndex >= aoMap.length) {
             skippedCount++;
@@ -484,6 +528,13 @@ function evaluateMOAtPoint(mo, aoMap, point) {
         }
 
         const ao = aoMap[aoIndex];
+
+        // Apply ORCA sign flip for f-orbitals and higher
+        // ORCA Molden files have flipped signs for f-shell MO coefficients
+        if (ao.needsSignFlip) {
+            coefficient = -coefficient;
+        }
+
         const basisValue = evaluateBasisFunction(
             ao.shell,
             ao.atomCenter,
@@ -496,7 +547,7 @@ function evaluateMOAtPoint(mo, aoMap, point) {
         if (debugMOEvaluation && !debugLoggedOnce && Math.abs(basisValue) > 1e-10) {
             console.log(`[MO Debug] AO ${aoIndex + 1}: shell=${ao.shell.type}, ` +
                 `ang=[${ao.angularMomentum}], coeff=${coefficient.toFixed(6)}, ` +
-                `basis=${basisValue.toFixed(6)}`);
+                `basis=${basisValue.toFixed(6)}${ao.needsSignFlip ? ' (sign-flipped)' : ''}`);
         }
 
         value += coefficient * basisValue;
@@ -628,8 +679,8 @@ window.showAOMapping = function() {
 
 // Compare specific orbital with expected
 window.inspectOrbital = function(orbIndex) {
-    if (!window.moldenData) {
-        console.log('No molden data loaded');
+    if (!window.moldenData || !window.molecule) {
+        console.log('No molden data or molecule loaded');
         return;
     }
 
@@ -639,6 +690,18 @@ window.inspectOrbital = function(orbIndex) {
         return;
     }
 
+    // Build AO map to get shell types
+    const savedD = useSphericalD;
+    const savedF = useSphericalF;
+    const savedG = useSphericalG;
+    useSphericalD = md.useSphericalD || false;
+    useSphericalF = md.useSphericalF || false;
+    useSphericalG = md.useSphericalG || false;
+    const aoMap = buildAOBasisMap(md.basisFunctions, window.molecule.atoms);
+    useSphericalD = savedD;
+    useSphericalF = savedF;
+    useSphericalG = savedG;
+
     const orb = md.orbitals[orbIndex];
     console.log(`=== Orbital ${orbIndex + 1} (${orbIndex === md.homoIndex ? 'HOMO' : orbIndex === md.lumoIndex ? 'LUMO' : ''}) ===`);
     console.log('Symmetry:', orb.symmetry);
@@ -646,13 +709,198 @@ window.inspectOrbital = function(orbIndex) {
     console.log('Occupation:', orb.occupation);
     console.log('Number of coefficients:', orb.coefficients.length);
 
-    // Show largest coefficients
+    // Analyze shell type contributions
+    const shellContrib = { s: 0, p: 0, d: 0, f: 0, g: 0 };
+    for (const c of orb.coefficients) {
+        const aoIdx = c.aoIndex - 1;
+        if (aoIdx >= 0 && aoIdx < aoMap.length) {
+            const shellType = aoMap[aoIdx].shellType;
+            shellContrib[shellType] = (shellContrib[shellType] || 0) + c.coefficient * c.coefficient;
+        }
+    }
+    const totalContrib = Object.values(shellContrib).reduce((a, b) => a + b, 0);
+    console.log('Shell type contributions (squared coefficients):');
+    for (const [type, contrib] of Object.entries(shellContrib)) {
+        if (contrib > 0.001) {
+            const pct = (100 * contrib / totalContrib).toFixed(1);
+            const needsFlip = needsOrcaSignFlip(type) ? ' (ORCA sign-flipped)' : '';
+            console.log(`  ${type}: ${pct}%${needsFlip}`);
+        }
+    }
+
+    // Show largest coefficients with shell info
     const sorted = [...orb.coefficients].sort((a, b) => Math.abs(b.coefficient) - Math.abs(a.coefficient));
     console.log('Top 10 coefficients:');
     for (let i = 0; i < Math.min(10, sorted.length); i++) {
         const c = sorted[i];
-        console.log(`  AO ${c.aoIndex}: ${c.coefficient.toFixed(6)}`);
+        const aoIdx = c.aoIndex - 1;
+        let shellInfo = '';
+        if (aoIdx >= 0 && aoIdx < aoMap.length) {
+            const ao = aoMap[aoIdx];
+            shellInfo = ` (${ao.shellType}, atom ${ao.shell.atomNumber})`;
+        }
+        console.log(`  AO ${c.aoIndex}: ${c.coefficient.toFixed(6)}${shellInfo}`);
     }
+};
+
+// Check source program and current settings
+window.checkMoldenSettings = function() {
+    if (!window.moldenData) {
+        console.log('No molden data loaded');
+        return;
+    }
+    const md = window.moldenData;
+    console.log('=== Molden Settings ===');
+    console.log('Source program:', md.sourceProgram);
+    console.log('Spherical harmonics from file:', {
+        D: md.useSphericalD ? '5D' : '6D',
+        F: md.useSphericalF ? '7F' : '10F',
+        G: md.useSphericalG ? '9G' : '15G'
+    });
+    console.log('Current evaluation settings:', {
+        sourceProgram: sourceProgram,
+        normalizationMode: normalizationMode,
+        skipNormalization: skipPrimitiveNormalization(),
+        signConvention: signConvention,
+        useSphericalD: useSphericalD,
+        useSphericalF: useSphericalF,
+        useSphericalG: useSphericalG
+    });
+
+    // Program-specific info
+    if (md.sourceProgram === 'orca') {
+        console.log('ORCA: Pre-normalized coefficients, forced 5D/7F/9G, sign flip for f/g');
+    } else if (md.sourceProgram === 'pyscf') {
+        console.log('PySCF: Standard coefficients, uses file-specified spherical/cartesian');
+    } else {
+        console.log('Unknown/other: Standard coefficients, uses file-specified spherical/cartesian');
+    }
+};
+
+// Check if current file is ORCA
+window.isMoldenFromOrca = function() {
+    if (!window.moldenData) {
+        console.log('No molden data loaded');
+        return false;
+    }
+    console.log('Source program:', window.moldenData.sourceProgram);
+    return window.moldenData.sourceProgram === 'orca';
+};
+
+// Toggle ORCA sign flip for testing
+window.toggleOrcaSignFlip = function(enable) {
+    if (enable === undefined) {
+        console.log('Current source program:', sourceProgram);
+        console.log('To test sign flip: window.toggleOrcaSignFlip(true/false)');
+        return;
+    }
+    if (enable) {
+        sourceProgram = 'orca';
+        console.log('Set source to ORCA - f/g orbitals will have sign flipped');
+    } else {
+        sourceProgram = 'unknown';
+        console.log('Set source to unknown - no sign flipping');
+    }
+    console.log('Re-select the orbital to see the effect');
+};
+
+// Set source program for testing
+window.setMoldenSource = function(source) {
+    const valid = ['orca', 'pyscf', 'gaussian', 'psi4', 'unknown'];
+    if (!valid.includes(source)) {
+        console.log('Valid sources:', valid.join(', '));
+        return;
+    }
+    sourceProgram = source;
+    console.log('Set source program to:', source);
+    console.log('Normalization will be ' + (skipPrimitiveNormalization() ? 'SKIPPED' : 'APPLIED'));
+    console.log('Re-select the orbital to see the effect');
+};
+
+// Test orbital evaluation at specific points for debugging
+window.testOrbitalPoint = function(orbIndex, x, y, z) {
+    if (!window.moldenData || !window.molecule) {
+        console.log('No molden data or molecule loaded');
+        return;
+    }
+
+    const md = window.moldenData;
+    if (orbIndex < 0 || orbIndex >= md.orbitals.length) {
+        console.log(`Invalid orbital index. Valid range: 0 to ${md.orbitals.length - 1}`);
+        return;
+    }
+
+    // Set up evaluation parameters
+    const savedD = useSphericalD;
+    const savedF = useSphericalF;
+    const savedG = useSphericalG;
+    const savedProg = sourceProgram;
+
+    useSphericalD = md.useSphericalD || false;
+    useSphericalF = md.useSphericalF || false;
+    useSphericalG = md.useSphericalG || false;
+    sourceProgram = md.sourceProgram || 'unknown';
+
+    if (sourceProgram === 'orca') {
+        useSphericalD = useSphericalF = useSphericalG = true;
+    }
+
+    const aoMap = buildAOBasisMap(md.basisFunctions, window.molecule.atoms);
+    const orb = md.orbitals[orbIndex];
+    const point = [x, y, z];
+    const value = evaluateMOAtPoint(orb, aoMap, point);
+
+    console.log(`Orbital ${orbIndex + 1} at (${x}, ${y}, ${z}): ${value.toFixed(8)}`);
+    console.log('Settings:', {
+        sourceProgram,
+        skipNorm: skipPrimitiveNormalization(),
+        spherical: { D: useSphericalD, F: useSphericalF, G: useSphericalG }
+    });
+
+    // Restore
+    useSphericalD = savedD;
+    useSphericalF = savedF;
+    useSphericalG = savedG;
+    sourceProgram = savedProg;
+
+    return value;
+};
+
+// Compare orbital with different normalization modes
+window.compareNormModes = function(orbIndex, x, y, z) {
+    if (!window.moldenData || !window.molecule) {
+        console.log('No molden data or molecule loaded');
+        return;
+    }
+
+    const modes = ['auto', 'always', 'never'];
+    const results = {};
+
+    for (const mode of modes) {
+        normalizationMode = mode;
+        results[mode] = window.testOrbitalPoint(orbIndex, x, y, z);
+    }
+
+    normalizationMode = 'auto'; // Reset
+    console.log('Comparison results at (' + x + ',' + y + ',' + z + '):');
+    console.log('  auto:', results.auto?.toFixed(8));
+    console.log('  always:', results.always?.toFixed(8));
+    console.log('  never:', results.never?.toFixed(8));
+};
+
+// Toggle sign convention for spherical harmonics
+window.setSignConvention = function(convention) {
+    const valid = ['standard', 'condon-shortley'];
+    if (!valid.includes(convention)) {
+        console.log('Valid conventions:', valid.join(', '));
+        console.log('Current convention:', signConvention);
+        console.log('standard: all positive angular factors (default)');
+        console.log('condon-shortley: includes (-1)^m phase for positive m (PySCF internal)');
+        return;
+    }
+    signConvention = convention;
+    console.log('Sign convention set to:', convention);
+    console.log('Re-select the orbital to see the effect');
 };
 
 /**
@@ -671,13 +919,38 @@ export function generateMoldenOrbitalGrid(moldenData, atoms, orbitalIndex = -1, 
     console.log('[MoldenGrid] Basis functions:', moldenData.basisFunctions.length);
     console.log('[MoldenGrid] Orbital index:', orbitalIndex);
 
-    // Set spherical harmonics flags from moldenData
-    useSphericalD = moldenData.useSphericalD || false;
-    useSphericalF = moldenData.useSphericalF || false;
-    useSphericalG = moldenData.useSphericalG || false;
-
     // Set source program (affects normalization conventions)
     sourceProgram = moldenData.sourceProgram || 'unknown';
+    signConvention = (sourceProgram === 'pyscf') ? 'condon-shortley' : 'standard';
+
+    // Set spherical harmonics flags from moldenData
+    // IMPORTANT: ORCA always uses spherical harmonics (5D, 7F, 9G) even if keywords
+    // aren't present in the file - it's the only way ORCA stores basis functions
+    if (sourceProgram === 'orca') {
+        useSphericalD = true;
+        useSphericalF = true;
+        useSphericalG = true;
+        console.log('[MoldenGrid] ORCA detected - forcing spherical harmonics (5D, 7F, 9G)');
+    } else {
+        useSphericalD = moldenData.useSphericalD || false;
+        useSphericalF = moldenData.useSphericalF || false;
+        useSphericalG = moldenData.useSphericalG || false;
+    }
+
+    // Select orbital FIRST (default to LUMO if available, otherwise HOMO)
+    let selectedOrbital;
+    if (orbitalIndex >= 0 && orbitalIndex < moldenData.orbitals.length) {
+        selectedOrbital = moldenData.orbitals[orbitalIndex];
+    } else if (moldenData.lumoIndex >= 0) {
+        selectedOrbital = moldenData.orbitals[moldenData.lumoIndex];
+        console.log('[MoldenGrid] Using LUMO');
+    } else if (moldenData.homoIndex >= 0) {
+        selectedOrbital = moldenData.orbitals[moldenData.homoIndex];
+        console.log('[MoldenGrid] Using HOMO');
+    } else {
+        console.error('[MoldenGrid] No valid orbital found');
+        return null;
+    }
 
     // Count expected AOs based on basis functions
     let expectedAOs = 0;
@@ -728,6 +1001,15 @@ export function generateMoldenOrbitalGrid(moldenData, atoms, orbitalIndex = -1, 
     // Log configuration
     if (sourceProgram === 'orca') {
         console.log('[MoldenGrid] ORCA detected - using pre-normalized coefficients');
+        if (shellCounts.f > 0 || shellCounts.g > 0) {
+            console.log('[MoldenGrid] ORCA sign flip will be applied to f/g shell contributions');
+        }
+    } else if (sourceProgram === 'pyscf') {
+        console.log('[MoldenGrid] PySCF detected - ' +
+            (skipPrimitiveNormalization() ? 'skipping normalization' : 'applying normalization') +
+            `, sign convention: ${signConvention}`);
+    } else {
+        console.log('[MoldenGrid] Standard Molden - applying normalization');
     }
     if (useSphericalD || useSphericalF || useSphericalG) {
         console.log('[MoldenGrid] Using spherical harmonics:', {
@@ -735,21 +1017,6 @@ export function generateMoldenOrbitalGrid(moldenData, atoms, orbitalIndex = -1, 
             F: useSphericalF ? '7F' : '10F',
             G: useSphericalG ? '9G' : '15G'
         });
-    }
-
-    // Select orbital (default to LUMO if available, otherwise HOMO)
-    let selectedOrbital;
-    if (orbitalIndex >= 0 && orbitalIndex < moldenData.orbitals.length) {
-        selectedOrbital = moldenData.orbitals[orbitalIndex];
-    } else if (moldenData.lumoIndex >= 0) {
-        selectedOrbital = moldenData.orbitals[moldenData.lumoIndex];
-        console.log('[MoldenGrid] Using LUMO');
-    } else if (moldenData.homoIndex >= 0) {
-        selectedOrbital = moldenData.orbitals[moldenData.homoIndex];
-        console.log('[MoldenGrid] Using HOMO');
-    } else {
-        console.error('[MoldenGrid] No valid orbital found');
-        return null;
     }
 
     console.log('[MoldenGrid] Selected MO:', {
