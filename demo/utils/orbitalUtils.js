@@ -733,8 +733,126 @@ export function createOrbitalMaterials(opacity = 0.7, positiveColor = 0x3366ff, 
     return { positive, negative };
 }
 
+// ========== Web Worker-based Isosurface Generation ==========
+
+// Singleton worker instance
+let marchingCubesWorker = null;
+let workerPending = null;
+
+/**
+ * Get or create the marching cubes web worker.
+ * @returns {Worker} The worker instance
+ */
+function getMarchingCubesWorker() {
+    if (!marchingCubesWorker) {
+        try {
+            marchingCubesWorker = new Worker('/demo/utils/marchingCubesWorker.js');
+        } catch (e) {
+            console.warn('[Orbitals] Failed to create web worker, falling back to main thread:', e);
+            return null;
+        }
+    }
+    return marchingCubesWorker;
+}
+
+/**
+ * Generate isosurface using Web Worker (non-blocking).
+ * Falls back to main-thread computation if worker unavailable.
+ *
+ * @param {Object} orbitalData - The orbital data containing volumeData and gridInfo
+ * @param {number} isoValue - The isosurface threshold value
+ * @param {boolean} showPositive - Show positive phase
+ * @param {boolean} showNegative - Show negative phase
+ * @returns {Promise<{positive: THREE.BufferGeometry, negative: THREE.BufferGeometry}>}
+ */
+export async function generateIsosurfaceAsync(orbitalData, isoValue, showPositive = true, showNegative = true) {
+    if (!orbitalData || !orbitalData.volumeData || !orbitalData.gridInfo) {
+        console.error('Invalid orbital data for isosurface generation');
+        return { positive: null, negative: null };
+    }
+
+    const worker = getMarchingCubesWorker();
+
+    // Fall back to synchronous if worker unavailable
+    if (!worker) {
+        console.log('[Orbitals] Using synchronous marching cubes (no worker)');
+        return generatePhaseSeparatedIsosurface(orbitalData, isoValue);
+    }
+
+    // Cancel any pending worker operation
+    if (workerPending) {
+        workerPending.reject(new Error('Cancelled'));
+        workerPending = null;
+    }
+
+    return new Promise((resolve, reject) => {
+        const t0 = performance.now();
+
+        workerPending = { resolve, reject };
+
+        worker.onmessage = (e) => {
+            workerPending = null;
+            const { positive, negative, elapsed } = e.data;
+
+            const totalTime = performance.now() - t0;
+            console.log(`[Orbitals] Worker marching cubes: ${elapsed.toFixed(0)}ms compute, ${totalTime.toFixed(0)}ms total`);
+
+            const result = { positive: null, negative: null };
+
+            // Convert Float32Arrays to Three.js geometries
+            if (positive && positive.vertices.length > 0) {
+                const geom = new THREE.BufferGeometry();
+                geom.setAttribute('position', new THREE.BufferAttribute(positive.vertices, 3));
+                geom.setAttribute('normal', new THREE.BufferAttribute(positive.normals, 3));
+                result.positive = geom;
+            }
+
+            if (negative && negative.vertices.length > 0) {
+                const geom = new THREE.BufferGeometry();
+                geom.setAttribute('position', new THREE.BufferAttribute(negative.vertices, 3));
+                geom.setAttribute('normal', new THREE.BufferAttribute(negative.normals, 3));
+                result.negative = geom;
+            }
+
+            resolve(result);
+        };
+
+        worker.onerror = (e) => {
+            workerPending = null;
+            console.error('[Orbitals] Worker error:', e);
+            // Fall back to synchronous
+            resolve(generatePhaseSeparatedIsosurface(orbitalData, isoValue));
+        };
+
+        // Send data to worker (transfer volumeData buffer for zero-copy)
+        const volumeData = orbitalData.volumeData;
+        const volumeBuffer = volumeData.buffer.slice(0);  // Clone buffer for transfer
+
+        worker.postMessage({
+            volumeData: new Float32Array(volumeBuffer),
+            gridInfo: orbitalData.gridInfo,
+            isoValue,
+            showPositive,
+            showNegative
+        }, [volumeBuffer]);
+    });
+}
+
+/**
+ * Terminate the marching cubes worker to free resources.
+ */
+export function terminateMarchingCubesWorker() {
+    if (marchingCubesWorker) {
+        marchingCubesWorker.terminate();
+        marchingCubesWorker = null;
+    }
+    workerPending = null;
+}
+
 // Export for use in other modules
 window.generateIsosurface = generateIsosurface;
 window.generatePhaseSeparatedIsosurface = generatePhaseSeparatedIsosurface;
+window.generateIsosurfaceAsync = generateIsosurfaceAsync;
+window.terminateMarchingCubesWorker = terminateMarchingCubesWorker;
 window.calculateDefaultIsovalue = calculateDefaultIsovalue;
 window.createOrbitalMaterials = createOrbitalMaterials;

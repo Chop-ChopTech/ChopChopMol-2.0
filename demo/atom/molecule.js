@@ -1706,6 +1706,154 @@ export default class Molecule {
     }
 
     /**
+     * Create orbital visualization asynchronously using Web Worker.
+     * Keeps UI responsive during marching cubes computation.
+     *
+     * @param {number} isovalue - Isovalue threshold
+     * @param {number} opacity - Opacity (0-1)
+     * @param {number} positiveColor - Color for positive phase (hex)
+     * @param {number} negativeColor - Color for negative phase (hex)
+     * @param {string} mode - Visualization mode: 'solid', 'wireframe', or 'dots'
+     * @returns {Promise<boolean>} Success status
+     */
+    async createOrbitalVisualizationAsync(isovalue = null, opacity = 0.7, positiveColor = 0x3366ff, negativeColor = 0xff6633, mode = null) {
+        // Check if orbital data exists
+        if (!window.orbitalData || !window.orbitalData.volumeData) {
+            console.warn('No orbital data available for visualization');
+            return false;
+        }
+
+        // Clear existing orbitals
+        this.clearOrbitals();
+
+        // Use provided or calculate default isovalue
+        if (isovalue === null) {
+            if (window.calculateDefaultIsovalue) {
+                isovalue = window.calculateDefaultIsovalue(window.orbitalData);
+            } else {
+                isovalue = 0.02;
+            }
+        }
+        this.orbitalIsovalue = isovalue;
+        this.orbitalOpacity = opacity;
+
+        // Use provided mode or keep existing
+        if (mode !== null) {
+            this.orbitalRenderMode = mode;
+        } else if (!this.orbitalRenderMode) {
+            this.orbitalRenderMode = 'solid';
+        }
+
+        // Generate phase-separated isosurfaces using web worker
+        let geometries;
+        if (window.generateIsosurfaceAsync) {
+            console.log('[Molecule] Using async (worker) marching cubes...');
+            geometries = await window.generateIsosurfaceAsync(window.orbitalData, isovalue);
+        } else if (window.generatePhaseSeparatedIsosurface) {
+            console.log('[Molecule] Using sync marching cubes (worker not available)...');
+            geometries = window.generatePhaseSeparatedIsosurface(window.orbitalData, isovalue);
+        } else {
+            console.error('Orbital utils not loaded');
+            return false;
+        }
+
+        // Create objects based on rendering mode
+        const createOrbitalObject = (geometry, color) => {
+            if (!geometry) return null;
+
+            let object;
+            const renderMode = this.orbitalRenderMode;
+
+            if (renderMode === 'wireframe') {
+                const wireframeGeometry = new THREE.WireframeGeometry(geometry);
+                const material = new THREE.LineBasicMaterial({
+                    color: color,
+                    opacity: opacity,
+                    transparent: opacity < 1,
+                    linewidth: 1
+                });
+                object = new THREE.LineSegments(wireframeGeometry, material);
+            } else if (renderMode === 'dots' || renderMode === 'points') {
+                const material = new THREE.PointsMaterial({
+                    color: color,
+                    size: 0.08,
+                    opacity: opacity,
+                    transparent: opacity < 1,
+                    sizeAttenuation: true
+                });
+                object = new THREE.Points(geometry, material);
+            } else {
+                const material = new THREE.MeshStandardMaterial({
+                    color: color,
+                    opacity: opacity,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    roughness: 0.3,
+                    metalness: 0.1,
+                    depthWrite: false
+                });
+                object = new THREE.Mesh(geometry, material);
+            }
+
+            object.renderOrder = 1;
+            return object;
+        };
+
+        // Create positive phase object
+        if (geometries.positive) {
+            this.orbitalPositiveMesh = createOrbitalObject(geometries.positive, positiveColor);
+
+            if (this.offset && this.orbitalPositiveMesh) {
+                const scale = this.stretch;
+                this.orbitalPositiveMesh.scale.set(scale, scale, scale);
+                this.orbitalPositiveMesh.position.sub(this.offset);
+            }
+
+            if (this.orbitalPositiveMesh) {
+                this.orbitalGroup.add(this.orbitalPositiveMesh);
+            }
+        }
+
+        // Create negative phase object
+        if (geometries.negative) {
+            this.orbitalNegativeMesh = createOrbitalObject(geometries.negative, negativeColor);
+
+            if (this.offset && this.orbitalNegativeMesh) {
+                const scale = this.stretch;
+                this.orbitalNegativeMesh.scale.set(scale, scale, scale);
+                this.orbitalNegativeMesh.position.sub(this.offset);
+            }
+
+            if (this.orbitalNegativeMesh) {
+                this.orbitalGroup.add(this.orbitalNegativeMesh);
+            }
+        }
+
+        // Add to scene
+        this.main.scene.add(this.orbitalGroup);
+        this.orbitalVisible = true;
+
+        console.log(`Created orbital visualization (async): mode=${this.orbitalRenderMode}, isovalue=${isovalue}`);
+        return true;
+    }
+
+    /**
+     * Update orbital isovalue asynchronously.
+     * @param {number} isovalue - New isovalue
+     * @returns {Promise<boolean>} Success status
+     */
+    async updateOrbitalIsovalueAsync(isovalue) {
+        if (!window.orbitalData) return false;
+
+        return this.createOrbitalVisualizationAsync(
+            isovalue,
+            this.orbitalOpacity,
+            this.orbitalPositiveMesh?.material?.color?.getHex() || 0x3366ff,
+            this.orbitalNegativeMesh?.material?.color?.getHex() || 0xff6633
+        );
+    }
+
+    /**
      * Change the orbital rendering mode.
      * @param {string} mode - 'solid', 'wireframe', or 'dots'
      */

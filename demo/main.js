@@ -6593,15 +6593,28 @@ async function selectOrbitalFromTable(orbitalIndex) {
             // Update status with orbital type
             if (statusEl) {
                 const typeLabel = orbitalData.orbitalType || `MO ${orbitalIndex + 1}`;
-                statusEl.textContent = typeLabel;
-                statusEl.style.color = '#4CAF50';
+                statusEl.textContent = typeLabel + ' (rendering...)';
+                statusEl.style.color = '#FFA500';
             }
 
             // Regenerate the orbital surface for the newly selected MO
+            // Use async version to keep UI responsive during marching cubes
             const currentIso = parseFloat(document.getElementById('isovalueSlider')?.value || main.molecule.orbitalIsovalue || 0.02);
-            main.molecule.updateOrbitalIsovalue(currentIso);
+
+            if (main.molecule.createOrbitalVisualizationAsync) {
+                await main.molecule.createOrbitalVisualizationAsync(currentIso);
+            } else {
+                main.molecule.updateOrbitalIsovalue(currentIso);
+            }
             main.molecule.toggleOrbitals(true);
             render();
+
+            // Update status after rendering complete
+            if (statusEl) {
+                const typeLabel = orbitalData.orbitalType || `MO ${orbitalIndex + 1}`;
+                statusEl.textContent = typeLabel;
+                statusEl.style.color = '#4CAF50';
+            }
 
         } catch (error) {
             console.error('[Orbitals] Error generating grid from backend:', error);
@@ -6627,16 +6640,38 @@ async function selectOrbitalFromTable(orbitalIndex) {
     }
 }
 
-// Isovalue slider
+// Isovalue slider with debouncing for async rendering
+let isovalueUpdateTimeout = null;
+let isovalueUpdatePending = false;
+
 document.getElementById('isovalueSlider')?.addEventListener('input', function () {
     const isovalue = parseFloat(this.value);
     document.getElementById('isovalueValue').textContent = isovalue.toFixed(3);
 
     if (!main.molecule) return;
-    if (main.molecule.orbitalVisible) {
-        main.molecule.updateOrbitalIsovalue(isovalue);
-        render();
+    if (!main.molecule.orbitalVisible) return;
+
+    // Debounce: wait for user to stop dragging before expensive recalc
+    if (isovalueUpdateTimeout) {
+        clearTimeout(isovalueUpdateTimeout);
     }
+
+    isovalueUpdateTimeout = setTimeout(async () => {
+        if (isovalueUpdatePending) return;
+        isovalueUpdatePending = true;
+
+        try {
+            // Use async version if available for smoother UI
+            if (main.molecule.updateOrbitalIsovalueAsync) {
+                await main.molecule.updateOrbitalIsovalueAsync(isovalue);
+            } else {
+                main.molecule.updateOrbitalIsovalue(isovalue);
+            }
+            render();
+        } finally {
+            isovalueUpdatePending = false;
+        }
+    }, 150);  // 150ms debounce
 });
 
 // Orbital opacity slider
