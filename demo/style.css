@@ -4699,6 +4699,62 @@ input[type="range"]:focus {
     height: 12px;
 }
 
+/* Orbital Render Mode Buttons */
+.orbital-render-mode {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.orbital-render-mode label {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    min-width: 32px;
+}
+
+.orbital-mode-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.orbital-mode-btn {
+    width: 28px;
+    height: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    transition: all 0.15s ease;
+}
+
+.orbital-mode-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.orbital-mode-btn.active {
+    background: rgba(99, 102, 241, 0.4);
+    border-color: rgba(99, 102, 241, 0.6);
+    color: #fff;
+}
+
+.orbital-mode-btn i {
+    font-size: 11px;
+}
+
+#pointSizeControl {
+    margin-top: 6px;
+}
+
 .orbital-table-wrapper {
     flex: 1;
     overflow-y: auto;

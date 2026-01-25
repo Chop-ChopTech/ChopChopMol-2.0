@@ -1922,9 +1922,33 @@
                 <input type="range" id="orbitalOpacitySlider" min="0.1" max="1" step="0.05" value="0.7">
                 <span id="orbitalOpacityValue">0.7</span>
             </div>
+            <div class="orbital-control-row">
+                <label>Quality</label>
+                <input type="range" id="orbitalQualitySlider" min="30" max="80" step="10" value="50">
+                <span id="orbitalQualityValue">50</span>
+            </div>
             <div class="orbital-phase-toggles">
                 <label><input type="checkbox" id="showPositivePhase" checked> +</label>
                 <label><input type="checkbox" id="showNegativePhase" checked> -</label>
+            </div>
+            <div class="orbital-render-mode">
+                <label>Style</label>
+                <div class="orbital-mode-buttons">
+                    <button id="orbitalModeSolid" class="orbital-mode-btn active" title="Solid surface">
+                        <i class="fas fa-circle"></i>
+                    </button>
+                    <button id="orbitalModeWireframe" class="orbital-mode-btn" title="Wireframe">
+                        <i class="fas fa-project-diagram"></i>
+                    </button>
+                    <button id="orbitalModeDots" class="orbital-mode-btn" title="Dots/Points">
+                        <i class="fas fa-braille"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="orbital-control-row" id="pointSizeControl" style="display: none;">
+                <label>Point Size</label>
+                <input type="range" id="orbitalPointSizeSlider" min="0.02" max="0.3" step="0.01" value="0.08">
+                <span id="orbitalPointSizeValue">0.08</span>
             </div>
         </div>
         <div class="orbital-table-wrapper">

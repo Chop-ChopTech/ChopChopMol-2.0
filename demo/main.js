@@ -6527,6 +6527,9 @@ window.updatePropertiesEmptyState = function () {
 // Track currently selected orbital in the table
 window.selectedOrbitalIndex = -1;
 
+// Track orbital grid quality (resolution)
+window.orbitalQuality = 50;
+
 // Function to select and display an orbital from the table
 async function selectOrbitalFromTable(orbitalIndex) {
     if (!main.molecule) return;
@@ -6560,10 +6563,11 @@ async function selectOrbitalFromTable(orbitalIndex) {
                 throw new Error('Molden orbital utilities not loaded');
             }
 
+            const gridSize = window.orbitalQuality || 50;
             const orbitalData = await window.generateMoldenOrbitalGridFromBackend(
                 window.moldenData.rawContent,
                 orbitalIndex,
-                50, // grid size
+                gridSize,
                 4.0 // padding in Bohr
             );
 
@@ -6645,6 +6649,23 @@ document.getElementById('orbitalOpacitySlider')?.addEventListener('input', funct
     render();
 });
 
+// Orbital quality slider (grid resolution)
+document.getElementById('orbitalQualitySlider')?.addEventListener('change', function () {
+    const quality = parseInt(this.value);
+    document.getElementById('orbitalQualityValue').textContent = quality;
+    window.orbitalQuality = quality;
+
+    // Re-generate orbital with new quality if one is selected
+    if (window.selectedOrbitalIndex >= 0 && window.moldenData) {
+        selectOrbitalFromTable(window.selectedOrbitalIndex);
+    }
+});
+
+// Update display value while dragging (without regenerating)
+document.getElementById('orbitalQualitySlider')?.addEventListener('input', function () {
+    document.getElementById('orbitalQualityValue').textContent = this.value;
+});
+
 // Phase toggles
 document.getElementById('showPositivePhase')?.addEventListener('change', function () {
     if (!main.molecule) return;
@@ -6657,6 +6678,45 @@ document.getElementById('showNegativePhase')?.addEventListener('change', functio
     if (!main.molecule) return;
     const showPositive = document.getElementById('showPositivePhase')?.checked || false;
     main.molecule.toggleOrbitalPhases(showPositive, this.checked);
+    render();
+});
+
+// Orbital render mode buttons
+function setOrbitalRenderMode(mode) {
+    if (!main.molecule) return;
+
+    // Update button states
+    document.querySelectorAll('.orbital-mode-btn').forEach(btn => btn.classList.remove('active'));
+    if (mode === 'solid') {
+        document.getElementById('orbitalModeSolid')?.classList.add('active');
+    } else if (mode === 'wireframe') {
+        document.getElementById('orbitalModeWireframe')?.classList.add('active');
+    } else if (mode === 'dots') {
+        document.getElementById('orbitalModeDots')?.classList.add('active');
+    }
+
+    // Show/hide point size control
+    const pointSizeControl = document.getElementById('pointSizeControl');
+    if (pointSizeControl) {
+        pointSizeControl.style.display = mode === 'dots' ? 'flex' : 'none';
+    }
+
+    // Update visualization
+    main.molecule.setOrbitalRenderMode(mode);
+    render();
+}
+
+document.getElementById('orbitalModeSolid')?.addEventListener('click', () => setOrbitalRenderMode('solid'));
+document.getElementById('orbitalModeWireframe')?.addEventListener('click', () => setOrbitalRenderMode('wireframe'));
+document.getElementById('orbitalModeDots')?.addEventListener('click', () => setOrbitalRenderMode('dots'));
+
+// Point size slider for dots mode
+document.getElementById('orbitalPointSizeSlider')?.addEventListener('input', function () {
+    const size = parseFloat(this.value);
+    document.getElementById('orbitalPointSizeValue').textContent = size.toFixed(2);
+
+    if (!main.molecule) return;
+    main.molecule.setOrbitalPointSize(size);
     render();
 });
 

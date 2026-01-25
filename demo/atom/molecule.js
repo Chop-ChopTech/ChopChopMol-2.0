@@ -1576,7 +1576,15 @@ export default class Molecule {
      * @param {number} positiveColor - Color for positive phase (hex)
      * @param {number} negativeColor - Color for negative phase (hex)
      */
-    createOrbitalVisualization(isovalue = null, opacity = 0.7, positiveColor = 0x3366ff, negativeColor = 0xff6633) {
+    /**
+     * Create orbital visualization with different rendering modes.
+     * @param {number} isovalue - Isovalue threshold
+     * @param {number} opacity - Opacity (0-1)
+     * @param {number} positiveColor - Color for positive phase (hex)
+     * @param {number} negativeColor - Color for negative phase (hex)
+     * @param {string} mode - Visualization mode: 'solid', 'wireframe', or 'dots'
+     */
+    createOrbitalVisualization(isovalue = null, opacity = 0.7, positiveColor = 0x3366ff, negativeColor = 0xff6633, mode = null) {
         // Check if orbital data exists
         if (!window.orbitalData || !window.orbitalData.volumeData) {
             console.warn('No orbital data available for visualization');
@@ -1597,6 +1605,13 @@ export default class Molecule {
         this.orbitalIsovalue = isovalue;
         this.orbitalOpacity = opacity;
 
+        // Use provided mode or keep existing
+        if (mode !== null) {
+            this.orbitalRenderMode = mode;
+        } else if (!this.orbitalRenderMode) {
+            this.orbitalRenderMode = 'solid';
+        }
+
         // Generate phase-separated isosurfaces
         if (!window.generatePhaseSeparatedIsosurface) {
             console.error('Orbital utils not loaded');
@@ -1605,67 +1620,132 @@ export default class Molecule {
 
         const geometries = window.generatePhaseSeparatedIsosurface(window.orbitalData, isovalue);
 
-        // Create materials
-        const materials = window.createOrbitalMaterials ?
-            window.createOrbitalMaterials(opacity, positiveColor, negativeColor) :
-            {
-                positive: new THREE.MeshStandardMaterial({
-                    color: positiveColor,
-                    opacity: opacity,
-                    transparent: true,
-                    side: THREE.DoubleSide,
-                    roughness: 0.3,
-                    metalness: 0.1,
-                    depthWrite: false
-                }),
-                negative: new THREE.MeshStandardMaterial({
-                    color: negativeColor,
-                    opacity: opacity,
-                    transparent: true,
-                    side: THREE.DoubleSide,
-                    roughness: 0.3,
-                    metalness: 0.1,
-                    depthWrite: false
-                })
-            };
+        // Create objects based on rendering mode
+        const createOrbitalObject = (geometry, color) => {
+            if (!geometry) return null;
 
-        // Create positive phase mesh
+            let object;
+            const renderMode = this.orbitalRenderMode;
+
+            if (renderMode === 'wireframe') {
+                // Wireframe mode - use WireframeGeometry to show all triangle edges
+                const wireframeGeometry = new THREE.WireframeGeometry(geometry);
+                const material = new THREE.LineBasicMaterial({
+                    color: color,
+                    opacity: opacity,
+                    transparent: opacity < 1,
+                    linewidth: 1
+                });
+                object = new THREE.LineSegments(wireframeGeometry, material);
+            } else if (renderMode === 'dots' || renderMode === 'points') {
+                // Dots/Points mode - extract vertices from geometry
+                const material = new THREE.PointsMaterial({
+                    color: color,
+                    size: 0.08,
+                    opacity: opacity,
+                    transparent: opacity < 1,
+                    sizeAttenuation: true
+                });
+                object = new THREE.Points(geometry, material);
+            } else {
+                // Solid mode (default)
+                const material = new THREE.MeshStandardMaterial({
+                    color: color,
+                    opacity: opacity,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    roughness: 0.3,
+                    metalness: 0.1,
+                    depthWrite: false
+                });
+                object = new THREE.Mesh(geometry, material);
+            }
+
+            object.renderOrder = 1;
+            return object;
+        };
+
+        // Create positive phase object
         if (geometries.positive) {
-            this.orbitalPositiveMesh = new THREE.Mesh(geometries.positive, materials.positive);
-            this.orbitalPositiveMesh.renderOrder = 1;
+            this.orbitalPositiveMesh = createOrbitalObject(geometries.positive, positiveColor);
 
             // Apply molecule offset to align with atoms
-            if (this.offset) {
-                // Scale positions to match molecule stretch
+            if (this.offset && this.orbitalPositiveMesh) {
                 const scale = this.stretch;
                 this.orbitalPositiveMesh.scale.set(scale, scale, scale);
                 this.orbitalPositiveMesh.position.sub(this.offset);
             }
 
-            this.orbitalGroup.add(this.orbitalPositiveMesh);
+            if (this.orbitalPositiveMesh) {
+                this.orbitalGroup.add(this.orbitalPositiveMesh);
+            }
         }
 
-        // Create negative phase mesh
+        // Create negative phase object
         if (geometries.negative) {
-            this.orbitalNegativeMesh = new THREE.Mesh(geometries.negative, materials.negative);
-            this.orbitalNegativeMesh.renderOrder = 1;
+            this.orbitalNegativeMesh = createOrbitalObject(geometries.negative, negativeColor);
 
             // Apply molecule offset to align with atoms
-            if (this.offset) {
+            if (this.offset && this.orbitalNegativeMesh) {
                 const scale = this.stretch;
                 this.orbitalNegativeMesh.scale.set(scale, scale, scale);
                 this.orbitalNegativeMesh.position.sub(this.offset);
             }
 
-            this.orbitalGroup.add(this.orbitalNegativeMesh);
+            if (this.orbitalNegativeMesh) {
+                this.orbitalGroup.add(this.orbitalNegativeMesh);
+            }
         }
 
         // Add to scene
         this.main.scene.add(this.orbitalGroup);
         this.orbitalVisible = true;
 
-        console.log(`Created orbital visualization with isovalue: ${isovalue}`);
+        console.log(`Created orbital visualization: mode=${this.orbitalRenderMode}, isovalue=${isovalue}`);
         return true;
+    }
+
+    /**
+     * Change the orbital rendering mode.
+     * @param {string} mode - 'solid', 'wireframe', or 'dots'
+     */
+    setOrbitalRenderMode(mode) {
+        if (!['solid', 'wireframe', 'dots', 'points'].includes(mode)) {
+            console.warn(`Invalid orbital render mode: ${mode}`);
+            return;
+        }
+
+        this.orbitalRenderMode = mode;
+
+        // Regenerate if orbital data exists
+        if (window.orbitalData) {
+            const positiveColor = this.orbitalPositiveMesh?.material?.color?.getHex() || 0x3366ff;
+            const negativeColor = this.orbitalNegativeMesh?.material?.color?.getHex() || 0xff6633;
+            this.createOrbitalVisualization(
+                this.orbitalIsovalue,
+                this.orbitalOpacity,
+                positiveColor,
+                negativeColor,
+                mode
+            );
+        }
+    }
+
+    /**
+     * Update the point size for dots mode.
+     * @param {number} size - Point size
+     */
+    setOrbitalPointSize(size) {
+        if (this.orbitalRenderMode !== 'dots' && this.orbitalRenderMode !== 'points') return;
+
+        if (this.orbitalPositiveMesh && this.orbitalPositiveMesh.material) {
+            this.orbitalPositiveMesh.material.size = size;
+            this.orbitalPositiveMesh.material.needsUpdate = true;
+        }
+        if (this.orbitalNegativeMesh && this.orbitalNegativeMesh.material) {
+            this.orbitalNegativeMesh.material.size = size;
+            this.orbitalNegativeMesh.material.needsUpdate = true;
+        }
     }
 
     /**
