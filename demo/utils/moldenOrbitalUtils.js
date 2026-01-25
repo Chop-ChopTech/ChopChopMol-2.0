@@ -13,7 +13,9 @@
  */
 
 // Backend URL - use local or production
-const BACKEND_URL = window.MACE_BACKEND_URL || 'https://chopchopmol-ai-backend.onrender.com';
+const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://127.0.0.1:10000'
+    : 'https://chopchopmol-ai-backend.onrender.com';
 
 /**
  * Generate volumetric grid data from a Molden file using the PySCF backend.
