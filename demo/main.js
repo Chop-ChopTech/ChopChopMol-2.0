@@ -6545,51 +6545,51 @@ async function selectOrbitalFromTable(orbitalIndex) {
 
     window.selectedOrbitalIndex = orbitalIndex;
 
-    // For molden files, generate grid for selected orbital
-    if (window.moldenData) {
-        console.log('[Orbitals] Generating grid for orbital', orbitalIndex);
+    // For molden files, generate grid for selected orbital using PySCF backend
+    if (window.moldenData && window.moldenData.rawContent) {
+        console.log('[Orbitals] Requesting orbital', orbitalIndex, 'from PySCF backend...');
 
-        const originalStatus = statusEl?.textContent || '';
         if (statusEl) {
-            statusEl.textContent = '(generating...)';
+            statusEl.textContent = '(loading...)';
             statusEl.style.color = '#FFA500';
         }
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 10));
-
-            if (!window.generateMoldenOrbitalGrid) {
+            // Use the new backend-based function
+            if (!window.generateMoldenOrbitalGridFromBackend) {
                 throw new Error('Molden orbital utilities not loaded');
             }
 
-            const orbitalData = window.generateMoldenOrbitalGrid(
-                window.moldenData,
-                main.molecule.atoms,
+            const orbitalData = await window.generateMoldenOrbitalGridFromBackend(
+                window.moldenData.rawContent,
                 orbitalIndex,
-                64, // grid size
-                5.0 // padding
+                50, // grid size
+                4.0 // padding in Bohr
             );
 
             if (!orbitalData) {
-                throw new Error('Failed to generate orbital grid');
+                throw new Error('Failed to generate orbital grid from backend');
             }
 
             window.orbitalData = orbitalData;
 
-            console.log('[Orbitals] Grid generation complete:', {
+            console.log('[Orbitals] Grid received from backend:', {
                 dimensions: orbitalData.gridInfo.dimensions,
-                valueRange: [orbitalData.minValue, orbitalData.maxValue]
+                valueRange: [orbitalData.minValue, orbitalData.maxValue],
+                orbitalType: orbitalData.orbitalType
             });
 
-            // Update isovalue if needed
+            // Update isovalue based on data range
             if (window.calculateDefaultIsovalue) {
                 const defaultIso = window.calculateDefaultIsovalue(orbitalData);
                 document.getElementById('isovalueSlider').value = defaultIso;
                 document.getElementById('isovalueValue').textContent = defaultIso.toFixed(3);
             }
 
+            // Update status with orbital type
             if (statusEl) {
-                statusEl.textContent = `MO ${orbitalIndex + 1}`;
+                const typeLabel = orbitalData.orbitalType || `MO ${orbitalIndex + 1}`;
+                statusEl.textContent = typeLabel;
                 statusEl.style.color = '#4CAF50';
             }
 
@@ -6600,10 +6600,14 @@ async function selectOrbitalFromTable(orbitalIndex) {
             render();
 
         } catch (error) {
-            console.error('[Orbitals] Error generating grid:', error);
+            console.error('[Orbitals] Error generating grid from backend:', error);
             if (statusEl) {
                 statusEl.textContent = 'Error';
                 statusEl.style.color = '#F44336';
+            }
+            // Show error to user
+            if (error.message && !error.message.includes('HTTP')) {
+                alert('Orbital visualization error: ' + error.message);
             }
         }
 

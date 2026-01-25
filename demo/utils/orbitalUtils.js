@@ -695,9 +695,11 @@ export function calculateDefaultIsovalue(orbitalData) {
     const { minValue, maxValue } = orbitalData;
     const maxAbs = Math.max(Math.abs(minValue), Math.abs(maxValue));
 
-    // Typical orbital isovalues are around 0.02-0.05 for electron density
-    // For molecular orbitals, use a fraction of the max value
-    return Math.min(maxAbs * 0.1, 0.05);
+    if (!Number.isFinite(maxAbs) || maxAbs === 0) {
+        return 0.02;
+    }
+
+    return Math.max(0.02, Math.min(maxAbs * 0.1, 0.05));
 }
 
 /**

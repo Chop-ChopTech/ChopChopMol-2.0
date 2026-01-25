@@ -1,5 +1,6 @@
 {
     "workbench.editor.enablePreviewFromCodeNavigation": true,
     "workbench.editor.enablePreviewFromQuickOpen": true,
-    "workbench.settings.openDefaultKeybindings": true
+    "workbench.settings.openDefaultKeybindings": true,
+    "liveServer.settings.port": 5501
 }

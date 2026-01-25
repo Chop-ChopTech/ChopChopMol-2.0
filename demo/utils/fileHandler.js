@@ -2038,7 +2038,9 @@ export default class FileHandler {
             useSphericalF: useSphericalF,
             useSphericalG: useSphericalG,
             // Source program (affects normalization)
-            sourceProgram: sourceProgram
+            sourceProgram: sourceProgram,
+            // Store raw content for PySCF backend
+            rawContent: text
         };
 
         // Set frameEnergies for consistency
