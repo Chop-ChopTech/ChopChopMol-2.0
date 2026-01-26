@@ -56,6 +56,7 @@ export default class Molecule {
         this.orbitalIsovalue = 0.02;
         this.orbitalOpacity = 0.7;
         this.orbitalVisible = false;
+        this.orbitalMaterialPreset = 'default';
 
         // LOD state
         this.lodEnabled = true;
@@ -1783,15 +1784,7 @@ export default class Molecule {
                 });
                 object = new THREE.Points(geometry, material);
             } else {
-                const material = new THREE.MeshStandardMaterial({
-                    color: color,
-                    opacity: opacity,
-                    transparent: true,
-                    side: THREE.DoubleSide,
-                    roughness: 0.3,
-                    metalness: 0.1,
-                    depthWrite: false
-                });
+                const material = this.createOrbitalMaterial(color, opacity);
                 object = new THREE.Mesh(geometry, material);
             }
 
@@ -1851,6 +1844,121 @@ export default class Molecule {
             this.orbitalPositiveMesh?.material?.color?.getHex() || 0x3366ff,
             this.orbitalNegativeMesh?.material?.color?.getHex() || 0xff6633
         );
+    }
+
+    /**
+     * Create a Three.js material for orbital surfaces based on the active preset.
+     * @param {number} color - Hex color
+     * @param {number} opacity - Opacity (0-1)
+     * @returns {THREE.Material}
+     */
+    createOrbitalMaterial(color, opacity) {
+        const preset = this.orbitalMaterialPreset || 'default';
+        const isTransparent = opacity < 1.0;
+        const shared = {
+            color: color,
+            opacity: opacity,
+            transparent: isTransparent,
+            side: THREE.DoubleSide,
+            depthWrite: !isTransparent,
+        };
+
+        switch (preset) {
+            case 'glass':
+                return new THREE.MeshPhysicalMaterial({
+                    ...shared,
+                    roughness: 0.05,
+                    metalness: 0.0,
+                    transmission: 0.92,
+                    ior: 1.45,
+                    thickness: 0.5,
+                    envMapIntensity: 1.0,
+                    clearcoat: 0.1,
+                    specularIntensity: 1.0,
+                });
+
+            case 'metal':
+                return new THREE.MeshStandardMaterial({
+                    ...shared,
+                    roughness: 0.08,
+                    metalness: 0.95,
+                    envMapIntensity: 1.5,
+                });
+
+            case 'acrylic':
+                return new THREE.MeshPhysicalMaterial({
+                    ...shared,
+                    roughness: 0.15,
+                    metalness: 0.0,
+                    clearcoat: 1.0,
+                    clearcoatRoughness: 0.05,
+                    reflectivity: 0.5,
+                    envMapIntensity: 0.8,
+                });
+
+            case 'pearl':
+                return new THREE.MeshPhysicalMaterial({
+                    ...shared,
+                    roughness: 0.3,
+                    metalness: 0.0,
+                    sheen: 1.0,
+                    sheenRoughness: 0.25,
+                    sheenColor: new THREE.Color(0xffffff),
+                    iridescence: 1.0,
+                    iridescenceIOR: 1.3,
+                    iridescenceThicknessRange: [100, 400],
+                });
+
+            case 'matte':
+                return new THREE.MeshStandardMaterial({
+                    ...shared,
+                    roughness: 0.95,
+                    metalness: 0.0,
+                });
+
+            case 'glow':
+                return new THREE.MeshStandardMaterial({
+                    ...shared,
+                    roughness: 0.4,
+                    metalness: 0.0,
+                    emissive: new THREE.Color(color),
+                    emissiveIntensity: 0.35,
+                });
+
+            case 'default':
+            default:
+                return new THREE.MeshStandardMaterial({
+                    ...shared,
+                    roughness: 0.3,
+                    metalness: 0.1,
+                });
+        }
+    }
+
+    /**
+     * Change the orbital surface material preset.
+     * Only applies in solid render mode; ignored for wireframe/dots.
+     * @param {string} preset - One of: 'default', 'glass', 'metal', 'acrylic', 'pearl', 'matte', 'glow'
+     */
+    setOrbitalMaterialPreset(preset) {
+        this.orbitalMaterialPreset = preset;
+
+        // If we're not in solid mode, just store the preference for later
+        if (this.orbitalRenderMode === 'wireframe' || this.orbitalRenderMode === 'dots' || this.orbitalRenderMode === 'points') {
+            return;
+        }
+
+        // Apply new material to existing meshes without regenerating geometry
+        const applyToMesh = (mesh) => {
+            if (!mesh || !mesh.material) return;
+            const color = mesh.material.color.getHex();
+            const oldMaterial = mesh.material;
+            mesh.material = this.createOrbitalMaterial(color, this.orbitalOpacity);
+            oldMaterial.dispose();
+        };
+
+        applyToMesh(this.orbitalPositiveMesh);
+        applyToMesh(this.orbitalNegativeMesh);
     }
 
     /**
@@ -1930,14 +2038,17 @@ export default class Molecule {
      */
     updateOrbitalOpacity(opacity) {
         this.orbitalOpacity = opacity;
+        const isTransparent = opacity < 1.0;
         if (this.orbitalPositiveMesh && this.orbitalPositiveMesh.material) {
             this.orbitalPositiveMesh.material.opacity = opacity;
-            this.orbitalPositiveMesh.material.transparent = opacity < 1;
+            this.orbitalPositiveMesh.material.transparent = isTransparent;
+            this.orbitalPositiveMesh.material.depthWrite = !isTransparent;
             this.orbitalPositiveMesh.material.needsUpdate = true;
         }
         if (this.orbitalNegativeMesh && this.orbitalNegativeMesh.material) {
             this.orbitalNegativeMesh.material.opacity = opacity;
-            this.orbitalNegativeMesh.material.transparent = opacity < 1;
+            this.orbitalNegativeMesh.material.transparent = isTransparent;
+            this.orbitalNegativeMesh.material.depthWrite = !isTransparent;
             this.orbitalNegativeMesh.material.needsUpdate = true;
         }
     }

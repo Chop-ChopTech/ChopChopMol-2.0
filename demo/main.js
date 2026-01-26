@@ -6736,6 +6736,12 @@ function setOrbitalRenderMode(mode) {
         pointSizeControl.style.display = mode === 'dots' ? 'flex' : 'none';
     }
 
+    // Show/hide material preset control (only for solid mode)
+    const materialPresetControl = document.getElementById('materialPresetControl');
+    if (materialPresetControl) {
+        materialPresetControl.style.display = mode === 'solid' ? 'flex' : 'none';
+    }
+
     // Update visualization
     main.molecule.setOrbitalRenderMode(mode);
     render();
@@ -6752,6 +6758,13 @@ document.getElementById('orbitalPointSizeSlider')?.addEventListener('input', fun
 
     if (!main.molecule) return;
     main.molecule.setOrbitalPointSize(size);
+    render();
+});
+
+// Material preset dropdown
+document.getElementById('orbitalMaterialPreset')?.addEventListener('change', function () {
+    if (!main.molecule) return;
+    main.molecule.setOrbitalMaterialPreset(this.value);
     render();
 });
 
