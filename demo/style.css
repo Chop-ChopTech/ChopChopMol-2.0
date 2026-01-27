@@ -5997,3 +5997,89 @@ input[type="color"]::-moz-color-swatch {
         transform: translateY(-50%) rotate(360deg);
     }
 }
+
+/* Landing Card */
+#landingCard {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.landing-card-content {
+    pointer-events: auto;
+    border: 2px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 24px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 48px 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 340px;
+}
+
+.landing-title {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.landing-subtitle {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 14px;
+    margin: 0 0 16px 0;
+    font-weight: 400;
+}
+
+.landing-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.landing-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.landing-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.landing-btn:active {
+    transform: translateY(0);
+}
+
+.landing-btn i {
+    font-size: 16px;
+    opacity: 0.7;
+}
+
+.landing-hint {
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 12px;
+    margin: 12px 0 0 0;
+    font-weight: 400;
+}

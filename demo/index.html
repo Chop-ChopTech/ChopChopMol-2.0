@@ -971,6 +971,24 @@
         <h3>Drag and drop a file here .xyz, .mol, or .pdb to be loaded</h3>
     </div>
 
+    <div id="landingCard">
+        <div class="landing-card-content">
+            <h2 class="landing-title">ChopChopMol</h2>
+            <p class="landing-subtitle">Load a molecule to get started</p>
+            <div class="landing-buttons">
+                <button class="landing-btn" id="landingOpenFile">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <span>Open File</span>
+                </button>
+                <button class="landing-btn" id="landingSearchDB">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Search Database</span>
+                </button>
+            </div>
+            <p class="landing-hint">or drag & drop a file anywhere</p>
+        </div>
+    </div>
+
 
 
     <div id="editMoleculePanel" class="on">
@@ -1082,7 +1100,22 @@
 
         //compareButton.addEventListener('click', () => {
         //    compareFileInput.click();
-        //}); 
+        //});
+
+        // Landing card buttons
+        document.getElementById('landingOpenFile').addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        document.getElementById('landingSearchDB').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dropdownIcon = document.querySelector('#toolbar-background > .dropdown > .dropdown-icon');
+            if (dropdownIcon) dropdownIcon.click();
+            setTimeout(() => {
+                const searchInput = document.getElementById('dbSearchInput');
+                if (searchInput) searchInput.focus();
+            }, 100);
+        });
     </script>
     <script>
         (function () {

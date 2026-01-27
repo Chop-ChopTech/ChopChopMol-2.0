@@ -269,6 +269,9 @@ export default class Main {
         render();
     }
     newMolecule(data, mode, center = true, soft = false, useRibbonMode = false, animate = true) {
+        const landingCard = document.getElementById('landingCard');
+        if (landingCard) landingCard.style.display = 'none';
+
         window._pendingChartData = null;
         this.reset(soft);
         this.molecule.init(data, mode, center, useRibbonMode);
