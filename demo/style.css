@@ -2406,7 +2406,6 @@ input[type="range"]:focus {
 }
 
 .ai-message.assistant .ai-message-content code {
-    background: rgba(0, 0, 0, 0.3);
     padding: 2px 6px;
     border-radius: 4px;
     font-family: 'Fira Code', monospace;
@@ -2414,7 +2413,6 @@ input[type="range"]:focus {
 }
 
 .ai-message.assistant .ai-message-content pre {
-    background: rgba(0, 0, 0, 0.4);
     padding: 12px;
     border-radius: 8px;
     overflow-x: auto;
@@ -2461,23 +2459,21 @@ input[type="range"]:focus {
     position: fixed;
     left: 0;
     top: 0;
-    width: 240px;
+    width: 280px;
     height: 100vh;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(30, 20, 50, 0.98));
-    backdrop-filter: blur(20px);
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
     display: flex;
     flex-direction: column;
     z-index: 10001;
-    transition: all 0.3s ease !important;
-    box-shadow: -5px 0 30px rgba(0, 0, 0, 0.5);
     font-family: 'Rubik', sans-serif;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: none;
+    box-shadow: none;
     transform: translateX(-100%);
+    transition: transform 0.3s ease !important;
 }
 
 .ai-chat-panel.open {
-    transform: translateX(0);
+    transform: none;
 }
 
 /* Header */
@@ -2486,9 +2482,11 @@ input[type="range"]:focus {
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
-    padding: 2px 2px;
-    background-color: #00244e;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.25);
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0 12px 0 0;
     color: white;
     font-weight: 600;
     font-size: 16px;
@@ -2512,17 +2510,17 @@ input[type="range"]:focus {
 .ai-header-btn {
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
-    padding: 8px 10px;
-    font-size: 14px;
+    padding: 6px 10px;
+    font-size: 12px;
     border-radius: 8px;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s;
     align-items: center;
     text-align: left;
     line-height: 1;
     width: 100px;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .ai-header-btn i {
@@ -2534,7 +2532,7 @@ input[type="range"]:focus {
 }
 
 .ai-header-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
     color: white;
 }
 
@@ -2542,43 +2540,165 @@ input[type="range"]:focus {
 .ai-chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 15px;
+    padding: 16px 12px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    background-color: #00051b;
+    gap: 10px;
+    background: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+/* Blur proxy layer – sits outside the scroll container so backdrop-filter works */
+#aiBlurLayer {
+    position: absolute;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.ai-blur-proxy {
+    position: absolute;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 16px;
+    pointer-events: none;
+}
+
+.ai-blur-proxy.user {
+    border-bottom-right-radius: 4px;
+}
+
+.ai-blur-proxy.assistant {
+    border-bottom-left-radius: 4px;
+}
+
+.ai-chat-messages::-webkit-scrollbar {
+    width: 3px;
+}
+
+.ai-chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ai-chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+}
+
+.ai-chat-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
 }
 
 /* Individual Messages */
 .ai-message {
-    max-width: 90%;
-    animation: aiMessageFadeIn 0.3s ease;
+    max-width: 92%;
+    animation: aiMessageFloat 0.4s cubic-bezier(0.2, 0.8, 0.3, 1);
+    position: relative;
+    backdrop-filter: blur(14px);
 }
 
-@keyframes aiMessageFadeIn {
+@keyframes aiMessageFloat {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(16px) scale(0.97);
+        filter: blur(2px);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
+        filter: blur(0);
     }
 }
 
+/* User message float-up entrance */
 .ai-message.user {
     align-self: flex-end;
+    animation: userMsgRise 0.5s cubic-bezier(0.16, 0.9, 0.3, 1);
+}
+
+@keyframes userMsgRise {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.92);
+        filter: blur(3px);
+    }
+
+    60% {
+        opacity: 1;
+        transform: translateY(-4px) scale(1.01);
+        filter: blur(0);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+}
+
+/* Particles container */
+.ai-msg-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+    z-index: -1;
+}
+
+.ai-particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(100, 160, 255, 0.6);
+    animation: particleRise var(--dur, 0.8s) cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+    box-shadow: 0 0 4px rgba(100, 160, 255, 0.4);
+}
+
+@keyframes particleRise {
+    0% {
+        opacity: 0.8;
+        transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(var(--dx, 0px), var(--dy, -40px)) scale(0);
+    }
 }
 
 .ai-message.assistant {
     align-self: flex-start;
 }
 
+/* Tool-use glow pulse on assistant bubble */
+.ai-message.assistant .ai-message-content.tool-active {
+    animation: toolGlow 1.6s ease-in-out infinite;
+    border-color: rgba(102, 126, 234, 0.25);
+}
+
+@keyframes toolGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 0 8px rgba(102, 126, 234, 0.08);
+    }
+
+    50% {
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 0 20px rgba(102, 126, 234, 0.25),
+            0 0 40px rgba(102, 126, 234, 0.08);
+    }
+}
+
 .ai-message-content {
-    padding: 12px 16px;
-    border-radius: 18px;
-    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 13px;
     line-height: 1.5;
     word-wrap: break-word;
     pointer-events: all !important;
@@ -2586,23 +2706,26 @@ input[type="range"]:focus {
 }
 
 .ai-message.user .ai-message-content {
-    background: linear-gradient(135deg, #3084d2, #004aca);
+    background: rgba(40, 100, 220, 0.4);
     color: white;
     border-bottom-right-radius: 4px;
-    box-shadow: #006deab5 0px 2px 10px;
+    border: 1px solid rgba(100, 160, 255, 0.2);
+    box-shadow: 0 2px 16px rgba(0, 60, 180, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .ai-message.assistant .ai-message-content {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e0e0e0;
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.88);
     border-bottom-left-radius: 4px;
-    /* border: 1px solid rgba(255, 255, 255, 0.05); */
-    box-shadow: #3e3e3eb5 0px 2px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .ai-message.error .ai-message-content {
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.25);
     color: #fca5a5;
 }
 
@@ -2610,42 +2733,43 @@ input[type="range"]:focus {
 .ai-actions-badge {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .ai-action-tag {
-    background: rgba(102, 126, 234, 0.3);
-    color: #a5b4fc;
-    padding: 3px 8px;
-    border-radius: 10px;
-    font-size: 11px;
+    background: rgba(102, 126, 234, 0.2);
+    color: rgba(165, 180, 252, 0.8);
+    padding: 2px 7px;
+    border-radius: 8px;
+    font-size: 10px;
     display: flex;
     align-items: center;
     gap: 4px;
 }
 
 .ai-action-tag i {
-    font-size: 10px;
+    font-size: 9px;
 }
 
 /* Typing Indicator */
 .ai-typing {
     display: flex;
-    gap: 4px;
-    padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 18px;
+    gap: 5px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
     border-bottom-left-radius: 4px;
     width: fit-content;
 }
 
 .ai-typing span {
-    width: 8px;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.5);
+    width: 6px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.45);
     border-radius: 50%;
     animation: aiTypingBounce 1.4s infinite ease-in-out;
 }
@@ -2668,7 +2792,7 @@ input[type="range"]:focus {
     80%,
     100% {
         transform: scale(0.6);
-        opacity: 0.5;
+        opacity: 0.4;
     }
 
     40% {
@@ -2681,21 +2805,33 @@ input[type="range"]:focus {
 .ai-chat-input-area {
     display: flex;
     flex-direction: column;
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.3);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    gap: 10px;
+    padding: 10px 10px 12px;
+    background: transparent;
+    border-top: none;
+    gap: 8px;
+    position: relative;
+}
+
+.ai-chat-input-area::before {
+    content: '';
+    position: absolute;
+    top: -24px;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.18), transparent);
+    pointer-events: none;
 }
 
 #aiChatInput {
     width: 100%;
     box-sizing: border-box;
-    padding: 12px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
     color: white;
-    font-size: 14px;
+    font-size: 13px;
     font-family: 'Rubik', sans-serif;
     outline: none;
     transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
@@ -2708,7 +2844,7 @@ input[type="range"]:focus {
 
 
 #aiChatInput::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 
 #aiChatInput::-webkit-scrollbar-track {
@@ -2716,49 +2852,52 @@ input[type="range"]:focus {
 }
 
 #aiChatInput::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
 }
 
 #aiChatInput::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.35);
 }
 
 #aiChatInput::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.3);
 }
 
 #aiChatInput:focus {
-    border-color: rgba(102, 126, 234, 0.5);
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 15px rgba(102, 126, 234, 0.2);
+    border-color: rgba(102, 126, 234, 0.35);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.1);
 }
 
 #aiSendBtn {
     align-self: flex-end;
-    width: 36px;
-    height: 36px;
-    border: none;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 50%;
-    background-color: rgba(60, 71, 119, 0.5);
-    color: white;
+    background: rgba(60, 71, 119, 0.35);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: rgba(255, 255, 255, 0.8);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    font-size: 13px;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     flex-shrink: 0;
 }
 
 #aiSendBtn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+    transform: scale(1.08);
+    background: rgba(80, 95, 160, 0.5);
+    box-shadow: 0 0 16px rgba(102, 126, 234, 0.3);
 }
 
 #aiSendBtn:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
     transform: none;
 }
@@ -2867,79 +3006,79 @@ input[type="range"]:focus {
 .ai-welcome {
     text-align: center;
     padding: 20px;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .ai-welcome i {
-    font-size: 40px;
-    margin-bottom: 15px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: 32px;
+    margin-bottom: 12px;
+    color: rgba(255, 255, 255, 0.15);
 }
 
 .ai-welcome h4 {
-    color: white;
-    margin: 0 0 10px 0;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .ai-welcome p {
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.6;
     margin: 0;
+    color: rgba(255, 255, 255, 0.3);
 }
 
 /* Quick Actions */
 .ai-quick-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    padding: 10px 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: none;
 }
 
 .ai-quick-btn {
-    padding: 6px 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 12px;
+    padding: 5px 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
     font-family: 'Rubik', sans-serif;
 }
 
 .ai-quick-btn:hover {
-    background: rgba(102, 126, 234, 0.2);
-    border-color: rgba(102, 126, 234, 0.3);
-    color: white;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 /* Tool Caption (shown at bottom of message during streaming) */
 .ai-tool-caption {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    padding: 8px 12px;
-    background: rgba(102, 126, 234, 0.15);
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: rgba(102, 126, 234, 0.1);
     border-radius: 8px;
-    color: #a5b4fc;
-    font-size: 12px;
+    color: rgba(165, 180, 252, 0.7);
+    font-size: 11px;
     animation: toolCaptionPulse 1.5s ease-in-out infinite;
 }
 
 .ai-tool-caption i {
-    font-size: 11px;
+    font-size: 10px;
 }
 
 @keyframes toolCaptionPulse {
 
     0%,
     100% {
-        opacity: 0.7;
+        opacity: 0.6;
     }
 
     50% {
@@ -2951,11 +3090,6 @@ input[type="range"]:focus {
 @media (max-width: 480px) {
     .ai-chat-panel {
         width: 100%;
-        right: -100%;
-    }
-
-    .ai-chat-panel.open {
-        right: 0;
     }
 }
 
@@ -4210,6 +4344,16 @@ input[type="range"]:focus {
     right: -20px;
     border-radius: 0 6px 6px 0;
     border-left: none;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.ai-chat-panel .panel-collapse-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 /* File Explorer toggle - on left edge, arrow points right when expanded */
@@ -4271,23 +4415,24 @@ input[type="range"]:focus {
 
 /* Mic Button */
 .ai-mic-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
     padding: 8px 12px;
     border-radius: 50%;
-    transition: all 0.2s;
-    font-size: 14px;
+    transition: background 0.2s, color 0.2s;
+    font-size: 13px;
 }
 
 .ai-mic-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .ai-mic-btn.recording {
-    background: rgba(239, 68, 68, 0.6);
+    background: rgba(239, 68, 68, 0.4);
+    border-color: rgba(239, 68, 68, 0.4);
     color: white;
     animation: pulse-mic 1s infinite;
 }
@@ -4980,8 +5125,13 @@ input[type="color"]::-moz-color-swatch {
 }
 
 @keyframes tutorialFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 /* Four dark panels around the spotlight */
@@ -5024,8 +5174,8 @@ input[type="color"]::-moz-color-swatch {
     z-index: 100001;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 0 30px rgba(255, 107, 53, 0.3),
-                0 0 60px rgba(255, 107, 53, 0.15),
-                inset 0 0 20px rgba(255, 107, 53, 0.1);
+        0 0 60px rgba(255, 107, 53, 0.15),
+        inset 0 0 20px rgba(255, 107, 53, 0.1);
 }
 
 .tutorial-ring {
@@ -5050,10 +5200,13 @@ input[type="color"]::-moz-color-swatch {
 }
 
 @keyframes tutorialRingPulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1);
         opacity: 1;
     }
+
     50% {
         transform: scale(1.03);
         opacity: 0.85;
@@ -5061,10 +5214,13 @@ input[type="color"]::-moz-color-swatch {
 }
 
 @keyframes tutorialRingPulse2 {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1);
         opacity: 0.4;
     }
+
     50% {
         transform: scale(1.05);
         opacity: 0.25;
@@ -5159,6 +5315,7 @@ input[type="color"]::-moz-color-swatch {
         opacity: 0;
         transform: translateY(10px) scale(0.95);
     }
+
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -5183,13 +5340,20 @@ input[type="color"]::-moz-color-swatch {
     left: -100%;
     width: 200%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
     animation: tutorialShimmer 3s ease-in-out infinite;
 }
 
 @keyframes tutorialShimmer {
-    0%, 100% { transform: translateX(-50%); }
-    50% { transform: translateX(50%); }
+
+    0%,
+    100% {
+        transform: translateX(-50%);
+    }
+
+    50% {
+        transform: translateX(50%);
+    }
 }
 
 .tutorial-step-label {
@@ -5198,7 +5362,7 @@ input[type="color"]::-moz-color-swatch {
     color: white;
     text-transform: uppercase;
     letter-spacing: 1.5px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .tutorial-close {

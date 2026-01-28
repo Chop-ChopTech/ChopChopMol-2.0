@@ -2163,6 +2163,7 @@
         <div id="textEditorStatus" class="text-editor-status">Ready</div>
     </div>
     <div id="aiChatPanel" class="ai-chat-panel open">
+        <div id="aiBlurLayer"></div>
         <div class="panel-resizer panel-resizer-horizontal" id="aiPanelResizer"></div>
         <button class="panel-collapse-toggle" id="aiCollapseToggle" title="Collapse panel">
             <i class="fas fa-chevron-left"></i>
@@ -2395,6 +2396,7 @@
                                 translation_scan: 'Running translation scan'
                             };
                             toolCaption.innerHTML = `<i class="fas fa-cog fa-spin"></i> ${toolStatusMap[status] || status.replace(/_/g, ' ')}`;
+                            contentEl.classList.add('tool-active');
                             messagesContainer.scrollTop = messagesContainer.scrollHeight;
                             return;
                         }
@@ -2412,9 +2414,10 @@
                             messagesContainer.appendChild(msgEl);
                         }
 
-                        // Remove tool caption when text comes in (tool finished)
+                        // Remove tool caption and glow when text comes in (tool finished)
                         const toolCaption = contentEl.querySelector('.ai-tool-caption');
                         if (toolCaption) toolCaption.remove();
+                        contentEl.classList.remove('tool-active');
 
                         fullText += chunk;
                         contentEl.innerHTML = renderMarkdown(fullText);
@@ -2577,7 +2580,109 @@
                 }
             });
 
+            // ── Blur proxy sync ──
+            // Backdrop-filter can't work on elements inside a scroll container
+            // (overflow-y:auto creates a stacking context boundary). So we render
+            // proxy divs in #aiBlurLayer (outside the scroll container) and sync
+            // their positions to each message bubble via JS.
+            const blurLayer = document.getElementById('aiBlurLayer');
+
+            function syncBlurProxies() {
+                if (!blurLayer || !panel.classList.contains('open')) return;
+                const panelRect = panel.getBoundingClientRect();
+                const msgsRect = messagesContainer.getBoundingClientRect();
+
+                // Position blur layer to cover exactly the messages area
+                blurLayer.style.top = (msgsRect.top - panelRect.top) + 'px';
+                blurLayer.style.left = (msgsRect.left - panelRect.left) + 'px';
+                blurLayer.style.width = msgsRect.width + 'px';
+                blurLayer.style.height = msgsRect.height + 'px';
+
+                const contentEls = messagesContainer.querySelectorAll('.ai-message-content');
+                const existingProxies = Array.from(blurLayer.children);
+
+                // Remove excess proxies
+                while (blurLayer.children.length > contentEls.length) {
+                    blurLayer.lastChild.remove();
+                }
+
+                contentEls.forEach((el, i) => {
+                    const rect = el.getBoundingClientRect();
+
+                    // Fully outside visible area — hide proxy
+                    if (rect.bottom <= msgsRect.top || rect.top >= msgsRect.bottom) {
+                        if (existingProxies[i]) existingProxies[i].style.display = 'none';
+                        return;
+                    }
+
+                    let proxy = existingProxies[i];
+                    if (!proxy) {
+                        proxy = document.createElement('div');
+                        proxy.className = 'ai-blur-proxy';
+                        blurLayer.appendChild(proxy);
+                    }
+
+                    // Set type class for matching border-radius
+                    const msgEl = el.closest('.ai-message');
+                    const isUser = msgEl?.classList.contains('user');
+                    proxy.classList.toggle('user', !!isUser);
+                    proxy.classList.toggle('assistant', !isUser);
+
+                    // Clip to messages area
+                    const top = Math.max(0, rect.top - msgsRect.top);
+                    const bottom = Math.min(msgsRect.height, rect.bottom - msgsRect.top);
+                    const left = rect.left - msgsRect.left;
+
+                    proxy.style.display = '';
+                    proxy.style.top = top + 'px';
+                    proxy.style.left = left + 'px';
+                    proxy.style.width = rect.width + 'px';
+                    proxy.style.height = (bottom - top) + 'px';
+
+                    // Flatten border-radius when clipped at top/bottom
+                    proxy.style.borderTopLeftRadius = (rect.top < msgsRect.top) ? '0' : '';
+                    proxy.style.borderTopRightRadius = (rect.top < msgsRect.top) ? '0' : '';
+                    proxy.style.borderBottomLeftRadius = (rect.bottom > msgsRect.bottom) ? '0' : '';
+                    proxy.style.borderBottomRightRadius = (rect.bottom > msgsRect.bottom) ? '0' : '';
+                });
+            }
+
+            // Sync on scroll, resize, and DOM mutations
+            messagesContainer.addEventListener('scroll', () => requestAnimationFrame(syncBlurProxies));
+            window.addEventListener('resize', () => requestAnimationFrame(syncBlurProxies));
+            const blurObserver = new MutationObserver(() => requestAnimationFrame(syncBlurProxies));
+            blurObserver.observe(messagesContainer, { childList: true, subtree: true, characterData: true });
+            // Also sync when panel opens/closes
+            const panelObserver = new MutationObserver(() => requestAnimationFrame(syncBlurProxies));
+            panelObserver.observe(panel, { attributes: true, attributeFilter: ['class'] });
+            requestAnimationFrame(syncBlurProxies);
+
             // Add message to chat
+            function spawnParticles(msgEl) {
+                const container = document.createElement('div');
+                container.className = 'ai-msg-particles';
+                msgEl.appendChild(container);
+                const count = 8 + Math.floor(Math.random() * 5);
+                for (let i = 0; i < count; i++) {
+                    const p = document.createElement('span');
+                    p.className = 'ai-particle';
+                    const dx = (Math.random() - 0.5) * 60;
+                    const dy = -(20 + Math.random() * 35);
+                    const dur = 0.5 + Math.random() * 0.5;
+                    const size = 2 + Math.random() * 2;
+                    const delay = Math.random() * 0.15;
+                    p.style.cssText = `
+                        left: ${Math.random() * 100}%;
+                        bottom: ${Math.random() * 40}%;
+                        width: ${size}px; height: ${size}px;
+                        --dx: ${dx}px; --dy: ${dy}px; --dur: ${dur}s;
+                        animation-delay: ${delay}s;
+                    `;
+                    container.appendChild(p);
+                }
+                setTimeout(() => container.remove(), 1200);
+            }
+
             function addMessage(type, content, actions = []) {
                 // Remove welcome message if present
                 const welcome = messagesContainer.querySelector('.ai-welcome');
@@ -2604,6 +2709,10 @@
 
                 messagesContainer.appendChild(msgEl);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                if (type === 'user') {
+                    spawnParticles(msgEl);
+                }
             }
 
             // Show typing indicator
