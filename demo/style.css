@@ -2673,24 +2673,27 @@ input[type="range"]:focus {
 
 /* Tool-use glow pulse on assistant bubble */
 .ai-message.assistant .ai-message-content.tool-active {
-    animation: toolGlow 1.6s ease-in-out infinite;
-    border-color: rgba(102, 126, 234, 0.25);
+    animation: toolGlow 1.5s infinite;
+    border-color: rgba(139, 92, 246, 0.5);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.07), rgba(139, 92, 246, 0.15), rgba(255, 255, 255, 0.07));
+    background-size: 200% 100%;
 }
 
 @keyframes toolGlow {
-
-    0%,
-    100% {
-        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 0 8px rgba(102, 126, 234, 0.08);
+    0% {
+        background-position: 100% 0;
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+        border-color: rgba(139, 92, 246, 0.3);
     }
-
     50% {
-        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 0 20px rgba(102, 126, 234, 0.25),
-            0 0 40px rgba(102, 126, 234, 0.08);
+        box-shadow: 0 0 25px rgba(139, 92, 246, 0.5), inset 0 0 15px rgba(139, 92, 246, 0.1);
+        border-color: rgba(139, 92, 246, 0.8);
+        transform: scale(1.01);
+    }
+    100% {
+        background-position: -100% 0;
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+        border-color: rgba(139, 92, 246, 0.3);
     }
 }
 
