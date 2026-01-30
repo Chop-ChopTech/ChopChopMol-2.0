@@ -1,4 +1,5 @@
 // MACE backend API utilities and extxyz file generation
+import { postJson } from './apiUtils.js';
 
 /**
  * Configuration for MACE API
@@ -112,12 +113,7 @@ export function generateMultiFrameExtxyz(frames) {
  * @returns {Promise<Object>} API response
  */
 export async function callMaceEnergy(backendUrl, atoms, model, includeForces = false) {
-    const res = await fetch(`${backendUrl}/ai/mace/energy`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ atoms, model, includeForces })
-    });
-    return await res.json();
+    return postJson(`${backendUrl}/ai/mace/energy`, { atoms, model, includeForces }, {}, 120000);
 }
 
 /**
@@ -129,12 +125,7 @@ export async function callMaceEnergy(backendUrl, atoms, model, includeForces = f
  * @returns {Promise<Object>} API response
  */
 export async function callMaceEnergyBatch(backendUrl, frames, model, includeForces = false) {
-    const res = await fetch(`${backendUrl}/ai/mace/energy-batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frames, model, includeForces })
-    });
-    return await res.json();
+    return postJson(`${backendUrl}/ai/mace/energy-batch`, { frames, model, includeForces }, {}, 120000);
 }
 
 /**
@@ -147,13 +138,7 @@ export async function callMaceEnergyBatch(backendUrl, frames, model, includeForc
  */
 export async function callMaceOptimize(backendUrl, atoms, model, options = {}) {
     const { fmax = 0.05, maxSteps = 100, includeForces = false } = options;
-
-    const res = await fetch(`${backendUrl}/ai/mace/optimize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ atoms, model, fmax, maxSteps, includeForces })
-    });
-    return await res.json();
+    return postJson(`${backendUrl}/ai/mace/optimize`, { atoms, model, fmax, maxSteps, includeForces }, {}, 120000);
 }
 
 /**
@@ -171,13 +156,7 @@ export async function callMaceMD(backendUrl, atoms, model, options = {}) {
         steps = 100,
         includeForces = false
     } = options;
-
-    const res = await fetch(`${backendUrl}/ai/mace/md`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ atoms, model, temperature_K, timestep_fs, steps, includeForces })
-    });
-    return await res.json();
+    return postJson(`${backendUrl}/ai/mace/md`, { atoms, model, temperature_K, timestep_fs, steps, includeForces }, {}, 120000);
 }
 
 /**

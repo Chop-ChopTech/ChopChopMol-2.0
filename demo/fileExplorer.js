@@ -314,7 +314,7 @@ class FileExplorer {
     }
 
     async downloadSelectedCloudToLocal() {
-        if (!this.directoryHandle) return alert('Open a local folder first');
+        if (!this.directoryHandle) return window.toastWarning?.('Open a local folder first');
 
         const ids = this.getSelectedCloudMolecules();
         let downloaded = 0;
@@ -413,7 +413,7 @@ class FileExplorer {
             fileTree.classList.remove('drag-over');
 
             if (!this.directoryHandle) {
-                alert('Open a local folder first');
+                window.toastWarning?.('Open a local folder first');
                 return;
             }
 
@@ -482,7 +482,7 @@ class FileExplorer {
             const ext = file.name.split('.').pop().toLowerCase();
 
             if (!MOLECULE_EXTENSIONS.includes(ext)) {
-                alert('Only molecule files can be uploaded to cloud');
+                window.toastWarning?.('Only molecule files can be uploaded to cloud');
                 return;
             }
 
@@ -912,7 +912,7 @@ class FileExplorer {
             if (permission !== 'granted') {
                 const requested = await this.directoryHandle.requestPermission({ mode: 'readwrite' });
                 if (requested !== 'granted') {
-                    alert('Write permission is required to save files');
+                    window.toastWarning?.('Write permission is required to save files');
                     this.directoryHandle = null;
                     return;
                 }
@@ -932,7 +932,7 @@ class FileExplorer {
         } catch (err) {
             if (err.name !== 'AbortError') {
                 console.error('Error opening folder:', err);
-                alert('Error opening folder: ' + err.message);
+                window.toastError?.('Could not open folder');
             }
         }
     }
@@ -973,7 +973,7 @@ class FileExplorer {
                     await this.directoryHandle.getDirectoryHandle(name, { create: true });
                     await this.refresh();
                 } catch (err) {
-                    alert('Error creating folder: ' + err.message);
+                    window.toastError?.('Could not create folder');
                 }
             }
             inputWrapper.remove();
@@ -996,7 +996,7 @@ class FileExplorer {
     async createCloudFolder() {
         // Check if user is signed in
         if (!window.auth?.currentUser) {
-            alert('Please sign in to create folders');
+            window.toastWarning?.('Please sign in to create folders');
             return;
         }
 
@@ -1316,7 +1316,7 @@ class FileExplorer {
             });
             await this.refresh();
         } catch (err) {
-            alert('Error moving file: ' + err.message);
+            window.toastError?.('Could not move file');
         }
     }
 
@@ -1602,8 +1602,8 @@ class FileExplorer {
     async saveToCloud() {
         const input = document.getElementById('cloudSaveInput');
         const name = input.value.trim();
-        if (!name) return alert('Enter a molecule name');
-        if (!window.main?.data) return alert('No molecule loaded');
+        if (!name) return window.toastWarning?.('Enter a molecule name');
+        if (!window.main?.data) return window.toastWarning?.('No molecule loaded');
 
         const saved = await window.saveMolecule(name);
         if (saved) {
@@ -1943,7 +1943,7 @@ class FileExplorer {
     }
 
     async importToLocal(mol) {
-        if (!this.directoryHandle) return alert('Open a local folder first');
+        if (!this.directoryHandle) return window.toastWarning?.('Open a local folder first');
 
         let fileContent, filename;
 
@@ -1963,7 +1963,7 @@ class FileExplorer {
             filename = mol.name.replace(/[^a-zA-Z0-9_-]/g, '_') + '.xyz';
         }
         else {
-            return alert('Invalid molecule data');
+            return window.toastError?.('Invalid molecule data');
         }
 
         try {
@@ -1974,7 +1974,7 @@ class FileExplorer {
             this.refresh();
             window.showSaveNotification?.(`Imported: ${filename}`);
         } catch (err) {
-            alert('Error saving file: ' + err.message);
+            window.toastError?.('Could not save file');
         }
     }
 }

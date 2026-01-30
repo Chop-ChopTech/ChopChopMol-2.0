@@ -164,6 +164,7 @@ const FUNCTIONS = {
     },
     set_angle: {
         execute: (params) => {
+            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
             if (!window.atomsSelected || window.atomsSelected.length !== 3) return { success: false, message: "Select exactly 3 atoms (A-B-C where B is the vertex)" };
 
             const [idx1, idx2, idx3] = window.atomsSelected;
@@ -413,6 +414,7 @@ const FUNCTIONS = {
 
     set_bond_distance: {
         execute: (params) => {
+            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
             if (!window.atomsSelected || window.atomsSelected.length !== 2) return { success: false, message: "Select exactly 2 atoms" };
 
             const idx1 = window.atomsSelected[0], idx2 = window.atomsSelected[1];
@@ -481,6 +483,7 @@ const FUNCTIONS = {
 
     set_dihedral_angle: {
         execute: (params) => {
+            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
             if (!window.atomsSelected || window.atomsSelected.length !== 4) return { success: false, message: "Select exactly 4 atoms for dihedral" };
 
             const [idx1, idx2, idx3, idx4] = window.atomsSelected;
@@ -866,6 +869,7 @@ const FUNCTIONS = {
 
     measure_distance: {
         execute: () => {
+            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
             if (!window.atomsSelected || window.atomsSelected.length !== 2) return { success: false, message: "Select exactly 2 atoms" };
             if (typeof window.createInfoLabel === 'function') {
                 window.createInfoLabel(window.atomsSelected[0], window.atomsSelected[1]);

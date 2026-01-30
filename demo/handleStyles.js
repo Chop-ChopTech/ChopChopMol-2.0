@@ -254,40 +254,11 @@ export function applyStylePreferences(prefs, renderer) {
 
 
 export function showNotification(message, type) {
-    // Remove existing notification if any
-    const existingNotif = document.getElementById('styleNotification');
-    if (existingNotif) {
-        existingNotif.remove();
-    }
-
-    const notification = document.createElement('div');
-    notification.id = 'styleNotification';
-    notification.textContent = message;
-    notification.style.cssText = `
-        position: absolute;
-        top: 90px;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        padding: 15px 25px;
-        border-radius: 16px;
-        color: white;
-        font-weight: 600;
-        z-index: 10000;
-        animation: slideIn 0.3s ease-out;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
-        backdrop-filter: blur(10px);
-        ${type === 'success' ? 'background: linear-gradient(135deg, #00c851 0%, #00ff00 100%);' : ''}
-        ${type === 'error' ? 'background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);' : ''}
-        ${type === 'info' ? 'background-color:rgba(0, 13, 43, 0);' : ''}
-    `;
-
-    document.body.appendChild(notification);
-
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
+    // Consolidated: delegates to unified toast system
+    const toastFn = type === 'success' ? window.toastSuccess
+        : type === 'error' ? window.toastError
+        : window.toastInfo;
+    toastFn?.(message);
 }
 
 // Add this after other event listeners in main.js

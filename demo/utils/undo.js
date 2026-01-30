@@ -150,25 +150,9 @@ document.addEventListener('keydown', function (e) {
 });
 
 
-// Simple notification
+// Consolidated: delegates to unified toast system
 function showNotification(text) {
-    const notification = document.createElement('div');
-    notification.textContent = text;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 4px;
-        z-index: 10000;
-        font-family: 'Rubik', sans-serif;
-    `;
-    document.body.appendChild(notification);
-
-    setTimeout(() => notification.remove(), 1500);
+    window.toastInfo?.(text, 1500);
 }
 // Create UI buttons
 function createUndoButtons() {

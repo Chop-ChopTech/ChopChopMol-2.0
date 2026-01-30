@@ -118,8 +118,11 @@ export default class FileHandler {
 
             } catch (error) {
                 console.error("Error parsing file:", error);
-                alert('Error parsing file: ' + error.message);
+                window.toastError?.('Could not parse file. Check the file format.');
             }
+        };
+        reader.onerror = () => {
+            window.toastError?.('Could not read the file. It may be corrupted or inaccessible.');
         };
         reader.readAsText(file);
     }

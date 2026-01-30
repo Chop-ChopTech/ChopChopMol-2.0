@@ -23,6 +23,26 @@
 </head>
 
 <body>
+    <!-- Critical error page (WebGL failure, etc.) — no module dependencies -->
+    <div id="critical-error-page">
+        <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <h1>Unable to Start</h1>
+        <p id="critical-error-message">Something went wrong while initializing the application.</p>
+        <button onclick="location.reload()">Reload Page</button>
+    </div>
+    <script>
+        window.showCriticalError = function(msg) {
+            var page = document.getElementById('critical-error-page');
+            if (page) {
+                page.style.display = 'flex';
+                if (msg) document.getElementById('critical-error-message').textContent = msg;
+            }
+        };
+    </script>
+
     <script src="https://unpkg.com/undo-manager@1.0.5/lib/undomanager.js"></script>
     <script src="/demo/utils/undo.js"></script>
     <script type="module">
@@ -152,12 +172,12 @@
         async function saveMolecule(moleculeName, folderId = null) {
             const user = auth.currentUser;
             if (!user) {
-                alert('Please sign in to save molecules');
+                window.toastWarning?.('Please sign in to save molecules');
                 return;
             }
 
             if (!window.main?.data?.atomData?.length) {
-                alert('No molecule loaded to save!');
+                window.toastWarning?.('No molecule loaded to save');
                 return;
             }
 
@@ -166,7 +186,7 @@
             const fileContent = window.exportToFormat(fileFormat, moleculeName);
 
             if (!fileContent) {
-                alert('Error generating molecule file');
+                window.toastError?.('Could not generate molecule file');
                 return;
             }
 
@@ -232,7 +252,7 @@
                 return true;
             } catch (error) {
                 console.error('Error saving:', error);
-                alert('Error saving molecule');
+                window.toastError?.('Could not save molecule. Please try again.');
                 return false;
             }
         }
@@ -354,10 +374,10 @@
 
             if (currentUsage + dataSize > limit) {
                 if (!isPremium) {
-                    alert(`Storage limit reached (${limit}MB). Upgrade to Premium for 70MB storage.`);
+                    window.toastWarning?.(`Storage limit reached (${limit}MB). Upgrade to Premium for 70MB storage.`);
                     window.location.href = '../upgrade/';
                 } else {
-                    alert('Premium storage limit reached (75MB).');
+                    window.toastWarning?.('Premium storage limit reached (75MB).');
                 }
                 return false;
             }
@@ -465,38 +485,18 @@
         }
 
         function showSaveNotification(message) {
-            const notification = document.createElement('div');
-            notification.textContent = message;
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: linear-gradient(135deg, #444aff81 0%, #a143ff7e 100%);
-                backdrop-filter: blur(5px);
-                color: white;
-                font-weight: 600;
-                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
-                padding: 15px 20px;
-                border-radius: 16px;
-                font-family: 'Rubik', sans-serif;
-                z-index: 10000;
-                animation: slideIn 0.3s ease;
-            `;
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transform = 'scale(1.2)';
-                notification.style.backdropFilter = 'blur(0px)';
-
-                setTimeout(() => notification.remove(), 300);
-            }, 2000);
+            // Consolidated: delegates to unified toast system
+            if (message && message.startsWith('Error')) {
+                window.toastError?.(message);
+            } else {
+                window.toastSuccess?.(message);
+            }
         }
 
         async function createCloudFolder(folderName, parentFolderId = null) {
             const user = auth.currentUser;
             if (!user) {
-                alert('Please sign in to create folders');
+                window.toastWarning?.('Please sign in to create folders');
                 return null;
             }
 
@@ -519,7 +519,7 @@
                 return folderRef.id;
             } catch (error) {
                 console.error('Error creating folder:', error);
-                alert('Error creating folder: ' + error.message);
+                window.toastError?.('Could not create folder. Please try again.');
                 return null;
             }
         }
@@ -2807,7 +2807,7 @@
 
                 } catch (err) {
                     console.error('Mic access denied:', err);
-                    alert('Microphone access is required for voice input');
+                    window.toastWarning?.('Microphone access is required for voice input');
                 }
             });
 

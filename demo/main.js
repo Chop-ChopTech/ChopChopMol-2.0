@@ -31,15 +31,41 @@ import {
 
 } from '/demo/handleStyles.js';
 
+import '/demo/utils/toast.js';
+import '/demo/utils/errorHandler.js';
+
+// WebGL feature detection
+function checkWebGLSupport() {
+    try {
+        const canvas = document.createElement('canvas');
+        return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+    } catch (e) {
+        return false;
+    }
+}
+
+if (!checkWebGLSupport()) {
+    window.showCriticalError?.('WebGL is not supported by your browser. ChopChopMol requires WebGL to render 3D molecules. Please use a modern browser like Chrome, Firefox, or Edge, and ensure hardware acceleration is enabled.');
+    throw new Error('WebGL not supported');
+}
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000000);
 
-let renderer = new THREE.WebGLRenderer({
-    antialias: false,
-    powerPreference: "high-performance",
-    alpha: true,
-    preserveDrawingBuffer: true
-}); renderer.setSize(window.innerWidth, window.innerHeight);
+let renderer;
+try {
+    renderer = new THREE.WebGLRenderer({
+        antialias: false,
+        powerPreference: "high-performance",
+        alpha: true,
+        preserveDrawingBuffer: true
+    });
+} catch (e) {
+    console.error('WebGL renderer creation failed:', e);
+    window.showCriticalError?.('Failed to initialize 3D rendering. Your GPU may not support WebGL, or hardware acceleration may be disabled in your browser settings.');
+    throw e;
+}
+renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
@@ -1179,7 +1205,7 @@ function getActiveCamera() {
 
 async function saveAsFile(format = 'xyz') {
     if (!main.data || !main.data.atomData || main.data.atomData.length === 0) {
-        alert('No molecule loaded to save!');
+        window.toastWarning?.('No molecule loaded to save');
         return;
     }
 
@@ -1939,7 +1965,7 @@ function attachButtonEventListeners() {
                 const element = replacingMolecule.trim().toUpperCase();
                 // Validate it's a known element
                 if (!main.molecule.atomSettings[element]) {
-                    alert(`Unknown element: ${element}`);
+                    window.toastError?.(`Unknown element: ${element}`);
                     return;
                 }
                 // Update all selected atoms in place (no rebuild needed)
@@ -3540,7 +3566,7 @@ function unselectAtom(index = null) {
 
 function saveImage() {
     if (!main.data || main.data.numAtoms === 0) {
-        alert('No molecule loaded to capture');
+        window.toastWarning?.('No molecule loaded to capture');
         return;
     }
 
@@ -3763,7 +3789,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = nameInput.value.trim();
 
         if (!name) {
-            alert('Please enter a molecule name');
+            window.toastWarning?.('Please enter a molecule name');
             return;
         }
 
@@ -3792,7 +3818,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const actions = document.getElementById('molecule-actions');
 
         if (molecules.length === 0) {
-            alert('No saved molecules found');
+            window.toastInfo?.('No saved molecules found');
             return;
         }
 
@@ -3813,7 +3839,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('load-selected-btn')?.addEventListener('click', () => {
         const select = document.getElementById('molecules-list');
         if (!select.value) {
-            alert('Please select a molecule');
+            window.toastWarning?.('Please select a molecule');
             return;
         }
 
@@ -3845,7 +3871,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('delete-selected-btn')?.addEventListener('click', async () => {
         const select = document.getElementById('molecules-list');
         if (!select.value) {
-            alert('Please select a molecule');
+            window.toastWarning?.('Please select a molecule');
             return;
         }
 
@@ -5484,12 +5510,12 @@ window.addEventListener('resize', updateRendererSize);
 window.updateRendererSize = updateRendererSize;
 function toggleRibbon() {
     if (!window.main || !window.main.data) {
-        alert('No molecule loaded');
+        window.toastWarning?.('No molecule loaded');
         return;
     }
 
     if (!window.main.data.ribbonData) {
-        alert('No protein backbone found - this molecule is not a protein');
+        window.toastWarning?.('This molecule is not a protein — no backbone found');
         return;
     }
 
@@ -5795,7 +5821,7 @@ window.toggleRibbon = toggleRibbon;
             }
         } catch (err) {
             console.error('Load error:', err);
-            alert('Failed to load: ' + err.message);
+            window.toastError?.('Failed to load molecule');
         } finally {
             loader.classList.remove('show');
         }
@@ -5882,7 +5908,7 @@ window.toggleRibbon = toggleRibbon;
     // Load from DrugBank (requires structure file URL - limited without API key)
     async function loadDrugBank(drugId) {
         // Try PubChem as fallback since DrugBank API is restricted
-        alert('DrugBank requires API access. Searching PubChem for: ' + drugId);
+        window.toastInfo?.('DrugBank requires API access. Searching PubChem instead.');
         await loadPubChem(drugId);
     }
 
@@ -6627,7 +6653,7 @@ async function selectOrbitalFromTable(orbitalIndex) {
             }
             // Show error to user
             if (error.message && !error.message.includes('HTTP')) {
-                alert('Orbital visualization error: ' + error.message);
+                window.toastError?.('Orbital visualization failed');
             }
         }
 
