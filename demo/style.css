@@ -1214,7 +1214,6 @@ input[type="range"]:focus {
 }
 
 .dropdown-icon:hover {
-    background-color: rgba(255, 255, 255, 0.1);
     color: #ffffff;
 }
 
@@ -1799,9 +1798,9 @@ input[type="range"]:focus {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    top: -4px;
-    width: 32px;
-    height: 32px;
+    top: 0;
+    width: 30px;
+    height: 30px;
     background: none;
     color: white;
     border-radius: 50%;
