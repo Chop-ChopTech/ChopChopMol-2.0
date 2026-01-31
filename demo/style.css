@@ -1281,8 +1281,8 @@ input[type="range"]:focus {
     left: 50%;
     transform: translateX(-50%);
     z-index: -999999999999999;
-    border-radius: 14px;
-    padding: 5px 14px;
+    border-radius: 25px;
+    padding: 5px 12px;
     transition: opacity 0.3s ease;
     background-repeat: no-repeat !important;
     perspective: 1000px;
