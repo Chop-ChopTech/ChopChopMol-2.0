@@ -6559,6 +6559,44 @@ window.selectedOrbitalIndex = -1;
 // Track orbital grid quality (resolution)
 window.orbitalQuality = 50;
 
+// Progress bar update for orbital preloading
+function updateOrbitalPreloadProgress(loaded, total) {
+    const bar = document.getElementById('orbitalPreloadBar');
+    const fill = document.getElementById('orbitalPreloadFill');
+    if (!bar || !fill) return;
+
+    if (total === 0) {
+        bar.style.display = 'none';
+        return;
+    }
+
+    bar.style.display = 'block';
+    const pct = Math.round((loaded / total) * 100);
+    fill.style.width = `${pct}%`;
+
+    if (loaded >= total) {
+        bar.classList.add('complete');
+        setTimeout(() => {
+            bar.style.display = 'none';
+            bar.classList.remove('complete');
+        }, 2000);
+    } else {
+        bar.classList.remove('complete');
+    }
+
+    // Update status text during preload (only if no orbital is actively selected/displayed)
+    const statusEl = document.getElementById('orbitalStatus');
+    if (statusEl && window.selectedOrbitalIndex < 0) {
+        if (loaded < total) {
+            statusEl.textContent = `(loading ${loaded}/${total})`;
+            statusEl.style.color = '#FFA500';
+        } else {
+            statusEl.textContent = `(${total} MOs ready)`;
+            statusEl.style.color = '#4CAF50';
+        }
+    }
+}
+
 // Function to select and display an orbital from the table
 async function selectOrbitalFromTable(orbitalIndex) {
     if (!main.molecule) return;
@@ -6579,7 +6617,39 @@ async function selectOrbitalFromTable(orbitalIndex) {
 
     // For molden files, generate grid for selected orbital using PySCF backend
     if (window.moldenData && window.moldenData.rawContent) {
-        console.log('[Orbitals] Requesting orbital', orbitalIndex, 'from PySCF backend...');
+        const gridSize = window.orbitalQuality || 50;
+        const padding = 4.0;
+
+        // Check cache first — if preloaded, this is instant (no network)
+        const cached = window.getCachedOrbital?.(orbitalIndex, gridSize, padding);
+        if (cached) {
+            console.log(`[Orbitals] Cache hit for orbital ${orbitalIndex}`);
+            window.orbitalData = cached;
+
+            if (window.calculateDefaultIsovalue) {
+                const defaultIso = window.calculateDefaultIsovalue(cached);
+                document.getElementById('isovalueSlider').value = defaultIso;
+                document.getElementById('isovalueValue').textContent = defaultIso.toFixed(3);
+            }
+
+            const currentIso = parseFloat(document.getElementById('isovalueSlider')?.value || main.molecule.orbitalIsovalue || 0.02);
+            if (main.molecule.createOrbitalVisualizationAsync) {
+                await main.molecule.createOrbitalVisualizationAsync(currentIso);
+            } else {
+                main.molecule.updateOrbitalIsovalue(currentIso);
+            }
+            main.molecule.toggleOrbitals(true);
+            render();
+
+            if (statusEl) {
+                statusEl.textContent = cached.orbitalType || `MO ${orbitalIndex + 1}`;
+                statusEl.style.color = '#4CAF50';
+            }
+            return;
+        }
+
+        // Cache miss — fall back to single-orbital request
+        console.log('[Orbitals] Cache miss, requesting orbital', orbitalIndex, 'from PySCF backend...');
 
         if (statusEl) {
             statusEl.textContent = '(loading...)';
@@ -6587,17 +6657,15 @@ async function selectOrbitalFromTable(orbitalIndex) {
         }
 
         try {
-            // Use the new backend-based function
             if (!window.generateMoldenOrbitalGridFromBackend) {
                 throw new Error('Molden orbital utilities not loaded');
             }
 
-            const gridSize = window.orbitalQuality || 50;
             const orbitalData = await window.generateMoldenOrbitalGridFromBackend(
                 window.moldenData.rawContent,
                 orbitalIndex,
                 gridSize,
-                4.0 // padding in Bohr
+                padding
             );
 
             if (!orbitalData) {
@@ -6612,22 +6680,18 @@ async function selectOrbitalFromTable(orbitalIndex) {
                 orbitalType: orbitalData.orbitalType
             });
 
-            // Update isovalue based on data range
             if (window.calculateDefaultIsovalue) {
                 const defaultIso = window.calculateDefaultIsovalue(orbitalData);
                 document.getElementById('isovalueSlider').value = defaultIso;
                 document.getElementById('isovalueValue').textContent = defaultIso.toFixed(3);
             }
 
-            // Update status with orbital type
             if (statusEl) {
                 const typeLabel = orbitalData.orbitalType || `MO ${orbitalIndex + 1}`;
                 statusEl.textContent = typeLabel + ' (rendering...)';
                 statusEl.style.color = '#FFA500';
             }
 
-            // Regenerate the orbital surface for the newly selected MO
-            // Use async version to keep UI responsive during marching cubes
             const currentIso = parseFloat(document.getElementById('isovalueSlider')?.value || main.molecule.orbitalIsovalue || 0.02);
 
             if (main.molecule.createOrbitalVisualizationAsync) {
@@ -6638,7 +6702,6 @@ async function selectOrbitalFromTable(orbitalIndex) {
             main.molecule.toggleOrbitals(true);
             render();
 
-            // Update status after rendering complete
             if (statusEl) {
                 const typeLabel = orbitalData.orbitalType || `MO ${orbitalIndex + 1}`;
                 statusEl.textContent = typeLabel;
@@ -6651,7 +6714,6 @@ async function selectOrbitalFromTable(orbitalIndex) {
                 statusEl.textContent = 'Error';
                 statusEl.style.color = '#F44336';
             }
-            // Show error to user
             if (error.message && !error.message.includes('HTTP')) {
                 window.toastError?.('Orbital visualization failed');
             }
@@ -6719,7 +6781,19 @@ document.getElementById('orbitalQualitySlider')?.addEventListener('change', func
     document.getElementById('orbitalQualityValue').textContent = quality;
     window.orbitalQuality = quality;
 
-    // Re-generate orbital with new quality if one is selected
+    // Clear cache and re-preload at new resolution
+    window.clearOrbitalCache?.();
+
+    if (window.moldenData && window.moldenData.rawContent) {
+        window.preloadAllOrbitals?.(
+            window.moldenData.rawContent,
+            quality,
+            4.0,
+            (loaded, total) => updateOrbitalPreloadProgress(loaded, total)
+        ).catch(err => console.warn('[Orbitals] Re-preload failed:', err));
+    }
+
+    // Re-generate current orbital with new quality
     if (window.selectedOrbitalIndex >= 0 && window.moldenData) {
         selectOrbitalFromTable(window.selectedOrbitalIndex);
     }
@@ -6895,6 +6969,16 @@ window.updateOrbitalControls = function () {
                     }, 100);
                 }
             }
+
+            // Start background preload of ALL orbitals
+            const gridSize = window.orbitalQuality || 50;
+            window.preloadAllOrbitals?.(
+                window.moldenData.rawContent,
+                gridSize,
+                4.0,
+                (loaded, total) => updateOrbitalPreloadProgress(loaded, total)
+            ).catch(err => console.warn('[Orbitals] Preload failed:', err));
+
         } else if (orbitalTableBody && info.fileType === 'cube') {
             // For cube files, just show a single entry
             orbitalTableBody.innerHTML = `
@@ -6908,10 +6992,11 @@ window.updateOrbitalControls = function () {
             orbitalTableBody.querySelector('tr')?.addEventListener('click', () => selectOrbitalFromTable(0));
         }
     } else {
-        // Hide the orbital table panel
+        // Hide the orbital table panel and clear cache
         if (orbitalTablePanel) {
             orbitalTablePanel.classList.remove('open');
         }
+        window.clearOrbitalCache?.();
         if (statusEl) {
             statusEl.textContent = '';
             statusEl.style.color = '#888';

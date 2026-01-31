@@ -10,9 +10,10 @@
  * - All angular momentum types (s, p, d, f, g)
  *
  * OPTIMIZATIONS (v2.0):
- * - Binary data transfer (base64-encoded Float32) - 3-5x faster than JSON
+ * - Binary data transfer (base64-encoded Float32 with zlib compression)
  * - Backend caching of mol objects and AO grids - instant orbital switching
- * - Performance timing for debugging
+ * - Frontend orbital cache with batch preloading - click any orbital instantly
+ * - Streaming NDJSON for progress bar during preload
  *
  * The frontend just needs to send the molden file content and receive the volumetric grid.
  */
@@ -22,10 +23,12 @@ const BACKEND_URL = window.location.hostname === 'localhost' || window.location.
     ? 'http://127.0.0.1:10000'
     : 'https://chopchopmol-ai-backend.onrender.com';
 
+// ============================================================================
+// Binary Decoders
+// ============================================================================
+
 /**
- * Decode base64-encoded Float32Array data from backend.
- * @param {string} base64String - Base64 encoded binary data
- * @returns {Float32Array} Decoded float array
+ * Decode base64-encoded Float32Array data from backend (uncompressed).
  */
 function decodeBase64Float32(base64String) {
     const binaryString = atob(base64String);
@@ -37,18 +40,251 @@ function decodeBase64Float32(base64String) {
 }
 
 /**
- * Generate volumetric grid data from a Molden file using the PySCF backend.
+ * Decode base64-encoded zlib-compressed Float32Array data from backend.
+ * Uses the native DecompressionStream API (supported in all modern browsers).
+ */
+async function decodeBase64Float32Zlib(base64String) {
+    const binaryString = atob(base64String);
+    const compressed = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        compressed[i] = binaryString.charCodeAt(i);
+    }
+
+    // Use native DecompressionStream (zlib format = 'deflate')
+    const ds = new DecompressionStream('deflate');
+    const writer = ds.writable.getWriter();
+    writer.write(compressed);
+    writer.close();
+
+    const reader = ds.readable.getReader();
+    const chunks = [];
+    let totalLength = 0;
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        totalLength += value.length;
+    }
+
+    const decompressed = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+        decompressed.set(chunk, offset);
+        offset += chunk.length;
+    }
+
+    return new Float32Array(decompressed.buffer);
+}
+
+/**
+ * Decode volume data based on the format returned by the backend.
+ */
+async function decodeVolumeData(data, dataFormat) {
+    if (dataFormat === 'base64_float32_zlib') {
+        return await decodeBase64Float32Zlib(data);
+    } else if (dataFormat === 'base64_float32') {
+        return decodeBase64Float32(data);
+    } else {
+        return new Float32Array(data);
+    }
+}
+
+// ============================================================================
+// Orbital Cache
+// ============================================================================
+
+// Cache: keyed by "${orbitalIndex}_${gridSize}_${padding}"
+window.orbitalCache = {};
+
+// Preload state tracking
+window.orbitalPreloadState = {
+    active: false,
+    abortController: null,
+    gridSize: null,
+    padding: null,
+    contentHash: null,
+    loaded: 0,
+    total: 0
+};
+
+/**
+ * Get a cached orbital if available.
+ * @returns {Object|null} Cached orbital data or null
+ */
+export function getCachedOrbital(orbitalIndex, gridSize, padding) {
+    const cacheKey = `${orbitalIndex}_${gridSize}_${padding}`;
+    return window.orbitalCache[cacheKey] || null;
+}
+
+/**
+ * Clear the orbital cache and abort any active preload.
+ */
+export function clearOrbitalCache() {
+    window.orbitalCache = {};
+    const state = window.orbitalPreloadState;
+    state.contentHash = null;
+    state.loaded = 0;
+    state.total = 0;
+    if (state.abortController) {
+        state.abortController.abort();
+        state.abortController = null;
+    }
+    state.active = false;
+}
+
+/**
+ * Compute a simple hash of content for cache invalidation.
+ */
+async function computeContentHash(content) {
+    const data = new TextEncoder().encode(content);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+}
+
+// ============================================================================
+// Batch Preload
+// ============================================================================
+
+/**
+ * Preload ALL orbitals from a molden file via the streaming batch endpoint.
+ * Results are cached as they arrive; the onProgress callback is called per orbital.
  *
- * @param {string} moldenContent - Raw content of the molden file
- * @param {number} orbitalIndex - MO index to visualize (0-based)
- * @param {number} gridSize - Grid resolution per axis (default: 50)
- * @param {number} padding - Padding around the molecule in Bohr (default: 4.0)
- * @returns {Promise<Object|null>} Orbital data compatible with marching cubes visualization
+ * @param {string} moldenContent - Raw molden file content
+ * @param {number} gridSize - Grid resolution per axis
+ * @param {number} padding - Padding in Bohr
+ * @param {Function} onProgress - Called with (loaded, total) as orbitals arrive
+ */
+export async function preloadAllOrbitals(moldenContent, gridSize = 50, padding = 4.0, onProgress) {
+    if (!moldenContent) return;
+
+    const state = window.orbitalPreloadState;
+
+    // Abort any previous preload
+    if (state.abortController) {
+        state.abortController.abort();
+    }
+
+    // Check if cache is already valid for this content + settings
+    const contentHash = await computeContentHash(moldenContent);
+    if (state.contentHash === contentHash && state.gridSize === gridSize && state.padding === padding
+        && state.loaded > 0 && state.loaded >= state.total) {
+        onProgress?.(state.total, state.total);
+        return;
+    }
+
+    // Clear old cache
+    window.orbitalCache = {};
+    state.active = true;
+    state.abortController = new AbortController();
+    state.gridSize = gridSize;
+    state.padding = padding;
+    state.contentHash = contentHash;
+    state.loaded = 0;
+    state.total = 0;
+
+    try {
+        console.log(`[OrbitalPreload] Starting batch preload (grid=${gridSize})...`);
+        const t0 = performance.now();
+
+        const response = await fetch(`${BACKEND_URL}/ai/molden/orbital-batch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ moldenContent, gridSize, padding }),
+            signal: state.abortController.signal
+        });
+
+        if (!response.ok) {
+            throw new Error(`Batch request failed: HTTP ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let gridInfo = null;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // Keep incomplete last line in buffer
+
+            for (const line of lines) {
+                if (!line.trim()) continue;
+
+                let obj;
+                try {
+                    obj = JSON.parse(line);
+                } catch (e) {
+                    console.warn('[OrbitalPreload] Failed to parse NDJSON line:', e);
+                    continue;
+                }
+
+                if (obj.type === 'meta') {
+                    state.total = obj.totalRequested;
+                    gridInfo = obj.gridInfo;
+                    onProgress?.(0, state.total);
+                } else if (obj.type === 'orbital') {
+                    const volumeData = await decodeVolumeData(obj.volumeData, obj.dataFormat);
+                    const cacheKey = `${obj.orbitalIndex}_${gridSize}_${padding}`;
+                    window.orbitalCache[cacheKey] = {
+                        volumeData,
+                        gridInfo,
+                        minValue: obj.minValue,
+                        maxValue: obj.maxValue,
+                        orbitalType: obj.orbitalType,
+                        energy: obj.energy,
+                        occupation: obj.occupation,
+                        orbitalIndex: obj.orbitalIndex,
+                        homoIndex: null,  // Set from meta below
+                        lumoIndex: null,
+                        numOrbitals: state.total,
+                        fileType: 'molden-generated'
+                    };
+                    state.loaded++;
+                    onProgress?.(state.loaded, state.total);
+                } else if (obj.type === 'error') {
+                    console.warn(`[OrbitalPreload] Error for orbital ${obj.orbitalIndex}:`, obj.error);
+                }
+            }
+        }
+
+        const elapsed = performance.now() - t0;
+        console.log(`[OrbitalPreload] Completed: ${state.loaded}/${state.total} orbitals in ${elapsed.toFixed(0)}ms`);
+
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            console.log('[OrbitalPreload] Aborted');
+        } else {
+            console.error('[OrbitalPreload] Error:', err);
+            throw err;
+        }
+    } finally {
+        state.active = false;
+    }
+}
+
+// ============================================================================
+// Single Orbital Request (fallback when cache miss during preload)
+// ============================================================================
+
+/**
+ * Generate volumetric grid data from a Molden file using the PySCF backend.
+ * Now supports zlib-compressed binary transfer.
  */
 export async function generateMoldenOrbitalGridFromBackend(moldenContent, orbitalIndex = 0, gridSize = 50, padding = 4.0) {
     if (!moldenContent) {
         console.error('[MoldenOrbitals] No molden content provided');
         return null;
+    }
+
+    // Check cache first
+    const cached = getCachedOrbital(orbitalIndex, gridSize, padding);
+    if (cached) {
+        console.log(`[MoldenOrbitals] Cache hit for orbital ${orbitalIndex}`);
+        return cached;
     }
 
     try {
@@ -57,15 +293,13 @@ export async function generateMoldenOrbitalGridFromBackend(moldenContent, orbita
 
         const response = await fetch(`${BACKEND_URL}/ai/molden/orbital`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 moldenContent,
                 orbitalIndex,
                 gridSize,
                 padding,
-                binary: true  // Request binary format for speed
+                binary: true
             })
         });
 
@@ -83,41 +317,14 @@ export async function generateMoldenOrbitalGridFromBackend(moldenContent, orbita
             throw new Error(result.error || 'Unknown error from backend');
         }
 
-        // Decode volume data based on format
-        let volumeData;
         const t3 = performance.now();
-
-        if (result.dataFormat === 'base64_float32') {
-            // Fast path: decode binary data
-            volumeData = decodeBase64Float32(result.volumeData);
-        } else {
-            // Legacy path: convert JSON array
-            volumeData = new Float32Array(result.volumeData);
-        }
-
+        const volumeData = await decodeVolumeData(result.volumeData, result.dataFormat);
         const t4 = performance.now();
 
-        // Log performance
-        const networkTime = t1 - t0;
-        const parseTime = t2 - t1;
-        const decodeTime = t4 - t3;
-        const totalTime = t4 - t0;
+        console.log(`[MoldenOrbitals] Orbital ${orbitalIndex} loaded in ${(t4 - t0).toFixed(0)}ms ` +
+            `(network=${(t1 - t0).toFixed(0)}ms, parse=${(t2 - t1).toFixed(0)}ms, decode=${(t4 - t3).toFixed(0)}ms)`);
 
-        console.log(`[MoldenOrbitals] Orbital ${orbitalIndex} loaded in ${totalTime.toFixed(0)}ms ` +
-            `(network=${networkTime.toFixed(0)}ms, parse=${parseTime.toFixed(0)}ms, decode=${decodeTime.toFixed(0)}ms)`);
-
-        if (result.timings) {
-            console.log(`[MoldenOrbitals] Backend timings:`, result.timings);
-        }
-
-        console.log(`[MoldenOrbitals] Grid data:`, {
-            dimensions: result.gridInfo.dimensions,
-            valueRange: [result.minValue, result.maxValue],
-            orbitalType: result.orbitalType,
-            dataFormat: result.dataFormat
-        });
-
-        return {
+        const orbitalData = {
             volumeData,
             gridInfo: result.gridInfo,
             minValue: result.minValue,
@@ -131,11 +338,13 @@ export async function generateMoldenOrbitalGridFromBackend(moldenContent, orbita
             homoIndex: result.homoIndex,
             lumoIndex: result.lumoIndex,
             numOrbitals: result.numOrbitals,
-            timings: {
-                frontend: { network: networkTime, parse: parseTime, decode: decodeTime, total: totalTime },
-                backend: result.timings
-            }
         };
+
+        // Store in cache for future use
+        const cacheKey = `${orbitalIndex}_${gridSize}_${padding}`;
+        window.orbitalCache[cacheKey] = orbitalData;
+
+        return orbitalData;
 
     } catch (error) {
         console.error('[MoldenOrbitals] Error generating orbital grid:', error);
@@ -145,10 +354,6 @@ export async function generateMoldenOrbitalGridFromBackend(moldenContent, orbita
 
 /**
  * Get information about orbitals in a molden file without computing the full grid.
- * Useful for populating the orbital selection table before the user selects one.
- *
- * @param {string} moldenContent - Raw content of the molden file
- * @returns {Promise<Object|null>} Orbital information including energies, occupations, HOMO/LUMO indices
  */
 export async function getMoldenOrbitalInfo(moldenContent) {
     if (!moldenContent) {
@@ -161,9 +366,7 @@ export async function getMoldenOrbitalInfo(moldenContent) {
 
         const response = await fetch(`${BACKEND_URL}/ai/molden/info`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ moldenContent })
         });
 
@@ -195,25 +398,26 @@ export async function getMoldenOrbitalInfo(moldenContent) {
 }
 
 /**
- * Legacy function for backward compatibility.
- * This is kept for code that still calls the old synchronous API.
- * It logs a warning and returns null - callers should use the async version.
- *
  * @deprecated Use generateMoldenOrbitalGridFromBackend instead
  */
 export function generateMoldenOrbitalGrid(moldenData, atoms, orbitalIndex = -1, gridSize = 50, padding = 5.0) {
     console.warn('[MoldenOrbitals] generateMoldenOrbitalGrid is deprecated. Use generateMoldenOrbitalGridFromBackend instead.');
-    console.warn('[MoldenOrbitals] This function returns null. Update your code to use the async backend-based version.');
     return null;
 }
 
 // Export functions to window for use in non-module scripts
 window.generateMoldenOrbitalGridFromBackend = generateMoldenOrbitalGridFromBackend;
 window.getMoldenOrbitalInfo = getMoldenOrbitalInfo;
-window.generateMoldenOrbitalGrid = generateMoldenOrbitalGrid; // Deprecated compatibility
+window.generateMoldenOrbitalGrid = generateMoldenOrbitalGrid;
+window.preloadAllOrbitals = preloadAllOrbitals;
+window.getCachedOrbital = getCachedOrbital;
+window.clearOrbitalCache = clearOrbitalCache;
 
 export default {
     generateMoldenOrbitalGridFromBackend,
     getMoldenOrbitalInfo,
-    generateMoldenOrbitalGrid
+    generateMoldenOrbitalGrid,
+    preloadAllOrbitals,
+    getCachedOrbital,
+    clearOrbitalCache
 };
