@@ -126,9 +126,7 @@ const switchModeButton = document.getElementById('switchMode');
 const toggleSillyButton = document.getElementById('toggleSilly');
 const saveImageButton = document.getElementById('captureScreen');
 const analyzeMoleculeButton = document.getElementById('analyze-molecule');
-const editMoleculePanel = document.getElementById('editMoleculePanel');
 const editMoleculeButton = document.getElementById('editMolecule');
-const editMoleculeContent = document.getElementById('editMoleculeContent');
 const closeStyleSelectorButton = document.getElementById('closeStyleSelector');
 const initialCameraPosition = new THREE.Vector3(0, 0, 15);
 const initialCameraTarget = new THREE.Vector3(0, 0, 0);
@@ -1458,13 +1456,8 @@ function updateAtomSelection() {
 
     // Update UI - Check the TOTAL count of selected atoms (including preview)
     if (allSelected.length > 0) {
-        editMoleculePanel.classList.remove('on');
         const element = main.molecule.atoms[allSelected[0]].type;
-
-        // Pass the selection count to updateEditingContent
         updateEditingContent(element, main.molecule.atomSettings[element].color, allSelected.length);
-    } else {
-        // editMoleculePanel.classList.add('on');
     }
 }
 
@@ -1511,13 +1504,8 @@ function onSelectionUp(event) {
                     selectAtom(idx, false); // Highlight final selection
                 });
 
-                // Update the UI with the final selection count
+                // Attach button event listeners after box selection
                 if (atomsSelected.length > 0) {
-                    editMoleculePanel.classList.remove('on');
-                    const element = main.molecule.atoms[atomsSelected[0]].type;
-                    updateEditingContent(element, main.molecule.atomSettings[element].color);
-
-                    // IMPORTANT: Attach button event listeners after box selection
                     attachButtonEventListeners();
                 }
             }
@@ -1672,11 +1660,6 @@ function onPointerDown(event) {
                         render();
 
                         if (atomsSelected.length > 0) {
-                            editMoleculePanel.classList.remove('on');
-                            const element = main.molecule.atoms[atomsSelected[0]].type;
-                            updateEditingContent(element, main.molecule.atomSettings[element].color);
-
-                            // Attach button event listeners
                             attachButtonEventListeners();
                         }
                     }
@@ -1954,7 +1937,6 @@ function attachButtonEventListeners() {
     const changeBtn = document.getElementById('changeAtomBtn');
     const removeBtn = document.getElementById('removeAtomBtn');
     const fragmentBtn = document.getElementById('createFragment');
-    const closeEditing = document.getElementById('closeEditing');
     const isolateBtn = document.getElementById('isolateFragmentBtn');
 
     // Clone and replace to remove all existing event listeners
@@ -2165,21 +2147,10 @@ function attachButtonEventListeners() {
             console.log(`Isolated ${isolationEntry.atomCount} selected atoms`);
         }
 
-        // Update UI
-        const editMoleculePanel = document.getElementById('editMoleculePanel');
-        if (editMoleculePanel) {
-            editMoleculePanel.classList.add('on');
-        }
         updateEditingContent();
         render();
     });
 
-
-    if (closeEditing) {
-        closeEditing.onclick = function () {
-            editMoleculePanel.classList.add('on');
-        };
-    }
 
     // Attach axis event listeners
     attachAxisEventListeners();
@@ -2545,60 +2516,8 @@ function resetFragments() {
     render();
 }
 
-// Updated updateEditingContent function in main.js
-function updateEditingContent(element = null, color = null) {
-    if (element !== null) {
-        let axisButtonHtml = '';
-        let axisControlsHtml = '';
-
-        // Show "Define Axis" button only when exactly 2 atoms are selected
-        if (atomsSelected.length === 2) {
-            axisButtonHtml = `<button id="defineAxisBtn" style="background-color:rgb(255, 0, 255); margin:10px; " class="fancy-button">Define Axis</button>`;
-        }
-
-        // Show axis controls if an axis is defined
-        if (rotationAxis) {
-            axisControlsHtml = `
-                <div style="margin-top: 20px; padding: 20px; background-color: rgba(0, 115, 255, 0.2); border-radius: 15px;" class="shine">
-                    <button id="removeAxisBtn" style="background-color:rgb(255, 100, 100); margin:5px;" class="fancy-button">Remove Axis</button>
-                    <div style="margin-top: 10px;">
-                        <label style="color: white; display: block; margin-bottom: 5px; font-size: 14px;">Rotate ${atomsSelected.length > 0 ? 'Selected Atoms' : 'Entire Molecule'}:</label>
-                        <input type="range" id="rotationSlider" min="-180" max="180" value="0" step="1" style="width: 100%;">
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <label style="color: white; display: block; margin-bottom: 5px; font-size: 14px;">Translate ${atomsSelected.length > 0 ? 'Selected Atoms' : 'Entire Molecule'}:</label>
-                        <input type="range" id="translationSlider" min="-180" max="180" value="0" step="0.1" style="width: 100%;">
-                    </div>
-                </div>
-            `;
-        }
-
-        editMoleculeContent.innerHTML = `
-            <button id="closeEditing" class="dismiss" title="Dismiss" style="position: absolute; top: 0%; left: 0%; margin: 10px;"><i class="fa-solid fa-angles-left"></i></button>
-        `;
-        editMoleculeContent.innerHTML += `
-            <button id="changeAtomBtn" style="background-color:rgb(162, 0, 255); margin:10px;" class="fancy-button">Replace Atom</button>
-            <button id="removeAtomBtn" style="background-color:rgb(0, 128, 255); margin:10px;" class="fancy-button">Remove Atom</button>
-            ${axisButtonHtml}
-            ${axisControlsHtml}
-        `;
-
-        if (atomsSelected.length > 1) {
-            document.getElementById('createFragment').style.display = 'block';
-        } else {
-            document.getElementById('createFragment').style.display = 'none';
-        }
-
-        // Recreate fragment list with click handlers
-        const fragmentList = document.getElementById('fragmentList');
-        updateFragmentList(fragmentList);
-
-        // Attach axis-related event listeners
-        attachAxisEventListeners();
-    } else {
-        editMoleculePanel.classList.add('on');
-    }
-}
+// Editing panel removed — all editing is now done through the AI agent
+function updateEditingContent() {}
 
 function updateFragmentList(fragmentList) {
     fragmentList.innerHTML = '';
@@ -5549,10 +5468,6 @@ function disableAtomInteractions() {
     // Clear any selections
     atomsSelected = [];
     hoveredAtom = null;
-
-    // Hide editing panels
-    const editPanel = document.getElementById('editMoleculePanel');
-    if (editPanel) editPanel.classList.add('on');
 
     console.log('Atom interactions disabled');
 }

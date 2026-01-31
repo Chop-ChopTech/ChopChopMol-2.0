@@ -686,41 +686,6 @@ body {
     height: 35px !important;
 }
 
-#editMoleculePanel {
-    position: absolute;
-    top: 50%;
-    left: 10px;
-    z-index: 9999;
-    background-color: #ff000000;
-    width: auto;
-    height: auto;
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    transform: translate(0%, -50%);
-    gap: 10px;
-}
-
-#editMoleculePanel.on {
-    left: -600px;
-}
-
-#editMoleculeContent {
-    background-color: #ffbd8b1c !important;
-    width: fit-content;
-    height: 100%;
-    text-align: center;
-    justify-content: center;
-    align-items: center;
-    display: flex;
-    flex-direction: column;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(145, 145, 145, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.159);
-    padding: 30px 10px;
-    border-radius: 20px;
-
-}
-
 #switchMode {
     color: #ffffff;
     padding: 8px 11px;
