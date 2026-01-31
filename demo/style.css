@@ -1272,6 +1272,7 @@ input[type="range"]:focus {
     perspective: 1000px;
     background-color: #5d5d5d57;
     border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(12px);
 }
 
 #fragmentList {
