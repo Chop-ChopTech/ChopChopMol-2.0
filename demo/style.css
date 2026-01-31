@@ -1265,8 +1265,8 @@ input[type="range"]:focus {
     left: 50%;
     transform: translateX(-50%);
     z-index: -999999999999999;
-    border-radius: 10px;
-    padding: 3px 10px;
+    border-radius: 50px;
+    padding: 5px 20px;
     transition: opacity 0.3s ease;
     background-repeat: no-repeat !important;
     perspective: 1000px;
@@ -2685,11 +2685,13 @@ input[type="range"]:focus {
         box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
         border-color: rgba(139, 92, 246, 0.3);
     }
+
     50% {
         box-shadow: 0 0 25px rgba(139, 92, 246, 0.5), inset 0 0 15px rgba(139, 92, 246, 0.1);
         border-color: rgba(139, 92, 246, 0.8);
         transform: scale(1.01);
     }
+
     100% {
         background-position: -100% 0;
         box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
@@ -5100,8 +5102,8 @@ input[type="color"]::-moz-color-swatch {
     top: 0;
 }
 
-#settingsGear .dropdown-content {
-    padding: 10px;
+#settingsGear {
+    padding: 0px;
 }
 
 #settingsDropdown {
@@ -6329,28 +6331,41 @@ input[type="color"]::-moz-color-swatch {
 .toast-info {
     border-left: 3px solid #60a5fa;
 }
-.toast-info .toast-icon { color: #60a5fa; }
+
+.toast-info .toast-icon {
+    color: #60a5fa;
+}
 
 .toast-success {
     border-left: 3px solid #34d399;
 }
-.toast-success .toast-icon { color: #34d399; }
+
+.toast-success .toast-icon {
+    color: #34d399;
+}
 
 .toast-warning {
     border-left: 3px solid #fbbf24;
 }
-.toast-warning .toast-icon { color: #fbbf24; }
+
+.toast-warning .toast-icon {
+    color: #fbbf24;
+}
 
 .toast-error {
     border-left: 3px solid #f87171;
 }
-.toast-error .toast-icon { color: #f87171; }
+
+.toast-error .toast-icon {
+    color: #f87171;
+}
 
 @keyframes toastSlideIn {
     from {
         opacity: 0;
         transform: translateY(-12px) scale(0.96);
     }
+
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -6362,6 +6377,7 @@ input[type="color"]::-moz-color-swatch {
         opacity: 1;
         transform: translateY(0) scale(1);
     }
+
     to {
         opacity: 0;
         transform: translateY(-10px) scale(0.96);

@@ -26,15 +26,16 @@
     <!-- Critical error page (WebGL failure, etc.) — no module dependencies -->
     <div id="critical-error-page">
         <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
         </svg>
         <h1>Unable to Start</h1>
         <p id="critical-error-message">Something went wrong while initializing the application.</p>
         <button onclick="location.reload()">Reload Page</button>
     </div>
     <script>
-        window.showCriticalError = function(msg) {
+        window.showCriticalError = function (msg) {
             var page = document.getElementById('critical-error-page');
             if (page) {
                 page.style.display = 'flex';
@@ -851,7 +852,7 @@
             style="display: none;" />
         <input id="compare" type="file" accept=".xyz, .mol, .pdb, .cif" style="display: none;">
         <div id="toolbar-background">
-            <div class="dropdown">
+            <div class="dropdown dropdown-icon">
                 <span class="dropdown-icon" title="Upload file"><i class="fa-solid fa-magnifying-glass"></i>
                 </span>
                 <div class="dropdown-content"
@@ -943,7 +944,7 @@
 
             <button class="dropdown-icon dropdown" id="startTutorialBtn" style="border: none;">
                 <i class="fa-solid fa-book-open"></i></button>
-            <div class="dropdown" id="settingsGear">
+            <div class="dropdown dropdown-icon" id="settingsGear">
                 <span class="dropdown-icon"><i class="fa-solid fa-user"></i></span>
                 <div class="dropdown-content shine" id="settingsDropdown">
 
