@@ -1585,7 +1585,7 @@ export default class Molecule {
      * @param {number} negativeColor - Color for negative phase (hex)
      * @param {string} mode - Visualization mode: 'solid', 'wireframe', or 'dots'
      */
-    createOrbitalVisualization(isovalue = null, opacity = 0.7, positiveColor = 0x3366ff, negativeColor = 0xff6633, mode = null) {
+    createOrbitalVisualization(isovalue = null, opacity = 0.7, positiveColor = 0x0066ff, negativeColor = 0xff0000, mode = null) {
         // Check if orbital data exists
         if (!window.orbitalData || !window.orbitalData.volumeData) {
             console.warn('No orbital data available for visualization');
@@ -1717,7 +1717,7 @@ export default class Molecule {
      * @param {string} mode - Visualization mode: 'solid', 'wireframe', or 'dots'
      * @returns {Promise<boolean>} Success status
      */
-    async createOrbitalVisualizationAsync(isovalue = null, opacity = 0.7, positiveColor = 0x3366ff, negativeColor = 0xff6633, mode = null) {
+    async createOrbitalVisualizationAsync(isovalue = null, opacity = 0.7, positiveColor = 0x0066ff, negativeColor = 0xff0000, mode = null) {
         // Check if orbital data exists
         if (!window.orbitalData || !window.orbitalData.volumeData) {
             console.warn('No orbital data available for visualization');
@@ -1841,8 +1841,8 @@ export default class Molecule {
         return this.createOrbitalVisualizationAsync(
             isovalue,
             this.orbitalOpacity,
-            this.orbitalPositiveMesh?.material?.color?.getHex() || 0x3366ff,
-            this.orbitalNegativeMesh?.material?.color?.getHex() || 0xff6633
+            this.orbitalPositiveMesh?.material?.color?.getHex() || 0x0066ff,
+            this.orbitalNegativeMesh?.material?.color?.getHex() || 0xff0000
         );
     }
 
@@ -1975,8 +1975,8 @@ export default class Molecule {
 
         // Regenerate if orbital data exists
         if (window.orbitalData) {
-            const positiveColor = this.orbitalPositiveMesh?.material?.color?.getHex() || 0x3366ff;
-            const negativeColor = this.orbitalNegativeMesh?.material?.color?.getHex() || 0xff6633;
+            const positiveColor = this.orbitalPositiveMesh?.material?.color?.getHex() || 0x0066ff;
+            const negativeColor = this.orbitalNegativeMesh?.material?.color?.getHex() || 0xff0000;
             this.createOrbitalVisualization(
                 this.orbitalIsovalue,
                 this.orbitalOpacity,
@@ -2026,8 +2026,8 @@ export default class Molecule {
         this.createOrbitalVisualization(
             isovalue,
             this.orbitalOpacity,
-            this.orbitalPositiveMesh?.material?.color?.getHex() || 0x3366ff,
-            this.orbitalNegativeMesh?.material?.color?.getHex() || 0xff6633
+            this.orbitalPositiveMesh?.material?.color?.getHex() || 0x0066ff,
+            this.orbitalNegativeMesh?.material?.color?.getHex() || 0xff0000
         );
         return true;
     }

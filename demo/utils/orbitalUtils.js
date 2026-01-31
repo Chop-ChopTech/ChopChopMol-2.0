@@ -338,11 +338,11 @@ export function generateIsosurface(orbitalData, isoValue, showPositive = true, s
     // Calculate gradient at a grid point using central differences
     const getGradient = (ix, iy, iz) => {
         const gx = (getValue(Math.min(ix + 1, nx - 1), iy, iz) - getValue(Math.max(ix - 1, 0), iy, iz)) /
-                   (ix === 0 || ix === nx - 1 ? 1 : 2);
+            (ix === 0 || ix === nx - 1 ? 1 : 2);
         const gy = (getValue(ix, Math.min(iy + 1, ny - 1), iz) - getValue(ix, Math.max(iy - 1, 0), iz)) /
-                   (iy === 0 || iy === ny - 1 ? 1 : 2);
+            (iy === 0 || iy === ny - 1 ? 1 : 2);
         const gz = (getValue(ix, iy, Math.min(iz + 1, nz - 1)) - getValue(ix, iy, Math.max(iz - 1, 0))) /
-                   (iz === 0 || iz === nz - 1 ? 1 : 2);
+            (iz === 0 || iz === nz - 1 ? 1 : 2);
 
         const len = Math.sqrt(gx * gx + gy * gy + gz * gz);
         if (len < 1e-10) return [0, 0, 1];
@@ -517,11 +517,11 @@ export function generatePhaseSeparatedIsosurface(orbitalData, isoValue) {
     const getGradient = (ix, iy, iz) => {
         // Central differences for interior points, forward/backward at boundaries
         const gx = (getValue(Math.min(ix + 1, nx - 1), iy, iz) - getValue(Math.max(ix - 1, 0), iy, iz)) /
-                   (ix === 0 || ix === nx - 1 ? 1 : 2);
+            (ix === 0 || ix === nx - 1 ? 1 : 2);
         const gy = (getValue(ix, Math.min(iy + 1, ny - 1), iz) - getValue(ix, Math.max(iy - 1, 0), iz)) /
-                   (iy === 0 || iy === ny - 1 ? 1 : 2);
+            (iy === 0 || iy === ny - 1 ? 1 : 2);
         const gz = (getValue(ix, iy, Math.min(iz + 1, nz - 1)) - getValue(ix, iy, Math.max(iz - 1, 0))) /
-                   (iz === 0 || iz === nz - 1 ? 1 : 2);
+            (iz === 0 || iz === nz - 1 ? 1 : 2);
 
         const len = Math.sqrt(gx * gx + gy * gy + gz * gz);
         if (len < 1e-10) return [0, 0, 1]; // Default normal if gradient is zero
@@ -680,7 +680,7 @@ export function generatePhaseSeparatedIsosurface(orbitalData, isoValue) {
         result.negative = negGeom;
     }
 
-    console.log(`Generated isosurface: positive=${positiveVerts.length/9} tris, negative=${negativeVerts.length/9} tris`);
+    console.log(`Generated isosurface: positive=${positiveVerts.length / 9} tris, negative=${negativeVerts.length / 9} tris`);
     return result;
 }
 
@@ -709,7 +709,7 @@ export function calculateDefaultIsovalue(orbitalData) {
  * @param {number} negativeColor - Color for negative phase (hex)
  * @returns {Object} { positive: material, negative: material }
  */
-export function createOrbitalMaterials(opacity = 0.7, positiveColor = 0x3366ff, negativeColor = 0xff6633) {
+export function createOrbitalMaterials(opacity = 0.7, positiveColor = 0xff0000, negativeColor = 0x0066ff) {
     const positive = new THREE.MeshStandardMaterial({
         color: positiveColor,
         opacity: opacity,
