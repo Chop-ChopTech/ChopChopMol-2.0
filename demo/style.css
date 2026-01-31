@@ -1198,15 +1198,67 @@ input[type="range"]:focus {
 
 /* Icon styling */
 .dropdown-icon {
-    font-size: 24px;
+    font-size: 22px;
     cursor: pointer;
-    padding: 7px;
-    background-color: #00000000;
-    border-radius: 5px;
+    padding: 0;
+    background-color: transparent;
+    border-radius: 8px;
+    display: flex;
     align-items: center;
     justify-content: center;
+    color: rgba(255, 255, 255, 0.65);
+    transition: color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+    width: 42px;
+    height: 42px;
+    position: relative;
+}
+
+.dropdown-icon:hover {
+    background-color: rgba(255, 255, 255, 0.1);
     color: #ffffff;
-    transition: all 0.3s ease;
+}
+
+/* Tooltip on hover */
+.dropdown-icon .toolbar-label {
+    position: absolute;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    font-size: 11px;
+    color: #fff;
+    white-space: nowrap;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    line-height: 1;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 4px 8px;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 100;
+}
+
+.dropdown-icon:hover .toolbar-label {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Toolbar group containers */
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* Vertical divider between groups */
+.toolbar-divider {
+    width: 1px;
+    height: 26px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 8px;
+    flex-shrink: 0;
 }
 
 /* Show dropdown when active class is present */
@@ -1219,9 +1271,9 @@ input[type="range"]:focus {
 
 .dropdown.active .dropdown-icon {
     color: #ffee00;
-    text-shadow: 0 0 10px #ff9d0096;
-    transform: scale(1.3);
-    transition: all 0.3s ease;
+    text-shadow: 0 0 8px rgba(255, 157, 0, 0.4);
+    background-color: rgba(255, 238, 0, 0.08);
+    transition: all 0.18s ease;
 }
 
 #toolbar-background {
@@ -1230,14 +1282,18 @@ input[type="range"]:focus {
     left: 50%;
     transform: translateX(-50%);
     z-index: -999999999999999;
-    border-radius: 50px;
-    padding: 5px 20px;
+    border-radius: 14px;
+    padding: 5px 14px;
     transition: opacity 0.3s ease;
     background-repeat: no-repeat !important;
     perspective: 1000px;
-    background-color: #5d5d5d57;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(12px);
+    background-color: rgba(20, 20, 22, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 #fragmentList {

@@ -852,113 +852,166 @@
             style="display: none;" />
         <input id="compare" type="file" accept=".xyz, .mol, .pdb, .cif" style="display: none;">
         <div id="toolbar-background">
-            <div class="dropdown">
-                <span class="dropdown-icon" title="Upload file"><i class="fa-solid fa-magnifying-glass"></i>
-                </span>
-                <div class="dropdown-content"
-                    style="left: 50%; background-color: transparent;  padding: 0px!important; " id="searchDropdownBox">
-                    <button class="fancy-button" style="width: 140px; height: 31px; border-radius: 30px; display: none;"
-                        id="customButton"><i class="fa-solid fa-bolt"></i> Open File</button>
-                    <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
-                        JSON</button>
-                    <div id="dbSearchPanel" class="db-search-panel">
-                        <div class="db-search-resizer db-search-resizer-left"></div>
-                        <div class="db-search-resizer db-search-resizer-right"></div>
-                        <div class="db-search-resizer db-search-resizer-bottom"></div>
-                        <div class="db-search-header">
-                            <span><i class="fas fa-database"></i> Database Search</span>
-                        </div>
-                        <div class="db-search-bar">
-                            <select id="dbSourceSelect" class="db-source-select">
-                                <option value="pubchem">PubChem</option>
-                                <option value="pdb">RCSB PDB</option>
-                                <option value="chembl">ChEMBL</option>
-                            </select>
-                            <input id="dbSearchInput" class="db-search-input" type="text"
-                                placeholder="Search molecules..." autocomplete="off">
-                            <div class="db-search-loader"></div>
-                        </div>
-                        <div id="dbSearchDropdown" class="db-search-dropdown">
-                            <table class="db-search-table">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Type</th>
-                                        <th>Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="dbSearchResults"></tbody>
-                            </table>
+            <!-- FILE group -->
+            <div class="toolbar-group">
+                <div class="dropdown">
+                    <span class="dropdown-icon" title="Search & import molecules">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span class="toolbar-label">Search</span>
+                    </span>
+                    <div class="dropdown-content"
+                        style="left: 50%; background-color: transparent; padding: 0px!important;"
+                        id="searchDropdownBox">
+                        <button class="fancy-button"
+                            style="width: 140px; height: 31px; border-radius: 30px; display: none;" id="customButton"><i
+                                class="fa-solid fa-bolt"></i> Open File</button>
+                        <button class="fancy-button" id="import-json"><i class="fas fa-file-code"></i><br> Load
+                            JSON</button>
+                        <div id="dbSearchPanel" class="db-search-panel">
+                            <div class="db-search-resizer db-search-resizer-left"></div>
+                            <div class="db-search-resizer db-search-resizer-right"></div>
+                            <div class="db-search-resizer db-search-resizer-bottom"></div>
+                            <div class="db-search-header">
+                                <span><i class="fas fa-database"></i> Database Search</span>
+                            </div>
+                            <div class="db-search-bar">
+                                <select id="dbSourceSelect" class="db-source-select">
+                                    <option value="pubchem">PubChem</option>
+                                    <option value="pdb">RCSB PDB</option>
+                                    <option value="chembl">ChEMBL</option>
+                                </select>
+                                <input id="dbSearchInput" class="db-search-input" type="text"
+                                    placeholder="Search molecules..." autocomplete="off">
+                                <div class="db-search-loader"></div>
+                            </div>
+                            <div id="dbSearchDropdown" class="db-search-dropdown">
+                                <table class="db-search-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dbSearchResults"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-
                 </div>
-            </div>
-            <button class="dropdown-icon" id="toggle-ribbon" onclick="window.toggleRibbon()" title="Toggle Ribbon View"
-                style="border: none; display: none;">
-                <i class="fa-solid fa-dna"></i>
-            </button>
-            <button class="dropdown-icon" id="reset-camera" title="Reset Camera" style="border: none;"
-                onclick="window.resetCamera()"><i class="fa-solid fa-arrows-to-circle"></i></button>
-            <button class="dropdown-icon" id="toggleFileExplorer" title="File Explorer"
-                style="border: none; display: none;">
-                <i class="fas fa-folder-tree"></i>
-            </button>
-            <div class="dropdown" id="energyChartDropdown" style="display: none;">
-                <span class="dropdown-icon" title="Energy Chart"><i class="fas fa-chart-line"></i></span>
-                <div class="dropdown-content" style="width: 320px; padding: 10px;">
-                    <canvas id="energyChartCanvas" style="width: 300px; height: 180px;"></canvas>
-                </div>
-            </div>
-            <button class="dropdown-icon dropdown" id="switchMode" style="display: none;"><i
-                    class="fa-solid fa-wand-sparkles"></i></button>
-            <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"
-                style="display: none;"><i class="fas fa-ruler"></i></button>
-            <button class="dropdown-icon dropdown"
-                onclick="document.getElementById('propertiesPanel').classList.toggle('open')" style="border: none;"
-                title="Force Visualization">
-                <i class="fa-solid fa-flask-vial"></i>
-            </button>
-            <button class="dropdown-icon dropdown"
-                onclick="document.getElementById('fragmentListContainer').classList.toggle('open')"
-                style="border: none;">
-                <i class="fa-solid fa-puzzle-piece"></i>
-            </button>
-            <button class="dropdown-icon dropdown"
-                onclick="document.getElementById('stylePanel').classList.toggle('open')" style="border: none;">
-                <i class="fa-solid fa-sliders"></i>
-            </button>
-
-            <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant" style="border: none; display: none;">
-                <i class="fa-solid fa-comment-dots"></i>
-            </button>
-            <div class="dropdown" style="display: none;">
-                <span class="dropdown-icon" style="left: 50%;"><i class="fa-solid fa-download"></i></span>
-                <div class="dropdown-content shine" style="display: none;">
-                    <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save Image</button>
-                    <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255); "><i
-                            class="fas fa-file-download"></i> Save XYZ</button>
-
+                <button class="dropdown-icon" id="toggleFileExplorer" title="File Explorer"
+                    style="border: none; display: none;">
+                    <i class="fas fa-folder-tree"></i>
+                    <span class="toolbar-label">Files</span>
+                </button>
+                <div class="dropdown" style="display: none;">
+                    <span class="dropdown-icon" style="left: 50%;">
+                        <i class="fa-solid fa-download"></i>
+                        <span class="toolbar-label">Export</span>
+                    </span>
+                    <div class="dropdown-content shine" style="display: none;">
+                        <button class="fancy-button" id="captureScreen"><i class="fas fa-camera"></i> Save
+                            Image</button>
+                        <button class="fancy-button" id="saveXYZ" style="background-color: rgb(0, 204, 255);"><i
+                                class="fas fa-file-download"></i> Save XYZ</button>
+                    </div>
                 </div>
             </div>
 
-            <button class="dropdown-icon dropdown" id="startTutorialBtn" style="border: none;">
-                <i class="fa-solid fa-book-open"></i></button>
-            <div class="dropdown dropdown-icon" id="settingsGear">
-                <span class="dropdown-icon"><i class="fa-solid fa-user"></i></span>
-                <div class="dropdown-content shine" id="settingsDropdown">
+            <div class="toolbar-divider"></div>
+
+            <!-- VIEW group -->
+            <div class="toolbar-group">
+                <button class="dropdown-icon" id="reset-camera" title="Reset Camera" style="border: none;"
+                    onclick="window.resetCamera()">
+                    <i class="fa-solid fa-arrows-to-circle"></i>
+                    <span class="toolbar-label">Reset</span>
+                </button>
+                <button class="dropdown-icon" id="toggle-ribbon" onclick="window.toggleRibbon()"
+                    title="Toggle Ribbon View" style="border: none; display: none;">
+                    <i class="fa-solid fa-dna"></i>
+                    <span class="toolbar-label">Ribbon</span>
+                </button>
+                <button class="dropdown-icon dropdown"
+                    onclick="document.getElementById('stylePanel').classList.toggle('open')" style="border: none;"
+                    title="Visual style settings">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span class="toolbar-label">Style</span>
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <!-- ANALYZE group -->
+            <div class="toolbar-group">
+                <button class="dropdown-icon dropdown"
+                    onclick="document.getElementById('propertiesPanel').classList.toggle('open')" style="border: none;"
+                    title="Molecular properties">
+                    <i class="fa-solid fa-flask-vial"></i>
+                    <span class="toolbar-label">Properties</span>
+                </button>
+                <button class="dropdown-icon dropdown"
+                    onclick="document.getElementById('fragmentListContainer').classList.toggle('open')"
+                    style="border: none;" title="Molecular fragments">
+                    <i class="fa-solid fa-puzzle-piece"></i>
+                    <span class="toolbar-label">Fragments</span>
+                </button>
+                <div class="dropdown" id="energyChartDropdown" style="display: none;">
+                    <span class="dropdown-icon" title="Energy Chart">
+                        <i class="fas fa-chart-line"></i>
+                        <span class="toolbar-label">Energy</span>
+                    </span>
+                    <div class="dropdown-content" style="width: 320px; padding: 10px;">
+                        <canvas id="energyChartCanvas" style="width: 300px; height: 180px;"></canvas>
+                    </div>
+                </div>
+                <button id="showAllBondLengths" class="dropdown-icon" title="Show All Bond Lengths"
+                    style="display: none;">
+                    <i class="fas fa-ruler"></i>
+                    <span class="toolbar-label">Bonds</span>
+                </button>
+                <button class="dropdown-icon dropdown" id="switchMode" style="display: none;">
+                    <i class="fa-solid fa-wand-sparkles"></i>
+                    <span class="toolbar-label">Mode</span>
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <!-- AI group -->
+            <div class="toolbar-group">
+                <button class="dropdown-icon" id="aiToggleBtn" title="AI Assistant"
+                    style="border: none; display: none;">
+                    <i class="fa-solid fa-comment-dots"></i>
+                    <span class="toolbar-label">AI Chat</span>
+                </button>
+            </div>
 
 
-                    <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign
-                        In</button>
-                    <button class="fancy-button" id="signOutButton" style="display: none;"><i
-                            class="fas fa-sign-out-alt"></i> Sign
-                        Out</button>
-                    <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
-                        onclick="showPremiumModal()">Subscription</button>
-                    <button class="donate-btn fancy-button" onclick="openDonateModal()"><i class="fas fa-heart"></i>
-                        Donation</button>
 
+            <!-- HELP group -->
+            <div class="toolbar-group">
+                <button class="dropdown-icon dropdown" id="startTutorialBtn" style="border: none;"
+                    title="Start tutorial">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span class="toolbar-label">Tutorial</span>
+                </button>
+                <div class="dropdown-icon" id="settingsGear">
+                    <span class="dropdown-icon">
+                        <i class="fa-solid fa-user"></i>
+                        <span class="toolbar-label">Account</span>
+                    </span>
+                    <div class="dropdown-content shine" id="settingsDropdown">
+                        <button class="fancy-button" id="signInButton"><i class="fas fa-sign-in-alt"></i> Sign
+                            In</button>
+                        <button class="fancy-button" id="signOutButton" style="display: none;"><i
+                                class="fas fa-sign-out-alt"></i> Sign
+                            Out</button>
+                        <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
+                            onclick="showPremiumModal()">Subscription</button>
+                        <button class="donate-btn fancy-button" onclick="openDonateModal()"><i class="fas fa-heart"></i>
+                            Donation</button>
+                    </div>
                 </div>
             </div>
         </div>
