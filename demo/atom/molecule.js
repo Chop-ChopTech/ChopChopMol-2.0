@@ -1745,9 +1745,22 @@ export default class Molecule {
             this.orbitalRenderMode = 'solid';
         }
 
-        // Generate phase-separated isosurfaces using web worker
+        // Generate phase-separated isosurfaces
         let geometries;
-        if (window.generateIsosurfaceAsync) {
+        if (window.orbitalData.isMesh && window.orbitalData.meshData) {
+            // Server-side marching cubes: mesh data already computed
+            console.log('[Molecule] Using server-side pre-computed mesh...');
+            geometries = { positive: null, negative: null };
+            const meshData = window.orbitalData.meshData;
+            for (const phase of ['positive', 'negative']) {
+                if (meshData[phase] && meshData[phase].vertices.length > 0) {
+                    const geom = new THREE.BufferGeometry();
+                    geom.setAttribute('position', new THREE.BufferAttribute(meshData[phase].vertices, 3));
+                    geom.setAttribute('normal', new THREE.BufferAttribute(meshData[phase].normals, 3));
+                    geometries[phase] = geom;
+                }
+            }
+        } else if (window.generateIsosurfaceAsync) {
             console.log('[Molecule] Using async (worker) marching cubes...');
             geometries = await window.generateIsosurfaceAsync(window.orbitalData, isovalue);
         } else if (window.generatePhaseSeparatedIsosurface) {
@@ -1837,6 +1850,28 @@ export default class Molecule {
      */
     async updateOrbitalIsovalueAsync(isovalue) {
         if (!window.orbitalData) return false;
+
+        // If current data is mesh-only (pre-computed at a fixed isovalue),
+        // fetch volumetric data for this orbital so we can recompute locally
+        if (window.orbitalData.isMesh && !window.orbitalData.volumeData) {
+            console.log('[Molecule] Isovalue change on mesh data — fetching volume for local marching cubes...');
+            try {
+                const volData = await window.generateMoldenOrbitalGridFromBackend(
+                    window.moldenContent,
+                    window.orbitalData.orbitalIndex,
+                    window.orbitalPreloadState?.gridSize || 50,
+                    window.orbitalPreloadState?.padding || 4.0
+                );
+                if (volData) {
+                    // Merge volume data into current orbital data
+                    window.orbitalData.volumeData = volData.volumeData;
+                    window.orbitalData.gridInfo = volData.gridInfo;
+                    window.orbitalData.isMesh = false;
+                }
+            } catch (err) {
+                console.warn('[Molecule] Failed to fetch volume data for isovalue update:', err);
+            }
+        }
 
         return this.createOrbitalVisualizationAsync(
             isovalue,

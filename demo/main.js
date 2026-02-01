@@ -6556,6 +6556,23 @@ async function selectOrbitalFromTable(orbitalIndex) {
             main.molecule.toggleOrbitals(true);
             render();
 
+            // If this is mesh-only data, background-prefetch volume data
+            // so isovalue slider changes are instant (no network request)
+            if (cached.isMesh && !cached.volumeData && window.generateMoldenOrbitalGridFromBackend && window.moldenData?.rawContent) {
+                window.generateMoldenOrbitalGridFromBackend(
+                    window.moldenData.rawContent, orbitalIndex, gridSize, padding
+                ).then(volData => {
+                    if (volData && window.orbitalData && window.orbitalData.orbitalIndex === orbitalIndex) {
+                        window.orbitalData.volumeData = volData.volumeData;
+                        window.orbitalData.gridInfo = volData.gridInfo;
+                        // Also update the cache entry
+                        cached.volumeData = volData.volumeData;
+                        cached.gridInfo = volData.gridInfo;
+                        console.log(`[Orbitals] Background volume data ready for orbital ${orbitalIndex}`);
+                    }
+                }).catch(() => {}); // Silently fail — user can still use mesh
+            }
+
             if (statusEl) {
                 statusEl.textContent = cached.orbitalType || `MO ${orbitalIndex + 1}`;
                 statusEl.style.color = '#4CAF50';
@@ -6563,7 +6580,7 @@ async function selectOrbitalFromTable(orbitalIndex) {
             return;
         }
 
-        // Cache miss — fall back to single-orbital request
+        // Cache miss — request single orbital (prefer mesh mode for speed)
         console.log('[Orbitals] Cache miss, requesting orbital', orbitalIndex, 'from PySCF backend...');
 
         if (statusEl) {
@@ -6572,11 +6589,13 @@ async function selectOrbitalFromTable(orbitalIndex) {
         }
 
         try {
-            if (!window.generateMoldenOrbitalGridFromBackend) {
+            // Use mesh endpoint if available (much less data to transfer)
+            const fetchFn = window.generateMoldenOrbitalMeshFromBackend || window.generateMoldenOrbitalGridFromBackend;
+            if (!fetchFn) {
                 throw new Error('Molden orbital utilities not loaded');
             }
 
-            const orbitalData = await window.generateMoldenOrbitalGridFromBackend(
+            const orbitalData = await fetchFn(
                 window.moldenData.rawContent,
                 orbitalIndex,
                 gridSize,
@@ -6616,6 +6635,24 @@ async function selectOrbitalFromTable(orbitalIndex) {
             }
             main.molecule.toggleOrbitals(true);
             render();
+
+            // Background-prefetch volume data for isovalue adjustments
+            if (orbitalData.isMesh && !orbitalData.volumeData && window.generateMoldenOrbitalGridFromBackend) {
+                window.generateMoldenOrbitalGridFromBackend(
+                    window.moldenData.rawContent, orbitalIndex, gridSize, padding
+                ).then(volData => {
+                    if (volData && window.orbitalData && window.orbitalData.orbitalIndex === orbitalIndex) {
+                        window.orbitalData.volumeData = volData.volumeData;
+                        window.orbitalData.gridInfo = volData.gridInfo;
+                        const cacheKey = `${orbitalIndex}_${gridSize}_${padding}`;
+                        if (window.orbitalCache[cacheKey]) {
+                            window.orbitalCache[cacheKey].volumeData = volData.volumeData;
+                            window.orbitalCache[cacheKey].gridInfo = volData.gridInfo;
+                        }
+                        console.log(`[Orbitals] Background volume data ready for orbital ${orbitalIndex}`);
+                    }
+                }).catch(() => {});
+            }
 
             if (statusEl) {
                 const typeLabel = orbitalData.orbitalType || `MO ${orbitalIndex + 1}`;
@@ -6691,27 +6728,31 @@ document.getElementById('orbitalOpacitySlider')?.addEventListener('input', funct
 });
 
 // Orbital quality slider (grid resolution)
-document.getElementById('orbitalQualitySlider')?.addEventListener('change', function () {
+document.getElementById('orbitalQualitySlider')?.addEventListener('change', async function () {
     const quality = parseInt(this.value);
     document.getElementById('orbitalQualityValue').textContent = quality;
     window.orbitalQuality = quality;
 
-    // Clear cache and re-preload at new resolution
+    // Clear cache (old resolution data is no longer relevant)
     window.clearOrbitalCache?.();
 
-    if (window.moldenData && window.moldenData.rawContent) {
-        window.preloadAllOrbitals?.(
-            window.moldenData.rawContent,
-            quality,
-            4.0,
-            (loaded, total) => updateOrbitalPreloadProgress(loaded, total)
-        ).catch(err => console.warn('[Orbitals] Re-preload failed:', err));
+    if (!window.moldenData || !window.moldenData.rawContent) return;
+
+    const currentOrbital = window.selectedOrbitalIndex;
+
+    // Step 1: If an orbital is currently displayed, re-request just THAT orbital
+    // immediately so the user sees the update fast
+    if (currentOrbital >= 0) {
+        await selectOrbitalFromTable(currentOrbital);
     }
 
-    // Re-generate current orbital with new quality
-    if (window.selectedOrbitalIndex >= 0 && window.moldenData) {
-        selectOrbitalFromTable(window.selectedOrbitalIndex);
-    }
+    // Step 2: Preload the remaining orbitals in background (non-blocking)
+    window.preloadAllOrbitals?.(
+        window.moldenData.rawContent,
+        quality,
+        4.0,
+        (loaded, total) => updateOrbitalPreloadProgress(loaded, total)
+    ).catch(err => console.warn('[Orbitals] Re-preload failed:', err));
 });
 
 // Update display value while dragging (without regenerating)

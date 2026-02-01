@@ -85,6 +85,35 @@ async function decodeVolumeData(data, dataFormat) {
     }
 }
 
+/**
+ * Decode mesh data (pre-computed vertices + normals) from the backend.
+ * The backend sends zlib-compressed base64 Float32Arrays.
+ * @param {Object} meshData - { positive: {vertices, normals, ...}, negative: {vertices, normals, ...} }
+ * @returns {Object} Decoded mesh with Float32Arrays ready for Three.js
+ */
+async function decodeMeshData(meshData) {
+    const result = { positive: null, negative: null };
+
+    for (const phase of ['positive', 'negative']) {
+        const phaseData = meshData[phase];
+        if (!phaseData) continue;
+
+        const [vertices, normals] = await Promise.all([
+            decodeBase64Float32Zlib(phaseData.vertices),
+            decodeBase64Float32Zlib(phaseData.normals),
+        ]);
+
+        result[phase] = {
+            vertices,
+            normals,
+            numVertices: phaseData.numVertices,
+            numTriangles: phaseData.numTriangles,
+        };
+    }
+
+    return result;
+}
+
 // ============================================================================
 // Orbital Cache
 // ============================================================================
@@ -151,10 +180,12 @@ async function computeContentHash(content) {
  * @param {number} padding - Padding in Bohr
  * @param {Function} onProgress - Called with (loaded, total) as orbitals arrive
  */
-export async function preloadAllOrbitals(moldenContent, gridSize = 50, padding = 4.0, onProgress) {
+export async function preloadAllOrbitals(moldenContent, gridSize = 50, padding = 4.0, onProgress, options = {}) {
     if (!moldenContent) return;
 
     const state = window.orbitalPreloadState;
+    const meshMode = options.meshMode !== undefined ? options.meshMode : true;
+    const isoValue = options.isoValue || 0.02;
 
     // Abort any previous preload
     if (state.abortController) {
@@ -180,13 +211,20 @@ export async function preloadAllOrbitals(moldenContent, gridSize = 50, padding =
     state.total = 0;
 
     try {
-        console.log(`[OrbitalPreload] Starting batch preload (grid=${gridSize})...`);
+        const mode = meshMode ? 'mesh' : 'volume';
+        console.log(`[OrbitalPreload] Starting batch preload (grid=${gridSize}, mode=${mode})...`);
         const t0 = performance.now();
+
+        const requestBody = { moldenContent, gridSize, padding };
+        if (meshMode) {
+            requestBody.meshMode = true;
+            requestBody.isoValue = isoValue;
+        }
 
         const response = await fetch(`${BACKEND_URL}/ai/molden/orbital-batch`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ moldenContent, gridSize, padding }),
+            body: JSON.stringify(requestBody),
             signal: state.abortController.signal
         });
 
@@ -198,6 +236,7 @@ export async function preloadAllOrbitals(moldenContent, gridSize = 50, padding =
         const decoder = new TextDecoder();
         let buffer = '';
         let gridInfo = null;
+        let serverMeshMode = false;
 
         while (true) {
             const { done, value } = await reader.read();
@@ -221,24 +260,48 @@ export async function preloadAllOrbitals(moldenContent, gridSize = 50, padding =
                 if (obj.type === 'meta') {
                     state.total = obj.totalRequested;
                     gridInfo = obj.gridInfo;
+                    serverMeshMode = obj.meshMode || false;
                     onProgress?.(0, state.total);
                 } else if (obj.type === 'orbital') {
-                    const volumeData = await decodeVolumeData(obj.volumeData, obj.dataFormat);
                     const cacheKey = `${obj.orbitalIndex}_${gridSize}_${padding}`;
-                    window.orbitalCache[cacheKey] = {
-                        volumeData,
-                        gridInfo,
-                        minValue: obj.minValue,
-                        maxValue: obj.maxValue,
-                        orbitalType: obj.orbitalType,
-                        energy: obj.energy,
-                        occupation: obj.occupation,
-                        orbitalIndex: obj.orbitalIndex,
-                        homoIndex: null,  // Set from meta below
-                        lumoIndex: null,
-                        numOrbitals: state.total,
-                        fileType: 'molden-generated'
-                    };
+
+                    if (obj.dataFormat === 'mesh' && obj.mesh) {
+                        // Mesh mode: decode pre-computed mesh data
+                        const meshGeometry = await decodeMeshData(obj.mesh);
+                        window.orbitalCache[cacheKey] = {
+                            meshData: meshGeometry,
+                            gridInfo,
+                            minValue: obj.minValue,
+                            maxValue: obj.maxValue,
+                            orbitalType: obj.orbitalType,
+                            energy: obj.energy,
+                            occupation: obj.occupation,
+                            orbitalIndex: obj.orbitalIndex,
+                            homoIndex: null,
+                            lumoIndex: null,
+                            numOrbitals: state.total,
+                            fileType: 'molden-generated',
+                            isMesh: true,
+                        };
+                    } else {
+                        // Volume mode: decode volumetric data (legacy path)
+                        const volumeData = await decodeVolumeData(obj.volumeData, obj.dataFormat);
+                        window.orbitalCache[cacheKey] = {
+                            volumeData,
+                            gridInfo,
+                            minValue: obj.minValue,
+                            maxValue: obj.maxValue,
+                            orbitalType: obj.orbitalType,
+                            energy: obj.energy,
+                            occupation: obj.occupation,
+                            orbitalIndex: obj.orbitalIndex,
+                            homoIndex: null,
+                            lumoIndex: null,
+                            numOrbitals: state.total,
+                            fileType: 'molden-generated',
+                            isMesh: false,
+                        };
+                    }
                     state.loaded++;
                     onProgress?.(state.loaded, state.total);
                 } else if (obj.type === 'error') {
@@ -248,7 +311,7 @@ export async function preloadAllOrbitals(moldenContent, gridSize = 50, padding =
         }
 
         const elapsed = performance.now() - t0;
-        console.log(`[OrbitalPreload] Completed: ${state.loaded}/${state.total} orbitals in ${elapsed.toFixed(0)}ms`);
+        console.log(`[OrbitalPreload] Completed: ${state.loaded}/${state.total} orbitals in ${elapsed.toFixed(0)}ms (${mode} mode)`);
 
     } catch (err) {
         if (err.name === 'AbortError') {
@@ -349,6 +412,69 @@ export async function generateMoldenOrbitalGridFromBackend(moldenContent, orbita
 }
 
 /**
+ * Request a single orbital as pre-computed mesh data from the backend.
+ * Much faster than volume data for initial display (5-20KB vs 50-100KB).
+ * Falls back to volume mode if mesh request fails.
+ */
+export async function generateMoldenOrbitalMeshFromBackend(moldenContent, orbitalIndex = 0, gridSize = 50, padding = 4.0, isoValue = 0.02) {
+    if (!moldenContent) return null;
+
+    // Check cache first
+    const cached = getCachedOrbital(orbitalIndex, gridSize, padding);
+    if (cached) return cached;
+
+    try {
+        const t0 = performance.now();
+        console.log(`[MoldenOrbitals] Requesting orbital ${orbitalIndex} mesh (grid=${gridSize})...`);
+
+        const response = await fetch(`${BACKEND_URL}/ai/molden/orbital`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                moldenContent, orbitalIndex, gridSize, padding,
+                meshMode: true, isoValue
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'Unknown error');
+
+        const meshGeometry = await decodeMeshData(result.mesh);
+        const elapsed = performance.now() - t0;
+        console.log(`[MoldenOrbitals] Orbital ${orbitalIndex} mesh loaded in ${elapsed.toFixed(0)}ms`);
+
+        const orbitalData = {
+            meshData: meshGeometry,
+            gridInfo: result.gridInfo,
+            minValue: result.minValue,
+            maxValue: result.maxValue,
+            comment: result.comment,
+            fileType: 'molden-generated',
+            orbitalIndex: result.orbitalIndex,
+            orbitalType: result.orbitalType,
+            energy: result.energy,
+            occupation: result.occupation,
+            homoIndex: result.homoIndex,
+            lumoIndex: result.lumoIndex,
+            numOrbitals: result.numOrbitals,
+            isMesh: true,
+        };
+
+        const cacheKey = `${orbitalIndex}_${gridSize}_${padding}`;
+        window.orbitalCache[cacheKey] = orbitalData;
+        return orbitalData;
+
+    } catch (error) {
+        console.warn('[MoldenOrbitals] Mesh request failed, falling back to volume:', error.message);
+        return generateMoldenOrbitalGridFromBackend(moldenContent, orbitalIndex, gridSize, padding);
+    }
+}
+
+/**
  * Get information about orbitals in a molden file without computing the full grid.
  */
 export async function getMoldenOrbitalInfo(moldenContent) {
@@ -403,6 +529,7 @@ export function generateMoldenOrbitalGrid(moldenData, atoms, orbitalIndex = -1, 
 
 // Export functions to window for use in non-module scripts
 window.generateMoldenOrbitalGridFromBackend = generateMoldenOrbitalGridFromBackend;
+window.generateMoldenOrbitalMeshFromBackend = generateMoldenOrbitalMeshFromBackend;
 window.getMoldenOrbitalInfo = getMoldenOrbitalInfo;
 window.generateMoldenOrbitalGrid = generateMoldenOrbitalGrid;
 window.preloadAllOrbitals = preloadAllOrbitals;
@@ -411,6 +538,7 @@ window.clearOrbitalCache = clearOrbitalCache;
 
 export default {
     generateMoldenOrbitalGridFromBackend,
+    generateMoldenOrbitalMeshFromBackend,
     getMoldenOrbitalInfo,
     generateMoldenOrbitalGrid,
     preloadAllOrbitals,
