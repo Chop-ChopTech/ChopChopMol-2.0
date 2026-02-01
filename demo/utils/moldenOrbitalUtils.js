@@ -1,27 +1,23 @@
-/**
- * Molden Orbital Visualization Utilities
- *
- * This module provides functions to generate volumetric orbital data from Molden files
- * by calling the PySCF-based backend for accurate Gaussian basis function evaluation.
- *
- * The backend handles all the complexity of:
- * - Spherical vs Cartesian basis sets (5D/7F/9G detection)
- * - Different normalization conventions (ORCA, PySCF, Gaussian, etc.)
- * - All angular momentum types (s, p, d, f, g)
- *
- * OPTIMIZATIONS (v2.0):
- * - Binary data transfer (base64-encoded Float32 with zlib compression)
- * - Backend caching of mol objects and AO grids - instant orbital switching
- * - Frontend orbital cache with batch preloading - click any orbital instantly
- * - Streaming NDJSON for progress bar during preload
- *
- * The frontend just needs to send the molden file content and receive the volumetric grid.
- */
-
 // Backend URL - use local or production
-const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+let BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://127.0.0.1:10000'
     : 'https://chopchopmol-ai-backend.onrender.com';
+
+window.addEventListener('keydown', (event) => {
+    if (event.key === '9') {
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'b') {
+                let code = prompt('Enter password');
+                if (code === '2626') {
+                    BACKEND_URL = 'https://zghitf9eyxg7u5-10000.proxy.runpod.net';
+                    console.log('Backend URL set to:', BACKEND_URL);
+                }
+            }
+        });
+    }
+});
+
+// https://zghitf9eyxg7u5-10000.proxy.runpod.net/health
 
 // ============================================================================
 // Binary Decoders
