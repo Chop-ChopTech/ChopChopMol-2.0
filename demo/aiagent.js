@@ -280,13 +280,13 @@ const FUNCTIONS = {
                         basePos.sub(pivot);
                         basePos.applyMatrix4(rotMatrix);
                         basePos.add(pivot);
-                        x = (basePos.x + offset.x) / stretch;
-                        y = (basePos.y + offset.y) / stretch;
-                        z = (basePos.z + offset.z) / stretch;
+                        x = (basePos.x - offset.x) / stretch;
+                        y = (basePos.y - offset.y) / stretch;
+                        z = (basePos.z - offset.z) / stretch;
                     } else {
-                        x = (atom.position.x + offset.x) / stretch;
-                        y = (atom.position.y + offset.y) / stretch;
-                        z = (atom.position.z + offset.z) / stretch;
+                        x = (atom.position.x - offset.x) / stretch;
+                        y = (atom.position.y - offset.y) / stretch;
+                        z = (atom.position.z - offset.z) / stretch;
                     }
 
                     atomData.push({ element: atom.type, x, y, z });
@@ -963,21 +963,70 @@ const FUNCTIONS = {
         execute: (params) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
 
-            const { axisAtom1, axisAtom2, atomsToMove, increment = 10, startAngle = 0, endAngle = 360 } = params;
+            const { axisAtom1, axisAtom2, increment = 10, startAngle = 0, endAngle = 360 } = params;
             const molecule = window.main.molecule;
             const stretch = molecule.stretch || 4;
             const offset = molecule.offset || { x: 0, y: 0, z: 0 };
+            const allAtoms = molecule.atoms;
+            const bonds = molecule.bonds;
 
-            const atom1 = molecule.atoms[axisAtom1];
-            const atom2 = molecule.atoms[axisAtom2];
+            const atom1 = allAtoms[axisAtom1];
+            const atom2 = allAtoms[axisAtom2];
             if (!atom1 || !atom2) return { success: false, message: "Invalid axis atoms" };
-            if (!atomsToMove || atomsToMove.length === 0) return { success: false, message: "No atoms to rotate" };
             if (!increment || increment <= 0) return { success: false, message: "Increment must be positive" };
 
-            const range = endAngle - startAngle;
-            const steps = Math.floor(Math.abs(range) / increment) + 1;
-            const allAtoms = molecule.atoms;
+            // Validate that axis atoms are bonded
+            const areBonded = bonds.some(bond => {
+                const i1 = allAtoms.indexOf(bond.atom1);
+                const i2 = allAtoms.indexOf(bond.atom2);
+                return (i1 === axisAtom1 && i2 === axisAtom2) || (i1 === axisAtom2 && i2 === axisAtom1);
+            });
+            if (!areBonded) return { success: false, message: `Atoms ${axisAtom1} and ${axisAtom2} are not bonded. Pick a bonded pair.` };
 
+            // Auto-compute fragment: BFS from axisAtom2, excluding axisAtom1
+            const adj = new Map();
+            for (let i = 0; i < allAtoms.length; i++) adj.set(i, []);
+            bonds.forEach(bond => {
+                const i1 = allAtoms.indexOf(bond.atom1);
+                const i2 = allAtoms.indexOf(bond.atom2);
+                if (i1 !== -1 && i2 !== -1) {
+                    adj.get(i1).push(i2);
+                    adj.get(i2).push(i1);
+                }
+            });
+
+            const findFragment = (start, exclude) => {
+                const visited = new Set([start]);
+                const queue = [start];
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    for (const neighbor of (adj.get(current) || [])) {
+                        if (current === start && neighbor === exclude) continue;
+                        if (!visited.has(neighbor)) {
+                            visited.add(neighbor);
+                            queue.push(neighbor);
+                        }
+                    }
+                }
+                return Array.from(visited);
+            };
+
+            const frag1 = findFragment(axisAtom1, axisAtom2);
+            const frag2 = findFragment(axisAtom2, axisAtom1);
+
+            // Use the smaller fragment; if equal, use the one on the axisAtom2 side
+            let atomsToMove;
+            if (params.atomsToMove && params.atomsToMove.length > 0) {
+                atomsToMove = params.atomsToMove; // Allow override if explicitly provided
+            } else {
+                atomsToMove = frag2.length <= frag1.length ? frag2 : frag1;
+            }
+
+            const range = endAngle - startAngle;
+            const steps = Math.floor(Math.abs(range) / increment);
+            if (steps < 1) return { success: false, message: "Angle range too small for given increment" };
+
+            const atomsToMoveSet = new Set(atomsToMove);
             const originalPositions = {};
             atomsToMove.forEach(idx => {
                 const atom = allAtoms[idx];
@@ -1002,18 +1051,18 @@ const FUNCTIONS = {
                 allAtoms.forEach((atom, idx) => {
                     let x, y, z;
 
-                    if (atomsToMove.includes(idx)) {
+                    if (atomsToMoveSet.has(idx)) {
                         const basePos = originalPositions[idx].clone();
                         basePos.sub(axisPoint);
                         basePos.applyMatrix4(rotationMatrix);
                         basePos.add(axisPoint);
-                        x = (basePos.x + offset.x) / stretch;
-                        y = (basePos.y + offset.y) / stretch;
-                        z = (basePos.z + offset.z) / stretch;
+                        x = (basePos.x - offset.x) / stretch;
+                        y = (basePos.y - offset.y) / stretch;
+                        z = (basePos.z - offset.z) / stretch;
                     } else {
-                        x = (atom.position.x + offset.x) / stretch;
-                        y = (atom.position.y + offset.y) / stretch;
-                        z = (atom.position.z + offset.z) / stretch;
+                        x = (atom.position.x - offset.x) / stretch;
+                        y = (atom.position.y - offset.y) / stretch;
+                        z = (atom.position.z - offset.z) / stretch;
                     }
 
                     atomData.push({ element: atom.type, x, y, z });
@@ -1026,7 +1075,7 @@ const FUNCTIONS = {
 
             return {
                 success: true,
-                message: `Generated ${steps} frames (${startAngle}° to ${startAngle + (steps - 1) * increment * direction}° in ${increment}° steps). Use frame slider to play.`
+                message: `Generated ${steps} frames rotating ${atomsToMove.length} atoms (${startAngle}° to ${startAngle + (steps - 1) * increment * direction}° in ${increment}° steps). Use frame slider to play.`
             };
         }
     },
@@ -1075,13 +1124,13 @@ const FUNCTIONS = {
                     if (atomsToMove.includes(idx)) {
                         const basePos = originalPositions[idx].clone();
                         basePos.add(translationVec);
-                        x = (basePos.x + offset.x) / stretch;
-                        y = (basePos.y + offset.y) / stretch;
-                        z = (basePos.z + offset.z) / stretch;
+                        x = (basePos.x - offset.x) / stretch;
+                        y = (basePos.y - offset.y) / stretch;
+                        z = (basePos.z - offset.z) / stretch;
                     } else {
-                        x = (atom.position.x + offset.x) / stretch;
-                        y = (atom.position.y + offset.y) / stretch;
-                        z = (atom.position.z + offset.z) / stretch;
+                        x = (atom.position.x - offset.x) / stretch;
+                        y = (atom.position.y - offset.y) / stretch;
+                        z = (atom.position.z - offset.z) / stretch;
                     }
 
                     atomData.push({ element: atom.type, x, y, z });

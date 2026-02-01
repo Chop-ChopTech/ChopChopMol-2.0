@@ -2565,7 +2565,6 @@ input[type="range"]:focus {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: transparent;
     position: relative;
     z-index: 1;
 }
