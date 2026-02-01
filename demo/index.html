@@ -2220,14 +2220,16 @@
         <button class="panel-collapse-toggle" id="aiCollapseToggle" title="Collapse panel">
             <i class="fas fa-chevron-left"></i>
         </button>
-        <div class="ai-chat-header" style="background: transparent;">
-
+        <div class="ai-chat-header">
+            <div class="ai-chat-header-title">
+                <i class="fas fa-atom"></i>
+                AI Assistant
+            </div>
             <div class="ai-header-buttons">
-                <button id="aiClearBtn" class="ai-header-btn" title="Clear chat" style="width:100% ;">
-                    Clear Chat
+                <button id="aiClearBtn" class="ai-header-btn ai-clear-btn" title="Clear chat">
+                    <i class="fas fa-trash-alt"></i>
                 </button>
-                <button id="aiSettingsBtn" style="display: none;" class="ai-header-btn" title="API Settings"
-                    style="display: none;">
+                <button id="aiSettingsBtn" style="display: none;" class="ai-header-btn" title="API Settings">
                     <i class="fas fa-cog"></i>
                 </button>
                 <button id="aiCloseBtn" class="ai-header-btn" title="Close" style="display: none;">
@@ -2239,6 +2241,9 @@
 
         <div id="aiChatMessages" class="ai-chat-messages">
             <div class="ai-welcome">
+                <div class="ai-welcome-icon"><i class="fas fa-flask"></i></div>
+                <h4>ChopChopMol AI</h4>
+                <p>Ask me to edit molecules, run torsion scans, optimize geometries, or calculate energies.</p>
             </div>
         </div>
 

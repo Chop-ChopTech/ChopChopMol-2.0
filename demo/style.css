@@ -1324,7 +1324,7 @@ input[type="range"]:focus {
     padding: 10px 0;
     position: absolute;
     top: -20px;
-    left: 242px;
+    left: 290px;
     margin-right: 0px;
     margin-top: 10px;
     right: 0px;
@@ -2456,24 +2456,34 @@ input[type="range"]:focus {
 }
 
 .ai-model-select {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.6);
     padding: 4px 8px;
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
+    font-family: 'Rubik', sans-serif;
+    transition: background 0.2s, border-color 0.2s;
 }
 
 .ai-model-select:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.ai-model-select:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.3);
 }
 
 #bottom-options {
     display: flex;
     flex-direction: row;
-    gap: 10px;
+    gap: 6px;
+    align-items: center;
 }
 
 .ai-chat-panel {
@@ -2482,13 +2492,15 @@ input[type="range"]:focus {
     top: 0;
     width: 280px;
     height: 100vh;
-    background: transparent;
+    background: linear-gradient(180deg, rgba(12, 15, 28, 0.92) 0%, rgba(8, 10, 22, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
     display: flex;
     flex-direction: column;
     z-index: 10001;
     font-family: 'Rubik', sans-serif;
-    border: none;
-    box-shadow: none;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
     transform: translateX(-100%);
     transition: transform 0.3s ease !important;
 }
@@ -2500,48 +2512,57 @@ input[type="range"]:focus {
 /* Header */
 .ai-chat-header {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 8px;
-    background: rgba(0, 0, 0, 0.25);
-
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.2);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 0 12px 0 0;
     color: white;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 14px;
+    gap: 8px;
 }
 
-.ai-chat-header i {
-    margin-right: 8px;
+.ai-chat-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.ai-chat-header-title i {
+    font-size: 12px;
+    color: rgba(140, 160, 255, 0.7);
 }
 
 .ai-header-buttons {
     display: flex;
-    gap: 5px;
+    gap: 4px;
     align-items: center;
-    justify-content: center;
-    text-align: center;
     margin: 0;
     padding: 0;
-    width: 100%;
+    flex-shrink: 0;
 }
 
 .ai-header-btn {
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.45);
     cursor: pointer;
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: 5px 10px;
+    font-size: 11px;
     border-radius: 8px;
-    transition: background 0.2s, color 0.2s;
-    align-items: center;
-    text-align: left;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
     line-height: 1;
-    width: 100px;
     font-weight: 500;
+    font-family: 'Rubik', sans-serif;
+    white-space: nowrap;
 }
 
 .ai-header-btn i {
@@ -2553,18 +2574,34 @@ input[type="range"]:focus {
 }
 
 .ai-header-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.ai-clear-btn {
+    padding: 5px 7px;
+    width: auto;
+    color: rgba(239, 80, 80, 0.5);
+    border-color: transparent;
+    background: none;
+    font-size: 12px;
+}
+
+.ai-clear-btn:hover {
+    color: rgba(239, 80, 80, 0.9);
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.15);
 }
 
 /* Messages Container */
 .ai-chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 12px;
+    padding: 12px 10px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     position: relative;
     z-index: 1;
 }
@@ -2730,26 +2767,24 @@ input[type="range"]:focus {
 }
 
 .ai-message.user .ai-message-content {
-    background: rgba(40, 100, 220, 0.4);
+    background: linear-gradient(135deg, rgba(60, 100, 220, 0.3), rgba(90, 70, 200, 0.2));
     color: white;
     border-bottom-right-radius: 4px;
-    border: 1px solid rgba(100, 160, 255, 0.2);
-    box-shadow: 0 2px 16px rgba(0, 60, 180, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(100, 140, 255, 0.15);
+    box-shadow: 0 2px 12px rgba(0, 40, 150, 0.15);
 }
 
 .ai-message.assistant .ai-message-content {
-    background: rgba(255, 255, 255, 0.07);
-    color: rgba(255, 255, 255, 0.88);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.85);
     border-bottom-left-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.12);
 }
 
 .ai-message.error .ai-message-content {
-    background: rgba(239, 68, 68, 0.15);
-    border: 1px solid rgba(239, 68, 68, 0.25);
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
     color: #fca5a5;
 }
 
@@ -2829,9 +2864,9 @@ input[type="range"]:focus {
 .ai-chat-input-area {
     display: flex;
     flex-direction: column;
-    padding: 10px 10px 12px;
-    background: transparent;
-    border-top: none;
+    padding: 8px 10px 10px;
+    background: rgba(0, 0, 0, 0.15);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
     gap: 8px;
     position: relative;
 }
@@ -2839,20 +2874,20 @@ input[type="range"]:focus {
 .ai-chat-input-area::before {
     content: '';
     position: absolute;
-    top: -24px;
+    top: -20px;
     left: 0;
     right: 0;
-    height: 24px;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.18), transparent);
+    height: 20px;
+    background: linear-gradient(to top, rgba(8, 10, 22, 0.8), transparent);
     pointer-events: none;
 }
 
 #aiChatInput {
     width: 100%;
     box-sizing: border-box;
-    padding: 10px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
     background: rgba(255, 255, 255, 0.04);
     color: white;
     font-size: 13px;
@@ -2889,39 +2924,36 @@ input[type="range"]:focus {
 }
 
 #aiChatInput:focus {
-    border-color: rgba(102, 126, 234, 0.35);
+    border-color: rgba(102, 126, 234, 0.25);
     background: rgba(255, 255, 255, 0.06);
-    box-shadow: 0 0 20px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.06);
 }
 
 #aiSendBtn {
-    align-self: flex-end;
-    width: 34px;
-    height: 34px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    background: rgba(60, 71, 119, 0.35);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: rgba(255, 255, 255, 0.8);
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(139, 92, 246, 0.15));
+    color: rgba(180, 195, 255, 0.9);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
-    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    font-size: 12px;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s, border-color 0.2s;
     flex-shrink: 0;
 }
 
 #aiSendBtn:hover {
-    transform: scale(1.08);
-    background: rgba(80, 95, 160, 0.5);
-    box-shadow: 0 0 16px rgba(102, 126, 234, 0.3);
+    transform: scale(1.06);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.35), rgba(139, 92, 246, 0.25));
+    border-color: rgba(102, 126, 234, 0.35);
+    box-shadow: 0 0 14px rgba(102, 126, 234, 0.2);
 }
 
 #aiSendBtn:disabled {
-    opacity: 0.4;
+    opacity: 0.3;
     cursor: not-allowed;
     transform: none;
 }
@@ -3029,28 +3061,42 @@ input[type="range"]:focus {
 /* Welcome Message */
 .ai-welcome {
     text-align: center;
-    padding: 20px;
+    padding: 30px 16px;
     color: rgba(255, 255, 255, 0.4);
+    margin-top: auto;
+    margin-bottom: auto;
 }
 
-.ai-welcome i {
-    font-size: 32px;
-    margin-bottom: 12px;
-    color: rgba(255, 255, 255, 0.15);
+.ai-welcome-icon {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.15));
+    border: 1px solid rgba(102, 126, 234, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ai-welcome-icon i {
+    font-size: 18px;
+    color: rgba(140, 160, 255, 0.6);
 }
 
 .ai-welcome h4 {
-    color: rgba(255, 255, 255, 0.5);
-    margin: 0 0 8px 0;
-    font-size: 14px;
-    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
 }
 
 .ai-welcome p {
-    font-size: 12px;
+    font-size: 11.5px;
     line-height: 1.6;
     margin: 0;
-    color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.28);
 }
 
 /* Quick Actions */
@@ -4368,16 +4414,16 @@ input[type="range"]:focus {
     right: -20px;
     border-radius: 0 6px 6px 0;
     border-left: none;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(12, 15, 28, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-color: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.35);
 }
 
 .ai-chat-panel .panel-collapse-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.8);
+    background: rgba(20, 25, 45, 0.9);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* File Explorer toggle - on left edge, arrow points right when expanded */
@@ -4439,19 +4485,25 @@ input[type="range"]:focus {
 
 /* Mic Button */
 .ai-mic-btn {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.45);
     cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 50%;
-    transition: background 0.2s, color 0.2s;
-    font-size: 13px;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .ai-mic-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .ai-mic-btn.recording {

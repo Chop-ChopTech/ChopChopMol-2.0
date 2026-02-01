@@ -5421,7 +5421,7 @@ function updateRendererSize() {
     }
     const fragmentListContainer = document.getElementById('fragmentListContainer');
     if (fragmentListContainer) {
-        fragmentListContainer.style.left = (leftOffset) + 'px';
+        fragmentListContainer.style.left = (leftOffset + 10) + 'px';
     }
     render();
 }
