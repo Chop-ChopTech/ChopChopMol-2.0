@@ -975,15 +975,7 @@ const FUNCTIONS = {
             if (!atom1 || !atom2) return { success: false, message: "Invalid axis atoms" };
             if (!increment || increment <= 0) return { success: false, message: "Increment must be positive" };
 
-            // Validate that axis atoms are bonded
-            const areBonded = bonds.some(bond => {
-                const i1 = allAtoms.indexOf(bond.atom1);
-                const i2 = allAtoms.indexOf(bond.atom2);
-                return (i1 === axisAtom1 && i2 === axisAtom2) || (i1 === axisAtom2 && i2 === axisAtom1);
-            });
-            if (!areBonded) return { success: false, message: `Atoms ${axisAtom1} and ${axisAtom2} are not bonded. Pick a bonded pair.` };
-
-            // Auto-compute fragment: BFS from axisAtom2, excluding axisAtom1
+            // Auto-compute fragments via BFS from each side, excluding the other
             const adj = new Map();
             for (let i = 0; i < allAtoms.length; i++) adj.set(i, []);
             bonds.forEach(bond => {
@@ -1013,6 +1005,11 @@ const FUNCTIONS = {
 
             const frag1 = findFragment(axisAtom1, axisAtom2);
             const frag2 = findFragment(axisAtom2, axisAtom1);
+
+            // If both fragments contain all atoms, they're in a ring and can't be split
+            if (frag1.length + frag2.length > allAtoms.length) {
+                return { success: false, message: `Cannot split molecule at atoms ${axisAtom1}-${axisAtom2}: they are part of a ring.` };
+            }
 
             // Use the smaller fragment; if equal, use the one on the axisAtom2 side
             let atomsToMove;
