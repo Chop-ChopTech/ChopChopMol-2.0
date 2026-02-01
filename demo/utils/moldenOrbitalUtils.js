@@ -412,69 +412,6 @@ export async function generateMoldenOrbitalGridFromBackend(moldenContent, orbita
 }
 
 /**
- * Request a single orbital as pre-computed mesh data from the backend.
- * Much faster than volume data for initial display (5-20KB vs 50-100KB).
- * Falls back to volume mode if mesh request fails.
- */
-export async function generateMoldenOrbitalMeshFromBackend(moldenContent, orbitalIndex = 0, gridSize = 50, padding = 4.0, isoValue = 0.02) {
-    if (!moldenContent) return null;
-
-    // Check cache first
-    const cached = getCachedOrbital(orbitalIndex, gridSize, padding);
-    if (cached) return cached;
-
-    try {
-        const t0 = performance.now();
-        console.log(`[MoldenOrbitals] Requesting orbital ${orbitalIndex} mesh (grid=${gridSize})...`);
-
-        const response = await fetch(`${BACKEND_URL}/ai/molden/orbital`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                moldenContent, orbitalIndex, gridSize, padding,
-                meshMode: true, isoValue
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error ${response.status}`);
-        }
-
-        const result = await response.json();
-        if (!result.success) throw new Error(result.error || 'Unknown error');
-
-        const meshGeometry = await decodeMeshData(result.mesh);
-        const elapsed = performance.now() - t0;
-        console.log(`[MoldenOrbitals] Orbital ${orbitalIndex} mesh loaded in ${elapsed.toFixed(0)}ms`);
-
-        const orbitalData = {
-            meshData: meshGeometry,
-            gridInfo: result.gridInfo,
-            minValue: result.minValue,
-            maxValue: result.maxValue,
-            comment: result.comment,
-            fileType: 'molden-generated',
-            orbitalIndex: result.orbitalIndex,
-            orbitalType: result.orbitalType,
-            energy: result.energy,
-            occupation: result.occupation,
-            homoIndex: result.homoIndex,
-            lumoIndex: result.lumoIndex,
-            numOrbitals: result.numOrbitals,
-            isMesh: true,
-        };
-
-        const cacheKey = `${orbitalIndex}_${gridSize}_${padding}`;
-        window.orbitalCache[cacheKey] = orbitalData;
-        return orbitalData;
-
-    } catch (error) {
-        console.warn('[MoldenOrbitals] Mesh request failed, falling back to volume:', error.message);
-        return generateMoldenOrbitalGridFromBackend(moldenContent, orbitalIndex, gridSize, padding);
-    }
-}
-
-/**
  * Get information about orbitals in a molden file without computing the full grid.
  */
 export async function getMoldenOrbitalInfo(moldenContent) {
@@ -529,7 +466,6 @@ export function generateMoldenOrbitalGrid(moldenData, atoms, orbitalIndex = -1, 
 
 // Export functions to window for use in non-module scripts
 window.generateMoldenOrbitalGridFromBackend = generateMoldenOrbitalGridFromBackend;
-window.generateMoldenOrbitalMeshFromBackend = generateMoldenOrbitalMeshFromBackend;
 window.getMoldenOrbitalInfo = getMoldenOrbitalInfo;
 window.generateMoldenOrbitalGrid = generateMoldenOrbitalGrid;
 window.preloadAllOrbitals = preloadAllOrbitals;
@@ -538,7 +474,6 @@ window.clearOrbitalCache = clearOrbitalCache;
 
 export default {
     generateMoldenOrbitalGridFromBackend,
-    generateMoldenOrbitalMeshFromBackend,
     getMoldenOrbitalInfo,
     generateMoldenOrbitalGrid,
     preloadAllOrbitals,
