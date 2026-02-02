@@ -54,8 +54,9 @@ export default class Molecule {
         this.orbitalPositiveMesh = null;
         this.orbitalNegativeMesh = null;
         this.orbitalIsovalue = 0.02;
-        this.orbitalOpacity = 0.7;
+        this.orbitalOpacity = 0;
         this.orbitalVisible = false;
+        this.orbitalRenderMode = 'wireframe';
         this.orbitalMaterialPreset = 'default';
 
         // LOD state
@@ -1610,7 +1611,7 @@ export default class Molecule {
         if (mode !== null) {
             this.orbitalRenderMode = mode;
         } else if (!this.orbitalRenderMode) {
-            this.orbitalRenderMode = 'solid';
+            this.orbitalRenderMode = 'wireframe';
         }
 
         // Generate phase-separated isosurfaces
@@ -1742,7 +1743,7 @@ export default class Molecule {
         if (mode !== null) {
             this.orbitalRenderMode = mode;
         } else if (!this.orbitalRenderMode) {
-            this.orbitalRenderMode = 'solid';
+            this.orbitalRenderMode = 'wireframe';
         }
 
         // Generate phase-separated isosurfaces
