@@ -4718,10 +4718,10 @@ input[type="range"]:focus {
 
 
 .properties-panel {
-    position: absolute;
-    top: 70px;
-    right: 100%;
-    margin-right: 397px;
+    position: fixed;
+    top: 60px;
+    left: var(--properties-panel-left, 50%);
+    transform: translateX(-50%);
     width: 250px;
     z-index: 9998;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);

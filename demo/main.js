@@ -5415,10 +5415,12 @@ function updateRendererSize() {
         frameSlider.style.left = (leftOffset + width / 2) + 'px';
     }
     const toolbarBg = document.getElementById('toolbar-background');
+    const canvasCenter = leftOffset + width / 2;
     if (toolbarBg) {
-        toolbarBg.style.left = (leftOffset + width / 2) + 'px';
+        toolbarBg.style.left = canvasCenter + 'px';
         toolbarBg.style.transform = 'translateX(-50%)';
     }
+    document.documentElement.style.setProperty('--properties-panel-left', canvasCenter + 'px');
     const fragmentListContainer = document.getElementById('fragmentListContainer');
     if (fragmentListContainer) {
         fragmentListContainer.style.left = (leftOffset + 10) + 'px';

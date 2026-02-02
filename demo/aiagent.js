@@ -1773,7 +1773,7 @@ const FUNCTIONS = {
             const model = params.model || AI_CONFIG.maceModel || 'mace-mp-0a';
             AI_CONFIG.maceModel = model;
             localStorage.setItem('chopchop_mace_model', model);
-            const includeForces = params.includeForces || false;
+            const includeForces = params.includeForces !== false;
 
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
 
@@ -1807,7 +1807,7 @@ const FUNCTIONS = {
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
             const stretch = molecule.stretch || 4;
             const offset = molecule.offset || { x: 0, y: 0, z: 0 };
-            const includeForces = params.includeForces || false;
+            const includeForces = params.includeForces !== false;
 
             try {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/optimize`, {
@@ -1939,7 +1939,7 @@ const FUNCTIONS = {
             const model = params.model || AI_CONFIG.maceModel || 'mace-mp-0a';
             AI_CONFIG.maceModel = model;
             localStorage.setItem('chopchop_mace_model', model);
-            const includeForces = params.includeForces || false;
+            const includeForces = params.includeForces !== false;
             const frames = window.xyzFrames;
             if (window.lastMaceResults && window.lastMaceResults.frameCount !== (frames?.length || 1)) {
                 window.lastMaceResults = null;
@@ -1956,6 +1956,10 @@ const FUNCTIONS = {
                         body: JSON.stringify({ atoms, model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a', includeForces })
                     });
                     const result = await res.json();
+                    if (result.success !== false && result.forces) {
+                        molecule.setForcesFromCalculation(result.forces);
+                        if (window.updateForceArrowControls) window.updateForceArrowControls();
+                    }
                     return { success: true, frameCount: 1, energies: [result] };
                 } catch (e) {
                     return { success: false, message: e.message };
