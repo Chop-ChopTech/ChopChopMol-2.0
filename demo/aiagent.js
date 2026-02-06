@@ -1973,8 +1973,12 @@ const FUNCTIONS = {
 
                 if (result.success) window.lastMaceResults = result;
 
-                // Merge forces back into window.xyzFrames and update current frame
+                // Store energies in window.frameEnergies and on each frame object
                 if (result.success && result.energies) {
+                    window.frameEnergies = result.energies.map(e => e.energy_eV);
+                    result.energies.forEach((e, i) => {
+                        if (window.xyzFrames[i]) window.xyzFrames[i].energy = e.energy_eV;
+                    });
                     mergeForcesIntoFrames(result.energies, includeForces);
                     updateCurrentFrameForces();
                 }
