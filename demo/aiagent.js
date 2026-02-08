@@ -300,7 +300,8 @@ const FUNCTIONS = {
 
             return {
                 success: true,
-                message: `Generated ${steps} frames (${startAngle}° to ${startAngle + (steps - 1) * increment * direction}° in ${increment}° steps). Rotating ${atomsToMove.length} atoms. Use frame slider to play.`
+                frameCount: steps,
+                message: `Generated ${steps} frames (${startAngle}° to ${startAngle + (steps - 1) * increment * direction}° in ${increment}° steps). Rotating ${atomsToMove.length} atoms.`
             };
         }
     },
@@ -869,38 +870,115 @@ const FUNCTIONS = {
     },
 
     measure_distance: {
-        execute: () => {
+        execute: (params = {}) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
-            if (!window.atomsSelected || window.atomsSelected.length !== 2) return { success: false, message: "Select exactly 2 atoms" };
-            if (typeof window.createInfoLabel === 'function') {
-                window.createInfoLabel(window.atomsSelected[0], window.atomsSelected[1]);
-                return { success: true, message: "Distance label created" };
+            const atoms = window.main.molecule.atoms;
+            let idx1, idx2;
+            if (params.atom1 !== undefined && params.atom2 !== undefined) {
+                idx1 = params.atom1; idx2 = params.atom2;
+            } else if (window.atomsSelected?.length === 2) {
+                idx1 = window.atomsSelected[0]; idx2 = window.atomsSelected[1];
+            } else {
+                return { success: false, message: "Provide atom1 and atom2, or select exactly 2 atoms" };
             }
-            const a1 = window.main.molecule.atoms[window.atomsSelected[0]], a2 = window.main.molecule.atoms[window.atomsSelected[1]];
-            const dist = Math.sqrt((a2.x - a1.x) ** 2 + (a2.y - a1.y) ** 2 + (a2.z - a1.z) ** 2);
-            return { success: true, message: `Distance: ${(dist / 4).toFixed(2)} Å` };
+            if (idx1 < 0 || idx1 >= atoms.length || idx2 < 0 || idx2 >= atoms.length) {
+                return { success: false, message: "Invalid atom indices" };
+            }
+            if (typeof window.createInfoLabel === 'function') {
+                window.createInfoLabel(idx1, idx2);
+            }
+            const a1 = atoms[idx1], a2 = atoms[idx2];
+            const dist = Math.sqrt((a2.x - a1.x) ** 2 + (a2.y - a1.y) ** 2 + (a2.z - a1.z) ** 2) / 4;
+            return {
+                success: true,
+                distance_angstrom: parseFloat(dist.toFixed(4)),
+                atom1: { index: idx1, element: a1.type },
+                atom2: { index: idx2, element: a2.type },
+                message: `${a1.type}${idx1}-${a2.type}${idx2}: ${dist.toFixed(3)} Å`
+            };
         }
     },
 
     measure_angle: {
-        execute: () => {
-            if (!window.atomsSelected || window.atomsSelected.length !== 3) return { success: false, message: "Select exactly 3 atoms" };
-            if (typeof window.createInfoLabel === 'function') {
-                window.createInfoLabel(window.atomsSelected[0], window.atomsSelected[1], window.atomsSelected[2]);
-                return { success: true, message: "Angle label created" };
+        execute: (params = {}) => {
+            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
+            const atoms = window.main.molecule.atoms;
+            let idx1, idx2, idx3;
+            if (params.atom1 !== undefined && params.atom2 !== undefined && params.atom3 !== undefined) {
+                idx1 = params.atom1; idx2 = params.atom2; idx3 = params.atom3;
+            } else if (window.atomsSelected?.length === 3) {
+                [idx1, idx2, idx3] = window.atomsSelected;
+            } else {
+                return { success: false, message: "Provide atom1/atom2/atom3, or select exactly 3 atoms" };
             }
-            return { success: false, message: "Angle measurement not available" };
+            if ([idx1, idx2, idx3].some(i => i < 0 || i >= atoms.length)) {
+                return { success: false, message: "Invalid atom indices" };
+            }
+            if (typeof window.createInfoLabel === 'function') {
+                window.createInfoLabel(idx1, idx2, idx3);
+            }
+            const a1 = atoms[idx1], a2 = atoms[idx2], a3 = atoms[idx3];
+            const v1 = { x: a1.x - a2.x, y: a1.y - a2.y, z: a1.z - a2.z };
+            const v2 = { x: a3.x - a2.x, y: a3.y - a2.y, z: a3.z - a2.z };
+            const dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+            const mag1 = Math.sqrt(v1.x ** 2 + v1.y ** 2 + v1.z ** 2);
+            const mag2 = Math.sqrt(v2.x ** 2 + v2.y ** 2 + v2.z ** 2);
+            const angle = Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2)))) * 180 / Math.PI;
+            return {
+                success: true,
+                angle_degrees: parseFloat(angle.toFixed(2)),
+                atoms: [
+                    { index: idx1, element: a1.type },
+                    { index: idx2, element: a2.type },
+                    { index: idx3, element: a3.type }
+                ],
+                message: `${a1.type}${idx1}-${a2.type}${idx2}-${a3.type}${idx3}: ${angle.toFixed(1)}°`
+            };
         }
     },
 
     measure_dihedral: {
-        execute: () => {
-            if (!window.atomsSelected || window.atomsSelected.length !== 4) return { success: false, message: "Select exactly 4 atoms" };
-            if (typeof window.createInfoLabel === 'function') {
-                window.createInfoLabel(window.atomsSelected[0], window.atomsSelected[1], window.atomsSelected[2], window.atomsSelected[3]);
-                return { success: true, message: "Dihedral angle label created" };
+        execute: (params = {}) => {
+            if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
+            const atoms = window.main.molecule.atoms;
+            let idx1, idx2, idx3, idx4;
+            if (params.atom1 !== undefined && params.atom2 !== undefined && params.atom3 !== undefined && params.atom4 !== undefined) {
+                idx1 = params.atom1; idx2 = params.atom2; idx3 = params.atom3; idx4 = params.atom4;
+            } else if (window.atomsSelected?.length === 4) {
+                [idx1, idx2, idx3, idx4] = window.atomsSelected;
+            } else {
+                return { success: false, message: "Provide atom1/atom2/atom3/atom4, or select exactly 4 atoms" };
             }
-            return { success: false, message: "Dihedral measurement not available" };
+            if ([idx1, idx2, idx3, idx4].some(i => i < 0 || i >= atoms.length)) {
+                return { success: false, message: "Invalid atom indices" };
+            }
+            if (typeof window.createInfoLabel === 'function') {
+                window.createInfoLabel(idx1, idx2, idx3, idx4);
+            }
+            const a1 = atoms[idx1], a2 = atoms[idx2], a3 = atoms[idx3], a4 = atoms[idx4];
+            const b1 = { x: a2.x - a1.x, y: a2.y - a1.y, z: a2.z - a1.z };
+            const b2 = { x: a3.x - a2.x, y: a3.y - a2.y, z: a3.z - a2.z };
+            const b3 = { x: a4.x - a3.x, y: a4.y - a3.y, z: a4.z - a3.z };
+            const cross = (u, v) => ({ x: u.y * v.z - u.z * v.y, y: u.z * v.x - u.x * v.z, z: u.x * v.y - u.y * v.x });
+            const dot = (u, v) => u.x * v.x + u.y * v.y + u.z * v.z;
+            const n1 = cross(b1, b2);
+            const n2 = cross(b2, b3);
+            const m1 = cross(n1, b2);
+            const mag = Math.sqrt(dot(b2, b2));
+            const x = dot(n1, n2);
+            const y = dot(m1, n2) / mag;
+            const dihedral = Math.atan2(y, x) * 180 / Math.PI;
+            return {
+                success: true,
+                dihedral_degrees: parseFloat(dihedral.toFixed(2)),
+                atoms: [
+                    { index: idx1, element: a1.type },
+                    { index: idx2, element: a2.type },
+                    { index: idx3, element: a3.type },
+                    { index: idx4, element: a4.type }
+                ],
+                message: `${a1.type}${idx1}-${a2.type}${idx2}-${a3.type}${idx3}-${a4.type}${idx4}: ${dihedral.toFixed(1)}°`
+            };
         }
     },
 
@@ -1073,7 +1151,8 @@ const FUNCTIONS = {
 
             return {
                 success: true,
-                message: `Generated ${steps} frames rotating ${atomsToMove.length} atoms (${startAngle}° to ${startAngle + (steps - 1) * increment * direction}° in ${increment}° steps). Use frame slider to play.`
+                frameCount: steps,
+                message: `Generated ${steps} frames rotating ${atomsToMove.length} atoms (${startAngle}° to ${startAngle + (steps - 1) * increment * direction}° in ${increment}° steps).`
             };
         }
     },
@@ -1141,7 +1220,8 @@ const FUNCTIONS = {
 
             return {
                 success: true,
-                message: `Generated ${steps} frames (${startDistance}Å to ${startDistance + (steps - 1) * increment * direction}Å in ${increment}Å steps). Use frame slider to play.`
+                frameCount: steps,
+                message: `Generated ${steps} frames (${startDistance}Å to ${startDistance + (steps - 1) * increment * direction}Å in ${increment}Å steps).`
             };
         }
     },
@@ -2263,30 +2343,88 @@ async function sendToAI(userMessage, onChunk) {
     }
 }
 
+// Next-step hints for composability — AI reads these to discover workflows
+const NEXT_STEPS = {
+    rotational_scan: ["calculate_all_energies to compute energies for each frame"],
+    translation_scan: ["calculate_all_energies to compute energies for each frame"],
+    angle_scan: ["calculate_all_energies to compute energies for each frame"],
+    calculate_all_energies: ["create_chart to visualize energy profile"],
+    calculate_energy: ["toggle_force_arrows to visualize forces (if includeForces was true)"],
+    optimize_geometry: ["get_cached_energies for energy data", "create_chart to plot convergence"],
+    run_md: ["get_cached_energies for trajectory energies", "create_chart to plot energy over time"],
+    load_molecule: ["get_molecule_info to inspect structure"],
+    split_molecule: ["rotational_scan to scan around the split bond"],
+    get_cached_energies: ["create_chart to visualize the energy data"],
+};
+
+// Extract scan x-axis values from frame comments for chart plotting
+function extractScanXValues() {
+    const frames = window.xyzFrames;
+    if (!frames?.length) return null;
+    const xValues = [];
+    let scanType = null;
+    for (const frame of frames) {
+        const comment = frame.comment || '';
+        const angleMatch = comment.match(/angle=([\d.\-]+)/);
+        const distMatch = comment.match(/dist=([\d.\-]+)/);
+        if (angleMatch) { xValues.push(parseFloat(angleMatch[1])); scanType = 'torsion'; }
+        else if (distMatch) { xValues.push(parseFloat(distMatch[1])); scanType = 'dissociation'; }
+        else { xValues.push(xValues.length); }
+    }
+    return xValues.length === frames.length ? { scanXValues: xValues, scanType } : null;
+}
+
 // Compress tool results to reduce payload size
 function compressToolResult(functionName, result) {
     // For successful operations, only send minimal confirmation
     if (result.success) {
-        // Don't send full molecule data back - backend doesn't need it
         const compressed = { success: true };
 
-        // Only include essential data
         if (result.message) compressed.message = result.message;
         if (result.action) compressed.action = result.action;
+
+        // Inject next-step hints for composability
+        if (NEXT_STEPS[functionName]) {
+            compressed.nextSteps = NEXT_STEPS[functionName];
+        }
+
+        // Data-specific pass-throughs
         if (result.data && functionName === 'get_molecule_info') {
-            // Keep only essential molecule info
-            compressed.data = {
-                atomCount: result.data.atomCount,
-                elements: result.data.elements
-            };
+            compressed.data = { atomCount: result.data.atomCount, elements: result.data.elements };
         }
         if (result.data && functionName === 'get_bonded_atoms') {
-            compressed.data = result.data; // This is already minimal
+            compressed.data = result.data;
         }
         if (functionName === 'web_search') {
             if (result.answer) compressed.answer = result.answer;
             if (result.results) compressed.results = result.results;
         }
+
+        // Measurement numeric values
+        if (result.distance_angstrom !== undefined) compressed.distance_angstrom = result.distance_angstrom;
+        if (result.angle_degrees !== undefined) compressed.angle_degrees = result.angle_degrees;
+        if (result.dihedral_degrees !== undefined) compressed.dihedral_degrees = result.dihedral_degrees;
+
+        // Scan/generation metadata
+        if (result.frameCount !== undefined) compressed.frameCount = result.frameCount;
+        if (result.fragment1) compressed.fragment1 = result.fragment1;
+        if (result.fragment2) compressed.fragment2 = result.fragment2;
+
+        // Energy data
+        if (result.energy_eV !== undefined) compressed.energy_eV = result.energy_eV;
+        if (result.converged !== undefined) compressed.converged = result.converged;
+        if (result.energies && functionName === 'calculate_all_energies') {
+            compressed.energies_kcal = result.energies.map(e => e.energy_kcal);
+            compressed.lowestEnergyFrame = result.lowestEnergyFrame;
+            compressed.highestEnergyFrame = result.highestEnergyFrame;
+            const scan = extractScanXValues();
+            if (scan) {
+                compressed.scanXValues = scan.scanXValues;
+                compressed.scanType = scan.scanType;
+            }
+        }
+
+        // Chart
         if (result.chartData) compressed.chartData = result.chartData;
         if (result.hasChart) compressed.hasChart = result.hasChart;
 
