@@ -63,6 +63,7 @@ const toolStatusMap = {
     translation_scan: 'Running translation scan',
     angle_scan: 'Running angle scan',
     run_md: 'Running MD simulation',
+    web_search: 'Searching the web',
 };
 // ALL functions the AI can execute (kept on frontend - they manipulate DOM/Three.js)
 const FUNCTIONS = {
@@ -2031,6 +2032,41 @@ const FUNCTIONS = {
             return { success: true, message: "Chart displayed", hasChart: true };
         }
     },
+
+    web_search: {
+        execute: async (params) => {
+            if (!params.query) return { success: false, message: "No search query provided" };
+            try {
+                const resp = await fetch(`${AI_CONFIG.backendUrl}/ai/knowledge/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: params.query,
+                        search_depth: params.search_depth || 'basic',
+                        max_results: params.max_results || 5,
+                        topic: params.topic || 'general'
+                    })
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    return { success: false, message: err.error || `Search failed (${resp.status})` };
+                }
+                const data = await resp.json();
+                return {
+                    success: true,
+                    answer: data.answer || '',
+                    results: (data.results || []).map(r => ({
+                        title: r.title,
+                        url: r.url,
+                        snippet: r.content
+                    })),
+                    message: `Found ${(data.results || []).length} results for "${params.query}"`
+                };
+            } catch (e) {
+                return { success: false, message: `Search error: ${e.message}` };
+            }
+        }
+    },
 };
 
 function getMoleculeState() {
@@ -2246,6 +2282,10 @@ function compressToolResult(functionName, result) {
         }
         if (result.data && functionName === 'get_bonded_atoms') {
             compressed.data = result.data; // This is already minimal
+        }
+        if (functionName === 'web_search') {
+            if (result.answer) compressed.answer = result.answer;
+            if (result.results) compressed.results = result.results;
         }
         if (result.chartData) compressed.chartData = result.chartData;
         if (result.hasChart) compressed.hasChart = result.hasChart;
