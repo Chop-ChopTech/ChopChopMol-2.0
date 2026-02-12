@@ -1952,6 +1952,30 @@
                     <input type="range" id="style6" min="1" max="64" step="1">
                 </div>
                 <div class="compact-style-row">
+                    <label>Transmission</label>
+                    <input type="range" id="styleTransmission" min="0" max="1" step="0.01" value="0">
+                </div>
+                <div class="compact-style-row">
+                    <label>IOR</label>
+                    <input type="range" id="styleIOR" min="1" max="2.33" step="0.01" value="1.5">
+                </div>
+                <div class="compact-style-row">
+                    <label>Thickness</label>
+                    <input type="range" id="styleThickness" min="0" max="5" step="0.05" value="0.5">
+                </div>
+                <div class="compact-style-row">
+                    <label>Clearcoat</label>
+                    <input type="range" id="styleClearcoat" min="0" max="1" step="0.01" value="0">
+                </div>
+                <div class="compact-style-row">
+                    <label>Sheen</label>
+                    <input type="range" id="styleSheen" min="0" max="1" step="0.01" value="0">
+                </div>
+                <div class="compact-style-row">
+                    <label>Iridescence</label>
+                    <input type="range" id="styleIridescence" min="0" max="1" step="0.01" value="0">
+                </div>
+                <div class="compact-style-row">
                     <label>Background</label>
                     <input type="color" id="style8" value="#01101f">
                 </div>
@@ -1974,6 +1998,40 @@
                 </div>
                 <div class="compact-style-row checkbox-row">
                     <label><input type="checkbox" id="showIndices"> Indices</label>
+                </div>
+            </div>
+
+            <div class="envmap-settings"
+                style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px;">
+                <div class="compact-style-row checkbox-row">
+                    <label><input type="checkbox" id="toggleEnvMap"> Env Map</label>
+                </div>
+                <div class="compact-style-row" id="envMapPresetRow" style="opacity: 0.5;">
+                    <label>HDRI</label>
+                    <select id="envMapPreset" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 4px; font-size: 11px; flex: 1; margin-left: 6px;">
+                        <option value="studio_small_09">Studio</option>
+                        <option value="photo_studio_loft_hall">Loft Hall</option>
+                        <option value="venice_sunset">Venice Sunset</option>
+                        <option value="kloofendal_48d_partly_cloudy_puresky">Partly Cloudy</option>
+                        <option value="dikhololo_night">Night Sky</option>
+                        <option value="forest_slope">Forest</option>
+                        <option value="syferfontein_0d_clear_puresky">Clear Sky</option>
+                        <option value="abandoned_parking">Parking Lot</option>
+                        <option value="industrial_workshop">Workshop</option>
+                        <option value="rural_asphalt_road">Country Road</option>
+                    </select>
+                </div>
+                <div class="compact-style-row" id="envMapResolutionRow" style="opacity: 0.5;">
+                    <label>Resolution</label>
+                    <select id="envMapResolution" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 4px; font-size: 11px; width: 60px; margin-left: 6px;">
+                        <option value="1k" selected>1K</option>
+                        <option value="2k">2K</option>
+                        <option value="4k">4K</option>
+                    </select>
+                </div>
+                <div class="compact-style-row" id="envMapIntensityRow" style="opacity: 0.5;">
+                    <label>Env Intensity</label>
+                    <input type="range" id="envMapIntensity" min="0" max="3" step="0.05" value="1">
                 </div>
             </div>
 

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ArcballControls } from 'jsm/controls/ArcballControls.js';
+import { RGBELoader } from 'jsm/loaders/RGBELoader.js';
 
 import Molecule from '/demo/atom/molecule.js';
 import FileHandler from '/demo/utils/fileHandler.js';
@@ -388,7 +389,15 @@ export default class Main {
     }
     setNewMode(style = false) {
         if (style) {
-            this.mode = { roughness: main.roughness, metalness: main.metalness, bondThickness: main.bondThickness, opacity: main.opacity, atomSize: main.atomSize, resolution: main.resolution, antialias: antialiasToggled, labels: main.labelsToggled };
+            this.mode = {
+                roughness: main.roughness, metalness: main.metalness,
+                bondThickness: main.bondThickness, opacity: main.opacity,
+                atomSize: main.atomSize, resolution: main.resolution,
+                antialias: antialiasToggled, labels: main.labelsToggled,
+                envMapIntensity: window.envMapEnabled ? (window.envMapIntensity || 1) : 0,
+                transmission: main.transmission, ior: main.ior, thickness: main.thickness,
+                clearcoat: main.clearcoat, sheen: main.sheen, iridescence: main.iridescence,
+            };
         } else {
             this.mode = 0
         }
@@ -511,9 +520,53 @@ resSelector.addEventListener('input', () => {
     }
 });
 
+const transmissionSelector = document.getElementById('styleTransmission');
+const iorSelector = document.getElementById('styleIOR');
+const thicknessSelector = document.getElementById('styleThickness');
+const clearcoatSelector = document.getElementById('styleClearcoat');
+const sheenSelector = document.getElementById('styleSheen');
+const iridescenceSelector = document.getElementById('styleIridescence');
+
+main.transmission = 0;
+main.ior = 1.5;
+main.thickness = 0.5;
+main.clearcoat = 0;
+main.sheen = 0;
+main.iridescence = 0;
+
+transmissionSelector.addEventListener('input', () => {
+    main.transmission = parseFloat(transmissionSelector.value);
+    if (mode != 0) updateStyles();
+});
+iorSelector.addEventListener('input', () => {
+    main.ior = parseFloat(iorSelector.value);
+    if (mode != 0) updateStyles();
+});
+thicknessSelector.addEventListener('input', () => {
+    main.thickness = parseFloat(thicknessSelector.value);
+    if (mode != 0) updateStyles();
+});
+clearcoatSelector.addEventListener('input', () => {
+    main.clearcoat = parseFloat(clearcoatSelector.value);
+    if (mode != 0) updateStyles();
+});
+sheenSelector.addEventListener('input', () => {
+    main.sheen = parseFloat(sheenSelector.value);
+    if (mode != 0) updateStyles();
+});
+iridescenceSelector.addEventListener('input', () => {
+    main.iridescence = parseFloat(iridescenceSelector.value);
+    if (mode != 0) updateStyles();
+});
+
 backgroundColorSelector.addEventListener('input', () => {
     const color = backgroundColorSelector.value;
-    scene.background = new THREE.Color(color);
+    if (!window.envMapEnabled) {
+        scene.background = new THREE.Color(color);
+    } else {
+        // Store the color so it's restored when env map is turned off
+        savedBackgroundColor = new THREE.Color(color);
+    }
     document.body.style.backgroundColor = color;
     render();
 });
@@ -594,6 +647,183 @@ toggleStyleChanges.addEventListener('change', () => {
 toggleAntialiasing.addEventListener('change', () => {
     antialiasToggled = toggleAntialiasing.checked;
     recreateRenderer(antialiasToggled);
+});
+
+// ── Environment Map (Polyhaven HDRIs) ────────────────────────────────
+const POLYHAVEN_HDRIS = {
+    'studio_small_09':      'Studio',
+    'photo_studio_loft_hall': 'Loft Hall',
+    'venice_sunset':        'Venice Sunset',
+    'kloofendal_48d_partly_cloudy_puresky': 'Partly Cloudy',
+    'dikhololo_night':      'Night Sky',
+    'forest_slope':         'Forest',
+    'syferfontein_0d_clear_puresky': 'Clear Sky',
+    'abandoned_parking':    'Parking Lot',
+    'industrial_workshop':  'Workshop',
+    'rural_asphalt_road':   'Country Road',
+};
+
+const envMapCache = {};
+let envMapLoading = false;
+let savedBackgroundColor = null;
+window.envMapEnabled = false;
+window.envMapIntensity = 1;
+window.envMapPreset = 'studio_small_09';
+window.envMapResolution = '1k';
+
+const rgbeLoader = new RGBELoader();
+
+function getPolyhavenUrl(name, resolution) {
+    return `https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/${resolution}/${name}_${resolution}.hdr`;
+}
+
+function loadEnvMap(name, resolution) {
+    const cacheKey = `${name}_${resolution}`;
+    if (envMapCache[cacheKey]) {
+        applyEnvTexture(envMapCache[cacheKey]);
+        return;
+    }
+
+    envMapLoading = true;
+    updateEnvMapLoadingUI(true, name);
+
+    const url = getPolyhavenUrl(name, resolution);
+    rgbeLoader.load(
+        url,
+        (hdrTexture) => {
+            const pmremGenerator = new THREE.PMREMGenerator(renderer);
+            pmremGenerator.compileEquirectangularShader();
+            const envTexture = pmremGenerator.fromEquirectangular(hdrTexture).texture;
+            hdrTexture.dispose();
+            pmremGenerator.dispose();
+
+            envMapCache[cacheKey] = envTexture;
+            envMapLoading = false;
+            updateEnvMapLoadingUI(false);
+            applyEnvTexture(envTexture);
+        },
+        (progress) => {
+            if (progress.total > 0) {
+                const pct = Math.round((progress.loaded / progress.total) * 100);
+                updateEnvMapLoadingUI(true, name, pct);
+            }
+        },
+        (err) => {
+            console.error('Failed to load HDRI:', err);
+            envMapLoading = false;
+            updateEnvMapLoadingUI(false);
+            window.toastError?.(`Failed to load env map "${POLYHAVEN_HDRIS[name] || name}"`);
+        }
+    );
+}
+
+function applyEnvTexture(envTexture) {
+    scene.environment = envTexture;
+    if (!savedBackgroundColor && scene.background && scene.background.isColor) {
+        savedBackgroundColor = scene.background.clone();
+    }
+    scene.background = envTexture;
+    window.envMapEnabled = true;
+    updateEnvMapIntensity(window.envMapIntensity || 1);
+    render();
+}
+
+function disableEnvMap() {
+    scene.environment = null;
+    if (savedBackgroundColor) {
+        scene.background = savedBackgroundColor;
+        savedBackgroundColor = null;
+    } else {
+        scene.background = new THREE.Color(document.getElementById('style8').value);
+    }
+    window.envMapEnabled = false;
+    updateEnvMapIntensity(0);
+    render();
+}
+
+function applyEnvMap(enabled, preset) {
+    if (enabled) {
+        loadEnvMap(preset || window.envMapPreset, window.envMapResolution || '1k');
+    } else {
+        disableEnvMap();
+    }
+}
+
+function updateEnvMapIntensity(intensity) {
+    if (!main.molecule) return;
+    if (main.molecule.instancedMesh && main.molecule.instancedMesh.material) {
+        const mat = main.molecule.instancedMesh.material;
+        if (mat.type !== 'MeshBasicMaterial') {
+            mat.envMapIntensity = intensity;
+            mat.needsUpdate = true;
+        }
+    }
+    if (main.molecule.bondGroup) {
+        main.molecule.bondGroup.traverse(child => {
+            if (child.isMesh && child.material && child.material.type !== 'MeshBasicMaterial') {
+                child.material.envMapIntensity = intensity;
+                child.material.needsUpdate = true;
+            }
+        });
+    }
+}
+
+function updateEnvMapLoadingUI(loading, name, pct) {
+    const presetSelect = document.getElementById('envMapPreset');
+    if (loading) {
+        presetSelect.style.opacity = '0.6';
+        presetSelect.title = pct !== undefined
+            ? `Loading ${POLYHAVEN_HDRIS[name] || name}... ${pct}%`
+            : `Loading ${POLYHAVEN_HDRIS[name] || name}...`;
+    } else {
+        presetSelect.style.opacity = '1';
+        presetSelect.title = '';
+    }
+}
+
+window.applyEnvMap = applyEnvMap;
+window.updateEnvMapIntensity = updateEnvMapIntensity;
+
+const toggleEnvMap = document.getElementById('toggleEnvMap');
+const envMapPresetSelect = document.getElementById('envMapPreset');
+const envMapIntensitySlider = document.getElementById('envMapIntensity');
+const envMapResolutionSelect = document.getElementById('envMapResolution');
+const envMapPresetRow = document.getElementById('envMapPresetRow');
+const envMapIntensityRow = document.getElementById('envMapIntensityRow');
+const envMapResolutionRow = document.getElementById('envMapResolutionRow');
+
+toggleEnvMap.addEventListener('change', () => {
+    const enabled = toggleEnvMap.checked;
+    envMapPresetRow.style.opacity = enabled ? '1' : '0.5';
+    envMapIntensityRow.style.opacity = enabled ? '1' : '0.5';
+    envMapResolutionRow.style.opacity = enabled ? '1' : '0.5';
+    if (enabled) {
+        applyEnvMap(true, envMapPresetSelect.value);
+    } else {
+        disableEnvMap();
+    }
+});
+
+envMapPresetSelect.addEventListener('change', () => {
+    window.envMapPreset = envMapPresetSelect.value;
+    if (toggleEnvMap.checked) {
+        applyEnvMap(true, envMapPresetSelect.value);
+    }
+});
+
+envMapResolutionSelect.addEventListener('change', () => {
+    window.envMapResolution = envMapResolutionSelect.value;
+    if (toggleEnvMap.checked) {
+        applyEnvMap(true, envMapPresetSelect.value);
+    }
+});
+
+envMapIntensitySlider.addEventListener('input', () => {
+    window.envMapIntensity = parseFloat(envMapIntensitySlider.value);
+    if (toggleEnvMap.checked) {
+        updateEnvMapIntensity(window.envMapIntensity);
+        render();
+    }
 });
 
 window.addEventListener('keydown', function (e) {
@@ -3273,6 +3503,12 @@ function recreateRenderer(antialiasEnabled) {
     // IMPORTANT: Re-attach the pointer down event for atom selection
     renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
 
+    // Env map textures depend on the renderer's PMREMGenerator, so invalidate cache
+    Object.keys(envMapCache).forEach(k => delete envMapCache[k]);
+    if (window.envMapEnabled) {
+        applyEnvMap(true, window.envMapPreset);
+    }
+
     render();
 }
 
@@ -3634,7 +3870,11 @@ if (typeof main !== 'undefined') {
 }
 
 function setSceneColor(color) {
-    scene.background = new THREE.Color(color);
+    if (!window.envMapEnabled) {
+        scene.background = new THREE.Color(color);
+    } else {
+        savedBackgroundColor = new THREE.Color(color);
+    }
 }
 
 window.loadStylePreferences = loadStylePreferences;

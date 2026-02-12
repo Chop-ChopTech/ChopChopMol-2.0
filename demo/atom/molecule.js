@@ -126,13 +126,24 @@ export default class Molecule {
                 transparent: this.overlay
             });
         } else {
-            material = new THREE.MeshStandardMaterial({
+            material = new THREE.MeshPhysicalMaterial({
                 vertexColors: true,
                 opacity: mode.opacity,
-                transparent: mode.opacity < 1,
+                transparent: mode.opacity < 1 || mode.transmission > 0,
                 roughness: mode.roughness,
                 metalness: mode.metalness,
                 side: THREE.DoubleSide,
+                envMapIntensity: mode.envMapIntensity || 0,
+                transmission: mode.transmission || 0,
+                ior: mode.ior || 1.5,
+                thickness: mode.thickness || 0.5,
+                clearcoat: mode.clearcoat || 0,
+                clearcoatRoughness: mode.roughness || 0,
+                sheen: mode.sheen || 0,
+                sheenRoughness: 0.5,
+                sheenColor: new THREE.Color(0xffffff),
+                iridescence: mode.iridescence || 0,
+                iridescenceIOR: 1.3,
             });
         }
 
@@ -485,10 +496,18 @@ export default class Molecule {
         // but center pivot (default) is fine if we position at segment centers.
         // Default Cylinder centers at (0,0,0) with height 1.
 
-        const material = new THREE.MeshStandardMaterial({
+        const material = new THREE.MeshPhysicalMaterial({
             vertexColors: true,
             metalness: mode.metalness || 0,
-            roughness: mode.roughness || 0.5
+            roughness: mode.roughness || 0.5,
+            envMapIntensity: mode.envMapIntensity || 0,
+            transmission: mode.transmission || 0,
+            transparent: (mode.transmission || 0) > 0,
+            ior: mode.ior || 1.5,
+            thickness: mode.thickness || 0.5,
+            clearcoat: mode.clearcoat || 0,
+            sheen: mode.sheen || 0,
+            iridescence: mode.iridescence || 0,
         });
 
         const totalInstances = bonds.length * 2;
@@ -1352,8 +1371,9 @@ export default class Molecule {
 
     /**
      * Update material properties in place without rebuilding the mesh.
-     * This can update roughness, metalness, opacity, and atom size.
-     * Note: Cannot switch between MeshBasicMaterial (mode 0) and MeshStandardMaterial.
+     * Supports MeshPhysicalMaterial properties: roughness, metalness, opacity,
+     * transmission, ior, thickness, clearcoat, sheen, iridescence, envMapIntensity.
+     * Note: Cannot switch between MeshBasicMaterial (mode 0) and MeshPhysicalMaterial.
      * @param {Object} mode - The new mode settings
      * @returns {boolean} True if update succeeded, false if rebuild is needed
      */
@@ -1364,19 +1384,32 @@ export default class Molecule {
         const isBasicMaterial = material.type === 'MeshBasicMaterial';
         const newModeIsBasic = mode === 0 || mode == 0;
 
-        // If switching between basic and standard material types, we need a full rebuild
+        // If switching between basic and physical material types, we need a full rebuild
         if (isBasicMaterial !== newModeIsBasic) {
             return false; // Signal that rebuild is needed
         }
 
-        // Update standard material properties if applicable
+        // Update physical material properties if applicable
         if (!isBasicMaterial && mode && typeof mode === 'object') {
             if (mode.roughness !== undefined) material.roughness = mode.roughness;
             if (mode.metalness !== undefined) material.metalness = mode.metalness;
             if (mode.opacity !== undefined) {
                 material.opacity = mode.opacity;
-                material.transparent = mode.opacity < 1;
+                material.transparent = mode.opacity < 1 || (mode.transmission || 0) > 0;
             }
+            if (mode.envMapIntensity !== undefined) material.envMapIntensity = mode.envMapIntensity;
+            if (mode.transmission !== undefined) {
+                material.transmission = mode.transmission;
+                material.transparent = mode.transmission > 0 || material.opacity < 1;
+            }
+            if (mode.ior !== undefined) material.ior = mode.ior;
+            if (mode.thickness !== undefined) material.thickness = mode.thickness;
+            if (mode.clearcoat !== undefined) {
+                material.clearcoat = mode.clearcoat;
+                material.clearcoatRoughness = mode.roughness || 0;
+            }
+            if (mode.sheen !== undefined) material.sheen = mode.sheen;
+            if (mode.iridescence !== undefined) material.iridescence = mode.iridescence;
             material.needsUpdate = true;
         }
 

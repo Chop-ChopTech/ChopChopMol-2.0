@@ -14,6 +14,12 @@ export async function saveStylePreferences(userId) {
             bondThickness: parseFloat(document.getElementById('style4').value),
             atomSize: parseFloat(document.getElementById('style5').value),
             resolution: parseInt(document.getElementById('style6').value),
+            transmission: parseFloat(document.getElementById('styleTransmission')?.value) || 0,
+            ior: parseFloat(document.getElementById('styleIOR')?.value) || 1.5,
+            thickness: parseFloat(document.getElementById('styleThickness')?.value) || 0.5,
+            clearcoat: parseFloat(document.getElementById('styleClearcoat')?.value) || 0,
+            sheen: parseFloat(document.getElementById('styleSheen')?.value) || 0,
+            iridescence: parseFloat(document.getElementById('styleIridescence')?.value) || 0,
             antialias: document.getElementById('style7').checked,
             backgroundColor: document.getElementById('style8').value,
             toggleStyleChanges: document.getElementById('toggleStyleChanges').checked,
@@ -22,6 +28,10 @@ export async function saveStylePreferences(userId) {
             showIndices: document.getElementById('showIndices').checked,
             transitionsEnabled: document.getElementById('toggleTransitions')?.checked || false,
             transitionDuration: parseInt(document.getElementById('transitionDuration')?.value) || 300,
+            envMapEnabled: document.getElementById('toggleEnvMap')?.checked || false,
+            envMapPreset: document.getElementById('envMapPreset')?.value || 'studio_small_09',
+            envMapResolution: document.getElementById('envMapResolution')?.value || '1k',
+            envMapIntensity: parseFloat(document.getElementById('envMapIntensity')?.value) || 1,
             lastUpdated: new Date().toISOString()
         };
 
@@ -113,6 +123,37 @@ export function applyStylePreferences(prefs, renderer) {
         main.resolution = prefs.resolution;
     }
 
+    // Apply physical material properties
+    if (prefs.transmission !== undefined) {
+        const el = document.getElementById('styleTransmission');
+        if (el) el.value = prefs.transmission;
+        main.transmission = prefs.transmission;
+    }
+    if (prefs.ior !== undefined) {
+        const el = document.getElementById('styleIOR');
+        if (el) el.value = prefs.ior;
+        main.ior = prefs.ior;
+    }
+    if (prefs.thickness !== undefined) {
+        const el = document.getElementById('styleThickness');
+        if (el) el.value = prefs.thickness;
+        main.thickness = prefs.thickness;
+    }
+    if (prefs.clearcoat !== undefined) {
+        const el = document.getElementById('styleClearcoat');
+        if (el) el.value = prefs.clearcoat;
+        main.clearcoat = prefs.clearcoat;
+    }
+    if (prefs.sheen !== undefined) {
+        const el = document.getElementById('styleSheen');
+        if (el) el.value = prefs.sheen;
+        main.sheen = prefs.sheen;
+    }
+    if (prefs.iridescence !== undefined) {
+        const el = document.getElementById('styleIridescence');
+        if (el) el.value = prefs.iridescence;
+        main.iridescence = prefs.iridescence;
+    }
 
     // Apply antialias
     if (prefs.antialias !== undefined) {
@@ -167,6 +208,36 @@ export function applyStylePreferences(prefs, renderer) {
         }
         if (window.transitionSettings) {
             window.transitionSettings.duration = prefs.transitionDuration;
+        }
+    }
+
+    // Apply environment map settings
+    if (prefs.envMapPreset !== undefined) {
+        const envMapPreset = document.getElementById('envMapPreset');
+        if (envMapPreset) envMapPreset.value = prefs.envMapPreset;
+        window.envMapPreset = prefs.envMapPreset;
+    }
+    if (prefs.envMapResolution !== undefined) {
+        const envMapResolution = document.getElementById('envMapResolution');
+        if (envMapResolution) envMapResolution.value = prefs.envMapResolution;
+        window.envMapResolution = prefs.envMapResolution;
+    }
+    if (prefs.envMapIntensity !== undefined) {
+        const envMapIntensity = document.getElementById('envMapIntensity');
+        if (envMapIntensity) envMapIntensity.value = prefs.envMapIntensity;
+        window.envMapIntensity = prefs.envMapIntensity;
+    }
+    if (prefs.envMapEnabled !== undefined) {
+        const toggleEnvMap = document.getElementById('toggleEnvMap');
+        if (toggleEnvMap) toggleEnvMap.checked = prefs.envMapEnabled;
+        const envMapPresetRow = document.getElementById('envMapPresetRow');
+        const envMapIntensityRow = document.getElementById('envMapIntensityRow');
+        const envMapResolutionRow = document.getElementById('envMapResolutionRow');
+        if (envMapPresetRow) envMapPresetRow.style.opacity = prefs.envMapEnabled ? '1' : '0.5';
+        if (envMapIntensityRow) envMapIntensityRow.style.opacity = prefs.envMapEnabled ? '1' : '0.5';
+        if (envMapResolutionRow) envMapResolutionRow.style.opacity = prefs.envMapEnabled ? '1' : '0.5';
+        if (window.applyEnvMap) {
+            window.applyEnvMap(prefs.envMapEnabled, prefs.envMapPreset || 'studio_small_09');
         }
     }
 
@@ -288,6 +359,37 @@ export function resetToDefaults() {
     window.showIndices = false;
     window.labelMode = false;
 
+    // Reset env map
+    const toggleEnvMap = document.getElementById('toggleEnvMap');
+    if (toggleEnvMap) toggleEnvMap.checked = false;
+    const envMapPreset = document.getElementById('envMapPreset');
+    if (envMapPreset) envMapPreset.value = 'studio_small_09';
+    const envMapResolution = document.getElementById('envMapResolution');
+    if (envMapResolution) envMapResolution.value = '1k';
+    const envMapIntensity = document.getElementById('envMapIntensity');
+    if (envMapIntensity) envMapIntensity.value = 1;
+    const envMapPresetRow = document.getElementById('envMapPresetRow');
+    if (envMapPresetRow) envMapPresetRow.style.opacity = '0.5';
+    const envMapIntensityRow = document.getElementById('envMapIntensityRow');
+    if (envMapIntensityRow) envMapIntensityRow.style.opacity = '0.5';
+    const envMapResolutionRow = document.getElementById('envMapResolutionRow');
+    if (envMapResolutionRow) envMapResolutionRow.style.opacity = '0.5';
+    window.envMapEnabled = false;
+    window.envMapPreset = 'studio_small_09';
+    window.envMapResolution = '1k';
+    window.envMapIntensity = 1;
+    if (window.applyEnvMap) window.applyEnvMap(false);
+
+    // Reset physical material sliders
+    const resetSliders = {
+        styleTransmission: 0, styleIOR: 1.5, styleThickness: 0.5,
+        styleClearcoat: 0, styleSheen: 0, styleIridescence: 0,
+    };
+    for (const [id, val] of Object.entries(resetSliders)) {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+    }
+
     // Reset main object values
     main.roughness = 0.17;
     main.metalness = 0.3;
@@ -295,6 +397,12 @@ export function resetToDefaults() {
     main.atomSize = 1;
     main.resolution = 16;
     main.labelsToggled = false;
+    main.transmission = 0;
+    main.ior = 1.5;
+    main.thickness = 0.5;
+    main.clearcoat = 0;
+    main.sheen = 0;
+    main.iridescence = 0;
 
     // Reset background
     window.scene.background = new THREE.Color('#01101f');

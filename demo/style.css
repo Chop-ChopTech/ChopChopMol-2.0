@@ -4733,6 +4733,7 @@ input[type="range"]:focus {
     margin-right: 10px;
     transform: translateX(-50%);
     width: 367px;
+    max-height: calc(100vh - 90px);
     z-index: 9999;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -4742,6 +4743,8 @@ input[type="range"]:focus {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
+    display: flex;
+    flex-direction: column;
 }
 
 .style-panel.open {
@@ -4832,8 +4835,23 @@ input[type="range"]:focus {
 }
 
 .style-panel.open .style-panel-content {
-    max-height: 400px;
+    max-height: calc(100vh - 140px);
     padding: 8px 12px 12px;
+    overflow-y: auto;
+}
+
+.style-panel-content::-webkit-scrollbar {
+    width: 5px;
+}
+.style-panel-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.style-panel-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+.style-panel-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 /* Properties Panel - for force and orbital info */
