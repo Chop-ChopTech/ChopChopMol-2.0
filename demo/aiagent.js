@@ -2100,7 +2100,22 @@ const FUNCTIONS = {
                 xLabel: params.xLabel || '',
                 yLabel: params.yLabel || '',
                 x: params.x || [],
-                y: params.y || []
+                y: params.y || [],
+                labels: params.labels || [],
+                lineColor: params.lineColor,
+                pointColor: params.pointColor,
+                highlightColor: params.highlightColor,
+                backgroundColor: params.backgroundColor,
+                lineWidth: params.lineWidth,
+                pointSize: params.pointSize,
+                tension: params.tension,
+                fill: params.fill,
+                fillColor: params.fillColor,
+                showGrid: params.showGrid,
+                showLegend: params.showLegend,
+                showPoints: params.showPoints,
+                fontSize: params.fontSize,
+                datasets: params.datasets
             };
             window.updateEnergyChartButton?.();
             // Auto-open the dropdown and render

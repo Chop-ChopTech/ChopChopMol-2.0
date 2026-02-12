@@ -4010,7 +4010,7 @@ input[type="range"]:focus {
     text-align: center;
 }
 
-/* Chart Lightbox */
+/* Chart Lightbox (legacy) */
 .chart-lightbox {
     position: fixed;
     top: 0;
@@ -4055,6 +4055,128 @@ input[type="range"]:focus {
         transform: scale(1);
         opacity: 1;
     }
+}
+
+/* Chart Inline Toolbar */
+.chart-toolbar {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+*:hover > .chart-toolbar {
+    opacity: 1;
+}
+
+.chart-toolbar-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: background 0.15s, color 0.15s;
+    backdrop-filter: blur(8px);
+}
+
+.chart-toolbar-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* Chart Fullscreen Modal */
+.chart-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000;
+    cursor: default;
+    transition: background 0.25s ease, backdrop-filter 0.25s ease;
+}
+
+.chart-modal-overlay.active {
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+}
+
+.chart-modal-content {
+    width: 85vw;
+    height: 78vh;
+    max-width: 1200px;
+    max-height: 800px;
+    background: rgba(20, 20, 35, 0.97);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.92);
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.chart-modal-overlay.active .chart-modal-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.chart-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+.chart-modal-title {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.chart-modal-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.chart-modal-btn {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.chart-modal-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
 }
 
 /* Cloud folder styles - reuse local folder styles */
