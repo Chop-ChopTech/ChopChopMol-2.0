@@ -651,16 +651,16 @@ toggleAntialiasing.addEventListener('change', () => {
 
 // ── Environment Map (Polyhaven HDRIs) ────────────────────────────────
 const POLYHAVEN_HDRIS = {
-    'studio_small_09':      'Studio',
+    'studio_small_09': 'Studio',
     'photo_studio_loft_hall': 'Loft Hall',
-    'venice_sunset':        'Venice Sunset',
+    'venice_sunset': 'Venice Sunset',
     'kloofendal_48d_partly_cloudy_puresky': 'Partly Cloudy',
-    'dikhololo_night':      'Night Sky',
-    'forest_slope':         'Forest',
+    'dikhololo_night': 'Night Sky',
+    'forest_slope': 'Forest',
     'syferfontein_0d_clear_puresky': 'Clear Sky',
-    'abandoned_parking':    'Parking Lot',
-    'industrial_workshop':  'Workshop',
-    'rural_asphalt_road':   'Country Road',
+    'abandoned_parking': 'Parking Lot',
+    'industrial_workshop': 'Workshop',
+    'rural_asphalt_road': 'Country Road',
 };
 
 const envMapCache = {};
@@ -1030,6 +1030,17 @@ function triggerExplosion() {
 
 // Simplified assembly animation: molecule pieces start scattered and assemble in a wave from left to right with eased motion (ease-out) and global fade-in
 let assemblyAnimating = false;
+document.addEventListener("keydown", (event) => {
+    if (event.key === "1") {
+
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+
+    }
+});
 
 function animateImplosion() {
     if (!main.molecule || !main.molecule.atoms || main.molecule.atoms.length === 0) return;
@@ -2747,7 +2758,7 @@ function resetFragments() {
 }
 
 // Editing panel removed — all editing is now done through the AI agent
-function updateEditingContent() {}
+function updateEditingContent() { }
 
 function updateFragmentList(fragmentList) {
     fragmentList.innerHTML = '';
