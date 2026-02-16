@@ -2403,9 +2403,16 @@
             const messagesContainer = document.getElementById('aiChatMessages');
             const modelSelect = document.getElementById('aiModelSelect');
             modelSelect.value = window.AIAgent?.getModel() || 'claude-haiku-4-5-20251001';
+            const thinkingControl = document.querySelector('.ai-thinking-control');
+            function updateThinkingVisibility() {
+                const isClaude = modelSelect.value.toLowerCase().includes('claude');
+                thinkingControl.style.display = isClaude ? '' : 'none';
+            }
             modelSelect.addEventListener('change', () => {
                 window.AIAgent?.setModel(modelSelect.value);
+                updateThinkingVisibility();
             });
+            updateThinkingVisibility();
 
             // ── Thinking budget toggle ──
             const thinkingToggle = document.getElementById('aiThinkingToggle');
