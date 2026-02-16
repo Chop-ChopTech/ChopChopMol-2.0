@@ -681,7 +681,7 @@ export default class Molecule {
             const y = row * size + size / 2;
 
             const atom = this.atoms[i];
-            const displayIndex = atom.originalIndex !== undefined ? atom.originalIndex + 1 : i + 1;
+            const displayIndex = i;
 
             let labelText = '';
             if (showElements && showIndices) {
