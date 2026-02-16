@@ -2231,7 +2231,8 @@ async function sendToAI(userMessage, onChunk) {
                 sessionId,
                 message: userMessage,
                 state,
-                model: AI_CONFIG.model
+                model: AI_CONFIG.model,
+                thinkingBudget: window._thinkingBudget ?? 4096
             };
 
             if (assistantMessage) {

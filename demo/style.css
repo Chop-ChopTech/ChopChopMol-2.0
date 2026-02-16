@@ -2627,6 +2627,7 @@ input[type="range"]:focus {
 /* Individual Messages */
 .ai-message {
     width: 100%;
+    box-sizing: border-box;
     animation: aiMessageFloat 0.3s ease-out;
     position: relative;
     padding: 10px 12px;
@@ -2682,6 +2683,12 @@ input[type="range"]:focus {
     word-wrap: break-word;
     pointer-events: all !important;
     user-select: text;
+    -webkit-user-select: text;
+}
+
+.ai-message-content * {
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 .ai-message.user .ai-message-content {
@@ -2985,6 +2992,56 @@ input[type="range"]:focus {
     }
 }
 
+/* ── Thinking Budget Control ── */
+.ai-thinking-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.ai-thinking-control i {
+    font-size: 10px;
+    color: rgba(180, 160, 255, 0.5);
+}
+
+.ai-thinking-control-label {
+    white-space: nowrap;
+}
+
+.ai-thinking-toggle {
+    display: flex;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    padding: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ai-thinking-opt {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 10px;
+    font-family: 'Rubik', sans-serif;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.ai-thinking-opt:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.ai-thinking-opt.active {
+    background: rgba(139, 92, 246, 0.2);
+    color: rgba(180, 160, 255, 0.9);
+}
+
 /* Input Area */
 .ai-chat-input-area {
     display: flex;
@@ -2992,7 +3049,7 @@ input[type="range"]:focus {
     padding: 8px 10px 10px;
     background: rgba(0, 0, 0, 0.15);
     border-top: 1px solid rgba(255, 255, 255, 0.04);
-    gap: 8px;
+    gap: 6px;
     position: relative;
 }
 

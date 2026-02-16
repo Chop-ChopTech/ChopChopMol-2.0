@@ -2310,6 +2310,17 @@
         <div class="ai-chat-input-area">
             <textarea id="aiChatInput" placeholder="Ask me anything" rows="3"></textarea>
 
+            <div class="ai-thinking-control">
+                <i class="fas fa-brain"></i>
+                <span class="ai-thinking-control-label">Thinking</span>
+                <div class="ai-thinking-toggle" id="aiThinkingToggle">
+                    <button class="ai-thinking-opt" data-budget="0" title="No thinking">Off</button>
+                    <button class="ai-thinking-opt active" data-budget="4096" title="Light thinking (~4K tokens)">Low</button>
+                    <button class="ai-thinking-opt" data-budget="10000" title="Medium thinking (~10K tokens)">Med</button>
+                    <button class="ai-thinking-opt" data-budget="32000" title="Deep thinking (~32K tokens)">High</button>
+                </div>
+            </div>
+
             <div id="bottom-options">
                 <select id="aiModelSelect" class="ai-model-select" title="Select AI Model">
                     <optgroup label="GPT-5.2">
@@ -2394,6 +2405,24 @@
             modelSelect.value = window.AIAgent?.getModel() || 'claude-haiku-4-5-20251001';
             modelSelect.addEventListener('change', () => {
                 window.AIAgent?.setModel(modelSelect.value);
+            });
+
+            // ── Thinking budget toggle ──
+            const thinkingToggle = document.getElementById('aiThinkingToggle');
+            const savedBudget = localStorage.getItem('chopchop_thinking_budget');
+            if (savedBudget !== null) {
+                thinkingToggle.querySelectorAll('.ai-thinking-opt').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.budget === savedBudget);
+                });
+            }
+            window._thinkingBudget = parseInt(thinkingToggle.querySelector('.ai-thinking-opt.active')?.dataset.budget || '4096');
+            thinkingToggle.addEventListener('click', (e) => {
+                const btn = e.target.closest('.ai-thinking-opt');
+                if (!btn) return;
+                thinkingToggle.querySelectorAll('.ai-thinking-opt').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                window._thinkingBudget = parseInt(btn.dataset.budget);
+                localStorage.setItem('chopchop_thinking_budget', btn.dataset.budget);
             });
 
             // Toggle panel
