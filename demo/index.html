@@ -2275,7 +2275,7 @@
         <div id="textEditorStatus" class="text-editor-status">Ready</div>
     </div>
     <div id="aiChatPanel" class="ai-chat-panel open">
-        <div id="aiBlurLayer"></div>
+        <!-- blur proxy removed — using panel-level backdrop-filter -->
         <div class="panel-resizer panel-resizer-horizontal" id="aiPanelResizer"></div>
         <button class="panel-collapse-toggle" id="aiCollapseToggle" title="Collapse panel">
             <i class="fas fa-chevron-left"></i>
@@ -2466,79 +2466,273 @@
                 // Prepare message element (added after first chunk)
                 const msgEl = document.createElement('div');
                 msgEl.className = 'ai-message assistant';
-                msgEl.innerHTML = '<div class="ai-message-content"></div>';
+                msgEl.innerHTML = `
+                    <div class="ai-message-label assistant-label">
+                        <i class="fas fa-atom"></i> ChopChopMol
+                    </div>
+                    <div class="ai-message-content">
+                        <div class="ai-response-thinking"></div>
+                        <div class="ai-response-tools"></div>
+                        <div class="ai-response-text"></div>
+                    </div>
+                `;
                 const contentEl = msgEl.querySelector('.ai-message-content');
+                const thinkingContainer = msgEl.querySelector('.ai-response-thinking');
+                const toolsContainer = msgEl.querySelector('.ai-response-tools');
+                const textContainer = msgEl.querySelector('.ai-response-text');
 
                 let fullText = "";
                 let typingRemoved = false;
 
+                // ── Thinking state ──
+                let thinkingEl = null;
+                let thinkingText = "";
+                let thinkingStartTime = null;
+
+                // ── Tool rows state ──
+                let activeToolRow = null;
+                const toolStatusMap = {
+                    select_atoms: 'Selecting atoms',
+                    select_atoms_by_element: 'Selecting by element',
+                    select_all_atoms: 'Selecting all',
+                    select_connected: 'Selecting connected',
+                    clear_selection: 'Clearing selection',
+                    isolate_selection: 'Isolating selection',
+                    load_molecule: 'Loading molecule',
+                    add_atom: 'Adding atom',
+                    remove_atoms: 'Removing atoms',
+                    change_atom_element: 'Changing element',
+                    transform_atoms: 'Transforming atoms',
+                    set_bond_distance: 'Setting bond distance',
+                    set_angle: 'Setting angle',
+                    set_dihedral_angle: 'Setting dihedral',
+                    measure_distance: 'Measuring distance',
+                    measure_angle: 'Measuring angle',
+                    measure_dihedral: 'Measuring dihedral',
+                    create_fragment: 'Creating fragment',
+                    delete_atoms: 'Deleting atoms',
+                    split_molecule: 'Splitting molecule',
+                    add_hydrogens: 'Adding hydrogens',
+                    save_file: 'Saving file',
+                    save_image: 'Saving image',
+                    toggle_labels: 'Toggling labels',
+                    toggle_force_arrows: 'Toggling forces',
+                    toggle_charge_visualization: 'Toggling charges',
+                    toggle_ribbon: 'Toggling ribbon',
+                    calculate_energy: 'Calculating energy',
+                    calculate_all_energies: 'Calculating all energies',
+                    get_cached_energies: 'Retrieving energies',
+                    optimize_geometry: 'Optimizing geometry',
+                    create_chart: 'Creating chart',
+                    read_file: 'Reading file',
+                    list_folder_files: 'Listing files',
+                    create_file: 'Creating file',
+                    edit_file: 'Editing file',
+                    rotational_scan: 'Running rotational scan',
+                    translation_scan: 'Running translation scan',
+                    angle_scan: 'Running angle scan',
+                    run_md: 'Running MD simulation',
+                    web_search: 'Searching web',
+                    set_style: 'Setting style',
+                    show_all_bond_lengths: 'Showing bond lengths',
+                    remove_bond_label: 'Removing label',
+                    clear_measurements: 'Clearing measurements',
+                    reset_camera: 'Resetting camera',
+                    zoom_to_fit: 'Zooming to fit',
+                    rotate_camera: 'Rotating camera',
+                    get_molecule_info: 'Getting molecule info',
+                    get_atom_info: 'Getting atom info',
+                    get_bonded_atoms: 'Getting bonded atoms',
+                    define_axis: 'Defining axis',
+                    remove_axis: 'Removing axis',
+                    undo: 'Undoing',
+                    redo: 'Redoing'
+                };
+                const toolIconMap = {
+                    select_atoms: 'fa-mouse-pointer',
+                    select_atoms_by_element: 'fa-mouse-pointer',
+                    select_all_atoms: 'fa-object-group',
+                    select_connected: 'fa-project-diagram',
+                    clear_selection: 'fa-times-circle',
+                    isolate_selection: 'fa-crosshairs',
+                    load_molecule: 'fa-flask',
+                    add_atom: 'fa-plus-circle',
+                    remove_atoms: 'fa-trash',
+                    change_atom_element: 'fa-exchange-alt',
+                    transform_atoms: 'fa-arrows-alt',
+                    set_bond_distance: 'fa-ruler',
+                    set_angle: 'fa-drafting-compass',
+                    set_dihedral_angle: 'fa-drafting-compass',
+                    measure_distance: 'fa-ruler',
+                    measure_angle: 'fa-drafting-compass',
+                    measure_dihedral: 'fa-drafting-compass',
+                    create_fragment: 'fa-puzzle-piece',
+                    delete_atoms: 'fa-trash',
+                    split_molecule: 'fa-cut',
+                    add_hydrogens: 'fa-plus',
+                    save_file: 'fa-save',
+                    save_image: 'fa-camera',
+                    toggle_labels: 'fa-tag',
+                    toggle_force_arrows: 'fa-arrows-alt',
+                    toggle_charge_visualization: 'fa-bolt',
+                    toggle_ribbon: 'fa-ribbon',
+                    calculate_energy: 'fa-bolt',
+                    calculate_all_energies: 'fa-bolt',
+                    get_cached_energies: 'fa-database',
+                    optimize_geometry: 'fa-compress-arrows-alt',
+                    create_chart: 'fa-chart-line',
+                    read_file: 'fa-file-alt',
+                    list_folder_files: 'fa-folder-open',
+                    create_file: 'fa-file-medical',
+                    edit_file: 'fa-file-code',
+                    rotational_scan: 'fa-sync',
+                    translation_scan: 'fa-arrows-alt-h',
+                    angle_scan: 'fa-drafting-compass',
+                    run_md: 'fa-running',
+                    web_search: 'fa-search',
+                    set_style: 'fa-palette',
+                    show_all_bond_lengths: 'fa-ruler-combined',
+                    remove_bond_label: 'fa-eraser',
+                    clear_measurements: 'fa-eraser',
+                    reset_camera: 'fa-video',
+                    zoom_to_fit: 'fa-expand',
+                    rotate_camera: 'fa-redo',
+                    get_molecule_info: 'fa-info-circle',
+                    get_atom_info: 'fa-atom',
+                    get_bonded_atoms: 'fa-project-diagram',
+                    define_axis: 'fa-ruler-vertical',
+                    remove_axis: 'fa-times',
+                    undo: 'fa-undo',
+                    redo: 'fa-redo',
+                    _default: 'fa-cog'
+                };
+
+                // ── Stop button setup ──
+                sendBtn.innerHTML = '<i class="fas fa-stop"></i>';
+                sendBtn.classList.add('ai-stop-mode');
+                sendBtn.disabled = false;
+                const stopHandler = () => { window.AIAgent?.abort(); };
+                sendBtn.addEventListener('click', stopHandler);
+
                 try {
                     const response = await window.AIAgent.send(message, (chunk, status, statusType) => {
-                        // Tool status during streaming - show at bottom of message
-                        if (chunk === null && statusType === 'tool_status') {
-                            // If message not shown yet, show it first
+                        // ── Thinking events ──
+                        if (statusType === 'thinking_start') {
                             if (!typingRemoved) {
                                 typingEl.remove();
                                 typingRemoved = true;
                                 messagesContainer.appendChild(msgEl);
                             }
-                            // Add/update tool caption at bottom
-                            let toolCaption = contentEl.querySelector('.ai-tool-caption');
-                            if (!toolCaption) {
-                                toolCaption = document.createElement('div');
-                                toolCaption.className = 'ai-tool-caption';
-                                contentEl.appendChild(toolCaption);
-                            }
-                            const toolStatusMap = {
-                                select_atoms: 'Selecting atoms',
-                                load_molecule: 'Loading molecule',
-                                transform_atoms: 'Transforming atoms',
-                                measure_distance: 'Measuring distance',
-                                measure_angle: 'Measuring angle',
-                                create_fragment: 'Creating fragment',
-                                delete_atoms: 'Deleting atoms',
-                                save_file: 'Saving file',
-                                save_image: 'Saving image',
-                                toggle_labels: 'Toggling labels',
-                                calculate_energy: 'Calculating energy',
-                                calculate_all_energies: 'Calculating all frame energies',
-                                get_cached_energies: 'Retrieving cached energies',
-                                optimize_geometry: 'Optimizing geometry',
-                                create_chart: 'Creating chart',
-                                read_file: 'Reading file',
-                                list_folder_files: 'Listing files',
-                                create_file: 'Creating file',
-                                edit_file: 'Editing file',
-                                split_molecule: 'Splitting molecule',
-                                rotational_scan: 'Running rotational scan',
-                                translation_scan: 'Running translation scan'
-                            };
-                            toolCaption.innerHTML = `<i class="fas fa-cog fa-spin"></i> ${toolStatusMap[status] || status.replace(/_/g, ' ')}`;
-                            contentEl.classList.add('tool-active');
+                            thinkingStartTime = performance.now();
+                            thinkingEl = document.createElement('div');
+                            thinkingEl.className = 'ai-thinking-block';
+                            thinkingEl.innerHTML = `
+                                <div class="ai-thinking-header" role="button">
+                                    <i class="fas fa-brain"></i>
+                                    <span class="ai-thinking-label">Thinking...</span>
+                                    <span class="ai-thinking-timer"></span>
+                                    <i class="fas fa-chevron-down ai-thinking-chevron"></i>
+                                </div>
+                                <div class="ai-thinking-content"></div>
+                            `;
+                            thinkingContainer.appendChild(thinkingEl);
+                            // Live timer
+                            thinkingEl._timerInterval = setInterval(() => {
+                                const elapsed = ((performance.now() - thinkingStartTime) / 1000).toFixed(0);
+                                thinkingEl.querySelector('.ai-thinking-timer').textContent = `${elapsed}s`;
+                            }, 1000);
+                            // Toggle expand/collapse
+                            thinkingEl.querySelector('.ai-thinking-header').addEventListener('click', () => {
+                                thinkingEl.classList.toggle('expanded');
+                            });
                             messagesContainer.scrollTop = messagesContainer.scrollHeight;
                             return;
                         }
 
-                        // Status update only (chunk is null) - for typing indicator
+                        if (statusType === 'thinking') {
+                            thinkingText += chunk;
+                            if (thinkingEl) {
+                                thinkingEl.querySelector('.ai-thinking-content').textContent = thinkingText;
+                            }
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            return;
+                        }
+
+                        if (statusType === 'thinking_done') {
+                            if (thinkingEl) {
+                                clearInterval(thinkingEl._timerInterval);
+                                const elapsed = ((performance.now() - thinkingStartTime) / 1000).toFixed(0);
+                                thinkingEl.querySelector('.ai-thinking-label').textContent = `Thought for ${elapsed}s`;
+                                thinkingEl.classList.remove('expanded');
+                                thinkingEl.classList.add('done');
+                            }
+                            return;
+                        }
+
+                        // ── Tool status → stacked rows ──
+                        if (chunk === null && statusType === 'tool_status') {
+                            if (!typingRemoved) {
+                                typingEl.remove();
+                                typingRemoved = true;
+                                messagesContainer.appendChild(msgEl);
+                            }
+
+                            // Mark previous active tool as completed
+                            if (activeToolRow) {
+                                activeToolRow.classList.remove('active');
+                                activeToolRow.classList.add('completed');
+                                activeToolRow.querySelector('.ai-tool-row-status').innerHTML = '<i class="fas fa-check"></i>';
+                            }
+
+                            const toolName = status;
+                            const icon = toolIconMap[toolName] || toolIconMap._default;
+                            const label = toolStatusMap[toolName] || toolName.replace(/_/g, ' ');
+
+                            const row = document.createElement('div');
+                            row.className = 'ai-tool-row active';
+                            row.dataset.tool = toolName;
+                            row.innerHTML = `
+                                <div class="ai-tool-row-header">
+                                    <i class="fas ${icon} ai-tool-icon"></i>
+                                    <span class="ai-tool-row-name">${label}</span>
+                                    <span class="ai-tool-row-status"><i class="fas fa-spinner fa-spin"></i></span>
+                                    <i class="fas fa-chevron-right ai-tool-row-chevron"></i>
+                                </div>
+                                <div class="ai-tool-row-details"></div>
+                            `;
+                            row.querySelector('.ai-tool-row-header').addEventListener('click', () => {
+                                row.classList.toggle('expanded');
+                            });
+
+                            toolsContainer.appendChild(row);
+                            activeToolRow = row;
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            return;
+                        }
+
+                        // ── Status update only (for typing indicator) ──
                         if (chunk === null) {
                             if (status) typingEl.setStatus(status);
                             return;
                         }
 
-                        // First actual text chunk - remove typing, show message
+                        // ── Text chunk ──
                         if (!typingRemoved) {
                             typingEl.remove();
                             typingRemoved = true;
                             messagesContainer.appendChild(msgEl);
                         }
 
-                        // Remove tool caption and glow when text comes in (tool finished)
-                        const toolCaption = contentEl.querySelector('.ai-tool-caption');
-                        if (toolCaption) toolCaption.remove();
-                        contentEl.classList.remove('tool-active');
+                        // Mark last tool as completed when text arrives
+                        if (activeToolRow) {
+                            activeToolRow.classList.remove('active');
+                            activeToolRow.classList.add('completed');
+                            activeToolRow.querySelector('.ai-tool-row-status').innerHTML = '<i class="fas fa-check"></i>';
+                            activeToolRow = null;
+                        }
 
                         fullText += chunk;
-                        contentEl.innerHTML = renderMarkdown(fullText);
+                        textContainer.innerHTML = renderMarkdown(fullText);
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     });
 
@@ -2547,24 +2741,40 @@
                         messagesContainer.appendChild(msgEl);
                     }
 
+                    // Mark any remaining active tool as completed
+                    if (activeToolRow) {
+                        activeToolRow.classList.remove('active');
+                        activeToolRow.classList.add('completed');
+                        activeToolRow.querySelector('.ai-tool-row-status').innerHTML = '<i class="fas fa-check"></i>';
+                        activeToolRow = null;
+                    }
+
                     if (response.error) {
                         msgEl.classList.add('error');
-                        contentEl.textContent = response.error;
+                        textContainer.textContent = response.error;
                     } else if (response.actions?.length > 0) {
-                        // Add actions badge
-                        const actionsHtml = `
-                            <div class="ai-actions-badge">
-                                ${response.actions.map(a => `<span class="ai-action-tag"><i class="fas fa-bolt"></i> ${a.name}</span>`).join('')}
-                            </div>
-                        `;
-                        contentEl.innerHTML = renderMarkdown(fullText) + actionsHtml;
-
-                        // Check for interactive charts in actions
+                        // Populate tool row details with params/results
+                        const toolRows = toolsContainer.querySelectorAll('.ai-tool-row');
                         response.actions.forEach(action => {
+                            for (const row of toolRows) {
+                                if (row.dataset.tool === action.name && !row.dataset.populated) {
+                                    const detailsEl = row.querySelector('.ai-tool-row-details');
+                                    const paramsStr = JSON.stringify(action.args, null, 1)
+                                        .replace(/\n/g, ' ').substring(0, 120);
+                                    const resultStr = action.result?.message ||
+                                        (action.result?.success ? 'Success' : 'Failed');
+                                    detailsEl.innerHTML = `
+                                        <div class="ai-tool-row-params">${escapeHtml(paramsStr)}</div>
+                                        <div class="ai-tool-row-result">${escapeHtml(resultStr)}</div>
+                                    `;
+                                    row.dataset.populated = 'true';
+                                    break;
+                                }
+                            }
+
+                            // Render charts
                             if (action.chartData) {
                                 const data = action.chartData;
-
-                                // Style params with defaults
                                 const lineColor = data.lineColor || '#667eea';
                                 const pointColor = data.pointColor || lineColor;
                                 const highlightColor = data.highlightColor || '#f093fb';
@@ -2583,7 +2793,6 @@
                                 const chartContainer = document.createElement('div');
                                 chartContainer.style.cssText = `margin-top: 12px; background: ${bgColor}; border-radius: 8px; padding: 12px; position: relative; transition: none;`;
 
-                                // Toolbar with expand & download buttons
                                 const toolbar = document.createElement('div');
                                 toolbar.className = 'chart-toolbar';
                                 toolbar.innerHTML = `
@@ -2598,8 +2807,6 @@
                                 contentEl.appendChild(chartContainer);
 
                                 const currentFrame = parseInt(document.getElementById('frameSlider')?.value || 0);
-
-                                // Build datasets
                                 const multiColors = ['#667eea', '#f093fb', '#4fd1c5', '#f6ad55', '#fc8181'];
                                 let datasets;
                                 if (data.datasets?.length) {
@@ -2646,10 +2853,7 @@
 
                                 const chartConfig = {
                                     type: data.type || 'line',
-                                    data: {
-                                        labels: data.x.map(v => v.toString()),
-                                        datasets: datasets
-                                    },
+                                    data: { labels: data.x.map(v => v.toString()), datasets },
                                     options: {
                                         responsive: true,
                                         maintainAspectRatio: false,
@@ -2671,18 +2875,10 @@
                                             }
                                         },
                                         plugins: {
-                                            title: {
-                                                display: !!data.title,
-                                                text: data.title,
-                                                color: '#fff',
-                                                font: { size: fontSize + 2, weight: 'bold' }
-                                            },
+                                            title: { display: !!data.title, text: data.title, color: '#fff', font: { size: fontSize + 2, weight: 'bold' } },
                                             legend: { display: showLegend, labels: { color: '#ccc', font: { size: fontSize } } },
                                             tooltip: {
-                                                backgroundColor: 'rgba(0,0,0,0.8)',
-                                                titleColor: '#fff',
-                                                bodyColor: '#fff',
-                                                cornerRadius: 6,
+                                                backgroundColor: 'rgba(0,0,0,0.8)', titleColor: '#fff', bodyColor: '#fff', cornerRadius: 6,
                                                 callbacks: {
                                                     title: () => '',
                                                     label: (item) => {
@@ -2693,27 +2889,16 @@
                                             }
                                         },
                                         scales: {
-                                            x: {
-                                                title: { display: !!data.xLabel, text: data.xLabel, color: '#aaa', font: { size: fontSize } },
-                                                ticks: { color: '#888', maxTicksLimit: 10, font: { size: fontSize - 1 } },
-                                                grid: { color: gridColor }
-                                            },
-                                            y: {
-                                                title: { display: !!data.yLabel, text: data.yLabel, color: '#aaa', font: { size: fontSize } },
-                                                ticks: { color: '#888', callback: (val) => typeof val === 'number' ? val.toFixed(2) : val, font: { size: fontSize - 1 } },
-                                                grid: { color: gridColor }
-                                            }
+                                            x: { title: { display: !!data.xLabel, text: data.xLabel, color: '#aaa', font: { size: fontSize } }, ticks: { color: '#888', maxTicksLimit: 10, font: { size: fontSize - 1 } }, grid: { color: gridColor } },
+                                            y: { title: { display: !!data.yLabel, text: data.yLabel, color: '#aaa', font: { size: fontSize } }, ticks: { color: '#888', callback: (val) => typeof val === 'number' ? val.toFixed(2) : val, font: { size: fontSize - 1 } }, grid: { color: gridColor } }
                                         }
                                     }
                                 };
 
                                 const chart = new Chart(canvas.getContext('2d'), chartConfig);
-
-                                // Store chart reference for frame slider sync
                                 window._activeEnergyChart = chart;
                                 window._activeChartXData = data.x;
 
-                                // Wire up toolbar buttons
                                 toolbar.querySelector('.chart-expand-btn').addEventListener('click', () => {
                                     window._openChartModal(data, chartConfig);
                                 });
@@ -2723,16 +2908,26 @@
                             }
                         });
                     }
+
+                    // Clean up empty sub-containers
+                    if (!thinkingContainer.children.length) thinkingContainer.remove();
+                    if (!toolsContainer.children.length) toolsContainer.remove();
+                    if (!textContainer.innerHTML.trim()) textContainer.remove();
+
                 } catch (err) {
                     if (!typingRemoved) {
                         typingEl.remove();
                         messagesContainer.appendChild(msgEl);
                     }
                     msgEl.classList.add('error');
-                    contentEl.textContent = 'Something went wrong. Please try again.';
+                    textContainer.textContent = 'Something went wrong. Please try again.';
                     console.error('AI Chat Error:', err);
                 }
 
+                // Restore send button
+                sendBtn.removeEventListener('click', stopHandler);
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                sendBtn.classList.remove('ai-stop-mode');
                 sendBtn.disabled = false;
                 chatInput.focus();
             }
@@ -2745,82 +2940,7 @@
                 }
             });
 
-            // ── Blur proxy sync ──
-            // Backdrop-filter can't work on elements inside a scroll container
-            // (overflow-y:auto creates a stacking context boundary). So we render
-            // proxy divs in #aiBlurLayer (outside the scroll container) and sync
-            // their positions to each message bubble via JS.
-            const blurLayer = document.getElementById('aiBlurLayer');
-
-            function syncBlurProxies() {
-                if (!blurLayer || !panel.classList.contains('open')) return;
-                const panelRect = panel.getBoundingClientRect();
-                const msgsRect = messagesContainer.getBoundingClientRect();
-
-                // Position blur layer to cover exactly the messages area
-                blurLayer.style.top = (msgsRect.top - panelRect.top) + 'px';
-                blurLayer.style.left = (msgsRect.left - panelRect.left) + 'px';
-                blurLayer.style.width = msgsRect.width + 'px';
-                blurLayer.style.height = msgsRect.height + 'px';
-
-                const contentEls = messagesContainer.querySelectorAll('.ai-message-content');
-                const existingProxies = Array.from(blurLayer.children);
-
-                // Remove excess proxies
-                while (blurLayer.children.length > contentEls.length) {
-                    blurLayer.lastChild.remove();
-                }
-
-                contentEls.forEach((el, i) => {
-                    const rect = el.getBoundingClientRect();
-
-                    // Fully outside visible area — hide proxy
-                    if (rect.bottom <= msgsRect.top || rect.top >= msgsRect.bottom) {
-                        if (existingProxies[i]) existingProxies[i].style.display = 'none';
-                        return;
-                    }
-
-                    let proxy = existingProxies[i];
-                    if (!proxy) {
-                        proxy = document.createElement('div');
-                        proxy.className = 'ai-blur-proxy';
-                        blurLayer.appendChild(proxy);
-                    }
-
-                    // Set type class for matching border-radius
-                    const msgEl = el.closest('.ai-message');
-                    const isUser = msgEl?.classList.contains('user');
-                    proxy.classList.toggle('user', !!isUser);
-                    proxy.classList.toggle('assistant', !isUser);
-
-                    // Clip to messages area
-                    const top = Math.max(0, rect.top - msgsRect.top);
-                    const bottom = Math.min(msgsRect.height, rect.bottom - msgsRect.top);
-                    const left = rect.left - msgsRect.left;
-
-                    proxy.style.display = '';
-                    proxy.style.top = top + 'px';
-                    proxy.style.left = left + 'px';
-                    proxy.style.width = rect.width + 'px';
-                    proxy.style.height = (bottom - top) + 'px';
-
-                    // Flatten border-radius when clipped at top/bottom
-                    proxy.style.borderTopLeftRadius = (rect.top < msgsRect.top) ? '0' : '';
-                    proxy.style.borderTopRightRadius = (rect.top < msgsRect.top) ? '0' : '';
-                    proxy.style.borderBottomLeftRadius = (rect.bottom > msgsRect.bottom) ? '0' : '';
-                    proxy.style.borderBottomRightRadius = (rect.bottom > msgsRect.bottom) ? '0' : '';
-                });
-            }
-
-            // Sync on scroll, resize, and DOM mutations
-            messagesContainer.addEventListener('scroll', () => requestAnimationFrame(syncBlurProxies));
-            window.addEventListener('resize', () => requestAnimationFrame(syncBlurProxies));
-            const blurObserver = new MutationObserver(() => requestAnimationFrame(syncBlurProxies));
-            blurObserver.observe(messagesContainer, { childList: true, subtree: true, characterData: true });
-            // Also sync when panel opens/closes
-            const panelObserver = new MutationObserver(() => requestAnimationFrame(syncBlurProxies));
-            panelObserver.observe(panel, { attributes: true, attributeFilter: ['class'] });
-            requestAnimationFrame(syncBlurProxies);
+            // Blur proxy system removed — panel-level backdrop-filter covers flat layout
 
             // Add message to chat
             function spawnParticles(msgEl) {
@@ -2856,41 +2976,36 @@
                 const msgEl = document.createElement('div');
                 msgEl.className = `ai-message ${type}`;
 
-                let actionsHtml = '';
-                if (actions && actions.length > 0) {
-                    actionsHtml = `
-                        <div class="ai-actions-badge">
-                            ${actions.map(a => `<span class="ai-action-tag"><i class="fas fa-bolt"></i> ${a.name}</span>`).join('')}
-                        </div>
-                    `;
-                }
+                const labelIcon = type === 'user' ? 'fa-user' : 'fa-atom';
+                const labelText = type === 'user' ? 'You' : 'ChopChopMol';
+                const labelClass = type === 'user' ? 'user-label' : 'assistant-label';
 
                 msgEl.innerHTML = `
+                    <div class="ai-message-label ${labelClass}">
+                        <i class="fas ${labelIcon}"></i> ${labelText}
+                    </div>
                     <div class="ai-message-content">
                         ${type === 'assistant' ? renderMarkdown(content) : escapeHtml(content)}
-                        ${actionsHtml}
                     </div>
                 `;
 
                 messagesContainer.appendChild(msgEl);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-                if (type === 'user') {
-                    spawnParticles(msgEl);
-                }
             }
 
-            // Show typing indicator
             // Show typing indicator with status
             function showTyping() {
                 const typingEl = document.createElement('div');
                 typingEl.className = 'ai-message assistant';
                 typingEl.innerHTML = `
-        <div class="ai-status-text">analyzing request</div>
-        <div class="ai-typing">
-            <span></span><span></span><span></span>
-        </div>
-    `;
+                    <div class="ai-message-label assistant-label">
+                        <i class="fas fa-atom"></i> ChopChopMol
+                    </div>
+                    <div class="ai-status-text">analyzing request</div>
+                    <div class="ai-typing">
+                        <span></span><span></span><span></span>
+                    </div>
+                `;
                 messagesContainer.appendChild(typingEl);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
@@ -3075,7 +3190,7 @@
                 function resizeAI(e) {
                     aiPanel.classList.add('resizing');
                     const diff = e.clientX - startX;
-                    const newWidth = Math.max(220, Math.min(600, startWidth + diff));
+                    const newWidth = Math.max(220, Math.min(700, startWidth + diff));
                     aiPanel.style.width = newWidth + 'px';
                     window.updateRendererSize?.();
                 }

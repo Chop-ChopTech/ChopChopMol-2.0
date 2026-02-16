@@ -2210,6 +2210,8 @@ function getMoleculeState() {
     };
 }
 
+let _abortController = null;
+
 async function sendToAI(userMessage, onChunk) {
     const state = getMoleculeState();
     let executed = [];
@@ -2218,6 +2220,7 @@ async function sendToAI(userMessage, onChunk) {
     let fullContent = "";
     const startTime = performance.now();
     let firstTokenTime = null;
+    _abortController = new AbortController();
     // Send initial status
     if (onChunk) onChunk(null, 'Analyzing request');
 
@@ -2248,7 +2251,8 @@ async function sendToAI(userMessage, onChunk) {
             const response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat/stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: _abortController.signal
             });
 
             if (!response.ok) {
@@ -2282,6 +2286,12 @@ async function sendToAI(userMessage, onChunk) {
                             iterationContent += data.content;
                             fullContent += data.content;
                             if (onChunk) onChunk(data.content);
+                        } else if (data.type === 'thinking_start') {
+                            if (onChunk) onChunk(null, null, 'thinking_start');
+                        } else if (data.type === 'thinking') {
+                            if (onChunk) onChunk(data.content, null, 'thinking');
+                        } else if (data.type === 'thinking_done') {
+                            if (onChunk) onChunk(null, null, 'thinking_done');
                         } else if (data.type === 'tool_status') {
                             // Real-time tool status from streaming (Claude)
                             if (onChunk) onChunk(null, data.toolName, 'tool_status');
@@ -2353,6 +2363,9 @@ async function sendToAI(userMessage, onChunk) {
         return { content: fullContent, actions: executed };
 
     } catch (e) {
+        if (e.name === 'AbortError') {
+            return { content: fullContent, actions: executed, aborted: true };
+        }
         console.error('AI Error:', e);
         return { error: e.message };
     }
@@ -2509,6 +2522,7 @@ function animateAtomPositions(atomIndices, targetPositions, duration = 400) {
 
 window.AIAgent = {
     send: sendToAI,
+    abort: () => { if (_abortController) _abortController.abort(); },
     clearHistory: async () => {
         // Clear on backend
         if (AI_CONFIG.sessionId) {
