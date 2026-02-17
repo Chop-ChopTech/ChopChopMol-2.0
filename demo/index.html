@@ -2508,17 +2508,14 @@
                     </div>
                     <div class="ai-message-content">
                         <div class="ai-response-thinking"></div>
-                        <div class="ai-response-tools"></div>
-                        <div class="ai-response-text"></div>
                     </div>
                 `;
                 const contentEl = msgEl.querySelector('.ai-message-content');
                 const thinkingContainer = msgEl.querySelector('.ai-response-thinking');
-                const toolsContainer = msgEl.querySelector('.ai-response-tools');
-                const textContainer = msgEl.querySelector('.ai-response-text');
 
                 let fullText = "";
                 let typingRemoved = false;
+                let currentTextBlock = null;  // current text segment (new one created after each tool group)
 
                 // ── Thinking state ──
                 let thinkingEl = null;
@@ -2744,8 +2741,9 @@
                                 row.classList.toggle('expanded');
                             });
 
-                            toolsContainer.appendChild(row);
+                            contentEl.appendChild(row);
                             activeToolRow = row;
+                            currentTextBlock = null;  // force new text block after tool
                             toolArgsBuffer = '';
                             messagesContainer.scrollTop = messagesContainer.scrollHeight;
                             return;
@@ -2799,8 +2797,16 @@
                             activeToolRow = null;
                         }
 
+                        // Create a new text block after tool rows for clean flow
+                        if (!currentTextBlock) {
+                            currentTextBlock = document.createElement('div');
+                            currentTextBlock.className = 'ai-response-text';
+                            contentEl.appendChild(currentTextBlock);
+                            fullText = '';  // reset for new segment
+                        }
+
                         fullText += chunk;
-                        textContainer.innerHTML = renderMarkdown(fullText);
+                        currentTextBlock.innerHTML = renderMarkdown(fullText);
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     });
 
@@ -2819,10 +2825,13 @@
 
                     if (response.error) {
                         msgEl.classList.add('error');
-                        textContainer.textContent = response.error;
+                        const errorBlock = document.createElement('div');
+                        errorBlock.className = 'ai-response-text';
+                        errorBlock.textContent = response.error;
+                        contentEl.appendChild(errorBlock);
                     } else if (response.actions?.length > 0) {
                         // Populate tool row details with params/results
-                        const toolRows = toolsContainer.querySelectorAll('.ai-tool-row');
+                        const toolRows = contentEl.querySelectorAll('.ai-tool-row');
                         response.actions.forEach(action => {
                             for (const row of toolRows) {
                                 if (row.dataset.tool === action.name && !row.dataset.populated) {
@@ -3005,8 +3014,9 @@
 
                     // Clean up empty sub-containers
                     if (!thinkingContainer.children.length) thinkingContainer.remove();
-                    if (!toolsContainer.children.length) toolsContainer.remove();
-                    if (!textContainer.innerHTML.trim()) textContainer.remove();
+                    contentEl.querySelectorAll('.ai-response-text').forEach(el => {
+                        if (!el.innerHTML.trim()) el.remove();
+                    });
 
                 } catch (err) {
                     if (!typingRemoved) {
@@ -3014,7 +3024,10 @@
                         messagesContainer.appendChild(msgEl);
                     }
                     msgEl.classList.add('error');
-                    textContainer.textContent = 'Something went wrong. Please try again.';
+                    const errBlock = document.createElement('div');
+                    errBlock.className = 'ai-response-text';
+                    errBlock.textContent = 'Something went wrong. Please try again.';
+                    contentEl.appendChild(errBlock);
                     console.error('AI Chat Error:', err);
                 }
 
