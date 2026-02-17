@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChopChopMol - 3D Molecular Visualization & Editing</title>
+    <title>ChopChopMol - AI-Powered Platform for Molecular Simulations</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -18,7 +18,7 @@
             --accent-blue: #3ea2ff;
             --accent-purple: #0e41cc;
             --accent-cyan: #00d4ff;
-            --accent-gold: #FFD700;
+            --accent-green: #00c896;
             --text-white: #ffffff;
             --text-light: #c8d4e3;
             --text-muted: #8899aa;
@@ -44,6 +44,7 @@
             overflow-x: hidden;
         }
 
+        /* ===== Background Animation ===== */
         .bg-animation {
             position: fixed;
             top: 0;
@@ -107,6 +108,7 @@
             }
         }
 
+        /* ===== Nav ===== */
         nav {
             position: fixed;
             top: 0;
@@ -140,22 +142,6 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-        }
-
-        .logo-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .logo-icon svg {
-            width: 24px;
-            height: 24px;
-            fill: var(--primary-deep);
         }
 
         .nav-links {
@@ -198,6 +184,7 @@
             align-items: center;
         }
 
+        /* ===== Buttons ===== */
         .btn {
             padding: 0.75rem 1.75rem;
             border-radius: 8px;
@@ -247,13 +234,14 @@
         }
 
         span.highlight-bold {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan), var(--accent-cyan));
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             font-weight: 700;
         }
 
+        /* ===== Hero ===== */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -360,6 +348,85 @@
             display: block;
         }
 
+        /* ===== App Showcase ===== */
+        .showcase-section {
+            padding: 2rem 2rem 6rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .showcase-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .showcase-browser {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), 0 0 120px rgba(62, 162, 255, 0.08);
+            position: relative;
+        }
+
+        .browser-bar {
+            background: rgba(20, 30, 48, 0.95);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .browser-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .browser-dots span {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .browser-dots span:nth-child(1) {
+            background: #ff5f57;
+        }
+
+        .browser-dots span:nth-child(2) {
+            background: #febc2e;
+        }
+
+        .browser-dots span:nth-child(3) {
+            background: #28c840;
+        }
+
+        .browser-url {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .showcase-browser img {
+            width: 100%;
+            display: block;
+        }
+
+        .showcase-placeholder {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: linear-gradient(135deg, rgba(10, 37, 64, 0.8), rgba(14, 65, 204, 0.2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* ===== Sections ===== */
         .section {
             padding: 6rem 2rem;
             position: relative;
@@ -386,6 +453,12 @@
             margin-bottom: 1rem;
         }
 
+        .section-tag.green {
+            background: rgba(0, 200, 150, 0.1);
+            border-color: rgba(0, 200, 150, 0.3);
+            color: var(--accent-green);
+        }
+
         .section-title {
             font-family: 'Outfit', sans-serif;
             font-size: 2.5rem;
@@ -393,12 +466,12 @@
             margin-bottom: 1rem;
         }
 
-
         .section-subtitle {
             color: var(--text-muted);
             font-size: 1.1rem;
         }
 
+        /* ===== Features Grid ===== */
         .features-grid {
             max-width: 1200px;
             margin: 0 auto;
@@ -471,6 +544,7 @@
             line-height: 1.7;
         }
 
+        /* ===== AI Section ===== */
         .ai-section {
             background: linear-gradient(180deg, transparent, rgba(102, 126, 234, 0.03), transparent);
         }
@@ -484,108 +558,29 @@
             align-items: center;
         }
 
-        .ai-chat-demo {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
+        .ai-screenshot-frame {
+            border-radius: 12px;
             overflow: hidden;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
         }
 
-        .chat-header {
-            padding: 1rem 1.5rem;
-            background: rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        .ai-screenshot-frame img {
+            width: 100%;
+            display: block;
         }
 
-        .chat-avatar {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            border-radius: 50%;
+        .ai-screenshot-placeholder {
+            width: 100%;
+            aspect-ratio: 16/10;
+            background: linear-gradient(135deg, rgba(10, 37, 64, 0.8), rgba(14, 65, 204, 0.15));
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .chat-avatar svg {
-            width: 20px;
-            height: 20px;
-            fill: white;
-        }
-
-        .chat-title {
-            font-weight: 600;
-        }
-
-        .chat-status {
-            font-size: 0.8rem;
-            color: var(--accent-blue);
-        }
-
-        .chat-messages {
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .chat-message {
-            max-width: 85%;
-            padding: 1rem 1.25rem;
-            border-radius: 16px;
-            font-size: 0.95rem;
-        }
-
-        .chat-message.user {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-
-        .chat-message.ai {
-            background: rgba(255, 255, 255, 0.1);
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-
-        .chat-input {
-            display: flex;
-            gap: 0.75rem;
-            padding: 1rem 1.5rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .chat-input input {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            color: white;
-            font-size: 0.95rem;
-        }
-
-        .chat-input input::placeholder {
             color: var(--text-muted);
-        }
-
-        .chat-input button {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            border: none;
-            border-radius: 8px;
-            padding: 0.75rem 1.25rem;
-            cursor: pointer;
-        }
-
-        .chat-input button svg {
-            width: 20px;
-            height: 20px;
-            fill: white;
+            font-size: 1rem;
+            padding: 2rem;
+            text-align: center;
         }
 
         .ai-content h3 {
@@ -602,7 +597,7 @@
             background-clip: text;
         }
 
-        .ai-content p {
+        .ai-content>p {
             color: var(--text-light);
             margin-bottom: 2rem;
             font-size: 1.1rem;
@@ -656,10 +651,72 @@
             font-size: 0.9rem;
         }
 
-        .formats-section {
+        /* ===== Screenshot Gallery ===== */
+        .gallery-section {
             background: var(--primary-dark);
             border-top: 1px solid rgba(255, 255, 255, 0.05);
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .gallery-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .gallery-item {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.4s ease;
+            background: rgba(10, 37, 64, 0.3);
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-4px);
+            border-color: rgba(62, 162, 255, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            display: block;
+        }
+
+        .gallery-item-placeholder {
+            width: 100%;
+            aspect-ratio: 16/10;
+            background: linear-gradient(135deg, rgba(10, 37, 64, 0.8), rgba(14, 65, 204, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .gallery-caption {
+            padding: 1.25rem 1.5rem;
+        }
+
+        .gallery-caption h4 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .gallery-caption p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* ===== Formats ===== */
+        .formats-section {
+            background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.2), transparent);
         }
 
         .formats-grid {
@@ -689,153 +746,7 @@
             transform: translateY(-2px);
         }
 
-        .pricing-section {
-            background: radial-gradient(ellipse at center, rgba(102, 126, 234, 0.05), transparent 70%);
-        }
-
-        .pricing-container {
-            max-width: 900px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
-
-        .pricing-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 2.5rem;
-            position: relative;
-            transition: all 0.4s ease;
-        }
-
-        .pricing-card.featured {
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 60px rgba(102, 126, 234, 0.2);
-        }
-
-        .pricing-card.featured::before {
-            content: 'MOST POPULAR';
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 0.5rem 1rem;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            color: white;
-            font-size: 0.75rem;
-            font-weight: 700;
-            border-radius: 50px;
-        }
-
-        .pricing-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .pricing-name {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .pricing-desc {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .pricing-amount {
-            display: flex;
-            align-items: baseline;
-            gap: 0.25rem;
-            margin-bottom: 2rem;
-        }
-
-        .pricing-currency {
-            font-size: 1.5rem;
-            color: var(--text-muted);
-        }
-
-        .pricing-value {
-            font-family: 'Outfit', sans-serif;
-            font-size: 4rem;
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        .pricing-period {
-            color: var(--text-muted);
-            font-size: 1rem;
-        }
-
-        .pricing-features {
-            list-style: none;
-            margin-bottom: 2rem;
-        }
-
-        .pricing-features li {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .pricing-features li:last-child {
-            border-bottom: none;
-        }
-
-        .pricing-features svg {
-            width: 20px;
-            height: 20px;
-            stroke: var(--accent-blue);
-            fill: none;
-            flex-shrink: 0;
-        }
-
-        .pricing-card .btn {
-            width: 100%;
-            justify-content: center;
-        }
-
-        .cta-section {
-            padding: 8rem 2rem;
-            text-align: center;
-            position: relative;
-        }
-
-        .cta-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(102, 126, 234, 0.1), transparent 70%);
-            pointer-events: none;
-        }
-
-        .cta-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        .cta-content h2 {
-            font-family: 'Outfit', sans-serif;
-            font-size: clamp(2rem, 4vw, 3.5rem);
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-
-        .cta-content p {
-            color: var(--text-muted);
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-        }
-
+        /* ===== MACE Section ===== */
         .mace-section {
             background: linear-gradient(180deg, transparent, rgba(0, 200, 150, 0.03), transparent);
         }
@@ -851,7 +762,7 @@
 
         .mace-content h3 {
             font-family: 'Outfit', sans-serif;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 700;
             margin-bottom: 1.5rem;
         }
@@ -918,73 +829,62 @@
             font-size: 0.9rem;
         }
 
-        .mace-models {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-
-        .mace-model {
-            padding: 0.5rem 1rem;
-            background: rgba(0, 200, 150, 0.1);
-            border: 1px solid rgba(0, 200, 150, 0.3);
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.85rem;
-            color: #00c896;
-        }
-
         .mace-visual {
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        .energy-display {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 10px;
+        .mace-screenshot-frame {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 200, 150, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .mace-screenshot-frame img {
+            width: 100%;
+            display: block;
+        }
+
+        /* ===== CTA ===== */
+        .cta-section {
+            padding: 8rem 2rem;
             text-align: center;
-            min-width: 280px;
+            position: relative;
         }
 
-        .energy-label {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.1), transparent 70%);
+            pointer-events: none;
         }
 
-        .energy-value {
+        .cta-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-content h2 {
             font-family: 'Outfit', sans-serif;
-            font-size: 3rem;
+            font-size: clamp(2rem, 4vw, 3.5rem);
             font-weight: 700;
-            color: #00c896;
+            margin-bottom: 1rem;
         }
 
-        .energy-value span {
-            font-size: 1.5rem;
+        .cta-content p {
             color: var(--text-muted);
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
         }
 
-        .energy-kcal {
-            color: var(--text-muted);
-            font-size: 1rem;
-            margin-top: 0.5rem;
-        }
-
-        @media (max-width: 1024px) {
-            .mace-container {
-                grid-template-columns: 1fr;
-            }
-
-            .mace-visual {
-                order: 2;
-            }
-        }
-
+        /* ===== Footer ===== */
         footer {
             background: rgba(0, 0, 0, 0.3);
             border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -1098,6 +998,7 @@
             margin: 5px 0;
         }
 
+        /* ===== Responsive ===== */
         @media (max-width: 1024px) {
             .hero-container {
                 grid-template-columns: 1fr;
@@ -1125,7 +1026,8 @@
                 grid-template-columns: repeat(2, 1fr);
             }
 
-            .ai-container {
+            .ai-container,
+            .mace-container {
                 grid-template-columns: 1fr;
             }
 
@@ -1133,9 +1035,12 @@
                 order: 2;
             }
 
-            .pricing-container {
+            .mace-visual {
+                order: 2;
+            }
+
+            .gallery-grid {
                 grid-template-columns: 1fr;
-                max-width: 450px;
             }
 
             .footer-top {
@@ -1187,30 +1092,28 @@
         <div class="molecule-float"></div>
     </div>
 
+    <!-- ===== NAV ===== -->
     <nav id="navbar">
-        <div class="logo">
-            ChopChopMol
-        </div>
+        <div class="logo">ChopChopMol</div>
         <ul class="nav-links">
             <li><a href="#features">Features</a></li>
             <li><a href="#ai">AI Assistant</a></li>
-            <li><a href="#formats">Formats</a></li>
+            <li><a href="#gallery">Gallery</a></li>
             <li><a href="#mace">MLIP</a></li>
         </ul>
         <div class="nav-cta">
-            <!-- <a href="#" class="btn btn-ghost">Sign In</a>
-            <a href="#" class="btn btn-primary">Launch App</a> -->
+            <a href="demo" class="btn btn-primary">Launch App</a>
         </div>
         <button class="mobile-menu-btn"><span></span><span></span><span></span></button>
     </nav>
 
+    <!-- ===== HERO ===== -->
     <section class="hero">
         <div class="hero-container">
             <div class="hero-content">
-                <h1 width="100%"><span>AI Powered</span> <br> Platform for Molecular <br> Simulations </span></h1>
-                <p>AI-powered editing and simulation, helping you perform <span class="highlight-bold">end-to-end</span>
-                    workflows effortlessly. Analyze, and transform
-                    molecular structures with unprecedented speed and precision.</p>
+                <h1><span>AI-Powered</span> Platform for Molecular Simulations</h1>
+                <p>Edit, simulate, and analyze molecular structures using natural language. Powered by machine learning
+                    potentials and AI, accessible entirely from your browser.</p>
                 <div class="hero-buttons">
                     <a href="demo" class="btn btn-primary btn-large">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1227,12 +1130,12 @@
                         <div class="stat-label">Atoms Supported</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-value" data-target="8" data-suffix="+">0</div>
-                        <div class="stat-label">File Formats</div>
+                        <div class="stat-value" data-target="55" data-suffix="+">0</div>
+                        <div class="stat-label">AI Tools</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-value" data-target="AI" data-text="true">AI</div>
-                        <div class="stat-label">Powered Editing</div>
+                        <div class="stat-value" data-target="8" data-suffix="+">0</div>
+                        <div class="stat-label">File Formats</div>
                     </div>
                 </div>
             </div>
@@ -1242,17 +1145,32 @@
         </div>
     </section>
 
+    <!-- ===== APP SHOWCASE ===== -->
+    <section class="showcase-section">
+        <div class="showcase-container">
+            <div class="showcase-browser">
+                <div class="browser-bar">
+                    <div class="browser-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <div class="browser-url">chopchopmol.com/demo</div>
+                </div>
+                <!-- TODO: Replace with screenshot -->
+                <img src="screenshots/app-hero.png"
+                    alt="ChopChopMol application showing 3D molecular visualization with AI chat panel">
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== FEATURES ===== -->
     <section class="section" id="features">
         <div class="section-header">
-            <span class="section-tag">AI-Powered</span>
-
-            <h1 class="section-title">Effortless Molecular Editing and Simulation Using <span class="highlight">Natural
-                    Language</span></h1>
-            <p class="section-subtitle">From simple visualization to complex editing and simulations ChopChopMol
-                provides
+            <span class="section-tag">Features</span>
+            <h2 class="section-title">Everything You Need for <span class="highlight">Molecular Work</span></h2>
+            <p class="section-subtitle">From simple visualization to complex simulations, ChopChopMol provides
                 professional-grade tools accessible from your browser.</p>
         </div>
-        <!-- <div class="features-grid">
+        <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon"><svg viewBox="0 0 24 24">
                         <path
@@ -1262,8 +1180,9 @@
                         <line x1="12" y1="22.08" x2="12" y2="12"></line>
                     </svg></div>
                 <h3 class="feature-title">3D Visualization</h3>
-                <p class="feature-desc">Render molecules with GPU-accelerated instanced meshes. Support for perspective
-                    and orthographic cameras with smooth arcball controls.</p>
+                <p class="feature-desc">GPU-accelerated instanced rendering with ball-and-stick, space-filling,
+                    wireframe, and cartoon styles. Smooth arcball controls with perspective and orthographic cameras.
+                </p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon"><svg viewBox="0 0 24 24">
@@ -1272,26 +1191,26 @@
                         <line x1="11" y1="8" x2="11" y2="14"></line>
                         <line x1="8" y1="11" x2="14" y2="11"></line>
                     </svg></div>
-                <h3 class="feature-title">Atom Selection</h3>
-                <p class="feature-desc">Select atoms by clicking, box selection, or chain/residue. Create and manage
-                    fragments with comprehensive selection tools.</p>
+                <h3 class="feature-title">Selection & Editing</h3>
+                <p class="feature-desc">Click, box-select, or select by chain and residue. Replace atoms, define
+                    rotation axes, create fragments, and edit structures interactively.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon"><svg viewBox="0 0 24 24">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                     </svg></div>
-                <h3 class="feature-title">Measurement Tools</h3>
-                <p class="feature-desc">Measure bond lengths, angles, and dihedral angles with precision. Real-time
-                    calculations as you interact with structures.</p>
+                <h3 class="feature-title">Measurements</h3>
+                <p class="feature-desc">Measure bond distances, angles, and dihedral angles with precision. Real-time
+                    calculations with persistent labels as you interact with structures.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon"><svg viewBox="0 0 24 24">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                     </svg></div>
-                <h3 class="feature-title">Multiple Styles</h3>
-                <p class="feature-desc">Switch between ball-and-stick, space-filling, wireframe, and more. Customize
-                    atom colors and rendering quality.</p>
+                <h3 class="feature-title">Trajectory Playback</h3>
+                <p class="feature-desc">Animate multi-frame trajectories from MD simulations, geometry optimizations, or
+                    torsion scans. Scrub through frames with energy tracking.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon"><svg viewBox="0 0 24 24">
@@ -1299,82 +1218,107 @@
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg></div>
-                <h3 class="feature-title">Cloud Storage</h3>
-                <p class="feature-desc">Save molecules to the cloud with Firebase integration. Access your work from
-                    anywhere with secure authentication.</p>
+                <h3 class="feature-title">Cloud & Remote Files</h3>
+                <p class="feature-desc">Save molecules to Firebase cloud storage. Connect to remote servers via SSH/SFTP
+                    to browse, open, and save files on HPC clusters.</p>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="3" y1="9" x2="21" y2="9"></line>
-                        <line x1="9" y1="21" x2="9" y2="9"></line>
-                    </svg></div>
-                <h3 class="feature-title">Tabbed Interface</h3>
-                <p class="feature-desc">Work with multiple molecules simultaneously. Drag-and-drop files directly into
-                    the application for instant viewing.</p>
-            </div>
-        </div> -->
+        </div>
+    </section>
+
+    <!-- ===== AI ASSISTANT ===== -->
+    <section class="section ai-section" id="ai">
+        <div class="section-header">
+            <span class="section-tag">AI Assistant</span>
+            <h2 class="section-title">Edit Molecules with <span class="highlight">Natural Language</span></h2>
+            <p class="section-subtitle">Simply describe what you want. The AI understands your molecule's structure and
+                executes complex operations in seconds.</p>
+        </div>
         <div class="ai-container">
             <div class="ai-visual">
-                <div class="ai-chat-demo">
-                    <div class="chat-header">
-                        <div class="chat-avatar"><svg viewBox="0 0 24 24">
-                                <path
-                                    d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13A2.5 2.5 0 0 0 5 15.5 2.5 2.5 0 0 0 7.5 18a2.5 2.5 0 0 0 2.5-2.5A2.5 2.5 0 0 0 7.5 13m9 0a2.5 2.5 0 0 0-2.5 2.5 2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-2.5-2.5z" />
-                            </svg></div>
-                        <div>
-                        </div>
-                    </div>
-                    <div class="chat-messages">
-                        <div class="chat-message user">Rotate the benzene ring 90° around the X axis</div>
-                        <div class="chat-message ai">Done! I've rotated the benzene ring fragment 90° around the X axis.
-                            The transformation preserved all bond geometries.</div>
-                        <div class="chat-message user">Perform a torsion scan with mace-mpa-0 around bond 4,5</div>
-                        <div class="chat-message ai">I've finished the torsion scan and calculated the energy of all
-                            frames. Here is the plot:</div>
-                    </div>
-                    <div class="chat-input">
-                        <input type="text" placeholder="Ask AI to modify your molecule..." disabled>
-                        <button><svg viewBox="0 0 24 24">
-                                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-                            </svg></button>
-                    </div>
+                <div class="ai-screenshot-frame">
+                    <!-- TODO: Replace with screenshot -->
+                    <img src="screenshots/ai-chat.png"
+                        alt="AI chat panel showing a conversation with tool calls and molecular editing">
                 </div>
             </div>
             <div class="ai-content">
-                <p>Simply tell the AI what you want to do. Rotate fragments, add functional groups, measure properties,
-                    or transform entire structures using plain English commands.</p>
+                <h3>Powered with <span>AI</span></h3>
+                <p>55+ specialized tools let the AI rotate fragments, add functional groups, run energy calculations,
+                    generate charts, and execute Python code - all from a single chat message.</p>
                 <div class="ai-features">
                     <div class="ai-feature">
                         <div class="ai-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                             </svg></div>
                         <div class="ai-feature-text"><strong>Natural Language Commands</strong><span>No scripting
-                                required—just describe what you need</span></div>
+                                required - just describe what you need</span></div>
                     </div>
                     <div class="ai-feature">
                         <div class="ai-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
-                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
                             </svg></div>
-                        <div class="ai-feature-text"><strong>Streaming Responses</strong><span>Real-time feedback as
-                                operations complete</span></div>
+                        <div class="ai-feature-text"><strong>Extended Thinking</strong><span>Watch the AI reason through
+                                complex multi-step workflows</span></div>
+                    </div>
+                    <div class="ai-feature">
+                        <div class="ai-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                            </svg></div>
+                        <div class="ai-feature-text"><strong>Python Execution</strong><span>AI runs custom Python
+                                analysis on your molecule data</span></div>
                     </div>
                     <div class="ai-feature">
                         <div class="ai-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                             </svg></div>
                         <div class="ai-feature-text"><strong>Context-Aware</strong><span>Understands your molecule's
-                                structure and history</span></div>
+                                structure, selection, and history</span></div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- <section class="section ai-section" id="ai">
+    <!-- ===== GALLERY ===== -->
+    <section class="section gallery-section" id="gallery">
+        <div class="section-header">
+            <span class="section-tag">In Action</span>
+            <h2 class="section-title">See What's Possible</h2>
+            <p class="section-subtitle">From editing small molecules to analyzing proteins, ChopChopMol handles it all.
+            </p>
+        </div>
+        <div class="gallery-grid">
+            <div class="gallery-item">
+                <!-- TODO: Replace with screenshot -->
+                <img src="screenshots/editing.png" alt="Atom selection and editing with rotation axis">
+                <div class="gallery-caption">
+                    <h4>Interactive Editing</h4>
+                    <p>Select atoms, define rotation axes, and manipulate molecular fragments in real time.</p>
+                </div>
+            </div>
+            <div class="gallery-item">
+                <!-- TODO: Replace with screenshot -->
+                <img src="screenshots/torsion-scan.png" alt="Torsion scan with energy plot and trajectory">
+                <div class="gallery-caption">
+                    <h4>Torsion Scans & Energy Profiles</h4>
+                    <p>Scan dihedral angles with MACE potentials and visualize energy landscapes.</p>
+                </div>
+            </div>
 
-    </section> -->
+            <div class="gallery-item">
+                <!-- TODO: Replace with screenshot -->
+                <img src="screenshots/protein.png" alt="Protein visualization with cartoon style">
+                <div class="gallery-caption">
+                    <h4>Protein Visualization</h4>
+                    <p>Load PDB and mmCIF files with support for large biomolecular structures.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
+    <!-- ===== FILE FORMATS ===== -->
     <section class="section formats-section" id="formats">
         <div class="section-header">
             <span class="section-tag">Compatibility</span>
@@ -1390,31 +1334,30 @@
             <span class="format-badge">PQR</span>
             <span class="format-badge">GRO</span>
             <span class="format-badge">CML</span>
+            <span class="format-badge">ORCA OUT</span>
         </div>
     </section>
 
+    <!-- ===== MACE / MLIP ===== -->
     <section class="section mace-section" id="mace">
         <div class="section-header">
-            <span class="section-tag">ML Potentials</span>
+            <span class="section-tag green">ML Potentials</span>
             <h2 class="section-title">MLIPs for Molecular Simulations</h2>
             <p class="section-subtitle">State-of-the-art machine learning potentials for accurate energy calculations
-                and
-                geometry optimization.</p>
+                and geometry optimization.</p>
         </div>
         <div class="mace-container">
             <div class="mace-content">
-                <h3 style="font-size: 34px;">Uses <span>MACE-MP</span></h3>
+                <h3>Powered by <span>MACE-MP</span></h3>
                 <p>Calculate molecular energies and optimize geometries using foundation models trained on millions of
-                    DFT
-                    calculations.</p>
+                    DFT calculations. All running on the backend - no setup required.</p>
                 <div class="mace-features">
                     <div class="mace-feature">
                         <div class="mace-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
                                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
                             </svg></div>
                         <div class="mace-feature-text"><strong>Single-Point Energy</strong><span>Get accurate energies
-                                in
-                                seconds</span></div>
+                                in seconds</span></div>
                     </div>
                     <div class="mace-feature">
                         <div class="mace-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
@@ -1430,80 +1373,30 @@
                                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                             </svg></div>
                         <div class="mace-feature-text"><strong>Energy Profiles</strong><span>Scan rotations and
-                                translations
-                                with energy tracking</span></div>
+                                translations with energy tracking</span></div>
                     </div>
-                </div>
-                <div class="mace-models">
-                    <!-- <span class="mace-model">mace-mp-0a</span>
-                    <span class="mace-model">mace-mp-0b3</span>
-                    <span class="mace-model">mace-mpa-0</span> -->
+                    <div class="mace-feature">
+                        <div class="mace-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path
+                                    d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                                </path>
+                            </svg></div>
+                        <div class="mace-feature-text"><strong>Molecular Dynamics</strong><span>Run NVE/NVT simulations
+                                with MACE potentials</span></div>
+                    </div>
                 </div>
             </div>
             <div class="mace-visual">
-                <div class="energy-display">
-                    <div class="energy-value" style="margin-bottom: 10px;">Torsional scan graph</div>
-                    <img src="energy.png" width="870px"
-                        style="border-radius: 10px; box-shadow:0px 0px 10px 0px rgba(0, 0, 0, 0.5);" alt="Energy Arrow">
+                <div class="mace-screenshot-frame">
+                    <!-- TODO: Replace with screenshot -->
+                    <img src="screenshots/mace-energy.png" alt="Torsion scan energy profile with MACE-MP potential">
                 </div>
-            </div>
-        </div>
-    </section>
-    <section class="section pricing-section" id="pricing" style="display: none;">
-        <div class="section-header">
-            <span class="section-tag">Simple Pricing</span>
-            <h2 class="section-title">Start Free, Go Pro</h2>
-            <p class="section-subtitle">No credit card required to get started. Upgrade when you need more.</p>
-        </div>
-        <div class="pricing-container">
-            <div class="pricing-card">
-                <h3 class="pricing-name">Free</h3>
-                <p class="pricing-desc">Perfect for exploration and learning</p>
-                <div class="pricing-amount"><span class="pricing-currency">$</span><span
-                        class="pricing-value">0</span><span class="pricing-period">/month</span></div>
-                <ul class="pricing-features">
-                    <li><svg viewBox="0 0 24 24" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>Full 3D visualization</li>
-                    <li><svg viewBox="0 0 24 24" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>All file format support</li>
-                    <li><svg viewBox="0 0 24 24" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>Basic measurements</li>
-                    <li><svg viewBox="0 0 24 24" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>Local file storage</li>
-                </ul>
-                <a href="#" class="btn btn-ghost">Get Started</a>
-            </div>
-            <div class="pricing-card featured">
-                <h3 class="pricing-name">Pro</h3>
-                <p class="pricing-desc">For researchers and professionals</p>
-                <div class="pricing-amount"><span class="pricing-currency">$</span><span
-                        class="pricing-value">2</span><span class="pricing-period">/month</span></div>
-                <ul class="pricing-features">
-                    <li><svg viewBox="0 0 24 24" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>Everything in Free</li>
-                    <li><svg viewBox="0 0 24 24" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg><strong>AI molecular editing</strong></li>
-                    <li><svg viewBox="0 0 24 24" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>Cloud storage & sync</li>
-                    <li><svg viewBox="0 0 24 24" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>Priority support</li>
-                    <li><svg viewBox="0 0 24 24" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>Advanced measurements</li>
-                </ul>
-                <a href="./upgrade/" class="btn btn-primary">Upgrade to Pro</a>
             </div>
         </div>
     </section>
 
+    <!-- ===== CTA ===== -->
     <section class="cta-section">
         <div class="cta-content">
             <h2>Ready to Transform Your Molecular Work?</h2>
@@ -1512,30 +1405,28 @@
         </div>
     </section>
 
+    <!-- ===== FOOTER ===== -->
     <footer>
         <div class="footer-container">
             <div class="footer-top">
                 <div class="footer-brand">
-                    <div class="logo">
-                        ChopChopMol
-                    </div>
-                    <p>Professional 3D molecular visualization and AI-powered editing, accessible from your browser.</p>
+                    <div class="logo">ChopChopMol</div>
+                    <p>AI-powered 3D molecular visualization and simulation, accessible from your browser.</p>
                 </div>
                 <div class="footer-links">
                     <h4>Product</h4>
                     <ul>
-                        <li><a href="#">Features</a></li>
-                        <li><a href="#">Pricing</a></li>
-                        <li><a href="#">Documentation</a></li>
-                        <li><a href="#">Changelog</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#ai">AI Assistant</a></li>
+                        <li><a href="#mace">MLIP</a></li>
+                        <li><a href="#formats">File Formats</a></li>
                     </ul>
                 </div>
                 <div class="footer-links">
                     <h4>Resources</h4>
                     <ul>
                         <li><a href="#">Tutorials</a></li>
-                        <li><a href="#">API Reference</a></li>
-                        <li><a href="#">File Formats</a></li>
+                        <li><a href="#">Documentation</a></li>
                         <li><a href="#">FAQ</a></li>
                     </ul>
                 </div>
@@ -1550,7 +1441,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>© 2025 ChopChopMol. All rights reserved.</p>
+                <p>2025 ChopChopMol. All rights reserved.</p>
                 <div class="social-links">
                     <a href="#"><svg viewBox="0 0 24 24">
                             <path
@@ -1573,6 +1464,7 @@
         </div>
     </footer>
 
+    <!-- ===== Three.js Hero Molecule ===== -->
     <script
         type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 
@@ -1580,16 +1472,10 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        /* =========================
-           LOAD DATA
-        ========================= */
         const moleculeData = await fetch('molecule-data.json')
             .then(r => r.json())
             .catch(() => null);
 
-        /* =========================
-           ELEMENT SETTINGS
-        ========================= */
         const ELEMENTS = {
             H: { color: 'white', radius: 0.31 },
             C: { color: 'gray', radius: 0.76 },
@@ -1598,27 +1484,14 @@
             Si: { color: 'darkgray', radius: 1.11 },
         };
 
-        /* =========================
-           THREE.JS SETUP
-        ========================= */
         const canvas = document.getElementById('molecule-canvas');
         const container = canvas.parentElement;
 
         const scene = new THREE.Scene();
-
-        const camera = new THREE.PerspectiveCamera(
-            50,
-            container.clientWidth / container.clientHeight,
-            0.1,
-            1000
-        );
+        const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
         camera.position.set(20, 20, 50);
 
-        const renderer = new THREE.WebGLRenderer({
-            canvas,
-            antialias: true,
-            alpha: true
-        });
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -1631,139 +1504,83 @@
         controls.minDistance = 30;
         controls.maxDistance = 150;
 
-        /* =========================
-           LIGHTING
-        ========================= */
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-
         const dir1 = new THREE.DirectionalLight(0xffffff, 1);
         dir1.position.set(50, 50, 50);
         scene.add(dir1);
-
         const dir2 = new THREE.DirectionalLight(0xffffff, 0.4);
         dir2.position.set(-50, -25, -50);
         scene.add(dir2);
 
-        /* =========================
-           MOLECULE GROUP
-        ========================= */
         const moleculeGroup = new THREE.Group();
         scene.add(moleculeGroup);
 
         if (moleculeData?.atomData) {
             const atoms = moleculeData.atomData;
 
-            /* ---------- Center molecule ---------- */
             let cx = 0, cy = 0, cz = 0;
-            atoms.forEach(a => {
-                cx += a.x; cy += a.y; cz += a.z;
-            });
-            cx /= atoms.length;
-            cy /= atoms.length;
-            cz /= atoms.length;
+            atoms.forEach(a => { cx += a.x; cy += a.y; cz += a.z; });
+            cx /= atoms.length; cy /= atoms.length; cz /= atoms.length;
+            atoms.forEach(a => { a.x -= cx; a.y -= cy; a.z -= cz; });
 
-            atoms.forEach(a => {
-                a.x -= cx;
-                a.y -= cy;
-                a.z -= cz;
-            });
-
-            /* ---------- ATOMS (Instanced) ---------- */
             const sphereGeo = new THREE.SphereGeometry(1, 20, 20);
             const atomsByElement = {};
-
             atoms.forEach(atom => {
-                if (!atomsByElement[atom.element]) {
-                    atomsByElement[atom.element] = [];
-                }
+                if (!atomsByElement[atom.element]) atomsByElement[atom.element] = [];
                 atomsByElement[atom.element].push(atom);
             });
 
             Object.entries(atomsByElement).forEach(([element, list]) => {
                 const settings = ELEMENTS[element] || { color: '#888', radius: 0.5 };
-
                 const material = new THREE.MeshStandardMaterial({
                     color: new THREE.Color(settings.color),
                     roughness: 0.3,
                     metalness: 0.15
                 });
-
-                const mesh = new THREE.InstancedMesh(
-                    sphereGeo,
-                    material,
-                    list.length
-                );
-
+                const mesh = new THREE.InstancedMesh(sphereGeo, material, list.length);
                 const scale = 2;
                 const mat = new THREE.Matrix4();
                 list.forEach((a, i) => {
-                    mat.makeScale(
-                        settings.radius / scale,
-                        settings.radius / scale,
-                        settings.radius / scale
-                    );
+                    mat.makeScale(settings.radius / scale, settings.radius / scale, settings.radius / scale);
                     mat.setPosition(a.x, a.y, a.z);
                     mesh.setMatrixAt(i, mat);
                 });
-
                 mesh.instanceMatrix.needsUpdate = true;
                 moleculeGroup.add(mesh);
             });
 
-            /* =========================
-               BONDS (HALF-COLORED)
-            ========================= */
             const BOND_FACTOR = 1.25;
-            const bondRadius = 0.09;
-
-            const bondGeo = new THREE.CylinderGeometry(
-                bondRadius,
-                bondRadius,
-                1,
-                12
-            );
-
+            const bondGeo = new THREE.CylinderGeometry(0.09, 0.09, 1, 12);
             const up = new THREE.Vector3(0, 1, 0);
 
             for (let i = 0; i < atoms.length; i++) {
                 for (let j = i + 1; j < atoms.length; j++) {
-                    const a = atoms[i];
-                    const b = atoms[j];
-
+                    const a = atoms[i], b = atoms[j];
                     const ra = ELEMENTS[a.element]?.radius ?? 0.5;
                     const rb = ELEMENTS[b.element]?.radius ?? 0.5;
-                    const maxDist = (ra + rb) * BOND_FACTOR;
-
                     const vA = new THREE.Vector3(a.x, a.y, a.z);
                     const vB = new THREE.Vector3(b.x, b.y, b.z);
-
                     const dist = vA.distanceTo(vB);
-                    if (dist > maxDist) continue;
+                    if (dist > (ra + rb) * BOND_FACTOR) continue;
 
                     const mid = vA.clone().add(vB).multiplyScalar(0.5);
                     const dir = vB.clone().sub(vA).normalize();
                     const quat = new THREE.Quaternion().setFromUnitVectors(up, dir);
 
-                    // ---- half bond A -> mid ----
                     const matA = new THREE.MeshStandardMaterial({
                         color: new THREE.Color(ELEMENTS[a.element]?.color ?? '#888'),
-                        roughness: 0.4,
-                        metalness: 0.1
+                        roughness: 0.4, metalness: 0.1
                     });
-
                     const bondA = new THREE.Mesh(bondGeo, matA);
                     bondA.quaternion.copy(quat);
                     bondA.scale.set(1, dist / 2, 1);
                     bondA.position.copy(vA.clone().add(mid).multiplyScalar(0.5));
                     moleculeGroup.add(bondA);
 
-                    // ---- half bond B -> mid ----
                     const matB = new THREE.MeshStandardMaterial({
                         color: new THREE.Color(ELEMENTS[b.element]?.color ?? '#888'),
-                        roughness: 0.4,
-                        metalness: 0.1
+                        roughness: 0.4, metalness: 0.1
                     });
-
                     const bondB = new THREE.Mesh(bondGeo, matB);
                     bondB.quaternion.copy(quat);
                     bondB.scale.set(1, dist / 2, 1);
@@ -1773,9 +1590,6 @@
             }
         }
 
-        /* =========================
-           ANIMATION LOOP
-        ========================= */
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
@@ -1783,19 +1597,16 @@
         }
         animate();
 
-        /* =========================
-           RESIZE
-        ========================= */
         window.addEventListener('resize', () => {
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(container.clientWidth, container.clientHeight);
         });
 
+        // Scroll effects
         const navbar = document.getElementById('navbar');
         window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
 
-        // Smooth scroll
         document.querySelectorAll('a[href^="#"]').forEach(a => {
             a.addEventListener('click', e => {
                 e.preventDefault();
@@ -1803,11 +1614,16 @@
             });
         });
 
-        // Scroll animations
         const observer = new IntersectionObserver(entries => {
-            entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'translateY(0)'; } });
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.style.opacity = '1';
+                    e.target.style.transform = 'translateY(0)';
+                }
+            });
         }, { threshold: 0.1 });
-        document.querySelectorAll('.feature-card, .pricing-card, .ai-feature, .mace-feature').forEach(el => {
+
+        document.querySelectorAll('.feature-card, .ai-feature, .mace-feature, .gallery-item').forEach(el => {
             el.style.opacity = '0';
             el.style.transform = 'translateY(30px)';
             el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
@@ -1864,10 +1680,6 @@
         }, { threshold: 0.5 });
         document.querySelectorAll('.stat-value').forEach(el => statObserver.observe(el));
     </script>
-
-
-
-
 </body>
 
 </html>
