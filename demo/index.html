@@ -1025,7 +1025,7 @@
         <h3>Drag and drop a file here .xyz, .mol, or .pdb to be loaded</h3>
     </div>
 
-    <div id="landingCard">
+    <div id="landingCard" style="display: none!important;">
         <div class="landing-card-content">
             <h2 class="landing-title">ChopChopMol</h2>
             <p class="landing-subtitle">Load a molecule to get started</p>
@@ -2008,7 +2008,8 @@
                 </div>
                 <div class="compact-style-row" id="envMapPresetRow" style="opacity: 0.5;">
                     <label>HDRI</label>
-                    <select id="envMapPreset" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 4px; font-size: 11px; flex: 1; margin-left: 6px;">
+                    <select id="envMapPreset"
+                        style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 4px; font-size: 11px; flex: 1; margin-left: 6px;">
                         <option value="studio_small_09">Studio</option>
                         <option value="photo_studio_loft_hall">Loft Hall</option>
                         <option value="venice_sunset">Venice Sunset</option>
@@ -2023,7 +2024,8 @@
                 </div>
                 <div class="compact-style-row" id="envMapResolutionRow" style="opacity: 0.5;">
                     <label>Resolution</label>
-                    <select id="envMapResolution" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 4px; font-size: 11px; width: 60px; margin-left: 6px;">
+                    <select id="envMapResolution"
+                        style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 4px; font-size: 11px; width: 60px; margin-left: 6px;">
                         <option value="1k" selected>1K</option>
                         <option value="2k">2K</option>
                         <option value="4k">4K</option>
@@ -2315,9 +2317,12 @@
                 <span class="ai-thinking-control-label">Thinking</span>
                 <div class="ai-thinking-toggle" id="aiThinkingToggle">
                     <button class="ai-thinking-opt" data-budget="0" title="No thinking">Off</button>
-                    <button class="ai-thinking-opt active" data-budget="4096" title="Light thinking (~4K tokens)">Low</button>
-                    <button class="ai-thinking-opt" data-budget="10000" title="Medium thinking (~10K tokens)">Med</button>
-                    <button class="ai-thinking-opt" data-budget="32000" title="Deep thinking (~32K tokens)">High</button>
+                    <button class="ai-thinking-opt active" data-budget="4096"
+                        title="Light thinking (~4K tokens)">Low</button>
+                    <button class="ai-thinking-opt" data-budget="10000"
+                        title="Medium thinking (~10K tokens)">Med</button>
+                    <button class="ai-thinking-opt" data-budget="32000"
+                        title="Deep thinking (~32K tokens)">High</button>
                 </div>
             </div>
 
@@ -2763,7 +2768,7 @@
                                     if (lastQuote > 0) code = code.substring(0, lastQuote);
                                     try {
                                         code = JSON.parse('"' + code + '"');
-                                    } catch(e) {
+                                    } catch (e) {
                                         code = code.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
                                     }
                                     const detailsEl = activeToolRow.querySelector('.ai-tool-row-details');
@@ -3523,7 +3528,7 @@
         window.renderEnergyChart = renderEnergyChart;
 
         // ── Chart JPG Download ──
-        window._downloadChartAsJPG = function(chartInstance, title) {
+        window._downloadChartAsJPG = function (chartInstance, title) {
             const srcCanvas = chartInstance.canvas;
             const scale = 2;
             const offscreen = document.createElement('canvas');
@@ -3541,7 +3546,7 @@
         };
 
         // ── Chart Fullscreen Modal ──
-        window._openChartModal = function(data, originalConfig) {
+        window._openChartModal = function (data, originalConfig) {
             // Remove existing modal if any
             document.querySelector('.chart-modal-overlay')?.remove();
 
