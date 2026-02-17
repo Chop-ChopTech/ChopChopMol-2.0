@@ -378,6 +378,9 @@ export default class Main {
         if (window.updateChargeControls) {
             window.updateChargeControls();
         }
+        if (window.updateRibbonToggle) {
+            window.updateRibbonToggle();
+        }
     }
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
@@ -6242,6 +6245,21 @@ function updateLabelMode() {
     main.molecule.toggleLabels(shouldShowLabels, window.showElements, window.showIndices, window.showCharges, charges);
     render();
 }
+
+// Ribbon/Cartoon toggle
+document.getElementById('toggleRibbonCheckbox').addEventListener('change', function () {
+    window.toggleRibbon();
+    // Sync checkbox state with actual ribbonMode (toggleRibbon may fail if no protein)
+    this.checked = window.ribbonMode;
+});
+
+window.updateRibbonToggle = function () {
+    const row = document.getElementById('ribbonToggleRow');
+    const checkbox = document.getElementById('toggleRibbonCheckbox');
+    const hasRibbon = !!window.main?.data?.ribbonData;
+    row.style.display = hasRibbon ? '' : 'none';
+    checkbox.checked = window.ribbonMode;
+};
 
 // Force arrows toggle
 window.forceArrowScale = 1.0;
