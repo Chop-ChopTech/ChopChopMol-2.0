@@ -3576,6 +3576,7 @@ input[type="range"]:focus {
 }
 
 .file-item.ai-created {
+    background: rgba(0, 255, 136, 0.12);
     border-right: 2px solid #00ff88;
 }
 

@@ -2304,9 +2304,8 @@ async function sendToAI(userMessage, onChunk) {
                         content: JSON.stringify(e.result)
                     }))
                 };
-                // Keep chart images for final response, clear the rest
-                // Keep chart data for final response, clear the rest
-                executed = executed.filter(e => e.chartData);
+                // Keep chart/figure data for final rendering, clear the rest
+                executed = executed.filter(e => e.chartData || e.pythonFigures);
             }
             if (i === 0 && onChunk) onChunk(null, 'Thinking');
 
