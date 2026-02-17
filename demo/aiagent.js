@@ -2162,6 +2162,67 @@ const FUNCTIONS = {
             }
         }
     },
+    execute_python: {
+        execute: async (params) => {
+            if (!params.code) return { success: false, message: "No code provided" };
+
+            // Show permission dialog and wait for user approval
+            const approved = await new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'python-confirm-overlay';
+                overlay.innerHTML = `
+                    <div class="python-confirm-modal">
+                        <div class="python-confirm-header">
+                            <i class="fas fa-terminal"></i>
+                            <span>Run Python Code?</span>
+                        </div>
+                        ${params.description ? `<div class="python-confirm-desc">${params.description}</div>` : ''}
+                        <pre class="python-confirm-code"><code>${params.code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+                        <div class="python-confirm-buttons">
+                            <button class="python-confirm-deny">Deny</button>
+                            <button class="python-confirm-allow">Allow</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                requestAnimationFrame(() => overlay.classList.add('active'));
+
+                const close = (result) => {
+                    overlay.classList.remove('active');
+                    setTimeout(() => overlay.remove(), 200);
+                    resolve(result);
+                };
+                overlay.querySelector('.python-confirm-allow').onclick = () => close(true);
+                overlay.querySelector('.python-confirm-deny').onclick = () => close(false);
+                overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+            });
+
+            if (!approved) {
+                return { success: false, message: "User denied code execution" };
+            }
+
+            // Build request with current molecule data
+            const molecule = window.main?.molecule;
+            const atoms = molecule?.atoms?.length
+                ? molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }))
+                : [];
+
+            try {
+                const resp = await fetch(`${AI_CONFIG.backendUrl}/ai/python/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: params.code, atoms })
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    return { success: false, message: err.error || `Execution failed (${resp.status})` };
+                }
+                return await resp.json();
+            } catch (e) {
+                return { success: false, message: `Execution error: ${e.message}` };
+            }
+        }
+    },
 };
 
 function getMoleculeState() {
@@ -2296,6 +2357,9 @@ async function sendToAI(userMessage, onChunk) {
                         } else if (data.type === 'tool_status') {
                             // Real-time tool status from streaming (Claude)
                             if (onChunk) onChunk(null, data.toolName, 'tool_status');
+                        } else if (data.type === 'tool_delta') {
+                            // Streaming tool argument deltas
+                            if (onChunk) onChunk(data.delta, data.toolName, 'tool_delta');
                         } else if (data.type === 'tool_calls') {
                             toolCalls = data.toolCalls;
                             assistantMessage = data.assistantMessage;
@@ -2343,6 +2407,9 @@ async function sendToAI(userMessage, onChunk) {
                                 result: compressedResult,
                                 chartData: window._pendingChartData
                             };
+                        } else if (fn === 'execute_python' && res.figures?.length) {
+                            // Preserve figures for inline rendering (not sent to AI)
+                            return { id: tc.id, name: fn, args, result: compressedResult, pythonFigures: res.figures };
                         } else {
                             return { id: tc.id, name: fn, args, result: compressedResult };
                         }
@@ -2456,6 +2523,13 @@ function compressToolResult(functionName, result) {
         // Chart
         if (result.chartData) compressed.chartData = result.chartData;
         if (result.hasChart) compressed.hasChart = result.hasChart;
+
+        // Python execution
+        if (functionName === 'execute_python') {
+            if (result.stdout) compressed.stdout = result.stdout;
+            if (result.stderr) compressed.stderr = result.stderr;
+            if (result.figures?.length) compressed.figureCount = result.figures.length;
+        }
 
         return compressed;
     }

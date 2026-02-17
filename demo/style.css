@@ -2909,6 +2909,73 @@ input[type="range"]:focus {
     border-top: 1px solid rgba(255, 255, 255, 0.03);
 }
 
+/* Python Live Code Preview in Tool Row */
+.ai-tool-row-code {
+    margin: 0;
+    padding: 8px 10px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #c8c8ff;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Python Execution Permission Dialog */
+.python-confirm-overlay {
+    position: fixed; inset: 0; z-index: 100000;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s; pointer-events: none;
+}
+.python-confirm-overlay.active { opacity: 1; pointer-events: auto; }
+
+.python-confirm-modal {
+    background: #1a1a2e; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 20px; max-width: 500px; width: 90%;
+    max-height: 70vh; display: flex; flex-direction: column;
+}
+.python-confirm-header {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 600; color: #e0e0ff; margin-bottom: 12px;
+}
+.python-confirm-header i { color: #7c5cff; }
+.python-confirm-desc {
+    font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 10px;
+}
+.python-confirm-code {
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px; padding: 12px; overflow: auto; max-height: 40vh;
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: #c8c8ff;
+    white-space: pre; margin: 0 0 16px 0;
+}
+.python-confirm-buttons {
+    display: flex; gap: 10px; justify-content: flex-end;
+}
+.python-confirm-deny {
+    padding: 8px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+    background: transparent; color: #aaa; cursor: pointer; font-size: 13px;
+}
+.python-confirm-deny:hover { background: rgba(255,255,255,0.05); }
+.python-confirm-allow {
+    padding: 8px 20px; border-radius: 8px; border: none;
+    background: linear-gradient(135deg, #7c5cff, #5c9cff); color: white;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+}
+.python-confirm-allow:hover { filter: brightness(1.1); }
+
+/* Python Inline Figures */
+.python-figure-wrapper { margin-top: 8px; }
+.python-figure {
+    width: 100%; border-radius: 8px; cursor: pointer;
+    transition: opacity 0.15s;
+}
+.python-figure:hover { opacity: 0.9; }
+
 /* Stop Button Mode */
 #aiSendBtn.ai-stop-mode {
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(239, 68, 68, 0.15));

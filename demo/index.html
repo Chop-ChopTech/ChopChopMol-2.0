@@ -2582,7 +2582,8 @@
                     define_axis: 'Defining axis',
                     remove_axis: 'Removing axis',
                     undo: 'Undoing',
-                    redo: 'Redoing'
+                    redo: 'Redoing',
+                    execute_python: 'Running Python code'
                 };
                 const toolIconMap = {
                     select_atoms: 'fa-mouse-pointer',
@@ -2640,6 +2641,7 @@
                     remove_axis: 'fa-times',
                     undo: 'fa-undo',
                     redo: 'fa-redo',
+                    execute_python: 'fa-terminal',
                     _default: 'fa-cog'
                 };
 
@@ -2649,6 +2651,8 @@
                 sendBtn.disabled = false;
                 const stopHandler = () => { window.AIAgent?.abort(); };
                 sendBtn.addEventListener('click', stopHandler);
+
+                let toolArgsBuffer = '';  // accumulates raw JSON for current tool's arguments
 
                 try {
                     const response = await window.AIAgent.send(message, (chunk, status, statusType) => {
@@ -2742,7 +2746,35 @@
 
                             toolsContainer.appendChild(row);
                             activeToolRow = row;
+                            toolArgsBuffer = '';
                             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            return;
+                        }
+
+                        // ── Tool argument delta → live code preview for execute_python ──
+                        if (statusType === 'tool_delta') {
+                            toolArgsBuffer += chunk;
+                            if (activeToolRow && activeToolRow.dataset.tool === 'execute_python') {
+                                // Try to extract the "code" value from the partial JSON
+                                const codeMatch = toolArgsBuffer.match(/"code"\s*:\s*"([\s\S]*)/);
+                                if (codeMatch) {
+                                    // Unescape JSON string escapes and trim trailing incomplete quote
+                                    let code = codeMatch[1];
+                                    // Remove trailing unfinished JSON (closing ", other keys)
+                                    const lastQuote = code.lastIndexOf('"');
+                                    if (lastQuote > 0) code = code.substring(0, lastQuote);
+                                    try {
+                                        code = JSON.parse('"' + code + '"');
+                                    } catch(e) {
+                                        code = code.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                                    }
+                                    const detailsEl = activeToolRow.querySelector('.ai-tool-row-details');
+                                    detailsEl.innerHTML = `<pre class="ai-tool-row-code">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+                                    if (!activeToolRow.classList.contains('expanded')) {
+                                        activeToolRow.classList.add('expanded');
+                                    }
+                                }
+                            }
                             return;
                         }
 
@@ -2940,6 +2972,32 @@
                                 });
                                 toolbar.querySelector('.chart-download-btn').addEventListener('click', () => {
                                     window._downloadChartAsJPG(chart, data.title || 'chart');
+                                });
+                            }
+
+                            // Render Python matplotlib figures
+                            if (action.name === 'execute_python' && action.pythonFigures?.length) {
+                                action.pythonFigures.forEach(b64 => {
+                                    const wrapper = document.createElement('div');
+                                    wrapper.className = 'python-figure-wrapper';
+                                    const img = document.createElement('img');
+                                    img.src = `data:image/png;base64,${b64}`;
+                                    img.className = 'python-figure';
+                                    img.addEventListener('click', () => {
+                                        const ov = document.createElement('div');
+                                        ov.className = 'chart-modal-overlay';
+                                        const content = document.createElement('div');
+                                        content.className = 'chart-modal-content';
+                                        content.innerHTML = `<img src="${img.src}" style="width:100%;border-radius:8px;">`;
+                                        ov.appendChild(content);
+                                        document.body.appendChild(ov);
+                                        requestAnimationFrame(() => ov.classList.add('active'));
+                                        ov.addEventListener('click', (e) => {
+                                            if (e.target === ov) { ov.classList.remove('active'); setTimeout(() => ov.remove(), 200); }
+                                        });
+                                    });
+                                    wrapper.appendChild(img);
+                                    contentEl.appendChild(wrapper);
                                 });
                             }
                         });
