@@ -1033,16 +1033,18 @@ function triggerExplosion() {
 
 // Simplified assembly animation: molecule pieces start scattered and assemble in a wave from left to right with eased motion (ease-out) and global fade-in
 let assemblyAnimating = false;
-document.addEventListener("keydown", (event) => {
-    if (event.key === "1") {
-
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            document.exitFullscreen();
-        }
-
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
     }
+}
+window.toggleFullscreen = toggleFullscreen;
+
+document.addEventListener("fullscreenchange", () => {
+    const btn = document.querySelector('[onclick="toggleFullscreen()"] i');
+    if (btn) btn.className = document.fullscreenElement ? "fa-solid fa-compress" : "fa-solid fa-expand";
 });
 
 function animateImplosion() {
