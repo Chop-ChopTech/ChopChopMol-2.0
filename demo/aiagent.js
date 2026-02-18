@@ -2267,7 +2267,9 @@ function getMoleculeState() {
         hasMetadata: metadata.length > 0,
         maceModel: AI_CONFIG.maceModel || null,
         aiModel: AI_CONFIG.model,
-        currentFileName: window.fileName
+        currentFileName: window.fileName,
+        hasFolder: !!window.fileExplorer?.directoryHandle,
+        folderFiles: window.fileExplorer?.fileHandles ? Array.from(window.fileExplorer.fileHandles.keys()) : []
     };
 }
 
