@@ -28,7 +28,7 @@ const backendUrl = window.location.hostname === 'localhost' || window.location.h
 const AI_CONFIG = {
     backendUrl: backendUrl,
     sessionId: crypto.randomUUID(),
-    model: localStorage.getItem('chopchop_ai_model') || 'claude-haiku-4-5-20251001', // Haiku is 5x faster than Sonnet
+    model: 'claude-sonnet-4-6',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
 };
 // Save immediately if new
@@ -2616,7 +2616,7 @@ window.AIAgent = {
     setApiKey: () => console.log('API key is now stored on the backend'),
     getApiKey: () => '',
     hasApiKey: () => true, // Always true since backend handles it
-    setModel: (m) => { AI_CONFIG.model = m; localStorage.setItem('chopchop_ai_model', m); },
+    setModel: (m) => { AI_CONFIG.model = m; },
     getModel: () => AI_CONFIG.model
 };
 
