@@ -2876,32 +2876,44 @@
                                 const lineWidth = data.lineWidth ?? 2;
                                 const basePointSize = data.pointSize ?? 3;
                                 const curveTension = data.tension ?? 0.3;
-                                const doFill = data.fill ?? false;
+                                const doFill = false;
                                 const fillColor = data.fillColor || (lineColor + '33');
                                 const showGrid = data.showGrid ?? true;
                                 const showLegend = data.showLegend ?? false;
                                 const showPoints = data.showPoints ?? true;
-                                const fontSize = data.fontSize ?? 12;
-                                const gridColor = showGrid ? 'rgba(255,255,255,0.1)' : 'transparent';
+                                const fontSize = data.fontSize ?? 11;
+                                const gridColor = showGrid ? 'rgba(255,255,255,0.05)' : 'transparent';
+                                const axisLabelColor = 'rgba(180,180,210,0.6)';
+                                const tickColor = 'rgba(180,180,210,0.4)';
+                                const borderColor = 'rgba(255,255,255,0.07)';
 
                                 const chartContainer = document.createElement('div');
-                                chartContainer.style.cssText = `margin-top: 12px; background: ${bgColor}; border-radius: 8px; padding: 12px; position: relative; transition: none;`;
+                                chartContainer.className = 'chart-inline-container';
 
+                                const chartHeader = document.createElement('div');
+                                chartHeader.className = 'chart-inline-header';
+                                const chartTitleEl = document.createElement('span');
+                                chartTitleEl.className = 'chart-inline-title';
+                                chartTitleEl.textContent = data.title || '';
                                 const toolbar = document.createElement('div');
                                 toolbar.className = 'chart-toolbar';
                                 toolbar.innerHTML = `
                                     <button class="chart-toolbar-btn chart-expand-btn" title="Fullscreen"><i class="fas fa-expand"></i></button>
-                                    <button class="chart-toolbar-btn chart-download-btn" title="Download JPG"><i class="fas fa-download"></i></button>
+                                    <button class="chart-toolbar-btn chart-download-btn" title="Download"><i class="fas fa-download"></i></button>
                                 `;
-                                chartContainer.appendChild(toolbar);
+                                chartHeader.appendChild(chartTitleEl);
+                                chartHeader.appendChild(toolbar);
+                                chartContainer.appendChild(chartHeader);
 
+                                const canvasWrap = document.createElement('div');
+                                canvasWrap.className = 'chart-canvas-wrap';
                                 const canvas = document.createElement('canvas');
-                                canvas.style.cssText = 'width: 100%; height: 200px; transition: none;';
-                                chartContainer.appendChild(canvas);
+                                canvasWrap.appendChild(canvas);
+                                chartContainer.appendChild(canvasWrap);
                                 contentEl.appendChild(chartContainer);
 
                                 const currentFrame = parseInt(document.getElementById('frameSlider')?.value || 0);
-                                const multiColors = ['#667eea', '#f093fb', '#4fd1c5', '#f6ad55', '#fc8181'];
+                                const multiColors = ['#818cf8', '#34d399', '#f472b6', '#fb923c', '#60a5fa'];
                                 let datasets;
                                 if (data.datasets?.length) {
                                     datasets = data.datasets.map((ds, idx) => {
@@ -2969,22 +2981,28 @@
                                             }
                                         },
                                         plugins: {
-                                            title: { display: !!data.title, text: data.title, color: '#fff', font: { size: fontSize + 2, weight: 'bold' } },
-                                            legend: { display: showLegend, labels: { color: '#ccc', font: { size: fontSize } } },
+                                            title: { display: false },
+                                            legend: { display: showLegend, labels: { color: 'rgba(200,200,220,0.7)', font: { size: fontSize }, boxWidth: 12, padding: 12 } },
                                             tooltip: {
-                                                backgroundColor: 'rgba(0,0,0,0.8)', titleColor: '#fff', bodyColor: '#fff', cornerRadius: 6,
+                                                backgroundColor: 'rgba(12,12,26,0.96)',
+                                                borderColor: 'rgba(255,255,255,0.1)',
+                                                borderWidth: 1,
+                                                titleColor: 'rgba(255,255,255,0.35)',
+                                                bodyColor: 'rgba(255,255,255,0.85)',
+                                                cornerRadius: 7,
+                                                padding: 10,
                                                 callbacks: {
                                                     title: () => '',
                                                     label: (item) => {
                                                         const val = typeof item.raw === 'number' ? item.raw.toFixed(6) : item.raw;
-                                                        return `${item.dataset.label || data.yLabel || 'Energy'}: ${val}`;
+                                                        return `${item.dataset.label || data.yLabel || 'Value'}: ${val}`;
                                                     }
                                                 }
                                             }
                                         },
                                         scales: {
-                                            x: { title: { display: !!data.xLabel, text: data.xLabel, color: '#aaa', font: { size: fontSize } }, ticks: { color: '#888', maxTicksLimit: 10, font: { size: fontSize - 1 } }, grid: { color: gridColor } },
-                                            y: { title: { display: !!data.yLabel, text: data.yLabel, color: '#aaa', font: { size: fontSize } }, ticks: { color: '#888', callback: (val) => typeof val === 'number' ? val.toFixed(2) : val, font: { size: fontSize - 1 } }, grid: { color: gridColor } }
+                                            x: { title: { display: !!data.xLabel, text: data.xLabel, color: axisLabelColor, font: { size: fontSize } }, ticks: { color: tickColor, maxTicksLimit: 10, font: { size: fontSize - 1 } }, grid: { color: gridColor }, border: { color: borderColor } },
+                                            y: { title: { display: !!data.yLabel, text: data.yLabel, color: axisLabelColor, font: { size: fontSize } }, ticks: { color: tickColor, callback: (val) => typeof val === 'number' ? val.toFixed(2) : val, font: { size: fontSize - 1 } }, grid: { color: gridColor }, border: { color: borderColor } }
                                         }
                                     }
                                 };
@@ -3467,7 +3485,7 @@
             const lw = chartData.lineWidth ?? 2;
             const ps = chartData.pointSize ?? 3;
             const tn = chartData.tension ?? 0.3;
-            const fl = chartData.fill ?? true;
+            const fl = chartData.fill ?? false;
             const sg = chartData.showGrid ?? true;
             const gc = sg ? 'rgba(255,255,255,0.1)' : 'transparent';
 
@@ -3596,7 +3614,7 @@
                 modalConfig.options.plugins.title.display = false;
             }
             // Bigger fonts for modal
-            const baseFontSize = data.fontSize ?? 12;
+            const baseFontSize = data.fontSize ?? 11;
             const modalFontSize = baseFontSize + 4;
             if (modalConfig.options?.scales?.x?.title?.font) modalConfig.options.scales.x.title.font.size = modalFontSize;
             if (modalConfig.options?.scales?.y?.title?.font) modalConfig.options.scales.y.title.font.size = modalFontSize;

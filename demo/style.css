@@ -2969,12 +2969,17 @@ input[type="range"]:focus {
 .python-confirm-allow:hover { filter: brightness(1.1); }
 
 /* Python Inline Figures */
-.python-figure-wrapper { margin-top: 8px; }
+.python-figure-wrapper {
+    margin-top: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    overflow: hidden;
+}
 .python-figure {
-    width: 100%; border-radius: 8px; cursor: pointer;
+    width: 100%; display: block; cursor: pointer;
     transition: opacity 0.15s;
 }
-.python-figure:hover { opacity: 0.9; }
+.python-figure:hover { opacity: 0.88; }
 
 /* Stop Button Mode */
 #aiSendBtn.ai-stop-mode {
@@ -4307,41 +4312,71 @@ input[type="range"]:focus {
     }
 }
 
-/* Chart Inline Toolbar */
-.chart-toolbar {
-    position: absolute;
-    top: 6px;
-    right: 6px;
+/* Chart Inline Container */
+.chart-inline-container {
+    margin-top: 10px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.chart-inline-header {
     display: flex;
-    gap: 4px;
-    z-index: 10;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 4px;
+    min-height: 32px;
+}
+
+.chart-inline-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.chart-canvas-wrap {
+    padding: 2px 10px 10px;
+}
+
+.chart-canvas-wrap canvas {
+    width: 100% !important;
+    height: 230px !important;
+}
+
+/* Chart Toolbar */
+.chart-toolbar {
+    display: flex;
+    gap: 3px;
     opacity: 0;
     transition: opacity 0.15s ease;
 }
 
-*:hover > .chart-toolbar {
+.chart-inline-container:hover .chart-toolbar {
     opacity: 1;
 }
 
 .chart-toolbar-btn {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border: none;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 11px;
     transition: background 0.15s, color 0.15s;
-    backdrop-filter: blur(8px);
 }
 
 .chart-toolbar-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
 }
 
 /* Chart Fullscreen Modal */
@@ -4398,10 +4433,11 @@ input[type="range"]:focus {
 }
 
 .chart-modal-title {
-    color: #fff;
-    font-size: 16px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 .chart-modal-actions {
