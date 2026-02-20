@@ -1905,20 +1905,22 @@
 
         // Sync chart highlight with frame slider
         document.getElementById('frameSlider')?.addEventListener('input', (e) => {
-            const chart = window._activeEnergyChart;
+            // Prefer inline chat chart; fall back to sidebar panel chart
+            const chart = window._activeInlineChatChart || window._activeEnergyChart;
             if (!chart) return;
 
-            const cd = window._pendingChartData;
+            const cd = window._activeInlineChatData || window._pendingChartData;
             const hc = cd?.highlightColor || '#f093fb';
-            const pc = cd?.pointColor || cd?.lineColor || 'rgba(102, 126, 234, 0.8)';
+            const pc = cd?.pointColor || cd?.lineColor || '#667eea';
             const ps = cd?.pointSize ?? 3;
             const frameIndex = parseInt(e.target.value);
             const dataset = chart.data.datasets[0];
+            if (!dataset) return;
 
-            // Update point colors - highlight current frame
-            dataset.backgroundColor = dataset.data.map((_, i) =>
-                i === frameIndex ? hc : pc
-            );
+            // Update pointBackgroundColor (the actual dot color in Chart.js line charts)
+            const colors = dataset.data.map((_, i) => i === frameIndex ? hc : pc);
+            dataset.pointBackgroundColor = colors;
+            dataset.backgroundColor = colors;
             dataset.pointRadius = dataset.data.map((_, i) =>
                 i === frameIndex ? ps + 3 : ps
             );
@@ -2812,7 +2814,8 @@
                     };
 
                     const chart = new Chart(canvas.getContext('2d'), chartConfig);
-                    window._activeEnergyChart = chart;
+                    window._activeInlineChatChart = chart;
+                    window._activeInlineChatData = data;
                     window._activeChartXData = data.x;
 
                     toolbar.querySelector('.chart-expand-btn').addEventListener('click', () => {
