@@ -74,7 +74,6 @@ export async function loadStylePreferences(userId, renderer) {
                 // Apply styles with proper renderer reference
                 applyStylePreferences(data.stylePreferences, renderer || window.renderer);
 
-                showNotification('Custom styles loaded!', 'info');
                 return data.stylePreferences;
             }
         }

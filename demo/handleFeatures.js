@@ -419,7 +419,7 @@ export function showRestrictionMessage() {
         restrictionMessage.id = 'restrictionMessage';
         restrictionMessage.style.cssText = `
             position: fixed;
-            top: 20px;
+            top: 80px;
             left: 50%;
             transform: translateX(-50%);
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

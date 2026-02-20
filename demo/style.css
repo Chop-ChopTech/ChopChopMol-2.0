@@ -132,7 +132,7 @@ body {
 }
 
 .fancy-input-container.on {
-    top: 40px !important;
+    top: 80px !important;
 }
 
 
@@ -482,7 +482,7 @@ body {
 }
 
 #loading.on {
-    top: 15px;
+    top: 85px;
 }
 
 #clear-canvas {
@@ -6773,12 +6773,11 @@ input[type="color"]::-moz-color-swatch {
 #toast-container {
     position: fixed;
     top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    right: 20px;
     z-index: 100000;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     gap: 8px;
     pointer-events: none;
 }
@@ -6802,7 +6801,7 @@ input[type="color"]::-moz-color-swatch {
     pointer-events: auto;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     opacity: 0;
-    transform: translateY(-12px) scale(0.96);
+    transform: translateX(20px) scale(0.96);
     transition: none;
 }
 
@@ -6879,24 +6878,24 @@ input[type="color"]::-moz-color-swatch {
 @keyframes toastSlideIn {
     from {
         opacity: 0;
-        transform: translateY(-12px) scale(0.96);
+        transform: translateX(20px) scale(0.96);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateX(0) scale(1);
     }
 }
 
 @keyframes toastSlideOut {
     from {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateX(0) scale(1);
     }
 
     to {
         opacity: 0;
-        transform: translateY(-10px) scale(0.96);
+        transform: translateX(20px) scale(0.96);
     }
 }
 
