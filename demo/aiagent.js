@@ -2426,6 +2426,12 @@ async function sendToAI(userMessage, onChunk) {
 
                 // Clear chart data after all tools
                 if (window._pendingChartData) window._pendingChartData = null;
+
+                // create_chart is terminal — chart is already rendered in the UI,
+                // no need to send results back to Claude for a closing message
+                if (results.some(r => r.name === 'create_chart')) {
+                    return { content: fullContent, actions: executed };
+                }
             } else {
                 break;
             }
