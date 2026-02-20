@@ -2668,6 +2668,161 @@
 
                 let toolArgsBuffer = '';  // accumulates raw JSON for current tool's arguments
 
+                // Render a chart inline immediately — called from onChunk (chart_ready) AND post-processing fallback
+                function renderInlineChart(data) {
+                    if (data._rendered) return;
+                    data._rendered = true;
+
+                    const lineColor = data.lineColor || '#667eea';
+                    const pointColor = data.pointColor || lineColor;
+                    const highlightColor = data.highlightColor || '#f093fb';
+                    const lineWidth = data.lineWidth ?? 2;
+                    const basePointSize = data.pointSize ?? 3;
+                    const curveTension = data.tension ?? 0.3;
+                    const doFill = false;
+                    const fillColor = data.fillColor || (lineColor + '33');
+                    const showGrid = data.showGrid ?? true;
+                    const showLegend = data.showLegend ?? false;
+                    const showPoints = data.showPoints ?? true;
+                    const fontSize = data.fontSize ?? 11;
+                    const gridColor = showGrid ? 'rgba(255,255,255,0.05)' : 'transparent';
+                    const axisLabelColor = 'rgba(180,180,210,0.6)';
+                    const tickColor = 'rgba(180,180,210,0.4)';
+                    const borderColor = 'rgba(255,255,255,0.07)';
+
+                    const chartContainer = document.createElement('div');
+                    chartContainer.className = 'chart-inline-container';
+
+                    const chartHeader = document.createElement('div');
+                    chartHeader.className = 'chart-inline-header';
+                    const chartTitleEl = document.createElement('span');
+                    chartTitleEl.className = 'chart-inline-title';
+                    chartTitleEl.textContent = data.title || '';
+                    const toolbar = document.createElement('div');
+                    toolbar.className = 'chart-toolbar';
+                    toolbar.innerHTML = `
+                        <button class="chart-toolbar-btn chart-expand-btn" title="Fullscreen"><i class="fas fa-expand"></i></button>
+                        <button class="chart-toolbar-btn chart-download-btn" title="Download"><i class="fas fa-download"></i></button>
+                    `;
+                    chartHeader.appendChild(chartTitleEl);
+                    chartHeader.appendChild(toolbar);
+                    chartContainer.appendChild(chartHeader);
+
+                    const canvasWrap = document.createElement('div');
+                    canvasWrap.className = 'chart-canvas-wrap';
+                    const canvas = document.createElement('canvas');
+                    canvasWrap.appendChild(canvas);
+                    chartContainer.appendChild(canvasWrap);
+                    contentEl.appendChild(chartContainer);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                    const currentFrame = parseInt(document.getElementById('frameSlider')?.value || 0);
+                    const multiColors = ['#818cf8', '#34d399', '#f472b6', '#fb923c', '#60a5fa'];
+                    let datasets;
+                    if (data.datasets?.length) {
+                        datasets = data.datasets.map((ds, idx) => {
+                            const dsColor = ds.color || multiColors[idx % multiColors.length];
+                            const dsPtColor = showPoints ? dsColor : 'transparent';
+                            return {
+                                label: ds.label || `Series ${idx + 1}`,
+                                data: ds.y,
+                                borderColor: dsColor,
+                                borderWidth: lineWidth,
+                                backgroundColor: dsPtColor,
+                                pointBackgroundColor: dsPtColor,
+                                pointBorderColor: 'transparent',
+                                pointBorderWidth: 0,
+                                pointRadius: showPoints ? basePointSize : 0,
+                                pointHoverRadius: showPoints ? basePointSize + 4 : 0,
+                                tension: curveTension,
+                                showLine: true,
+                                fill: doFill,
+                                ...(doFill ? { backgroundColor: ds.color ? (ds.color + '33') : fillColor } : {})
+                            };
+                        });
+                    } else {
+                        const pointColors = data.x.map((_, i) => i === currentFrame ? highlightColor : pointColor);
+                        const pointSizes = data.x.map((_, i) => i === currentFrame ? basePointSize + 3 : basePointSize);
+                        datasets = [{
+                            label: data.yLabel || 'Energy (eV)',
+                            data: data.y,
+                            borderColor: lineColor,
+                            borderWidth: lineWidth,
+                            backgroundColor: pointColors,
+                            pointBackgroundColor: showPoints ? pointColors : 'transparent',
+                            pointBorderColor: 'transparent',
+                            pointBorderWidth: 0,
+                            pointRadius: showPoints ? pointSizes : 0,
+                            pointHoverRadius: showPoints ? basePointSize + 7 : 0,
+                            tension: curveTension,
+                            showLine: true,
+                            fill: doFill,
+                            ...(doFill ? { backgroundColor: fillColor } : {})
+                        }];
+                    }
+
+                    const chartConfig = {
+                        type: data.type || 'line',
+                        data: { labels: data.x.map(v => v.toString()), datasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { intersect: false, mode: 'index' },
+                            onClick: (event, elements) => {
+                                if (elements.length > 0) {
+                                    const index = elements[0].index;
+                                    const frameSlider = document.getElementById('frameSlider');
+                                    if (frameSlider && window.xyzFrames?.length > index) {
+                                        frameSlider.value = index;
+                                        frameSlider.dispatchEvent(new Event('input'));
+                                        if (!data.datasets?.length) {
+                                            const ds = chart.data.datasets[0];
+                                            ds.pointBackgroundColor = data.x.map((_, i) => i === index ? highlightColor : pointColor);
+                                            ds.pointRadius = data.x.map((_, i) => i === index ? basePointSize + 3 : basePointSize);
+                                            chart.update('none');
+                                        }
+                                    }
+                                }
+                            },
+                            plugins: {
+                                title: { display: false },
+                                legend: { display: showLegend, labels: { color: 'rgba(200,200,220,0.7)', font: { size: fontSize }, boxWidth: 12, padding: 12 } },
+                                tooltip: {
+                                    backgroundColor: 'rgba(12,12,26,0.96)',
+                                    borderColor: 'rgba(255,255,255,0.1)',
+                                    borderWidth: 1,
+                                    titleColor: 'rgba(255,255,255,0.35)',
+                                    bodyColor: 'rgba(255,255,255,0.85)',
+                                    cornerRadius: 7,
+                                    padding: 10,
+                                    callbacks: {
+                                        title: () => '',
+                                        label: (item) => {
+                                            const val = typeof item.raw === 'number' ? item.raw.toFixed(6) : item.raw;
+                                            return `${item.dataset.label || data.yLabel || 'Value'}: ${val}`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: { title: { display: !!data.xLabel, text: data.xLabel, color: axisLabelColor, font: { size: fontSize } }, ticks: { color: tickColor, maxTicksLimit: 10, font: { size: fontSize - 1 } }, grid: { color: gridColor }, border: { color: borderColor } },
+                                y: { title: { display: !!data.yLabel, text: data.yLabel, color: axisLabelColor, font: { size: fontSize } }, ticks: { color: tickColor, callback: (val) => typeof val === 'number' ? val.toFixed(2) : val, font: { size: fontSize - 1 } }, grid: { color: gridColor }, border: { color: borderColor } }
+                            }
+                        }
+                    };
+
+                    const chart = new Chart(canvas.getContext('2d'), chartConfig);
+                    window._activeEnergyChart = chart;
+                    window._activeChartXData = data.x;
+
+                    toolbar.querySelector('.chart-expand-btn').addEventListener('click', () => {
+                        window._openChartModal(data, chartConfig);
+                    });
+                    toolbar.querySelector('.chart-download-btn').addEventListener('click', () => {
+                        window._downloadChartAsJPG(chart, data.title || 'chart');
+                    });
+                }
+
                 try {
                     const response = await window.AIAgent.send(message, (chunk, status, statusType) => {
                         // ── Thinking events ──
@@ -2793,6 +2948,24 @@
                             return;
                         }
 
+                        // ── Chart ready — render immediately without waiting for Claude's closing response ──
+                        if (statusType === 'chart_ready') {
+                            if (!typingRemoved) {
+                                typingEl.remove();
+                                typingRemoved = true;
+                                messagesContainer.appendChild(msgEl);
+                            }
+                            if (activeToolRow) {
+                                activeToolRow.classList.remove('active');
+                                activeToolRow.classList.add('completed');
+                                activeToolRow.querySelector('.ai-tool-row-status').innerHTML = '<i class="fas fa-check"></i>';
+                                activeToolRow = null;
+                            }
+                            currentTextBlock = null;
+                            renderInlineChart(status); // status = chartData object
+                            return;
+                        }
+
                         // ── Status update only (for typing indicator) ──
                         if (chunk === null) {
                             if (status) typingEl.setStatus(status);
@@ -2866,158 +3039,8 @@
                                 }
                             }
 
-                            // Render charts
-                            if (action.chartData) {
-                                const data = action.chartData;
-                                const lineColor = data.lineColor || '#667eea';
-                                const pointColor = data.pointColor || lineColor;
-                                const highlightColor = data.highlightColor || '#f093fb';
-                                const bgColor = data.backgroundColor || 'rgba(0,0,0,0.3)';
-                                const lineWidth = data.lineWidth ?? 2;
-                                const basePointSize = data.pointSize ?? 3;
-                                const curveTension = data.tension ?? 0.3;
-                                const doFill = false;
-                                const fillColor = data.fillColor || (lineColor + '33');
-                                const showGrid = data.showGrid ?? true;
-                                const showLegend = data.showLegend ?? false;
-                                const showPoints = data.showPoints ?? true;
-                                const fontSize = data.fontSize ?? 11;
-                                const gridColor = showGrid ? 'rgba(255,255,255,0.05)' : 'transparent';
-                                const axisLabelColor = 'rgba(180,180,210,0.6)';
-                                const tickColor = 'rgba(180,180,210,0.4)';
-                                const borderColor = 'rgba(255,255,255,0.07)';
-
-                                const chartContainer = document.createElement('div');
-                                chartContainer.className = 'chart-inline-container';
-
-                                const chartHeader = document.createElement('div');
-                                chartHeader.className = 'chart-inline-header';
-                                const chartTitleEl = document.createElement('span');
-                                chartTitleEl.className = 'chart-inline-title';
-                                chartTitleEl.textContent = data.title || '';
-                                const toolbar = document.createElement('div');
-                                toolbar.className = 'chart-toolbar';
-                                toolbar.innerHTML = `
-                                    <button class="chart-toolbar-btn chart-expand-btn" title="Fullscreen"><i class="fas fa-expand"></i></button>
-                                    <button class="chart-toolbar-btn chart-download-btn" title="Download"><i class="fas fa-download"></i></button>
-                                `;
-                                chartHeader.appendChild(chartTitleEl);
-                                chartHeader.appendChild(toolbar);
-                                chartContainer.appendChild(chartHeader);
-
-                                const canvasWrap = document.createElement('div');
-                                canvasWrap.className = 'chart-canvas-wrap';
-                                const canvas = document.createElement('canvas');
-                                canvasWrap.appendChild(canvas);
-                                chartContainer.appendChild(canvasWrap);
-                                contentEl.appendChild(chartContainer);
-
-                                const currentFrame = parseInt(document.getElementById('frameSlider')?.value || 0);
-                                const multiColors = ['#818cf8', '#34d399', '#f472b6', '#fb923c', '#60a5fa'];
-                                let datasets;
-                                if (data.datasets?.length) {
-                                    datasets = data.datasets.map((ds, idx) => {
-                                        const dsColor = ds.color || multiColors[idx % multiColors.length];
-                                        const dsPtColor = showPoints ? dsColor : 'transparent';
-                                        return {
-                                            label: ds.label || `Series ${idx + 1}`,
-                                            data: ds.y,
-                                            borderColor: dsColor,
-                                            borderWidth: lineWidth,
-                                            backgroundColor: dsPtColor,
-                                            pointBackgroundColor: dsPtColor,
-                                            pointBorderColor: 'transparent',
-                                            pointBorderWidth: 0,
-                                            pointRadius: showPoints ? basePointSize : 0,
-                                            pointHoverRadius: showPoints ? basePointSize + 4 : 0,
-                                            tension: curveTension,
-                                            showLine: true,
-                                            fill: doFill,
-                                            ...(doFill ? { backgroundColor: ds.color ? (ds.color + '33') : fillColor } : {})
-                                        };
-                                    });
-                                } else {
-                                    const pointColors = data.x.map((_, i) => i === currentFrame ? highlightColor : pointColor);
-                                    const pointSizes = data.x.map((_, i) => i === currentFrame ? basePointSize + 3 : basePointSize);
-                                    datasets = [{
-                                        label: data.yLabel || 'Energy (eV)',
-                                        data: data.y,
-                                        borderColor: lineColor,
-                                        borderWidth: lineWidth,
-                                        backgroundColor: pointColors,
-                                        pointBackgroundColor: showPoints ? pointColors : 'transparent',
-                                        pointBorderColor: 'transparent',
-                                        pointBorderWidth: 0,
-                                        pointRadius: showPoints ? pointSizes : 0,
-                                        pointHoverRadius: showPoints ? basePointSize + 7 : 0,
-                                        tension: curveTension,
-                                        showLine: true,
-                                        fill: doFill,
-                                        ...(doFill ? { backgroundColor: fillColor } : {})
-                                    }];
-                                }
-
-                                const chartConfig = {
-                                    type: data.type || 'line',
-                                    data: { labels: data.x.map(v => v.toString()), datasets },
-                                    options: {
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        interaction: { intersect: false, mode: 'index' },
-                                        onClick: (event, elements) => {
-                                            if (elements.length > 0) {
-                                                const index = elements[0].index;
-                                                const frameSlider = document.getElementById('frameSlider');
-                                                if (frameSlider && window.xyzFrames?.length > index) {
-                                                    frameSlider.value = index;
-                                                    frameSlider.dispatchEvent(new Event('input'));
-                                                    if (!data.datasets?.length) {
-                                                        const ds = chart.data.datasets[0];
-                                                        ds.pointBackgroundColor = data.x.map((_, i) => i === index ? highlightColor : pointColor);
-                                                        ds.pointRadius = data.x.map((_, i) => i === index ? basePointSize + 3 : basePointSize);
-                                                        chart.update('none');
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        plugins: {
-                                            title: { display: false },
-                                            legend: { display: showLegend, labels: { color: 'rgba(200,200,220,0.7)', font: { size: fontSize }, boxWidth: 12, padding: 12 } },
-                                            tooltip: {
-                                                backgroundColor: 'rgba(12,12,26,0.96)',
-                                                borderColor: 'rgba(255,255,255,0.1)',
-                                                borderWidth: 1,
-                                                titleColor: 'rgba(255,255,255,0.35)',
-                                                bodyColor: 'rgba(255,255,255,0.85)',
-                                                cornerRadius: 7,
-                                                padding: 10,
-                                                callbacks: {
-                                                    title: () => '',
-                                                    label: (item) => {
-                                                        const val = typeof item.raw === 'number' ? item.raw.toFixed(6) : item.raw;
-                                                        return `${item.dataset.label || data.yLabel || 'Value'}: ${val}`;
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        scales: {
-                                            x: { title: { display: !!data.xLabel, text: data.xLabel, color: axisLabelColor, font: { size: fontSize } }, ticks: { color: tickColor, maxTicksLimit: 10, font: { size: fontSize - 1 } }, grid: { color: gridColor }, border: { color: borderColor } },
-                                            y: { title: { display: !!data.yLabel, text: data.yLabel, color: axisLabelColor, font: { size: fontSize } }, ticks: { color: tickColor, callback: (val) => typeof val === 'number' ? val.toFixed(2) : val, font: { size: fontSize - 1 } }, grid: { color: gridColor }, border: { color: borderColor } }
-                                        }
-                                    }
-                                };
-
-                                const chart = new Chart(canvas.getContext('2d'), chartConfig);
-                                window._activeEnergyChart = chart;
-                                window._activeChartXData = data.x;
-
-                                toolbar.querySelector('.chart-expand-btn').addEventListener('click', () => {
-                                    window._openChartModal(data, chartConfig);
-                                });
-                                toolbar.querySelector('.chart-download-btn').addEventListener('click', () => {
-                                    window._downloadChartAsJPG(chart, data.title || 'chart');
-                                });
-                            }
+                            // Render chart — skipped if already rendered via chart_ready event
+                            if (action.chartData) renderInlineChart(action.chartData);
 
                             // Render Python matplotlib figures
                             if (action.name === 'execute_python' && action.pythonFigures?.length) {

@@ -2401,6 +2401,8 @@ async function sendToAI(userMessage, onChunk) {
 
                         // After executing a tool, check if it's a chart
                         if (fn === 'create_chart' && res.hasChart && window._pendingChartData) {
+                            // Fire immediately so chat UI renders the chart without waiting for Claude's next round-trip
+                            if (onChunk) onChunk(null, window._pendingChartData, 'chart_ready');
                             return {
                                 id: tc.id,
                                 name: fn,
