@@ -1232,7 +1232,7 @@ const FUNCTIONS = {
             if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
 
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
-            const includeForces = params.includeForces || false;
+            const includeForces = params.includeForces !== false;
 
             try {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/md`, {
