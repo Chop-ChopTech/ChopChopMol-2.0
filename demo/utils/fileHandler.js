@@ -199,13 +199,9 @@ export default class FileHandler {
             const firstAtomLine = lines[startLine] ? lines[startLine].trim().split(/\s+/) : [];
             const numCols = firstAtomLine.length;
 
-            // Common column layouts:
-            // 4 cols: element x y z
-            // 5 cols: element x y z charge OR element x y z label
-            // 6 cols: element x y z charge label OR element x y z vx vy vz (rarely)
-            // 7 cols: element x y z fx fy fz
-            // 8 cols: element x y z fx fy fz charge
-            // 9+ cols: various combinations
+            // Only treat extra columns as forces if the comment line explicitly mentions "forces"
+            // (ExtXYZ files with Properties= header go through the separate parsing path below)
+            const commentHasForces = comment && /forces/i.test(comment);
 
             for (let j = startLine; j < startLine + numAtoms; j++) {
                 const parts = lines[j].trim().split(/\s+/);
@@ -221,8 +217,8 @@ export default class FileHandler {
                 const atom = { element, x, y, z };
 
                 // Handle extra columns based on count
-                if (numCols >= 7) {
-                    // Likely forces in columns 4-6 (0-indexed: parts[4], parts[5], parts[6])
+                if (numCols >= 7 && commentHasForces) {
+                    // Forces in columns 4-6 (0-indexed: parts[4], parts[5], parts[6])
                     const fx = parseFloat(parts[4]);
                     const fy = parseFloat(parts[5]);
                     const fz = parseFloat(parts[6]);

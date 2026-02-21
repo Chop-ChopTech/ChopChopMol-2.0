@@ -2221,17 +2221,43 @@ const FUNCTIONS = {
                 return { success: false, message: "User denied code execution" };
             }
 
-            // Build request with current molecule data
+            // Build request with current molecule data + trajectory if available
             const molecule = window.main?.molecule;
             const atoms = molecule?.atoms?.length
                 ? molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }))
                 : [];
 
+            // Include trajectory frames and energies when available (capped at 200 frames)
+            const requestBody = { code: params.code, atoms };
+            if (window.xyzFrames?.length > 0) {
+                const allFrames = window.xyzFrames;
+                const maxFrames = 200;
+                let indices;
+                if (allFrames.length <= maxFrames) {
+                    indices = allFrames.map((_, i) => i);
+                } else {
+                    indices = [0];
+                    const step = (allFrames.length - 1) / (maxFrames - 1);
+                    for (let k = 1; k < maxFrames - 1; k++) indices.push(Math.round(k * step));
+                    indices.push(allFrames.length - 1);
+                }
+                requestBody.frames = indices.map(idx => ({
+                    index: idx,
+                    atoms: allFrames[idx].atomData.map(a => ({
+                        element: a.element, x: a.x, y: a.y, z: a.z,
+                        ...(a.fx !== undefined ? { fx: a.fx, fy: a.fy, fz: a.fz } : {})
+                    }))
+                }));
+                if (window.frameEnergies?.length) {
+                    requestBody.energies = window.frameEnergies;
+                }
+            }
+
             try {
                 const resp = await fetch(`${AI_CONFIG.backendUrl}/ai/python/execute`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: params.code, atoms })
+                    body: JSON.stringify(requestBody)
                 });
                 if (!resp.ok) {
                     const err = await resp.json().catch(() => ({}));
@@ -2276,7 +2302,6 @@ function getMoleculeState() {
             index: i,
             atomCount: f.numAtoms,
             comment: f.comment || '',
-            atoms: f.atomData,  // Full atom data for each frame (includes fx, fy, fz if present)
             energy: energies[i] !== undefined ? energies[i] : null,
             metadata: metadata[i] || null
         })),
