@@ -1242,7 +1242,7 @@ const FUNCTIONS = {
                         atoms,
                         model: params.model || AI_CONFIG.maceModel || 'medium',
                         temperature: params.temperature || 300,
-                        steps: params.steps || 500,
+                        ...(params.frames ? { frames: params.frames } : { steps: params.steps || 500 }),
                         timestep: params.timestep || 1.0,
                         friction: params.friction || 0.01,
                         saveInterval: params.saveInterval || 10,
