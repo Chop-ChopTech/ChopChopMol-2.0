@@ -2353,6 +2353,10 @@
                         <option value="gpt-5-mini">GPT-5 Mini</option>
                         <option value="gpt-5-nano">GPT-5 Nano</option>
                     </optgroup>
+                    <optgroup label="O-Series (Reasoning)">
+                        <option value="o4-mini">o4-mini</option>
+                        <option value="o3">o3</option>
+                    </optgroup>
                     <optgroup label="GPT-4.1 (No Reasoning)">
                         <option value="gpt-4.1">GPT-4.1</option>
                         <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
@@ -2424,8 +2428,12 @@
             window.AIAgent?.setModel('claude-sonnet-4-6');
             const thinkingControl = document.querySelector('.ai-thinking-control');
             function updateThinkingVisibility() {
-                const isClaude = modelSelect.value.toLowerCase().includes('claude');
-                thinkingControl.style.display = isClaude ? '' : 'none';
+                const val = modelSelect.value.toLowerCase();
+                const isClaude = val.includes('claude');
+                const isReasoning = val.startsWith('o3') || val.startsWith('o4') || val.startsWith('gpt-5');
+                thinkingControl.style.display = (isClaude || isReasoning) ? '' : 'none';
+                const label = thinkingControl.querySelector('.ai-thinking-control-label');
+                label.textContent = isClaude ? 'Thinking' : 'Reasoning';
             }
             modelSelect.addEventListener('change', () => {
                 window.AIAgent?.setModel(modelSelect.value);
