@@ -760,6 +760,7 @@ class FileExplorer {
         <div class="file-context-menu-item danger" data-action="delete"><i class="fas fa-trash"></i> Delete ${count} Files</div>
     ` : `
         <div class="file-context-menu-item" data-action="open"><i class="fas fa-external-link-alt"></i> Open</div>
+        <div class="file-context-menu-item" data-action="opentext"><i class="fas fa-file-alt"></i> Open as Text</div>
         <div class="file-context-menu-item" data-action="upload"><i class="fas fa-cloud-upload-alt"></i> Upload to Cloud</div>
         <div class="file-context-menu-item" data-action="rename"><i class="fas fa-pen"></i> Rename</div>
         <div class="file-context-menu-divider"></div>
@@ -783,6 +784,7 @@ class FileExplorer {
                 if (action === 'upload') this.uploadSelectedLocalToCloud();
             } else {
                 if (action === 'open') this.openFile(path);
+                if (action === 'opentext') this.openFileAsText(path);
                 if (action === 'rename') this.renameFile(path);
                 if (action === 'delete') this.deleteFile(path);
                 if (action === 'upload') {
@@ -1358,6 +1360,17 @@ class FileExplorer {
             // Open in text editor
             await this.openTextEditor(path, file);
         }
+    }
+
+    async openFileAsText(path) {
+        const handle = this.fileHandles.get(path);
+        if (!handle) return;
+
+        document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+        document.querySelector(`.file-item[data-path="${path}"]`)?.classList.add('active');
+
+        const file = await handle.getFile();
+        await this.openTextEditor(path, file);
     }
 
     async loadMoleculeFile(file) {
