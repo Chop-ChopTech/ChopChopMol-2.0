@@ -2166,35 +2166,55 @@ const FUNCTIONS = {
         execute: async (params) => {
             if (!params.code) return { success: false, message: "No code provided" };
 
-            // Show permission dialog and wait for user approval
+            // Find the active tool row for execute_python and show inline permission
             const approved = await new Promise((resolve) => {
-                const overlay = document.createElement('div');
-                overlay.className = 'python-confirm-overlay';
-                overlay.innerHTML = `
-                    <div class="python-confirm-modal">
-                        <div class="python-confirm-header">
-                            <i class="fas fa-terminal"></i>
-                            <span>Run Python Code?</span>
-                        </div>
-                        ${params.description ? `<div class="python-confirm-desc">${params.description}</div>` : ''}
-                        <pre class="python-confirm-code"><code>${params.code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
-                        <div class="python-confirm-buttons">
-                            <button class="python-confirm-deny">Deny</button>
-                            <button class="python-confirm-allow">Allow</button>
-                        </div>
+                const toolRows = document.querySelectorAll('.ai-tool-row[data-tool="execute_python"]');
+                const row = toolRows[toolRows.length - 1]; // last one = current
+
+                if (!row) {
+                    // Fallback: no tool row found, auto-allow
+                    resolve(true);
+                    return;
+                }
+
+                // Ensure tool row is expanded so user sees the code
+                if (!row.classList.contains('expanded')) row.classList.add('expanded');
+                row.classList.add('awaiting-permission');
+
+                // Swap spinner to warning icon
+                const statusEl = row.querySelector('.ai-tool-row-status');
+                if (statusEl) statusEl.innerHTML = '<i class="fas fa-shield-alt"></i>';
+
+                // Inject inline permission bar into the tool row details
+                const detailsEl = row.querySelector('.ai-tool-row-details');
+                const permBar = document.createElement('div');
+                permBar.className = 'python-confirm-inline';
+                permBar.innerHTML = `
+                    <div class="python-confirm-inline-label">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Run on server?</span>
+                    </div>
+                    <div class="python-confirm-inline-buttons">
+                        <button class="python-confirm-inline-deny">Deny</button>
+                        <button class="python-confirm-inline-allow">Allow</button>
                     </div>
                 `;
-                document.body.appendChild(overlay);
-                requestAnimationFrame(() => overlay.classList.add('active'));
+                detailsEl.appendChild(permBar);
+
+                // Scroll chat so the permission bar is visible
+                const messagesContainer = document.getElementById('chatMessages');
+                if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
                 const close = (result) => {
-                    overlay.classList.remove('active');
-                    setTimeout(() => overlay.remove(), 200);
+                    permBar.remove();
+                    row.classList.remove('awaiting-permission');
+                    if (statusEl) statusEl.innerHTML = result
+                        ? '<i class="fas fa-spinner fa-spin"></i>'
+                        : '<i class="fas fa-times"></i>';
                     resolve(result);
                 };
-                overlay.querySelector('.python-confirm-allow').onclick = () => close(true);
-                overlay.querySelector('.python-confirm-deny').onclick = () => close(false);
-                overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+                permBar.querySelector('.python-confirm-inline-allow').onclick = () => close(true);
+                permBar.querySelector('.python-confirm-inline-deny').onclick = () => close(false);
             });
 
             if (!approved) {
