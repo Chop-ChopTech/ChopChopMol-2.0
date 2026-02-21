@@ -57,6 +57,11 @@ export default class FileHandler {
                     parsedData = this.parseMoldenToJson(text);
                 }
 
+                // Auto-detect and convert Bohr to Angstrom if needed
+                if (parsedData && parsedData.numAtoms > 0) {
+                    parsedData = FileHandler.convertBohrIfNeeded(parsedData);
+                }
+
                 if (overlay) {
                     const transformation = alignMolecules(parsedData, this.main.data);
                     rotation = transformation.rotation;
@@ -135,6 +140,7 @@ export default class FileHandler {
 
         const frames = [];
         const frameEnergies = [];
+        let detectedUnits = null; // 'bohr', 'angstrom', or null
         let i = 0;
 
         while (i < lines.length) {
@@ -153,6 +159,16 @@ export default class FileHandler {
             const comment = lines[i + 1] ? lines[i + 1].trim() : '';
             let energy = null;
             const metadata = {};
+
+            // Detect coordinate units from comment line
+            // Matches: unit=bohr, units=au, units=atomic, unit = Bohr, (BOHR), etc.
+            if (!detectedUnits) {
+                if (/\bunits?\s*[:=]\s*(?:bohr|au|atomic)\b/i.test(comment) || /\(BOHR\)/i.test(comment)) {
+                    detectedUnits = 'bohr';
+                } else if (/\bunits?\s*[:=]\s*(?:angstrom|ang|angs)\b/i.test(comment) || /\(ANGSTROEM?\)/i.test(comment)) {
+                    detectedUnits = 'angstrom';
+                }
+            }
 
             // Try to extract energy from comment line (various formats)
             // Format 1: "energy=-123.456" or "Energy = -123.456"
@@ -279,10 +295,12 @@ export default class FileHandler {
             return { atomData: [], numAtoms: 0 };
         }
 
-        return {
+        const result = {
             atomData: frames[0].atomData,
             numAtoms: frames[0].numAtoms
         };
+        if (detectedUnits) result._units = detectedUnits;
+        return result;
     }
 
     parseExtxyzToJson(content) {
@@ -290,6 +308,7 @@ export default class FileHandler {
         const frames = [];
         const frameEnergies = [];
         const frameMetadata = []; // Store per-frame metadata (lattice, virial, stress, pbc, etc.)
+        let detectedUnits = null;
         let i = 0;
 
         while (i < lines.length) {
@@ -304,6 +323,15 @@ export default class FileHandler {
             const energyMatch = commentLine.match(/energy\s*=\s*(-?[\d.eE+-]+)/i);
             if (energyMatch) energy = parseFloat(energyMatch[1]);
             frameEnergies.push(energy);
+
+            // Detect coordinate units from comment line
+            if (!detectedUnits) {
+                if (/\bunits?\s*[:=]\s*(?:bohr|au|atomic)\b/i.test(commentLine) || /\(BOHR\)/i.test(commentLine)) {
+                    detectedUnits = 'bohr';
+                } else if (/\bunits?\s*[:=]\s*(?:angstrom|ang|angs)\b/i.test(commentLine) || /\(ANGSTROEM?\)/i.test(commentLine)) {
+                    detectedUnits = 'angstrom';
+                }
+            }
 
             // Parse frame-level metadata from comment line
             const metadata = {};
@@ -478,6 +506,7 @@ export default class FileHandler {
         if (frames.length > 0 && frames[0].metadata) {
             result.metadata = frames[0].metadata;
         }
+        if (detectedUnits) result._units = detectedUnits;
         return result;
     }
 
@@ -2083,6 +2112,121 @@ export default class FileHandler {
                 hasOrbital: orbitals.length > 0
             }
         };
+    }
+
+    /**
+     * Detect if coordinates are in Bohr and convert to Angstrom if needed.
+     * Uses two strategies:
+     * 1. Explicit markers in metadata (unit=bohr, units=au, etc.)
+     * 2. Geometric heuristic: if nearest-neighbor distances are ~1.89x typical bond lengths
+     */
+    static convertBohrIfNeeded(parsedData) {
+        const BOHR_TO_ANG = 0.529177249;
+        const atoms = parsedData.atomData;
+        if (!atoms || atoms.length < 2) return parsedData;
+
+        // Strategy 1: Check for explicit unit markers set by parsers
+        if (parsedData._units === 'bohr') {
+            console.log('Bohr units detected from file metadata — converting to Angstrom');
+            FileHandler._applyBohrConversion(parsedData, BOHR_TO_ANG);
+            return parsedData;
+        }
+        // If parser explicitly says angstrom, skip heuristic
+        if (parsedData._units === 'angstrom') return parsedData;
+
+        // Strategy 2: Geometric heuristic — check nearest-neighbor distances
+        // Sample up to 30 atoms for performance
+        const sampleSize = Math.min(atoms.length, 30);
+        let minDist = Infinity;
+        let totalNearestDist = 0;
+        let nearestCount = 0;
+
+        for (let i = 0; i < sampleSize; i++) {
+            let nearest = Infinity;
+            for (let j = 0; j < atoms.length; j++) {
+                if (i === j) continue;
+                const dx = atoms[i].x - atoms[j].x;
+                const dy = atoms[i].y - atoms[j].y;
+                const dz = atoms[i].z - atoms[j].z;
+                const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (d < nearest) nearest = d;
+            }
+            if (nearest < Infinity) {
+                minDist = Math.min(minDist, nearest);
+                totalNearestDist += nearest;
+                nearestCount++;
+            }
+        }
+
+        if (nearestCount === 0) return parsedData;
+        const avgNearest = totalNearestDist / nearestCount;
+
+        // Typical bond lengths in Angstrom: H-H ~0.74, C-H ~1.09, C-C ~1.54, C=C ~1.34
+        // Typical bond lengths in Bohr:     H-H ~1.40, C-H ~2.06, C-C ~2.91, C=C ~2.53
+        // Key: if minimum distance is > 1.2 (too long for any Angstrom bond except metals),
+        // AND converting gives reasonable Angstrom bonds, it's Bohr.
+        // To avoid false positives on metal-organic compounds (which can have 2.0-3.0Å bonds),
+        // we also check that hydrogen atoms (if present) have nearest-neighbor > 1.3
+        // (H-X bonds in Angstrom are always < 1.3Å, but in Bohr they're > 1.4)
+        const convertedAvg = avgNearest * BOHR_TO_ANG;
+        const convertedMin = minDist * BOHR_TO_ANG;
+
+        // Check H-atom nearest distances specifically (most discriminating)
+        const hasH = atoms.some(a => a.element === 'H');
+        let hMinDist = Infinity;
+        if (hasH) {
+            for (let i = 0; i < Math.min(atoms.length, 50); i++) {
+                if (atoms[i].element !== 'H') continue;
+                for (let j = 0; j < atoms.length; j++) {
+                    if (i === j) continue;
+                    const dx = atoms[i].x - atoms[j].x;
+                    const dy = atoms[i].y - atoms[j].y;
+                    const dz = atoms[i].z - atoms[j].z;
+                    const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    if (d < hMinDist) hMinDist = d;
+                }
+            }
+        }
+
+        const isBohr = hasH
+            // With H atoms: H-X bonds are always < 1.3Å, but in Bohr they're > 1.4
+            ? (hMinDist > 1.3 && hMinDist * BOHR_TO_ANG > 0.5 && hMinDist * BOHR_TO_ANG < 1.5)
+            // Without H atoms: use general heuristic, require larger gap
+            : (minDist > 2.0 && convertedMin > 0.6 && convertedAvg < 2.5);
+
+        if (isBohr) {
+            console.log(`Bohr units detected by heuristic (avg nearest=${avgNearest.toFixed(3)}, ` +
+                `min=${minDist.toFixed(3)}, converted avg=${convertedAvg.toFixed(3)}Å) — converting to Angstrom`);
+            FileHandler._applyBohrConversion(parsedData, BOHR_TO_ANG);
+        }
+
+        return parsedData;
+    }
+
+    static _applyBohrConversion(parsedData, factor) {
+        // Convert main atom data
+        for (const atom of parsedData.atomData) {
+            atom.x *= factor;
+            atom.y *= factor;
+            atom.z *= factor;
+        }
+
+        // Convert all trajectory frames if present
+        if (window.xyzFrames) {
+            for (const frame of window.xyzFrames) {
+                if (frame.atomData) {
+                    for (const atom of frame.atomData) {
+                        atom.x *= factor;
+                        atom.y *= factor;
+                        atom.z *= factor;
+                    }
+                }
+            }
+        }
+
+        // Mark as converted
+        parsedData._units = 'angstrom';
+        parsedData._convertedFromBohr = true;
     }
 
 }
