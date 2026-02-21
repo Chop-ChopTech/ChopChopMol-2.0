@@ -1931,8 +1931,13 @@ function onPointerDown(event) {
                     } else {
 
                         if (fragmentsSelected.length === 0) {
-                            atomsSelected = [];
-                            unselectAtom();
+                            if (window.sillyMode && atomsSelected.length > 0) {
+                                sillyCascadeUnselect([...atomsSelected]);
+                                atomsSelected = [];
+                            } else {
+                                atomsSelected = [];
+                                unselectAtom();
+                            }
                         }
                         // If fragments are selected, keep their atoms selected
                         else {
@@ -3713,12 +3718,13 @@ function selectAtom(index, reset = true) {
         });
     }
 
-    if (window.sillyMode && !sillyAlreadySelected.has(index)) {
+    if (window.sillyMode && !sillyAlreadySelected.has(index) && !isSelecting) {
         // Animate: color fade for atom and bonds
         sillyAlreadySelected.add(index);
         sillyStartSelectColor(index, bondHalves);
     } else {
         // Instant yellow
+        if (window.sillyMode) sillyAlreadySelected.add(index);
         colorAttr.setXYZ(index, 1, 1, 0);
         colorAttr.needsUpdate = true;
         if (bondHalves.length > 0) {
@@ -3742,21 +3748,11 @@ function unselectAtom(index = null) {
     if (!colorAttr) return;
 
     if (index === null) {
-        // Animate deselection for atoms being truly deselected
-        if (window.sillyMode) {
-            for (const idx of sillyAlreadySelected) {
-                if (!atomsSelected.includes(idx)) {
-                    sillyStartUnselectColor(idx);
-                }
-            }
-        }
         // Reset all atoms to their display color
         for (let i = 0; i < colorAttr.count; i++) {
             const atom = main.molecule.atoms[i];
             const color = getDisplayColorForAtom(i);
             atom.displayColor = color;
-            // In silly mode, skip instant reset for atoms with active unselect animation
-            if (window.sillyMode && sillyAnimations.has('unselcolor_' + i)) continue;
             colorAttr.setXYZ(i, color.r, color.g, color.b);
         }
         // Only clear silly tracking for atoms no longer in atomsSelected
@@ -5747,13 +5743,7 @@ function sillyStartSelectColor(atomIndex, bondHalves) {
     });
 }
 
-function sillyStartUnselectColor(atomIndex) {
-    const mol = main.molecule;
-    if (!mol || !mol.instancedMesh || atomIndex >= mol.instancedMesh.count) return;
-
-    const targetColor = getDisplayColorForAtom(atomIndex);
-
-    // Collect bond halves for this atom
+function sillyCreateUnselectOverlays(mol, atomIndex) {
     const bondHalves = [];
     if (mol.bonds && mol.bondGroup?.children[0]) {
         const atom = mol.atoms[atomIndex];
@@ -5765,9 +5755,8 @@ function sillyStartUnselectColor(atomIndex) {
 
     const bondMesh = mol.bondGroup?.children[0];
     const isStyled = bondMesh && bondMesh.isInstancedMesh;
-
-    // For styled bonds, create yellow overlays at full length that will shrink back
     const bondOverlays = [];
+
     if (bondHalves.length > 0 && isStyled) {
         const bondRadius = bondMesh.geometry.parameters?.radiusTop || 0.1;
         const radialSegs = bondMesh.geometry.parameters?.radialSegments || 8;
@@ -5794,7 +5783,6 @@ function sillyStartUnselectColor(atomIndex) {
             const atomEnd = p.clone().addScaledVector(yAxis, isAtom1Half ? -halfLen * 0.5 : halfLen * 0.5);
             const growDir = isAtom1Half ? 1 : -1;
 
-            // Start at full length
             const overlay = new THREE.Mesh(overlayGeo, overlayMat);
             overlay.quaternion.copy(q);
             overlay.scale.set(s.x, halfLen, s.z);
@@ -5829,14 +5817,79 @@ function sillyStartUnselectColor(atomIndex) {
         }
     }
 
+    return bondOverlays;
+}
+
+function sillyStartUnselectColor(atomIndex, delay) {
+    const mol = main.molecule;
+    if (!mol || !mol.instancedMesh || atomIndex >= mol.instancedMesh.count) return;
+
+    const targetColor = getDisplayColorForAtom(atomIndex);
+
+    // If no delay, create overlays now. Otherwise defer to update loop.
+    const bondOverlays = delay ? [] : sillyCreateUnselectOverlays(mol, atomIndex);
+
     sillyAnimations.set('unselcolor_' + atomIndex, {
         type: 'unselect_color',
         atomIndex,
         targetColor,
         bondOverlays,
+        overlaysCreated: !delay,
+        delay: delay || 0,
         startTime: performance.now(),
         duration: 150,
     });
+}
+
+function sillyCascadeUnselect(selectedIndices) {
+    const mol = main.molecule;
+    if (!mol || !mol.bonds) return;
+
+    // Build adjacency list (only between selected atoms)
+    const selectedSet = new Set(selectedIndices);
+    const adj = new Map();
+    for (const idx of selectedIndices) adj.set(idx, []);
+
+    mol.bonds.forEach(bond => {
+        const i1 = mol.atoms.indexOf(bond.atom1);
+        const i2 = mol.atoms.indexOf(bond.atom2);
+        if (selectedSet.has(i1) && selectedSet.has(i2)) {
+            adj.get(i1).push(i2);
+            adj.get(i2).push(i1);
+        }
+    });
+
+    // BFS from lowest index, then next unvisited, etc.
+    const visited = new Set();
+    const depthMap = new Map();
+    const sorted = [...selectedIndices].sort((a, b) => a - b);
+
+    for (const startIdx of sorted) {
+        if (visited.has(startIdx)) continue;
+        const queue = [startIdx];
+        visited.add(startIdx);
+        depthMap.set(startIdx, depthMap.size === 0 ? 0 : Math.max(...depthMap.values()) + 1);
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            const currentDepth = depthMap.get(current);
+            for (const neighbor of (adj.get(current) || [])) {
+                if (!visited.has(neighbor)) {
+                    visited.add(neighbor);
+                    depthMap.set(neighbor, currentDepth + 1);
+                    queue.push(neighbor);
+                }
+            }
+        }
+    }
+
+    // Schedule staggered unselect animations
+    const delayPerLevel = 60; // ms between each wave
+    for (const [atomIdx, depth] of depthMap) {
+        sillyStartUnselectColor(atomIdx, depth * delayPerLevel);
+    }
+
+    sillyAlreadySelected.clear();
 }
 
 function sillyStartHoverIn(atomIndex) {
@@ -5960,8 +6013,19 @@ function sillyModeUpdate(now) {
             const idx = anim.atomIndex;
             if (idx >= mesh.count || !colorAttr) { toRemove.push(key); continue; }
 
-            const eased = t * t * (3 - 2 * t);
-            const reverseEased = 1 - eased; // full -> zero
+            const elapsed = now - anim.startTime;
+            const effectiveElapsed = elapsed - anim.delay;
+            if (effectiveElapsed < 0) continue; // waiting for cascade delay
+
+            // Create overlays on first active frame if deferred
+            if (!anim.overlaysCreated) {
+                anim.bondOverlays = sillyCreateUnselectOverlays(mol, idx);
+                anim.overlaysCreated = true;
+            }
+
+            const tLocal = Math.min(effectiveElapsed / anim.duration, 1);
+            const eased = tLocal * tLocal * (3 - 2 * tLocal);
+            const reverseEased = 1 - eased;
 
             // Fade atom color from yellow toward target
             const tc = anim.targetColor;
@@ -5980,7 +6044,7 @@ function sillyModeUpdate(now) {
                 ov.mesh.material.opacity = reverseEased;
             }
 
-            if (t >= 1) {
+            if (tLocal >= 1) {
                 for (const ov of anim.bondOverlays) {
                     mol.bondGroup.remove(ov.mesh);
                 }
