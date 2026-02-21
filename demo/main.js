@@ -1393,6 +1393,9 @@ switchModeButton.addEventListener('click', (e) => {
 });
 toggleSillyButton.addEventListener('click', (e) => {
     window.sillyMode = !window.sillyMode;
+    if (!window.sillyMode) {
+        sillyModeCleanup();
+    }
 });
 
 window.addEventListener('replyUpdated', (event) => {
@@ -2069,22 +2072,30 @@ function onPointerMove2(event) {
         if (hoveredAtom !== instanceId) {
             // Reset previous hover
             if (hoveredAtom !== null && !atomsSelected.includes(hoveredAtom)) {
-                const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
-                if (!colorAttr) return;
-                const color = getDisplayColorForAtom(hoveredAtom);
-                colorAttr.setXYZ(hoveredAtom, color.r, color.g, color.b);
-                colorAttr.needsUpdate = true;
+                if (window.sillyMode) {
+                    sillyStartHoverOut(hoveredAtom);
+                } else {
+                    const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+                    if (!colorAttr) return;
+                    const color = getDisplayColorForAtom(hoveredAtom);
+                    colorAttr.setXYZ(hoveredAtom, color.r, color.g, color.b);
+                    colorAttr.needsUpdate = true;
+                }
             }
 
             // Apply hover effect
             hoveredAtom = instanceId;
             if (!atomsSelected.includes(instanceId)) {
-                const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
-                const color = getDisplayColorForAtom(instanceId);
-                // Lighten the color for hover
-                const hoverColor = color.clone().lerp(new THREE.Color(1, 1, 1), 0.3);
-                colorAttr.setXYZ(instanceId, hoverColor.r, hoverColor.g, hoverColor.b);
-                colorAttr.needsUpdate = true;
+                if (window.sillyMode) {
+                    sillyStartHoverIn(instanceId);
+                } else {
+                    const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+                    const color = getDisplayColorForAtom(instanceId);
+                    // Lighten the color for hover
+                    const hoverColor = color.clone().lerp(new THREE.Color(1, 1, 1), 0.3);
+                    colorAttr.setXYZ(instanceId, hoverColor.r, hoverColor.g, hoverColor.b);
+                    colorAttr.needsUpdate = true;
+                }
             }
 
             renderer.domElement.style.cursor = 'pointer';
@@ -2093,15 +2104,19 @@ function onPointerMove2(event) {
     } else {
         // No hover
         if (hoveredAtom !== null && !atomsSelected.includes(hoveredAtom)) {
-            const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
-            if (!colorAttr) {
-                hoveredAtom = null;
-                return;
+            if (window.sillyMode) {
+                sillyStartHoverOut(hoveredAtom);
+            } else {
+                const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
+                if (!colorAttr) {
+                    hoveredAtom = null;
+                    return;
+                }
+                const color = getDisplayColorForAtom(hoveredAtom);
+                colorAttr.setXYZ(hoveredAtom, color.r, color.g, color.b);
+                colorAttr.needsUpdate = true;
+                render();
             }
-            const color = getDisplayColorForAtom(hoveredAtom);
-            colorAttr.setXYZ(hoveredAtom, color.r, color.g, color.b);
-            colorAttr.needsUpdate = true;
-            render();
         }
         hoveredAtom = null;
         renderer.domElement.style.cursor = 'default';
@@ -3685,26 +3700,36 @@ function selectAtom(index, reset = true) {
         updateBondColorsForDisplay();
     }
 
-    // Highlight selected atom (yellow)
+    // Highlight selected atom (yellow) + connected bond halves
     main.molecule.atoms[index].displayColor = new THREE.Color(1, 1, 0);
-    colorAttr.setXYZ(index, 1, 1, 0);
-    colorAttr.needsUpdate = true;
-    // Highlight bond halves connected to this atom
+
+    // Collect bond half-indices connected to this atom
+    const bondHalves = [];
     if (main.molecule.bonds && main.molecule.bondGroup?.children[0]) {
-        const bondMesh = main.molecule.bondGroup.children[0];
-        const bondColorAttr = bondMesh.geometry.getAttribute('color');
-        if (bondColorAttr) {
-            const atom = main.molecule.atoms[index];
-            main.molecule.bonds.forEach((bond, bondIdx) => {
-                if (bond.atom1 === atom) {
-                    // This atom is atom1, highlight first half (bondIdx * 2)
-                    bondColorAttr.setXYZ(bondIdx * 2, 1, 1, 0);
-                } else if (bond.atom2 === atom) {
-                    // This atom is atom2, highlight second half (bondIdx * 2 + 1)
-                    bondColorAttr.setXYZ(bondIdx * 2 + 1, 1, 1, 0);
+        const atom = main.molecule.atoms[index];
+        main.molecule.bonds.forEach((bond, bondIdx) => {
+            if (bond.atom1 === atom) bondHalves.push(bondIdx * 2);
+            else if (bond.atom2 === atom) bondHalves.push(bondIdx * 2 + 1);
+        });
+    }
+
+    if (window.sillyMode && !sillyAlreadySelected.has(index)) {
+        // Animate: color fade for atom and bonds
+        sillyAlreadySelected.add(index);
+        sillyStartSelectColor(index, bondHalves);
+    } else {
+        // Instant yellow
+        colorAttr.setXYZ(index, 1, 1, 0);
+        colorAttr.needsUpdate = true;
+        if (bondHalves.length > 0) {
+            const bondMesh = main.molecule.bondGroup.children[0];
+            const bondColorAttr = bondMesh.geometry.getAttribute('color');
+            if (bondColorAttr) {
+                for (const halfIdx of bondHalves) {
+                    bondColorAttr.setXYZ(halfIdx, 1, 1, 0);
                 }
-            });
-            bondColorAttr.needsUpdate = true;
+                bondColorAttr.needsUpdate = true;
+            }
         }
     }
 }
@@ -3717,19 +3742,38 @@ function unselectAtom(index = null) {
     if (!colorAttr) return;
 
     if (index === null) {
+        // Animate deselection for atoms being truly deselected
+        if (window.sillyMode) {
+            for (const idx of sillyAlreadySelected) {
+                if (!atomsSelected.includes(idx)) {
+                    sillyStartUnselectColor(idx);
+                }
+            }
+        }
         // Reset all atoms to their display color
         for (let i = 0; i < colorAttr.count; i++) {
             const atom = main.molecule.atoms[i];
             const color = getDisplayColorForAtom(i);
             atom.displayColor = color;
+            // In silly mode, skip instant reset for atoms with active unselect animation
+            if (window.sillyMode && sillyAnimations.has('unselcolor_' + i)) continue;
             colorAttr.setXYZ(i, color.r, color.g, color.b);
         }
+        // Only clear silly tracking for atoms no longer in atomsSelected
+        for (const idx of sillyAlreadySelected) {
+            if (!atomsSelected.includes(idx)) sillyAlreadySelected.delete(idx);
+        }
     } else {
-        // Reset only the specified atom to its display color
-        const atom = main.molecule.atoms[index];
-        const color = getDisplayColorForAtom(index);
-        atom.displayColor = color;
-        colorAttr.setXYZ(index, color.r, color.g, color.b);
+        // Single atom deselect
+        if (window.sillyMode && sillyAlreadySelected.has(index)) {
+            sillyStartUnselectColor(index);
+            sillyAlreadySelected.delete(index);
+        } else {
+            const color = getDisplayColorForAtom(index);
+            main.molecule.atoms[index].displayColor = color;
+            colorAttr.setXYZ(index, color.r, color.g, color.b);
+        }
+        if (!atomsSelected.includes(index)) sillyAlreadySelected.delete(index);
     }
     colorAttr.needsUpdate = true;
     updateBondColorsForDisplay();
@@ -5624,9 +5668,359 @@ toggleOrthoCamera.addEventListener('change', () => {
     render();
 });
 
+// --- Silly Mode: smooth micro-interactions ---
+// Active animations: Map<key, {type, startTime, ...}>
+const sillyAnimations = new Map();
+const sillyAlreadySelected = new Set(); // tracks atoms that already played select animation
+
+function sillyStartSelectColor(atomIndex, bondHalves) {
+    const mol = main.molecule;
+    if (!mol || !mol.instancedMesh || atomIndex >= mol.instancedMesh.count) return;
+
+    // Capture the atom's current color as the start
+    const colorAttr = mol.instancedMesh.geometry.getAttribute('color');
+    const fromColor = new THREE.Color(colorAttr.getX(atomIndex), colorAttr.getY(atomIndex), colorAttr.getZ(atomIndex));
+
+    const bondMesh = mol.bondGroup?.children[0];
+    const isStyled = bondMesh && bondMesh.isInstancedMesh;
+
+    // For styled bonds, create yellow overlay cylinders that grow from atom end
+    const bondOverlays = [];
+    if (bondHalves.length > 0 && isStyled) {
+        const bondRadius = bondMesh.geometry.parameters?.radiusTop || 0.1;
+        const radialSegs = bondMesh.geometry.parameters?.radialSegments || 8;
+        // Slightly larger radius to render on top without z-fighting
+        const overlayGeo = new THREE.CylinderGeometry(bondRadius * 1.03, bondRadius * 1.03, 1, radialSegs);
+        const overlayMat = bondMesh.material.clone();
+        overlayMat.vertexColors = false;
+        overlayMat.color.set(0xffff00);
+        overlayMat.transparent = true;
+        overlayMat.opacity = 0;
+
+        const m = new THREE.Matrix4();
+        const p = new THREE.Vector3();
+        const q = new THREE.Quaternion();
+        const s = new THREE.Vector3();
+
+        for (let bi = 0; bi < bondHalves.length; bi++) {
+            const halfIdx = bondHalves[bi];
+            bondMesh.getMatrixAt(halfIdx, m);
+            m.decompose(p, q, s);
+
+            const yAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(q).normalize();
+            const halfLen = s.y;
+
+            // atom1 half (even): atom at bottom (-Y end), grow upward (+Y)
+            // atom2 half (odd):  atom at top (+Y end), grow downward (-Y)
+            const isAtom1Half = halfIdx % 2 === 0;
+            const atomEnd = p.clone().addScaledVector(yAxis, isAtom1Half ? -halfLen * 0.5 : halfLen * 0.5);
+            const growDir = isAtom1Half ? 1 : -1;
+
+            const overlay = new THREE.Mesh(overlayGeo, overlayMat);
+            overlay.quaternion.copy(q);
+            overlay.scale.set(s.x, 0.001, s.z);
+            overlay.position.copy(atomEnd);
+
+            mol.bondGroup.add(overlay);
+
+            bondOverlays.push({
+                mesh: overlay,
+                atomEnd: atomEnd.clone(),
+                yAxis: yAxis.clone(),
+                growDir,
+                halfLen,
+                xScale: s.x,
+                zScale: s.z,
+            });
+        }
+    }
+
+    sillyAnimations.set('selcolor_' + atomIndex, {
+        type: 'select_color',
+        atomIndex,
+        bondHalves,
+        fromColor,
+        bondOverlays,
+        isStyled,
+        startTime: performance.now(),
+        duration: 150,
+    });
+}
+
+function sillyStartUnselectColor(atomIndex) {
+    const mol = main.molecule;
+    if (!mol || !mol.instancedMesh || atomIndex >= mol.instancedMesh.count) return;
+
+    const targetColor = getDisplayColorForAtom(atomIndex);
+
+    // Collect bond halves for this atom
+    const bondHalves = [];
+    if (mol.bonds && mol.bondGroup?.children[0]) {
+        const atom = mol.atoms[atomIndex];
+        mol.bonds.forEach((bond, bondIdx) => {
+            if (bond.atom1 === atom) bondHalves.push(bondIdx * 2);
+            else if (bond.atom2 === atom) bondHalves.push(bondIdx * 2 + 1);
+        });
+    }
+
+    const bondMesh = mol.bondGroup?.children[0];
+    const isStyled = bondMesh && bondMesh.isInstancedMesh;
+
+    // For styled bonds, create yellow overlays at full length that will shrink back
+    const bondOverlays = [];
+    if (bondHalves.length > 0 && isStyled) {
+        const bondRadius = bondMesh.geometry.parameters?.radiusTop || 0.1;
+        const radialSegs = bondMesh.geometry.parameters?.radialSegments || 8;
+        const overlayGeo = new THREE.CylinderGeometry(bondRadius * 1.03, bondRadius * 1.03, 1, radialSegs);
+        const overlayMat = bondMesh.material.clone();
+        overlayMat.vertexColors = false;
+        overlayMat.color.set(0xffff00);
+        overlayMat.transparent = true;
+        overlayMat.opacity = 1;
+
+        const m = new THREE.Matrix4();
+        const p = new THREE.Vector3();
+        const q = new THREE.Quaternion();
+        const s = new THREE.Vector3();
+
+        for (let bi = 0; bi < bondHalves.length; bi++) {
+            const halfIdx = bondHalves[bi];
+            bondMesh.getMatrixAt(halfIdx, m);
+            m.decompose(p, q, s);
+
+            const yAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(q).normalize();
+            const halfLen = s.y;
+            const isAtom1Half = halfIdx % 2 === 0;
+            const atomEnd = p.clone().addScaledVector(yAxis, isAtom1Half ? -halfLen * 0.5 : halfLen * 0.5);
+            const growDir = isAtom1Half ? 1 : -1;
+
+            // Start at full length
+            const overlay = new THREE.Mesh(overlayGeo, overlayMat);
+            overlay.quaternion.copy(q);
+            overlay.scale.set(s.x, halfLen, s.z);
+            overlay.position.copy(atomEnd).addScaledVector(yAxis, growDir * halfLen * 0.5);
+
+            mol.bondGroup.add(overlay);
+
+            bondOverlays.push({
+                mesh: overlay,
+                atomEnd: atomEnd.clone(),
+                yAxis: yAxis.clone(),
+                growDir,
+                halfLen,
+                xScale: s.x,
+                zScale: s.z,
+            });
+        }
+
+        // Set bond colors to target immediately (overlay covers them during animation)
+        const bondColorAttr = bondMesh.geometry.getAttribute('color');
+        if (bondColorAttr) {
+            for (const halfIdx of bondHalves) {
+                const bondIdx = Math.floor(halfIdx / 2);
+                const bond = mol.bonds[bondIdx];
+                const atomIdx = (halfIdx % 2 === 0)
+                    ? mol.atoms.indexOf(bond.atom1)
+                    : mol.atoms.indexOf(bond.atom2);
+                const c = atomIdx >= 0 ? getDisplayColorForAtom(atomIdx) : new THREE.Color(0xffffff);
+                bondColorAttr.setXYZ(halfIdx, c.r, c.g, c.b);
+            }
+            bondColorAttr.needsUpdate = true;
+        }
+    }
+
+    sillyAnimations.set('unselcolor_' + atomIndex, {
+        type: 'unselect_color',
+        atomIndex,
+        targetColor,
+        bondOverlays,
+        startTime: performance.now(),
+        duration: 150,
+    });
+}
+
+function sillyStartHoverIn(atomIndex) {
+    // Cancel any existing hover-out for this atom
+    sillyAnimations.delete('hover_' + atomIndex);
+    sillyAnimations.set('hover_' + atomIndex, {
+        type: 'hover_in',
+        atomIndex,
+        startTime: performance.now(),
+        duration: 100,
+    });
+}
+
+function sillyStartHoverOut(atomIndex) {
+    sillyAnimations.delete('hover_' + atomIndex);
+    sillyAnimations.set('hover_' + atomIndex, {
+        type: 'hover_out',
+        atomIndex,
+        startTime: performance.now(),
+        duration: 150,
+    });
+}
+
+function sillyModeUpdate(now) {
+    if (!window.sillyMode) return;
+    if (sillyAnimations.size === 0) return;
+
+    const mol = main.molecule;
+    if (!mol || !mol.instancedMesh) return;
+
+    const mesh = mol.instancedMesh;
+    const colorAttr = mesh.geometry.getAttribute('color');
+
+    let colorDirty = false;
+    const toRemove = [];
+
+    for (const [key, anim] of sillyAnimations) {
+        const elapsed = now - anim.startTime;
+        const t = Math.min(elapsed / anim.duration, 1);
+
+        if (anim.type === 'hover_in') {
+            const idx = anim.atomIndex;
+            if (idx >= mesh.count || !colorAttr) { toRemove.push(key); continue; }
+
+            if (atomsSelected.includes(idx)) { toRemove.push(key); continue; }
+
+            const baseColor = getDisplayColorForAtom(idx);
+            const hoverColor = baseColor.clone().lerp(new THREE.Color(1, 1, 1), 0.3);
+
+            // Smooth lerp from base -> hover
+            const eased = t * t * (3 - 2 * t); // smoothstep
+            const r = baseColor.r + (hoverColor.r - baseColor.r) * eased;
+            const g = baseColor.g + (hoverColor.g - baseColor.g) * eased;
+            const b = baseColor.b + (hoverColor.b - baseColor.b) * eased;
+            colorAttr.setXYZ(idx, r, g, b);
+            colorDirty = true;
+
+            if (t >= 1) toRemove.push(key);
+
+        } else if (anim.type === 'hover_out') {
+            const idx = anim.atomIndex;
+            if (idx >= mesh.count || !colorAttr) { toRemove.push(key); continue; }
+
+            if (atomsSelected.includes(idx)) { toRemove.push(key); continue; }
+
+            const baseColor = getDisplayColorForAtom(idx);
+            const hoverColor = baseColor.clone().lerp(new THREE.Color(1, 1, 1), 0.3);
+
+            // Smooth lerp from hover -> base
+            const eased = t * t * (3 - 2 * t);
+            const r = hoverColor.r + (baseColor.r - hoverColor.r) * eased;
+            const g = hoverColor.g + (baseColor.g - hoverColor.g) * eased;
+            const b = hoverColor.b + (baseColor.b - hoverColor.b) * eased;
+            colorAttr.setXYZ(idx, r, g, b);
+            colorDirty = true;
+
+            if (t >= 1) toRemove.push(key);
+
+        } else if (anim.type === 'select_color') {
+            const idx = anim.atomIndex;
+            if (idx >= mesh.count || !colorAttr) { toRemove.push(key); continue; }
+
+            const eased = t * t * (3 - 2 * t);
+
+            // Fade atom color toward yellow
+            const fr = anim.fromColor;
+            colorAttr.setXYZ(idx,
+                fr.r + (1 - fr.r) * eased,
+                fr.g + (1 - fr.g) * eased,
+                fr.b + (0 - fr.b) * eased
+            );
+            colorDirty = true;
+
+            // Grow yellow overlay cylinders from atom end along each bond half
+            for (const ov of anim.bondOverlays) {
+                const len = ov.halfLen * eased;
+                ov.mesh.scale.set(ov.xScale, Math.max(len, 0.001), ov.zScale);
+                ov.mesh.position.copy(ov.atomEnd).addScaledVector(ov.yAxis, ov.growDir * len * 0.5);
+                ov.mesh.material.opacity = eased;
+            }
+
+            // When done: remove overlays and set bond colors to final yellow
+            if (t >= 1) {
+                for (const ov of anim.bondOverlays) {
+                    mol.bondGroup.remove(ov.mesh);
+                }
+                const bondMeshRef = mol.bondGroup?.children[0];
+                if (bondMeshRef) {
+                    const bondColorAttr = bondMeshRef.geometry.getAttribute('color');
+                    if (bondColorAttr) {
+                        for (const halfIdx of anim.bondHalves) {
+                            bondColorAttr.setXYZ(halfIdx, 1, 1, 0);
+                        }
+                        bondColorAttr.needsUpdate = true;
+                    }
+                }
+                toRemove.push(key);
+            }
+
+        } else if (anim.type === 'unselect_color') {
+            const idx = anim.atomIndex;
+            if (idx >= mesh.count || !colorAttr) { toRemove.push(key); continue; }
+
+            const eased = t * t * (3 - 2 * t);
+            const reverseEased = 1 - eased; // full -> zero
+
+            // Fade atom color from yellow toward target
+            const tc = anim.targetColor;
+            colorAttr.setXYZ(idx,
+                1 + (tc.r - 1) * eased,
+                1 + (tc.g - 1) * eased,
+                0 + (tc.b - 0) * eased
+            );
+            colorDirty = true;
+
+            // Shrink bond overlays back toward atom
+            for (const ov of anim.bondOverlays) {
+                const len = ov.halfLen * reverseEased;
+                ov.mesh.scale.set(ov.xScale, Math.max(len, 0.001), ov.zScale);
+                ov.mesh.position.copy(ov.atomEnd).addScaledVector(ov.yAxis, ov.growDir * len * 0.5);
+                ov.mesh.material.opacity = reverseEased;
+            }
+
+            if (t >= 1) {
+                for (const ov of anim.bondOverlays) {
+                    mol.bondGroup.remove(ov.mesh);
+                }
+                toRemove.push(key);
+            }
+        }
+    }
+
+    for (const key of toRemove) sillyAnimations.delete(key);
+    if (colorDirty) colorAttr.needsUpdate = true;
+    if (colorDirty) render();
+}
+
+function sillyModeCleanup() {
+    const mol = main.molecule;
+    for (const [key, anim] of sillyAnimations) {
+        // Remove overlay meshes and finalize bond colors
+        if (anim.bondOverlays) {
+            for (const ov of anim.bondOverlays) {
+                ov.mesh.parent?.remove(ov.mesh);
+            }
+        }
+        if (anim.type === 'select_color' && mol?.bondGroup?.children[0]) {
+            const bondColorAttr = mol.bondGroup.children[0].geometry.getAttribute('color');
+            if (bondColorAttr && anim.bondHalves) {
+                for (const halfIdx of anim.bondHalves) {
+                    bondColorAttr.setXYZ(halfIdx, 1, 1, 0);
+                }
+                bondColorAttr.needsUpdate = true;
+            }
+        }
+    }
+    sillyAnimations.clear();
+    sillyAlreadySelected.clear();
+}
+
 function animate() {
     window.fragments = fragments;
     requestAnimationFrame(animate);
+    sillyModeUpdate(performance.now());
     controls.update();
     render();
 }
