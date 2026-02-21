@@ -2204,11 +2204,20 @@ export default class FileHandler {
     }
 
     static _applyBohrConversion(parsedData, factor) {
+        // Forces in atomic units are Hartree/Bohr → convert to eV/Å
+        // eV/Å = Hartree/Bohr × (27.211386 eV/Hartree) / (0.529177 Å/Bohr)
+        const HARTREE_BOHR_TO_EV_ANG = 27.211386245988 / 0.529177249;
+
         // Convert main atom data
         for (const atom of parsedData.atomData) {
             atom.x *= factor;
             atom.y *= factor;
             atom.z *= factor;
+            if (atom.fx !== undefined) {
+                atom.fx *= HARTREE_BOHR_TO_EV_ANG;
+                atom.fy *= HARTREE_BOHR_TO_EV_ANG;
+                atom.fz *= HARTREE_BOHR_TO_EV_ANG;
+            }
         }
 
         // Convert all trajectory frames if present
@@ -2219,6 +2228,11 @@ export default class FileHandler {
                         atom.x *= factor;
                         atom.y *= factor;
                         atom.z *= factor;
+                        if (atom.fx !== undefined) {
+                            atom.fx *= HARTREE_BOHR_TO_EV_ANG;
+                            atom.fy *= HARTREE_BOHR_TO_EV_ANG;
+                            atom.fz *= HARTREE_BOHR_TO_EV_ANG;
+                        }
                     }
                 }
             }
