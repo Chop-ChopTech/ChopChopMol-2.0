@@ -2251,6 +2251,14 @@ const FUNCTIONS = {
                 if (window.frameEnergies?.length) {
                     requestBody.energies = window.frameEnergies;
                 }
+                // Include MD metadata (steps, temperatures, kinetic energies) if available
+                if (window.lastMaceResults?.energies?.length) {
+                    const mace = window.lastMaceResults.energies;
+                    if (mace[0]?.step !== undefined) requestBody.steps = mace.map(e => e.step);
+                    if (mace[0]?.temperature_K !== undefined) requestBody.temperatures = mace.map(e => e.temperature_K);
+                    if (mace[0]?.kinetic_eV !== undefined) requestBody.kinetic_energies = mace.map(e => e.kinetic_eV);
+                    if (mace[0]?.total_eV !== undefined) requestBody.total_energies = mace.map(e => e.total_eV);
+                }
             }
 
             try {
@@ -2500,8 +2508,8 @@ const NEXT_STEPS = {
     angle_scan: ["calculate_all_energies to compute energies for each frame"],
     calculate_all_energies: ["create_chart to visualize energy profile"],
     calculate_energy: ["toggle_force_arrows to visualize forces (if includeForces was true)"],
-    optimize_geometry: ["get_cached_energies for energy data", "create_chart to plot convergence"],
-    run_md: ["get_cached_energies for trajectory energies", "create_chart to plot energy over time"],
+    optimize_geometry: ["create_chart to plot convergence", "execute_python for custom analysis (energies, positions, temperatures auto-available)"],
+    run_md: ["create_chart to plot energy over time", "execute_python for custom analysis (energies, positions, steps, temperatures, kinetic_energies, total_energies auto-available — no need to call get_cached_energies first)"],
     load_molecule: ["get_molecule_info to inspect structure"],
     split_molecule: ["rotational_scan to scan around the split bond"],
     get_cached_energies: ["create_chart to visualize the energy data"],

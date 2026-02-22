@@ -2830,7 +2830,7 @@
                         window._openChartModal(data, chartConfig);
                     });
                     toolbar.querySelector('.chart-download-btn').addEventListener('click', () => {
-                        window._downloadChartAsJPG(chart, data.title || 'chart');
+                        window._downloadChartAsPNG(chart, data.title || 'chart');
                     });
                 }
 
@@ -3063,15 +3063,45 @@
                                     img.className = 'python-figure';
                                     img.addEventListener('click', () => {
                                         const ov = document.createElement('div');
-                                        ov.className = 'chart-modal-overlay';
+                                        ov.className = 'chart-modal-overlay figure-modal-overlay';
                                         const content = document.createElement('div');
-                                        content.className = 'chart-modal-content';
-                                        content.innerHTML = `<img src="${img.src}" style="width:100%;border-radius:8px;">`;
+                                        content.className = 'chart-modal-content figure-modal-content';
+
+                                        const header = document.createElement('div');
+                                        header.className = 'chart-modal-header';
+                                        header.innerHTML = `
+                                            <span class="chart-modal-title">Figure</span>
+                                            <div class="chart-modal-actions">
+                                                <button class="chart-modal-btn figure-modal-download" title="Download PNG"><i class="fas fa-download"></i></button>
+                                                <button class="chart-modal-btn figure-modal-close" title="Close"><i class="fas fa-times"></i></button>
+                                            </div>
+                                        `;
+                                        content.appendChild(header);
+
+                                        const imgWrap = document.createElement('div');
+                                        imgWrap.className = 'figure-modal-body';
+                                        imgWrap.innerHTML = `<img src="${img.src}" style="width:100%;border-radius:8px;">`;
+                                        content.appendChild(imgWrap);
+
                                         ov.appendChild(content);
                                         document.body.appendChild(ov);
                                         requestAnimationFrame(() => ov.classList.add('active'));
-                                        ov.addEventListener('click', (e) => {
-                                            if (e.target === ov) { ov.classList.remove('active'); setTimeout(() => ov.remove(), 200); }
+
+                                        function closeModal() {
+                                            ov.classList.remove('active');
+                                            setTimeout(() => ov.remove(), 200);
+                                            document.removeEventListener('keydown', escHandler);
+                                        }
+                                        function escHandler(e) { if (e.key === 'Escape') closeModal(); }
+                                        document.addEventListener('keydown', escHandler);
+
+                                        ov.addEventListener('click', (e) => { if (e.target === ov) closeModal(); });
+                                        header.querySelector('.figure-modal-close').addEventListener('click', closeModal);
+                                        header.querySelector('.figure-modal-download').addEventListener('click', () => {
+                                            const link = document.createElement('a');
+                                            link.download = 'figure.png';
+                                            link.href = img.src;
+                                            link.click();
                                         });
                                     });
                                     wrapper.appendChild(img);
@@ -3591,21 +3621,20 @@
         window.updateEnergyChartButton = updateEnergyChartButton;
         window.renderEnergyChart = renderEnergyChart;
 
-        // ── Chart JPG Download ──
-        window._downloadChartAsJPG = function (chartInstance, title) {
+        // ── Chart PNG Download ──
+        window._downloadChartAsPNG = function (chartInstance, title) {
             const srcCanvas = chartInstance.canvas;
             const scale = 2;
             const offscreen = document.createElement('canvas');
             offscreen.width = srcCanvas.width * scale;
             offscreen.height = srcCanvas.height * scale;
             const ctx = offscreen.getContext('2d');
-            // White background for JPG
             ctx.fillStyle = '#1a1a2e';
             ctx.fillRect(0, 0, offscreen.width, offscreen.height);
             ctx.drawImage(srcCanvas, 0, 0, offscreen.width, offscreen.height);
             const link = document.createElement('a');
-            link.download = (title || 'chart').replace(/[^a-zA-Z0-9_-]/g, '_') + '.jpg';
-            link.href = offscreen.toDataURL('image/jpeg', 0.95);
+            link.download = (title || 'chart').replace(/[^a-zA-Z0-9_-]/g, '_') + '.png';
+            link.href = offscreen.toDataURL('image/png');
             link.click();
         };
 
@@ -3626,7 +3655,7 @@
             header.innerHTML = `
                 <span class="chart-modal-title">${data.title || 'Chart'}</span>
                 <div class="chart-modal-actions">
-                    <button class="chart-modal-btn chart-modal-download" title="Download JPG"><i class="fas fa-download"></i></button>
+                    <button class="chart-modal-btn chart-modal-download" title="Download PNG"><i class="fas fa-download"></i></button>
                     <button class="chart-modal-btn chart-modal-close" title="Close"><i class="fas fa-times"></i></button>
                 </div>
             `;
@@ -3700,7 +3729,7 @@
             });
             header.querySelector('.chart-modal-close').addEventListener('click', closeModal);
             header.querySelector('.chart-modal-download').addEventListener('click', () => {
-                window._downloadChartAsJPG(modalChart, data.title || 'chart');
+                window._downloadChartAsPNG(modalChart, data.title || 'chart');
             });
 
             // Animate in
