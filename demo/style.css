@@ -3162,6 +3162,128 @@ input[type="range"]:focus {
     pointer-events: none;
 }
 
+/* Attachment button */
+.ai-attach-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.ai-attach-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.8);
+}
+.ai-attach-btn.has-files {
+    color: rgba(102, 126, 234, 0.8);
+    border-color: rgba(102, 126, 234, 0.2);
+}
+
+/* Attachment chips container */
+.ai-attachment-chips {
+    display: none;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 0;
+}
+.ai-attachment-chips.visible {
+    display: flex;
+}
+
+/* Individual file chip */
+.ai-attachment-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: rgba(102, 126, 234, 0.12);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    color: rgba(180, 195, 255, 0.9);
+    font-size: 11px;
+    max-width: 200px;
+}
+.ai-attachment-chip .chip-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ai-attachment-chip .chip-size {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 10px;
+    flex-shrink: 0;
+}
+.ai-attachment-chip .chip-remove {
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 9px;
+    padding: 2px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: color 0.15s;
+}
+.ai-attachment-chip .chip-remove:hover {
+    color: rgba(239, 68, 68, 0.8);
+}
+
+/* Drop overlay */
+.ai-drop-overlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(102, 126, 234, 0.08);
+    border: 2px dashed rgba(102, 126, 234, 0.4);
+    border-radius: 10px;
+    z-index: 10;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: rgba(180, 195, 255, 0.8);
+    font-size: 12px;
+    pointer-events: none;
+}
+.ai-drop-overlay i {
+    font-size: 20px;
+    color: rgba(102, 126, 234, 0.6);
+}
+.ai-chat-input-area.drag-active .ai-drop-overlay {
+    display: flex;
+}
+
+/* File badges in sent user messages */
+.ai-message.user .ai-attached-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.ai-attached-file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+}
+.ai-attached-file-badge i {
+    font-size: 9px;
+}
+
 #aiChatInput {
     width: 100%;
     box-sizing: border-box;

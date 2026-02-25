@@ -1489,6 +1489,7 @@
         });
 
         window.addEventListener('dragover', (event) => {
+            if (event.target.closest('.ai-chat-input-area')) return;
             event.preventDefault(); // Prevent default to allow drop
             if (event.dataTransfer.types.includes('application/json')) return;
             if (event.dataTransfer.types.includes('text/plain')) return;
@@ -1496,6 +1497,7 @@
         });
 
         window.addEventListener('dragenter', (event) => {
+            if (event.target.closest('.ai-chat-input-area')) return;
             event.preventDefault();
             if (event.dataTransfer.types.includes('application/json')) return;
             if (event.dataTransfer.types.includes('text/plain')) return;
@@ -1508,6 +1510,7 @@
         window.droppedFile = null; // global variable to store dropped file
 
         window.addEventListener('drop', (event) => {
+            if (event.target.closest('.ai-chat-input-area')) return;
             event.preventDefault();
             dropZone.classList.remove('dragover');
 
@@ -2322,6 +2325,10 @@
         </div>
 
         <div class="ai-chat-input-area">
+            <div id="aiAttachmentChips" class="ai-attachment-chips"></div>
+            <div id="aiDropOverlay" class="ai-drop-overlay">
+                <i class="fas fa-file-upload"></i><span>Drop files to attach</span>
+            </div>
             <textarea id="aiChatInput" placeholder="Ask me anything" rows="3"></textarea>
 
             <div class="ai-thinking-control">
@@ -2378,6 +2385,10 @@
                         <option value="claude-3-5-haiku-20241022">Claude Haiku 3.5</option>
                     </optgroup>
                 </select>
+                <button id="aiAttachBtn" class="ai-attach-btn" title="Attach files">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <input type="file" id="aiFileInput" multiple style="display:none">
                 <button id="aiSendBtn"><i class="fas fa-paper-plane"></i></button>
                 <button id="aiMicBtn" class="ai-mic-btn" title="Voice input">
                     <i class="fas fa-microphone"></i>
@@ -2511,14 +2522,188 @@
             });
 
 
+            // ── File attachment system ──
+            const pendingAttachments = []; // [{name, content, size}]
+            const MAX_FILE_SIZE = 100 * 1024;     // 100KB per file
+            const MAX_TOTAL_SIZE = 500 * 1024;    // 500KB total
+            const attachBtn = document.getElementById('aiAttachBtn');
+            const fileInput = document.getElementById('aiFileInput');
+            const chipsContainer = document.getElementById('aiAttachmentChips');
+            const inputArea = document.querySelector('.ai-chat-input-area');
+
+            const TEXT_EXTENSIONS = /\.(xyz|extxyz|pdb|mol|sdf|cif|mol2|pqr|gro|cml|out|cube|molden|txt|py|json|csv|log|dat|inp|com|gjf|fchk|wfn|wfx|yml|yaml|toml|cfg|conf|sh|bash|md|rst|tex|html|xml|smiles|smi|ts|js|jsx|tsx|c|cpp|h|hpp|java|rs|go|rb|pl|r|m|f90|f|nw|zmat|gjc)$/i;
+
+            function addAttachmentFile(file) {
+                if (!TEXT_EXTENSIONS.test(file.name) && !file.type.startsWith('text/')) {
+                    window.showToast?.(`Cannot attach binary file: ${file.name}`, 'error');
+                    return;
+                }
+                if (file.size > MAX_FILE_SIZE) {
+                    window.showToast?.(`File too large: ${file.name} (${(file.size / 1024).toFixed(0)}KB, max 100KB)`, 'error');
+                    return;
+                }
+                if (pendingAttachments.some(a => a.name === file.name)) return;
+                const currentTotal = pendingAttachments.reduce((s, a) => s + a.size, 0);
+                if (currentTotal + file.size > MAX_TOTAL_SIZE) {
+                    window.showToast?.('Total attachment size exceeds 500KB limit', 'error');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => {
+                    pendingAttachments.push({ name: file.name, content: reader.result, size: file.size });
+                    renderAttachmentChips();
+                };
+                reader.onerror = () => window.showToast?.(`Failed to read: ${file.name}`, 'error');
+                reader.readAsText(file);
+            }
+
+            function addAttachmentFromContent(name, content) {
+                const size = new Blob([content]).size;
+                if (size > MAX_FILE_SIZE) {
+                    window.showToast?.(`File too large: ${name} (${(size / 1024).toFixed(0)}KB, max 100KB)`, 'error');
+                    return;
+                }
+                if (pendingAttachments.some(a => a.name === name)) return;
+                const currentTotal = pendingAttachments.reduce((s, a) => s + a.size, 0);
+                if (currentTotal + size > MAX_TOTAL_SIZE) {
+                    window.showToast?.('Total attachment size exceeds 500KB limit', 'error');
+                    return;
+                }
+                pendingAttachments.push({ name, content, size });
+                renderAttachmentChips();
+            }
+
+            function renderAttachmentChips() {
+                chipsContainer.innerHTML = '';
+                if (pendingAttachments.length === 0) {
+                    chipsContainer.classList.remove('visible');
+                    attachBtn.classList.remove('has-files');
+                    return;
+                }
+                chipsContainer.classList.add('visible');
+                attachBtn.classList.add('has-files');
+                pendingAttachments.forEach((att, idx) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'ai-attachment-chip';
+                    const sizeStr = att.size < 1024 ? att.size + 'B' : (att.size / 1024).toFixed(1) + 'KB';
+                    chip.innerHTML = `
+                        <i class="fas fa-file-alt" style="font-size:9px;flex-shrink:0"></i>
+                        <span class="chip-name" title="${att.name}">${att.name}</span>
+                        <span class="chip-size">${sizeStr}</span>
+                        <span class="chip-remove" title="Remove"><i class="fas fa-times"></i></span>
+                    `;
+                    chip.querySelector('.chip-remove').addEventListener('click', () => {
+                        pendingAttachments.splice(idx, 1);
+                        renderAttachmentChips();
+                    });
+                    chipsContainer.appendChild(chip);
+                });
+            }
+
+            // Paperclip button -> file picker
+            attachBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                for (const file of e.target.files) addAttachmentFile(file);
+                fileInput.value = '';
+            });
+
+            // Drag & drop on chat input area
+            let _dragCounter = 0;
+            inputArea.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                _dragCounter++;
+                inputArea.classList.add('drag-active');
+            });
+            inputArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                _dragCounter--;
+                if (_dragCounter <= 0) { _dragCounter = 0; inputArea.classList.remove('drag-active'); }
+            });
+            inputArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'copy';
+            });
+            inputArea.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                _dragCounter = 0;
+                inputArea.classList.remove('drag-active');
+
+                // Case 1: System files from Finder/desktop
+                if (e.dataTransfer.files?.length > 0) {
+                    for (const file of e.dataTransfer.files) addAttachmentFile(file);
+                    return;
+                }
+
+                // Case 2: Local file explorer files (text/plain with path)
+                const textData = e.dataTransfer.getData('text/plain');
+                if (textData && window.fileExplorer) {
+                    try {
+                        const parsed = JSON.parse(textData);
+                        if (parsed.multi && parsed.paths) {
+                            for (const path of parsed.paths) {
+                                const result = await window.fileExplorer.readFile(path);
+                                if (result.success) {
+                                    const name = path.split('/').pop() || path;
+                                    addAttachmentFromContent(name, result.content);
+                                }
+                            }
+                            return;
+                        }
+                    } catch { /* not JSON, treat as single path */ }
+                    if (window.fileExplorer.fileHandles?.has(textData)) {
+                        const result = await window.fileExplorer.readFile(textData);
+                        if (result.success) {
+                            const name = textData.split('/').pop() || textData;
+                            addAttachmentFromContent(name, result.content);
+                        }
+                        return;
+                    }
+                }
+
+                // Case 3: Cloud files (application/json with fileContent)
+                const jsonData = e.dataTransfer.getData('application/json');
+                if (jsonData) {
+                    try {
+                        const parsed = JSON.parse(jsonData);
+                        if (parsed.multi && parsed.ids) {
+                            window.showToast?.('Drag individual cloud files to attach', 'info');
+                        } else if (parsed.fileContent) {
+                            const ext = parsed.fileFormat || 'xyz';
+                            const name = (parsed.name || 'molecule') + '.' + ext;
+                            addAttachmentFromContent(name, parsed.fileContent);
+                        }
+                    } catch { /* ignore parse errors */ }
+                }
+            });
+
+            // Expose globally for file explorer integration
+            window.attachFileToChat = addAttachmentFromContent;
+
             // Send message
             async function handleSend() {
                 const message = chatInput.value.trim();
-                if (!message) return;
+                if (!message && pendingAttachments.length === 0) return;
                 if (!window.AIAgent) return;
 
-                addMessage('user', message);
+                // Build full message with attached file contents
+                let fullMessage = message;
+                const attachedFileNames = pendingAttachments.map(a => a.name);
+                if (pendingAttachments.length > 0) {
+                    const attachmentBlock = pendingAttachments.map(att =>
+                        `<attached_file name="${att.name}">\n${att.content}\n</attached_file>`
+                    ).join('\n\n');
+                    fullMessage = message ? `${message}\n\n${attachmentBlock}` : attachmentBlock;
+                }
+
+                // Display clean message with file badges (not raw content)
+                addMessage('user', message || '(attached files)', attachedFileNames);
                 chatInput.value = '';
+                pendingAttachments.length = 0;
+                renderAttachmentChips();
                 sendBtn.disabled = true;
 
                 // Remove welcome and show typing indicator
@@ -2835,7 +3020,7 @@
                 }
 
                 try {
-                    const response = await window.AIAgent.send(message, (chunk, status, statusType) => {
+                    const response = await window.AIAgent.send(fullMessage, (chunk, status, statusType) => {
                         // ── Thinking events ──
                         if (statusType === 'thinking_start') {
                             if (!typingRemoved) {
@@ -3174,7 +3359,7 @@
                 setTimeout(() => container.remove(), 1200);
             }
 
-            function addMessage(type, content, actions = []) {
+            function addMessage(type, content, attachedFiles = []) {
                 // Remove welcome message if present
                 const welcome = messagesContainer.querySelector('.ai-welcome');
                 if (welcome) welcome.remove();
@@ -3186,12 +3371,21 @@
                 const labelText = type === 'user' ? 'You' : 'ChopChopMol';
                 const labelClass = type === 'user' ? 'user-label' : 'assistant-label';
 
+                let fileBadgesHtml = '';
+                if (attachedFiles.length > 0) {
+                    const badges = attachedFiles.map(name =>
+                        `<span class="ai-attached-file-badge"><i class="fas fa-paperclip"></i> ${escapeHtml(name)}</span>`
+                    ).join('');
+                    fileBadgesHtml = `<div class="ai-attached-files">${badges}</div>`;
+                }
+
                 msgEl.innerHTML = `
                     <div class="ai-message-label ${labelClass}">
                         <i class="fas ${labelIcon}"></i> ${labelText}
                     </div>
                     <div class="ai-message-content">
                         ${type === 'assistant' ? renderMarkdown(content) : escapeHtml(content)}
+                        ${fileBadgesHtml}
                     </div>
                 `;
 
