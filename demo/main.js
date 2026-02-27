@@ -6123,6 +6123,13 @@ function updateRendererSize() {
     renderer.setSize(width, height);
     renderer.domElement.style.marginLeft = leftOffset + 'px';
 
+    // Sync text editor position with viewport area
+    const textEditor = document.getElementById('textEditorModal');
+    if (textEditor) {
+        textEditor.style.left = leftOffset + 'px';
+        textEditor.style.right = rightOffset + 'px';
+    }
+
     // Center frame slider on canvas
     const frameSlider = document.getElementById('frameSliderContainer');
     if (frameSlider) {

@@ -2279,17 +2279,13 @@
         </div>
     </div>
 
-    <!-- Text Editor Modal (for non-molecule files) -->
+    <!-- Text Editor (for non-molecule files) -->
     <div id="textEditorModal" class="text-editor-modal">
         <div class="text-editor-header">
             <span id="textEditorFilename">file.txt</span>
-            <div class="text-editor-actions">
-                <button id="saveTextFileBtn" title="Save"><i class="fas fa-save"></i> Save</button>
-                <button id="closeTextEditorBtn" title="Close"><i class="fas fa-times"></i></button>
-            </div>
+            <span id="textEditorStatus" class="text-editor-status"></span>
         </div>
         <textarea id="textEditorContent" spellcheck="false"></textarea>
-        <div id="textEditorStatus" class="text-editor-status">Ready</div>
     </div>
     <div id="aiChatPanel" class="ai-chat-panel open">
         <!-- blur proxy removed — using panel-level backdrop-filter -->

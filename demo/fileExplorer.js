@@ -39,8 +39,6 @@ class FileExplorer {
         // Setup filter dropdowns for local and cloud sorting
         this.setupFilterDropdown('localSortFilterBtn', 'localSortDropdown', 'localSortMode');
         this.setupFilterDropdown('cloudSortFilterBtn', 'cloudSortDropdown', 'cloudSortMode');
-        document.getElementById('saveTextFileBtn')?.addEventListener('click', () => this.saveCurrentTextFile());
-        document.getElementById('closeTextEditorBtn')?.addEventListener('click', () => this.closeTextEditor());
         document.getElementById('saveLocalBtn')?.addEventListener('click', () => this.saveToLocal());
         // File search filter
         document.getElementById('fileSearchInput')?.addEventListener('input', (e) => {
@@ -75,16 +73,19 @@ class FileExplorer {
             }
         });
 
-        // Track unsaved changes
+        // Auto-save on input (debounced)
+        this._autoSaveTimer = null;
         this.textContent?.addEventListener('input', () => {
-            this.unsavedChanges = true;
             this.textStatus.textContent = 'Modified';
+            clearTimeout(this._autoSaveTimer);
+            this._autoSaveTimer = setTimeout(() => this.saveCurrentTextFile(), 800);
         });
 
-        // Keyboard shortcuts
+        // Ctrl+S still force-saves immediately
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's' && this.textEditor?.classList.contains('open')) {
                 e.preventDefault();
+                clearTimeout(this._autoSaveTimer);
                 this.saveCurrentTextFile();
             }
         });
@@ -1354,7 +1355,8 @@ class FileExplorer {
         const ext = file.name.split('.').pop().toLowerCase();
 
         if (MOLECULE_EXTENSIONS.includes(ext)) {
-            // Load as molecule
+            // Close text editor if open, load as molecule
+            await this.closeTextEditor();
             await this.loadMoleculeFile(file);
         } else {
             // Open in text editor
@@ -1382,17 +1384,24 @@ class FileExplorer {
     }
 
     async openTextEditor(path, file) {
+        // Save any pending changes from previous file
+        if (this.currentFile && this.unsavedChanges) {
+            clearTimeout(this._autoSaveTimer);
+            await this.saveCurrentTextFile();
+        }
         this.currentFile = { path, handle: this.fileHandles.get(path) };
         this.textFilename.textContent = path;
         this.textContent.value = await file.text();
-        this.textStatus.textContent = 'Ready';
+        this.textStatus.textContent = '';
         this.unsavedChanges = false;
         this.textEditor.classList.add('open');
+        window.updateRendererSize?.();
     }
 
-    closeTextEditor() {
-        if (this.unsavedChanges) {
-            if (!confirm('You have unsaved changes. Close anyway?')) return;
+    async closeTextEditor() {
+        if (this.currentFile && this.unsavedChanges) {
+            clearTimeout(this._autoSaveTimer);
+            await this.saveCurrentTextFile();
         }
         this.textEditor.classList.remove('open');
         this.currentFile = null;
@@ -1410,11 +1419,11 @@ class FileExplorer {
             this.unsavedChanges = false;
             this.textStatus.textContent = 'Saved';
             setTimeout(() => {
-                if (!this.unsavedChanges) this.textStatus.textContent = 'Ready';
-            }, 2000);
+                if (!this.unsavedChanges) this.textStatus.textContent = '';
+            }, 1500);
         } catch (err) {
             console.error('Error saving file:', err);
-            this.textStatus.textContent = 'Error saving!';
+            this.textStatus.textContent = 'Error saving';
         }
     }
 
