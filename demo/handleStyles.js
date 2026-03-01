@@ -404,7 +404,8 @@ export function resetToDefaults() {
     main.iridescence = 0;
 
     // Reset background
-    window.scene.background = new THREE.Color('#01101f');
+    const sceneRef = window.main?.scene;
+    if (sceneRef) sceneRef.background = new THREE.Color('#01101f');
     document.body.style.backgroundColor = '#01101f';
 
     // Reset other states

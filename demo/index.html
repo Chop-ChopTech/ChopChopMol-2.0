@@ -50,7 +50,7 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy, serverTimestamp, where, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -86,15 +86,24 @@
         const signOutButton = document.getElementById('signOutButton');
         const userStatus = document.getElementById('userStatus');
 
-        // Handle sign-in
+        // Handle redirect result (fires on page load after a signInWithRedirect)
+        getRedirectResult(auth).then((result) => {
+            if (result) {
+                console.log('Signed in via redirect as', result.user.displayName);
+            }
+        }).catch((error) => {
+            console.error('Redirect sign-in error:', error);
+        });
+
+        // Handle sign-in: try popup first, fall back to redirect if COOP blocks it
         signInButton.addEventListener('click', () => {
             signInWithPopup(auth, provider)
                 .then((result) => {
-                    const user = result.user;
-                    console.log('Signed in as', user.displayName);
+                    console.log('Signed in as', result.user.displayName);
                 })
                 .catch((error) => {
-                    console.error('Sign-in error:', error);
+                    console.warn('Popup sign-in failed, falling back to redirect:', error.code);
+                    signInWithRedirect(auth, provider);
                 });
         });
 
@@ -688,10 +697,12 @@
                     premiumBtn.style.display = 'none';
                 }
 
-                const dropdownIcon = document.querySelector('#settings .dropdown-icon');
-                dropdownIcon.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
-                dropdownIcon.classList.remove('signed-in');
-                dropdownIcon.title = '';
+                const dropdownIcon = document.querySelector('#settingsGear > .dropdown-icon');
+                if (dropdownIcon) {
+                    dropdownIcon.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
+                    dropdownIcon.classList.remove('signed-in');
+                    dropdownIcon.title = '';
+                }
 
                 const makeDefaultBtn = document.getElementById('makeDefaultButton');
                 if (makeDefaultBtn) {

@@ -10,7 +10,9 @@ window.onerror = function (message, source, lineno, colno, error) {
     // Filter known noise
     if (typeof message === 'string' && (
         message.includes('ResizeObserver') ||
-        message.includes('Script error')
+        message.includes('Script error') ||
+        message.includes('ASSERTION FAILED') ||
+        message.includes('Cross-Origin')
     )) {
         return false;
     }
@@ -26,8 +28,9 @@ window.addEventListener('unhandledrejection', (event) => {
 
     const msg = reason?.message || String(reason || '');
 
-    // Filter noise from auth refresh, analytics, ad scripts
-    if (msg.includes('auth') || msg.includes('Firebase') || msg.includes('adsbygoogle')) {
+    // Filter noise from auth refresh, analytics, ad scripts, popup COOP issues
+    if (msg.includes('auth') || msg.includes('Firebase') || msg.includes('adsbygoogle') ||
+        msg.includes('ASSERTION FAILED') || msg.includes('Cross-Origin')) {
         return;
     }
 
