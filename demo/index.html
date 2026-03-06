@@ -12,7 +12,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://js.stripe.com/v3/"></script>
     <!-- <link rel="icon" href="favicon.ico" type="image/x-icon"> -->
     <link rel="icon" href="/demo/molicon.png">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7912318580869252"
@@ -113,13 +112,6 @@
             signOut(auth).then(() => {
                 console.log('User signed out');
 
-                // Reset premium state
-                premiumState = {
-                    isActive: false,
-                    isTrial: false,
-                    trialEndDate: null
-                };
-
                 // Dispatch auth state changed event immediately
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: {
@@ -133,13 +125,6 @@
                 signInButton.style.display = 'block';
                 signOutButton.style.display = 'none';
                 userStatus.innerHTML = 'Not signed in';
-
-
-                // Hide premium button
-                const premiumBtn = document.getElementById('premiumUpgradeBtn');
-                if (premiumBtn) {
-                    premiumBtn.style.display = 'none';
-                }
 
                 // Hide make default button
                 const makeDefaultBtn = document.getElementById('makeDefaultButton');
@@ -301,8 +286,7 @@
                 const userData = userDoc.exists() ? userDoc.data() : {};
 
                 const used = userData.storageUsed || 0;
-                const isPremium = userData.premium || false;
-                const limit = isPremium ? 70 : 0.5;
+                const limit = 70;
                 const percentage = (used / limit) * 100;
 
                 // Update storage info in user status (even if hidden)
@@ -379,16 +363,10 @@
             const userData = userDoc.exists() ? userDoc.data() : {};
 
             const currentUsage = userData.storageUsed || 0;
-            const isPremium = userData.premium || false;
-            const limit = isPremium ? 70 : 0.5;
+            const limit = 70;
 
             if (currentUsage + dataSize > limit) {
-                if (!isPremium) {
-                    window.toastWarning?.(`Storage limit reached (${limit}MB). Upgrade to Premium for 70MB storage.`);
-                    window.location.href = '../upgrade/';
-                } else {
-                    window.toastWarning?.('Premium storage limit reached (75MB).');
-                }
+                window.toastWarning?.(`Storage limit reached (${limit}MB).`);
                 return false;
             }
 
@@ -621,8 +599,6 @@
 
 
         onAuthStateChanged(auth, async (user) => {
-            const premiumBtn = document.getElementById('premiumUpgradeBtn');
-
             if (user) {
                 // User is signed in
 
@@ -642,29 +618,12 @@
                 window.currentUserEmail = user.email;
                 window.currentUser = user;
 
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                const userData = userDoc.exists() ? userDoc.data() : {};
-                const isPremium = userData.premium || false;
-
-                premiumState.isActive = isPremium;
-                premiumState.storageLimit = isPremium ? 70 : 0.5;
-                premiumState.storageUsed = userData.storageUsed || 0;
-
-                // ADDED: Enable ALL features for signed-in users (not premium-dependent)
+                // Enable ALL features for signed-in users
                 document.querySelectorAll('.tool-locked').forEach(tool => {
                     tool.classList.remove('tool-locked');
                     tool.removeAttribute('disabled');
                 });
 
-                if (premiumBtn) {
-                    if (isPremium) {
-                        premiumBtn.style.display = 'none';
-                    } else {
-                        //premiumBtn.style.display = 'block';
-                        //premiumBtn.innerHTML = '<i class="fas fa-crown"></i> Upgrade Storage (0.5MB → 70MB)';
-
-                    }
-                }
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: {
                         user: user,
@@ -672,7 +631,6 @@
                         premiumState: premiumState
                     }
                 }));
-                await checkFirebasePremium(user.uid);
                 updateStorageIndicator();
 
                 // Load user's style preferences with appropriate delay
@@ -693,9 +651,6 @@
                 signInButton.style.display = 'block';
                 signOutButton.style.display = 'none';
                 userStatus.style.display = 'none';
-                if (premiumBtn) {
-                    premiumBtn.style.display = 'none';
-                }
 
                 const dropdownIcon = document.querySelector('#settingsGear > .dropdown-icon');
                 if (dropdownIcon) {
@@ -719,12 +674,6 @@
 
                 window.currentUserEmail = null;
                 window.currentUser = null;
-                premiumState.isActive = false;
-                premiumState.isTrial = false;
-                premiumState.userId = null;
-                premiumState.storageLimit = 0;
-                premiumState.storageUsed = 0;
-
                 window.dispatchEvent(new CustomEvent('authStateChanged', {
                     detail: {
                         user: null,
@@ -1025,8 +974,6 @@
                         <button class="fancy-button" id="signOutButton" style="display: none;"><i
                                 class="fas fa-sign-out-alt"></i> Sign
                             Out</button>
-                        <button id="premiumUpgradeBtn" class="fancy-button" style="background-color: #38bd3c;"
-                            onclick="showPremiumModal()">Subscription</button>
                         <button class="donate-btn fancy-button" onclick="openDonateModal()"><i class="fas fa-heart"></i>
                             Donation</button>
                     </div>
@@ -1104,54 +1051,6 @@
         </div>
         <!-- <br>
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
-    </div>
-    <!-- Premium Upgrade Button - Add this after your settings dropdown -->
-    <!-- Add this button to your toolbar/buttons div near the top -->
-
-
-    <!-- Compact search panel -->
-
-
-    <!-- Premium Modal - Add this before closing body tag -->
-    <div id="premiumModal" class="premium-modal">
-        <div class="premium-modal-content">
-            <button class="close-premium-modal" onclick="closePremiumModal()">&times;</button>
-
-            <div class="premium-header">
-                <i class="fa-solid fa-gem premium-crown"></i>
-                <h2>ChopChopMol Premium</h2>
-                <p>Unlock all features for molecular visualization</p>
-            </div>
-
-            <div class="premium-price-card">
-                <div class="price-tag">
-                    <span class="currency">$</span>
-                    <span class="amount">2</span>
-                    <span class="period">/month</span>
-                </div>
-
-                <ul class="premium-features">
-                    <li><i class="fas fa-check"></i> Advanced editing tools</li>
-                    <li><i class="fas fa-check"></i> All export formats (PDB, MOL2, XYZ)</li>
-                    <li><i class="fas fa-check"></i> Measurement & analysis tools</li>
-                    <li><i class="fas fa-check"></i> Cloud storage & sync</li>
-                    <li><i class="fas fa-check"></i> Priority support</li>
-                </ul>
-
-                <button id="subscribePremiumBtn" class="subscribe-premium-btn" onclick="subscribeToPremium()">
-                    <span class="btn-text">Start Premium - $2/month</span>
-                    <div class="loading-spinner"></div>
-                </button>
-
-                <p class="trial-text">Cancel anytime • Secure payment via Stripe</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Limit notification popup -->
-    <div id="limitNotification" style="display: none;" class="limit-notification">
-        <i class="fas fa-lock"></i>
-        <span id="limitMessage">Premium feature</span>
     </div>
     <!-- Scripts -->
     <script src="/demo/utils/utils.js"></script>
@@ -1713,46 +1612,6 @@
                 "jsm/": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/"
             }
         }
-    </script>
-    <script>
-        // Ensure premium button is ALWAYS visible
-        (function () {
-            function forceButtonVisible() {
-                const btn = document.getElementById('premiumUpgradeBtn');
-                //if (btn) {
-                //  btn.style.display = 'flex';
-                //  btn.style.opacity = '1';
-                //  btn.style.visibility = 'visible';
-                //  btn.style.zIndex = '10000';
-                //}
-            }
-
-            // Initial check
-            forceButtonVisible();
-
-            // Check every 500ms for first 5 seconds
-            let checks = 0;
-            const interval = setInterval(() => {
-                forceButtonVisible();
-                checks++;
-                if (checks >= 10) clearInterval(interval);
-            }, 500);
-
-            // Override any function that might hide it
-            const originalDisplay = Object.getOwnPropertyDescriptor(CSSStyleDeclaration.prototype, 'display');
-            if (originalDisplay) {
-                Object.defineProperty(CSSStyleDeclaration.prototype, 'display', {
-                    set: function (value) {
-                        if (this.parentElement?.id === 'premiumUpgradeBtn' && value === 'none') {
-                            // Don't allow hiding the premium button
-                            return;
-                        }
-                        originalDisplay.set.call(this, value);
-                    },
-                    get: originalDisplay.get
-                });
-            }
-        })();
     </script>
     <!-- Frame slider for multi-frame XYZ files -->
     <div id="frameSliderContainer" style="
@@ -4114,7 +3973,7 @@
                     target: '#settingsGear',
                     title: 'Account & Settings',
                     icon: 'fa-user-gear',
-                    text: 'Access your account settings, manage subscriptions, and configure application preferences.',
+                    text: 'Access your account settings and configure application preferences.',
                     tip: 'Sign in to unlock cloud storage and sync your work across devices.',
                     position: 'bottom'
                 },

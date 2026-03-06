@@ -142,7 +142,6 @@ let rotationAxis = null; // Store the defined axis
 let axisAtoms = []; // Store the two atoms that define the axis
 let axisVisualizer = null; // Three.js object to visualize the axis
 let labels = [];
-let premiumActive = false
 const selectionBox = document.getElementById('selectionBox');
 const projectionVector = new THREE.Vector3();
 let isolationHistory = [];
@@ -3857,18 +3856,13 @@ function rotateCamera(angleToRotate, camera, controls = null) {
 }
 
 window.addEventListener('authStateChanged', (event) => {
-    const { user, isSignedIn, premiumState } = event.detail;
-    premiumActive = premiumState.isActive
+    const { user } = event.detail;
     updateFeatureAccess(user, true, true);
     editingMolecule = true
     window.currentUserEmail = user ? user.email : null
 
     const saveSection = document.getElementById('molecule-save-section');
-    const message = document.getElementById('molecule-save-message');
     if (saveSection) {
-        saveSection.style.display = 'none'
-
-        // Check if prompt already exists to avoid duplicates
         let prompt = saveSection.parentElement.querySelector('.save-molecules-prompt');
         if (!prompt) {
             prompt = document.createElement('div');
@@ -3880,14 +3874,8 @@ window.addEventListener('authStateChanged', (event) => {
             saveSection.style.display = 'none'
             prompt.innerHTML = '<p style="color: white; padding: 10px;">Sign in to save molecules</p>';
         } else {
-            // Check if user has premium OR is on trial
-            if (premiumState.isActive || premiumState.isTrial) {
-                prompt.innerHTML = '';
-                saveSection.style.display = 'block'
-            } else {
-                prompt.innerHTML = '<p style="color: white; padding: 10px;">Purchase premium to save molecules</p>';
-                saveSection.style.display = 'none'
-            }
+            prompt.innerHTML = '';
+            saveSection.style.display = 'block'
         }
     }
 });
