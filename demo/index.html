@@ -2566,7 +2566,7 @@
                 }
 
                 // Display clean message with file badges (not raw content)
-                addMessage('user', message || '(attached files)', attachedFileNames);
+                addMessage('user', message, attachedFileNames);
                 chatInput.value = '';
                 pendingAttachments.length = 0;
                 renderAttachmentChips();
@@ -3245,12 +3245,14 @@
                     fileBadgesHtml = `<div class="ai-attached-files">${badges}</div>`;
                 }
 
+                const textHtml = content ? (type === 'assistant' ? renderMarkdown(content) : escapeHtml(content)) : '';
+
                 msgEl.innerHTML = `
                     <div class="ai-message-label ${labelClass}">
                         <i class="fas ${labelIcon}"></i> ${labelText}
                     </div>
                     <div class="ai-message-content">
-                        ${type === 'assistant' ? renderMarkdown(content) : escapeHtml(content)}
+                        ${textHtml}
                         ${fileBadgesHtml}
                     </div>
                 `;
