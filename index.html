@@ -8,338 +8,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Outfit:wght@100..900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="ns.css">
     <style>
-        :root {
-            --primary-deep: #000000;
-            --primary-dark: #01101f;
-            --primary-mid: #0a2540;
-            --accent-blue: #3ea2ff;
-            --accent-purple: #0e41cc;
-            --accent-cyan: #00d4ff;
-            --accent-green: #00c896;
-            --text-white: #ffffff;
-            --text-light: #c8d4e3;
-            --text-muted: #8899aa;
-            --glass-bg: rgba(10, 37, 64, 0.6);
-            --glass-border: rgba(102, 126, 234, 0.3);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--primary-deep);
-            color: var(--text-white);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* ===== Background Animation ===== */
-        .bg-animation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .molecule-float {
-            position: absolute;
-            border-radius: 50%;
-            opacity: 0.05;
-            animation: float 20s infinite ease-in-out;
-        }
-
-        .molecule-float:nth-child(1) {
-            width: 300px;
-            height: 300px;
-            top: 10%;
-            left: 5%;
-            background: radial-gradient(circle at 30% 30%, var(--accent-blue), transparent 70%);
-        }
-
-        .molecule-float:nth-child(2) {
-            width: 400px;
-            height: 400px;
-            top: 60%;
-            right: 10%;
-            animation-delay: -5s;
-            background: radial-gradient(circle at 30% 30%, var(--accent-purple), transparent 70%);
-        }
-
-        .molecule-float:nth-child(3) {
-            width: 250px;
-            height: 250px;
-            bottom: 10%;
-            left: 30%;
-            animation-delay: -10s;
-            background: radial-gradient(circle at 30% 30%, var(--accent-cyan), transparent 70%);
-        }
-
-        @keyframes float {
-
-            0%,
-            100% {
-                transform: translate(0, 0);
-            }
-
-            25% {
-                transform: translate(30px, -30px);
-            }
-
-            50% {
-                transform: translate(-20px, 20px);
-            }
-
-            75% {
-                transform: translate(20px, 10px);
-            }
-        }
-
-        /* ===== Nav ===== */
-        nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            background: rgba(10, 22, 40, 0.8);
-            border-bottom: 1px solid var(--glass-border);
-            transition: all 0.3s ease;
-        }
-
-        nav.scrolled {
-            padding: 0.75rem 2rem;
-            background: rgba(10, 22, 40, 0.95);
-        }
-
-        .logo {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.75rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2.5rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: var(--text-light);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 0.95rem;
-            transition: color 0.2s ease;
-            position: relative;
-        }
-
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--accent-blue);
-            transition: width 0.3s ease;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-white);
-        }
-
-        .nav-links a:hover::after {
-            width: 100%;
-        }
-
-        .nav-cta {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        /* ===== Buttons ===== */
-        .btn {
-            padding: 0.75rem 1.75rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-ghost {
-            background: transparent;
-            color: var(--text-light);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-ghost:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-white);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-large {
-            padding: 1rem 2.5rem;
-            font-size: 1.1rem;
-        }
-
-        span.highlight {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan), var(--accent-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        span.highlight-bold {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700;
-        }
-
-        /* ===== Hero ===== */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            position: relative;
-            padding: 8rem 2rem 4rem;
-        }
-
-        .hero-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            align-items: center;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-content h1 {
-            font-family: 'Outfit', sans-serif;
-            font-size: clamp(2.5rem, 5vw, 4rem);
-            font-weight: 800;
-            line-height: 1.1;
-            margin-bottom: 1.5rem;
-        }
-
-        .hero-content h1 span {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan), var(--accent-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-content p {
-            font-size: 1.25rem;
-            color: var(--text-light);
-            margin-bottom: 2rem;
-            max-width: 540px;
-        }
-
-        .hero-buttons {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .hero-stats {
-            display: flex;
-            gap: 3rem;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .stat-value {
-            font-family: 'Outfit', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--accent-blue);
-            display: flex;
-            overflow: hidden;
-            height: 1.2em;
-        }
-
-        .digit-slot {
-            display: inline-block;
-            height: 1.2em;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .digit-roll {
-            display: flex;
-            flex-direction: column;
-            transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .digit-roll span {
-            height: 1.2em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .stat-suffix {
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .stat-label {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        .hero-visual {
-            position: relative;
-            height: 600px;
+        /* Hero 3D molecule */
+        .hero__mol {
+            max-width: 480px;
+            height: 380px;
+            margin: 48px auto 0;
         }
 
         #molecule-canvas {
@@ -348,1134 +25,565 @@
             display: block;
         }
 
-        /* ===== App Showcase ===== */
-        .showcase-section {
-            padding: 2rem 2rem 6rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .showcase-container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .showcase-browser {
-            border-radius: 12px;
+        /* Browser frame */
+        .browser {
+            border-radius: var(--radius);
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), 0 0 120px rgba(62, 162, 255, 0.08);
-            position: relative;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
         }
 
-        .browser-bar {
-            background: rgba(20, 30, 48, 0.95);
-            padding: 0.75rem 1rem;
+        .browser__bar {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            gap: 7px;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, .3);
+            border-bottom: 1px solid var(--border);
         }
 
-        .browser-dots {
-            display: flex;
-            gap: 6px;
+        .browser__url {
+            margin-left: 8px;
+            font: 500 .8rem var(--mono);
+            color: var(--dim);
         }
 
-        .browser-dots span {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        .browser-dots span:nth-child(1) {
-            background: #ff5f57;
-        }
-
-        .browser-dots span:nth-child(2) {
-            background: #febc2e;
-        }
-
-        .browser-dots span:nth-child(3) {
-            background: #28c840;
-        }
-
-        .browser-url {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: 6px;
-            padding: 0.4rem 1rem;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .showcase-browser img {
+        .browser img {
             width: 100%;
             display: block;
         }
 
-        .showcase-placeholder {
-            width: 100%;
-            aspect-ratio: 16/9;
-            background: linear-gradient(135deg, rgba(10, 37, 64, 0.8), rgba(14, 65, 204, 0.2));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            font-size: 1.1rem;
-        }
-
-        /* ===== Sections ===== */
-        .section {
-            padding: 6rem 2rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .section-header {
-            text-align: center;
-            max-width: 700px;
-            margin: 0 auto 4rem;
-        }
-
-        .section-tag {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            background: rgba(102, 126, 234, 0.1);
-            border: 1px solid rgba(102, 126, 234, 0.3);
-            border-radius: 50px;
-            color: var(--accent-blue);
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 1rem;
-        }
-
-        .section-tag.green {
-            background: rgba(0, 200, 150, 0.1);
-            border-color: rgba(0, 200, 150, 0.3);
-            color: var(--accent-green);
-        }
-
-        .section-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-
-        .section-subtitle {
-            color: var(--text-muted);
-            font-size: 1.1rem;
-        }
-
-        /* ===== Features Grid ===== */
-        .features-grid {
-            max-width: 1200px;
-            margin: 0 auto;
+        /* Split two-column layout */
+        .split {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: center;
+            max-width: var(--max);
+            margin: 0 auto;
+            text-align: left;
         }
 
-        .feature-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 2rem;
-            transition: all 0.4s ease;
-            position: relative;
+        .split__title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 0 8px;
+        }
+
+        .split__lead {
+            color: var(--muted);
+            margin: 0 0 20px;
+            font-size: 1rem;
+        }
+
+        /* Screenshot frame */
+        .screenshot {
+            border-radius: var(--radius);
             overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
         }
 
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
-            transform: scaleX(0);
-            transition: transform 0.4s ease;
+        .screenshot img {
+            width: 100%;
+            display: block;
         }
 
-        .feature-card:hover {
-            transform: translateY(-8px);
-            border-color: rgba(102, 126, 234, 0.4);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-
-        .feature-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .feature-icon {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
-            border-radius: 12px;
+        /* Card icon */
+        .card__icon {
+            width: 48px;
+            height: 48px;
+            background: var(--glow);
+            border-radius: var(--radius-sm);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 16px;
         }
 
-        .feature-icon svg {
-            width: 28px;
-            height: 28px;
-            stroke: var(--accent-blue);
+        .card__icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--accent);
             fill: none;
             stroke-width: 2;
         }
 
-        .feature-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-        }
-
-        .feature-desc {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            line-height: 1.7;
-        }
-
-        /* ===== AI Section ===== */
-        .ai-section {
-            background: linear-gradient(180deg, transparent, rgba(102, 126, 234, 0.03), transparent);
-        }
-
-        .ai-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            align-items: center;
-        }
-
-        .ai-screenshot-frame {
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-        }
-
-        .ai-screenshot-frame img {
-            width: 100%;
-            display: block;
-        }
-
-        .ai-screenshot-placeholder {
-            width: 100%;
-            aspect-ratio: 16/10;
-            background: linear-gradient(135deg, rgba(10, 37, 64, 0.8), rgba(14, 65, 204, 0.15));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            font-size: 1rem;
-            padding: 2rem;
-            text-align: center;
-        }
-
-        .ai-content h3 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-        }
-
-        .ai-content h3 span {
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .ai-content>p {
-            color: var(--text-light);
-            margin-bottom: 2rem;
-            font-size: 1.1rem;
-        }
-
-        .ai-features {
+        /* Feature list (AI/MACE sections) */
+        .feat-list {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 10px;
         }
 
-        .ai-feature {
+        .feat-item {
             display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 8px;
-            transition: background 0.3s ease;
+            gap: 14px;
+            align-items: flex-start;
+            padding: 14px;
+            background: rgba(255, 255, 255, .03);
+            border-radius: var(--radius-sm);
+            border: 1px solid transparent;
+            transition: border-color .2s;
         }
 
-        .ai-feature:hover {
-            background: rgba(255, 255, 255, 0.06);
+        .feat-item:hover {
+            border-color: var(--border);
         }
 
-        .ai-feature-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(123, 104, 238, 0.2);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .feat-icon {
             flex-shrink: 0;
-        }
-
-        .ai-feature-icon svg {
-            width: 20px;
-            height: 20px;
-            stroke: var(--accent-purple);
-            fill: none;
-        }
-
-        .ai-feature-text strong {
-            display: block;
-            margin-bottom: 0.25rem;
-        }
-
-        .ai-feature-text span {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        /* ===== Screenshot Gallery ===== */
-        .gallery-section {
-            background: var(--primary-dark);
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .gallery-grid {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
-
-        .gallery-item {
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.4s ease;
-            background: rgba(10, 37, 64, 0.3);
-        }
-
-        .gallery-item:hover {
-            transform: translateY(-4px);
-            border-color: rgba(62, 162, 255, 0.3);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        .gallery-item img {
-            width: 100%;
-            display: block;
-        }
-
-        .gallery-item-placeholder {
-            width: 100%;
-            aspect-ratio: 16/10;
-            background: linear-gradient(135deg, rgba(10, 37, 64, 0.8), rgba(14, 65, 204, 0.1));
+            width: 36px;
+            height: 36px;
+            background: var(--glow);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            padding: 2rem;
-            text-align: center;
         }
 
-        .gallery-caption {
-            padding: 1.25rem 1.5rem;
+        .feat-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--accent);
+            fill: none;
+            stroke-width: 2;
         }
 
-        .gallery-caption h4 {
-            font-family: 'Outfit', sans-serif;
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin-bottom: 0.25rem;
+        .feat-item strong {
+            display: block;
+            font-size: .95rem;
+            margin-bottom: 2px;
         }
 
-        .gallery-caption p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
+        .feat-item span {
+            font-size: .9rem;
+            color: var(--muted);
         }
 
-        /* ===== Formats ===== */
-        .formats-section {
-            background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.2), transparent);
+        /* Green accent variant (MACE) */
+        .feat-icon--green {
+            background: rgba(34, 197, 94, .15);
         }
 
-        .formats-grid {
-            max-width: 1000px;
-            margin: 0 auto;
+        .feat-icon--green svg {
+            stroke: #22c55e;
+        }
+
+        /* Tag grid (file formats) */
+        .tag-grid {
             display: flex;
-            justify-content: center;
             flex-wrap: wrap;
-            gap: 1rem;
+            gap: 10px;
+            justify-content: center;
+            max-width: 700px;
+            margin: 0 auto;
         }
 
-        .format-badge {
-            padding: 0.75rem 1.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            font-family: 'Outfit', monospace;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
+        .tag {
+            padding: 10px 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font: 600 .9rem var(--mono);
+            color: var(--text);
+            transition: border-color .2s, color .2s, transform .15s;
+            cursor: default;
         }
 
-        .format-badge:hover {
-            background: rgba(102, 126, 234, 0.1);
-            border-color: var(--accent-blue);
-            color: var(--accent-blue);
+        .tag:hover {
+            border-color: var(--accent);
+            color: var(--accent);
             transform: translateY(-2px);
         }
 
-        /* ===== MACE Section ===== */
-        .mace-section {
-            background: linear-gradient(180deg, transparent, rgba(0, 200, 150, 0.03), transparent);
-        }
-
-        .mace-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            align-items: center;
-        }
-
-        .mace-content h3 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 2.2rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-        }
-
-        .mace-content h3 span {
-            background: linear-gradient(135deg, #00c896, #667eea);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .mace-content>p {
-            color: var(--text-light);
-            margin-bottom: 2rem;
-            font-size: 1.1rem;
-        }
-
-        .mace-features {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .mace-feature {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 8px;
-            transition: background 0.3s ease;
-        }
-
-        .mace-feature:hover {
-            background: rgba(255, 255, 255, 0.06);
-        }
-
-        .mace-feature-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(0, 200, 150, 0.2);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .mace-feature-icon svg {
-            width: 20px;
-            height: 20px;
-            stroke: #00c896;
-            fill: none;
-        }
-
-        .mace-feature-text strong {
-            display: block;
-            margin-bottom: 0.25rem;
-        }
-
-        .mace-feature-text span {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        .mace-visual {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .mace-screenshot-frame {
-            border-radius: 12px;
+        /* Gallery cards */
+        .card--gallery {
+            padding: 0;
             overflow: hidden;
-            border: 1px solid rgba(0, 200, 150, 0.2);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
         }
 
-        .mace-screenshot-frame img {
+        .card--gallery img {
             width: 100%;
             display: block;
         }
 
-        /* ===== CTA ===== */
-        .cta-section {
-            padding: 8rem 2rem;
-            text-align: center;
+        .card--gallery .card__body {
+            padding: 20px 24px;
+        }
+
+        .card--gallery h3 {
+            margin-bottom: 4px;
+        }
+
+        /* Video */
+        .video-wrap {
             position: relative;
-        }
-
-        .cta-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(102, 126, 234, 0.1), transparent 70%);
-            pointer-events: none;
-        }
-
-        .cta-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        .cta-content h2 {
-            font-family: 'Outfit', sans-serif;
-            font-size: clamp(2rem, 4vw, 3.5rem);
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-
-        .cta-content p {
-            color: var(--text-muted);
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-        }
-
-        /* ===== Footer ===== */
-        footer {
-            background: rgba(0, 0, 0, 0.3);
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 4rem 2rem 2rem;
-        }
-
-        .footer-container {
-            max-width: 1200px;
+            max-width: 700px;
             margin: 0 auto;
+            aspect-ratio: 16/9;
         }
 
-        .footer-top {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: 3rem;
-            margin-bottom: 3rem;
-        }
-
-        .footer-brand .logo {
-            margin-bottom: 1rem;
-        }
-
-        .footer-brand p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            line-height: 1.7;
-        }
-
-        .footer-links h4 {
-            font-family: 'Outfit', sans-serif;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--text-light);
-        }
-
-        .footer-links ul {
-            list-style: none;
-        }
-
-        .footer-links li {
-            margin-bottom: 0.75rem;
-        }
-
-        .footer-links a {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.2s ease;
-        }
-
-        .footer-links a:hover {
-            color: var(--accent-blue);
-        }
-
-        .footer-bottom {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 2rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .footer-bottom p {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
-
-        .social-links {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .social-links a {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-
-        .social-links a:hover {
-            background: var(--accent-blue);
-        }
-
-        .social-links svg {
-            width: 20px;
-            height: 20px;
-            fill: var(--text-light);
-        }
-
-        .social-links a:hover svg {
-            fill: var(--primary-deep);
-        }
-
-        .mobile-menu-btn {
-            display: none;
-            background: none;
+        .video-wrap iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
             border: none;
-            cursor: pointer;
-            padding: 0.5rem;
+            border-radius: var(--radius);
         }
 
-        .mobile-menu-btn span {
-            display: block;
-            width: 24px;
-            height: 2px;
-            background: var(--text-white);
-            margin: 5px 0;
-        }
-
-        /* ===== Responsive ===== */
-        @media (max-width: 1024px) {
-            .hero-container {
-                grid-template-columns: 1fr;
-                text-align: center;
-            }
-
-            .hero-content p {
-                margin: 0 auto 2rem;
-            }
-
-            .hero-buttons {
-                justify-content: center;
-            }
-
-            .hero-stats {
-                justify-content: center;
-            }
-
-            .hero-visual {
-                height: 450px;
-                margin-top: 2rem;
-            }
-
-            .features-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .ai-container,
-            .mace-container {
-                grid-template-columns: 1fr;
-            }
-
-            .ai-visual {
-                order: 2;
-            }
-
-            .mace-visual {
-                order: 2;
-            }
-
-            .gallery-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .footer-top {
-                grid-template-columns: 1fr 1fr;
-            }
+        /* CTA subtitle */
+        .cta__sub {
+            color: var(--muted);
+            font-size: 1.15rem;
+            margin: 0 0 32px;
         }
 
         @media (max-width: 768px) {
-
-            .nav-links,
-            .nav-cta {
-                display: none;
-            }
-
-            .mobile-menu-btn {
-                display: block;
-            }
-
-            .features-grid {
+            .split {
                 grid-template-columns: 1fr;
+                gap: 32px;
             }
 
-            .hero-stats {
-                flex-direction: column;
-                gap: 1.5rem;
-            }
-
-            .stat {
-                text-align: center;
-            }
-
-            .footer-top {
-                grid-template-columns: 1fr;
-                text-align: center;
-            }
-
-            .footer-bottom {
-                flex-direction: column;
-                gap: 1rem;
+            .hero__mol {
+                height: 280px;
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="bg-animation">
-        <div class="molecule-float"></div>
-        <div class="molecule-float"></div>
-        <div class="molecule-float"></div>
-    </div>
 
-    <!-- ===== NAV ===== -->
-    <nav id="navbar">
-        <div class="logo">ChopChopMol</div>
-        <ul class="nav-links">
-            <li><a href="#features">Features</a></li>
-            <li><a href="#ai">AI Assistant</a></li>
-            <li><a href="#gallery">Gallery</a></li>
-            <li><a href="#mace">MLIP</a></li>
-        </ul>
-        <div class="nav-cta">
-            <a href="demo" class="btn btn-primary">Launch App</a>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="wrap header__inner">
+            <a href="/" class="header__logo">ChopChopMol</a>
+            <nav class="header__nav" id="main-nav">
+                <a href="#features">Features</a>
+                <a href="#ai">AI Assistant</a>
+                <a href="#gallery">Gallery</a>
+                <a href="#mace">MLIP</a>
+            </nav>
+            <a href="demo" class="btn btn--sm">Launch App</a>
+            <button class="header__toggle" id="menu-toggle"><span></span><span></span><span></span></button>
         </div>
-        <button class="mobile-menu-btn"><span></span><span></span><span></span></button>
-    </nav>
+    </header>
 
-    <!-- ===== HERO ===== -->
+    <!-- HERO -->
     <section class="hero">
-        <div class="hero-container">
-            <div class="hero-content">
-                <h1><span>AI-Powered</span> Platform for Molecular Simulations</h1>
-                <p>Edit, simulate, and analyze molecular structures using natural language. Powered by machine learning
-                    potentials and AI, accessible entirely from your browser.</p>
-                <div class="hero-buttons">
-                    <a href="demo" class="btn btn-primary btn-large">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                        Start Free
-                    </a>
-                    <a href="#features" class="btn btn-ghost btn-large">Explore Features</a>
-                </div>
-                <div class="hero-stats">
-                    <div class="stat">
-                        <div class="stat-value" data-target="500000" data-suffix="+" data-format="comma">0</div>
-                        <div class="stat-label">Atoms Supported</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value" data-target="55" data-suffix="+">0</div>
-                        <div class="stat-label">AI Tools</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value" data-target="8" data-suffix="+">0</div>
-                        <div class="stat-label">File Formats</div>
-                    </div>
-                </div>
+        <div class="wrap">
+            <h1 class="hero__title"><span class="hero__accent">AI-Powered</span> Platform for Molecular Simulations</h1>
+            <p class="hero__lead">Edit, simulate, and analyze molecular structures using natural language. Powered by
+                machine learning potentials and AI, accessible entirely from your browser.</p>
+            <div class="hero__cta">
+                <a href="demo" class="btn">Start Free</a>
+                <a href="#features" class="btn btn--outline">Explore Features</a>
             </div>
-            <div class="hero-visual">
+            <div class="hero__mol">
                 <canvas id="molecule-canvas"></canvas>
             </div>
         </div>
     </section>
 
-    <!-- ===== APP SHOWCASE ===== -->
-    <section class="showcase-section">
-        <div class="showcase-container">
-            <div class="showcase-browser">
-                <div class="browser-bar">
-                    <div class="browser-dots">
-                        <span></span><span></span><span></span>
-                    </div>
-                    <div class="browser-url">chopchopmol.com/demo</div>
+    <!-- TRUST -->
+    <section class="trust">
+        <div class="wrap">
+            <div class="trust__grid">
+                <div class="trust__item">
+                    <strong>500,000+</strong>
+                    <span>Atoms Supported</span>
                 </div>
-                <!-- TODO: Replace with screenshot -->
+                <div class="trust__item">
+                    <strong>55+</strong>
+                    <span>AI Tools</span>
+                </div>
+                <div class="trust__item">
+                    <strong>8+</strong>
+                    <span>File Formats</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SHOWCASE -->
+    <section class="section">
+        <div class="wrap">
+            <div class="browser">
+                <div class="browser__bar">
+                    <span class="dot dot--r"></span>
+                    <span class="dot dot--y"></span>
+                    <span class="dot dot--g"></span>
+                    <span class="browser__url">chopchopmol.com/demo</span>
+                </div>
                 <img src="screenshots/app-hero.png"
                     alt="ChopChopMol application showing 3D molecular visualization with AI chat panel">
             </div>
         </div>
     </section>
 
-    <!-- ===== FEATURES ===== -->
-    <section class="section" id="features">
-        <div class="section-header">
-            <span class="section-tag">Features</span>
-            <h2 class="section-title">Everything You Need for <span class="highlight">Molecular Work</span></h2>
-            <p class="section-subtitle">From simple visualization to complex simulations, ChopChopMol provides
-                professional-grade tools accessible from your browser.</p>
-        </div>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24">
-                        <path
-                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                        </path>
-                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                    </svg></div>
-                <h3 class="feature-title">3D Visualization</h3>
-                <p class="feature-desc">GPU-accelerated instanced rendering with ball-and-stick, space-filling,
-                    wireframe, and cartoon styles. Smooth arcball controls with perspective and orthographic cameras.
-                </p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        <line x1="11" y1="8" x2="11" y2="14"></line>
-                        <line x1="8" y1="11" x2="14" y2="11"></line>
-                    </svg></div>
-                <h3 class="feature-title">Selection & Editing</h3>
-                <p class="feature-desc">Click, box-select, or select by chain and residue. Replace atoms, define
-                    rotation axes, create fragments, and edit structures interactively.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24">
-                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </svg></div>
-                <h3 class="feature-title">Measurements</h3>
-                <p class="feature-desc">Measure bond distances, angles, and dihedral angles with precision. Real-time
-                    calculations with persistent labels as you interact with structures.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24">
-                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                    </svg></div>
-                <h3 class="feature-title">Trajectory Playback</h3>
-                <p class="feature-desc">Animate multi-frame trajectories from MD simulations, geometry optimizations, or
-                    torsion scans. Scrub through frames with energy tracking.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg></div>
-                <h3 class="feature-title">Cloud & Remote Files</h3>
-                <p class="feature-desc">Save molecules to Firebase cloud storage. Connect to remote servers via SSH/SFTP
-                    to browse, open, and save files on HPC clusters.</p>
+    <!-- FEATURES -->
+    <section class="section section--alt" id="features">
+        <div class="wrap">
+            <span class="badge">Features</span>
+            <h2 class="section__title">Everything You Need for Molecular Work</h2>
+            <p class="section__sub">From simple visualization to complex simulations — professional-grade tools
+                accessible from your browser.</p>
+            <div class="card-grid card-grid--3">
+                <div class="card">
+                    <div class="card__icon"><svg viewBox="0 0 24 24">
+                            <path
+                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                            </path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg></div>
+                    <h3>3D Visualization</h3>
+                    <p>GPU-accelerated instanced rendering with ball-and-stick, space-filling, wireframe, and cartoon
+                        styles. Smooth arcball controls with perspective and orthographic cameras.</p>
+                </div>
+                <div class="card">
+                    <div class="card__icon"><svg viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            <line x1="11" y1="8" x2="11" y2="14"></line>
+                            <line x1="8" y1="11" x2="14" y2="11"></line>
+                        </svg></div>
+                    <h3>Selection & Editing</h3>
+                    <p>Click, box-select, or select by chain and residue. Replace atoms, define rotation axes, create
+                        fragments, and edit structures interactively.</p>
+                </div>
+                <div class="card">
+                    <div class="card__icon"><svg viewBox="0 0 24 24">
+                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                        </svg></div>
+                    <h3>Measurements</h3>
+                    <p>Measure bond distances, angles, and dihedral angles with precision. Real-time calculations with
+                        persistent labels as you interact with structures.</p>
+                </div>
+                <div class="card">
+                    <div class="card__icon"><svg viewBox="0 0 24 24">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg></div>
+                    <h3>Trajectory Playback</h3>
+                    <p>Animate multi-frame trajectories from MD simulations, geometry optimizations, or torsion scans.
+                        Scrub through frames with energy tracking.</p>
+                </div>
+                <div class="card">
+                    <div class="card__icon"><svg viewBox="0 0 24 24">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg></div>
+                    <h3>Cloud & Remote Files</h3>
+                    <p>Save molecules to Firebase cloud storage. Connect to remote servers via SSH/SFTP to browse, open,
+                        and save files on HPC clusters.</p>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- ===== AI ASSISTANT ===== -->
-    <section class="section ai-section" id="ai">
-        <div class="section-header">
-            <span class="section-tag">AI Assistant</span>
-            <h2 class="section-title">Edit Molecules with <span class="highlight">Natural Language</span></h2>
-            <p class="section-subtitle">Simply describe what you want. The AI understands your molecule's structure and
+    <!-- AI ASSISTANT -->
+    <section class="section" id="ai">
+        <div class="wrap">
+            <span class="badge">AI Assistant</span>
+            <h2 class="section__title">Edit Molecules with Natural Language</h2>
+            <p class="section__sub">Simply describe what you want. The AI understands your molecule's structure and
                 executes complex operations in seconds.</p>
-        </div>
-        <div class="ai-container">
-            <div class="ai-visual">
-                <div class="ai-screenshot-frame">
-                    <!-- TODO: Replace with screenshot -->
+            <div class="split">
+                <div class="screenshot">
                     <img src="screenshots/ai-chat.png"
                         alt="AI chat panel showing a conversation with tool calls and molecular editing">
                 </div>
-            </div>
-            <div class="ai-content">
-                <h3>Powered with <span>AI</span></h3>
-                <p>55+ specialized tools let the AI rotate fragments, add functional groups, run energy calculations,
-                    generate charts, and execute Python code - all from a single chat message.</p>
-                <div class="ai-features">
-                    <div class="ai-feature">
-                        <div class="ai-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            </svg></div>
-                        <div class="ai-feature-text"><strong>Natural Language Commands</strong><span>No scripting
-                                required - just describe what you need</span></div>
-                    </div>
-                    <div class="ai-feature">
-                        <div class="ai-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
-                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                            </svg></div>
-                        <div class="ai-feature-text"><strong>Extended Thinking</strong><span>Watch the AI reason through
-                                complex multi-step workflows</span></div>
-                    </div>
-                    <div class="ai-feature">
-                        <div class="ai-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
-                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                                <line x1="8" y1="21" x2="16" y2="21"></line>
-                                <line x1="12" y1="17" x2="12" y2="21"></line>
-                            </svg></div>
-                        <div class="ai-feature-text"><strong>Python Execution</strong><span>AI runs custom Python
-                                analysis on your molecule data</span></div>
-                    </div>
-                    <div class="ai-feature">
-                        <div class="ai-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                            </svg></div>
-                        <div class="ai-feature-text"><strong>Context-Aware</strong><span>Understands your molecule's
-                                structure, selection, and history</span></div>
+                <div>
+                    <h3 class="split__title">Powered with <span style="color:var(--accent)">AI</span></h3>
+                    <p class="split__lead">55+ specialized tools let the AI rotate fragments, add functional groups, run
+                        energy calculations, generate charts, and execute Python — all from a single chat message.</p>
+                    <div class="feat-list">
+                        <div class="feat-item">
+                            <div class="feat-icon"><svg viewBox="0 0 24 24">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                </svg></div>
+                            <div><strong>Natural Language Commands</strong><span>No scripting required — just describe
+                                    what you need</span></div>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-icon"><svg viewBox="0 0 24 24">
+                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                                </svg></div>
+                            <div><strong>Extended Thinking</strong><span>Watch the AI reason through complex multi-step
+                                    workflows</span></div>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-icon"><svg viewBox="0 0 24 24">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                                </svg></div>
+                            <div><strong>Python Execution</strong><span>AI runs custom Python analysis on your molecule
+                                    data</span></div>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-icon"><svg viewBox="0 0 24 24">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg></div>
+                            <div><strong>Context-Aware</strong><span>Understands your molecule's structure, selection,
+                                    and history</span></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ===== GALLERY ===== -->
-    <section class="section gallery-section" id="gallery">
-        <div class="section-header">
-            <span class="section-tag">In Action</span>
-            <h2 class="section-title">See What's Possible</h2>
-            <p class="section-subtitle">From editing small molecules to analyzing proteins, ChopChopMol handles it all.
-            </p>
-        </div>
-        <div class="gallery-grid">
-            <div class="gallery-item">
-                <!-- TODO: Replace with screenshot -->
-                <img src="screenshots/editing.png" alt="Atom selection and editing with rotation axis">
-                <div class="gallery-caption">
-                    <h4>Interactive Editing</h4>
-                    <p>Select atoms, define rotation axes, and manipulate molecular fragments in real time.</p>
+    <!-- GALLERY -->
+    <section class="section section--alt" id="gallery">
+        <div class="wrap">
+            <span class="badge">In Action</span>
+            <h2 class="section__title">See What's Possible</h2>
+            <p class="section__sub">From editing small molecules to analyzing proteins, ChopChopMol handles it all.</p>
+            <div class="card-grid card-grid--2">
+                <div class="card card--gallery">
+                    <img src="screenshots/editing.png" alt="Atom selection and editing with rotation axis">
+                    <div class="card__body">
+                        <h3>Interactive Editing</h3>
+                        <p>Select atoms, define rotation axes, and manipulate molecular fragments in real time.</p>
+                    </div>
                 </div>
-            </div>
-            <div class="gallery-item">
-                <!-- TODO: Replace with screenshot -->
-                <img src="screenshots/torsion-scan.png" alt="Torsion scan with energy plot and trajectory">
-                <div class="gallery-caption">
-                    <h4>Torsion Scans & Energy Profiles</h4>
-                    <p>Scan dihedral angles with MACE potentials and visualize energy landscapes.</p>
+                <div class="card card--gallery">
+                    <img src="screenshots/torsion-scan.png" alt="Torsion scan with energy plot and trajectory">
+                    <div class="card__body">
+                        <h3>Torsion Scans & Energy Profiles</h3>
+                        <p>Scan dihedral angles with MACE potentials and visualize energy landscapes.</p>
+                    </div>
                 </div>
-            </div>
-
-            <div class="gallery-item">
-                <!-- TODO: Replace with screenshot -->
-                <img src="screenshots/protein.png" alt="Protein visualization with cartoon style">
-                <div class="gallery-caption">
-                    <h4>Protein Visualization</h4>
-                    <p>Load PDB and mmCIF files with support for large biomolecular structures.</p>
+                <div class="card card--gallery">
+                    <img src="screenshots/protein.png" alt="Protein visualization with cartoon style">
+                    <div class="card__body">
+                        <h3>Protein Visualization</h3>
+                        <p>Load PDB and mmCIF files with support for large biomolecular structures.</p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ===== FILE FORMATS ===== -->
-    <section class="section formats-section" id="formats">
-        <div class="section-header">
-            <span class="section-tag">Compatibility</span>
-            <h2 class="section-title">Supports All Major Formats</h2>
-            <p class="section-subtitle">Import and export molecules in the formats you already use.</p>
-        </div>
-        <div class="formats-grid">
-            <span class="format-badge">PDB</span>
-            <span class="format-badge">XYZ</span>
-            <span class="format-badge">MOL / SDF</span>
-            <span class="format-badge">mmCIF</span>
-            <span class="format-badge">MOL2</span>
-            <span class="format-badge">PQR</span>
-            <span class="format-badge">GRO</span>
-            <span class="format-badge">CML</span>
-            <span class="format-badge">ORCA OUT</span>
+    <!-- FILE FORMATS -->
+    <section class="section" id="formats">
+        <div class="wrap">
+            <span class="badge">Compatibility</span>
+            <h2 class="section__title">Supports All Major Formats</h2>
+            <p class="section__sub">Import and export molecules in the formats you already use.</p>
+            <div class="tag-grid">
+                <span class="tag">PDB</span>
+                <span class="tag">XYZ</span>
+                <span class="tag">MOL / SDF</span>
+                <span class="tag">mmCIF</span>
+                <span class="tag">MOL2</span>
+                <span class="tag">PQR</span>
+                <span class="tag">GRO</span>
+                <span class="tag">CML</span>
+                <span class="tag">ORCA OUT</span>
+            </div>
         </div>
     </section>
 
-    <!-- ===== MACE / MLIP ===== -->
-    <section class="section mace-section" id="mace">
-        <div class="section-header">
-            <span class="section-tag green">ML Potentials</span>
-            <h2 class="section-title">MLIPs for Molecular Simulations</h2>
-            <p class="section-subtitle">State-of-the-art machine learning potentials for accurate energy calculations
-                and geometry optimization.</p>
-        </div>
-        <div class="mace-container">
-            <div class="mace-content">
-                <h3>Powered by <span>MACE-MP</span></h3>
-                <p>Calculate molecular energies and optimize geometries using foundation models trained on millions of
-                    DFT calculations. All running on the backend - no setup required.</p>
-                <div class="mace-features">
-                    <div class="mace-feature">
-                        <div class="mace-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
-                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                            </svg></div>
-                        <div class="mace-feature-text"><strong>Single-Point Energy</strong><span>Get accurate energies
-                                in seconds</span></div>
-                    </div>
-                    <div class="mace-feature">
-                        <div class="mace-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
-                                <path
-                                    d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83">
-                                </path>
-                            </svg></div>
-                        <div class="mace-feature-text"><strong>Geometry Optimization</strong><span>Find minimum energy
-                                structures automatically</span></div>
-                    </div>
-                    <div class="mace-feature">
-                        <div class="mace-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
-                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                            </svg></div>
-                        <div class="mace-feature-text"><strong>Energy Profiles</strong><span>Scan rotations and
-                                translations with energy tracking</span></div>
-                    </div>
-                    <div class="mace-feature">
-                        <div class="mace-feature-icon"><svg viewBox="0 0 24 24" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <path
-                                    d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
-                                </path>
-                            </svg></div>
-                        <div class="mace-feature-text"><strong>Molecular Dynamics</strong><span>Run NVE/NVT simulations
-                                with MACE potentials</span></div>
+    <!-- MACE / MLIP -->
+    <section class="section section--alt" id="mace">
+        <div class="wrap">
+            <span class="badge">ML Potentials</span>
+            <h2 class="section__title">MLIPs for Molecular Simulations</h2>
+            <p class="section__sub">State-of-the-art machine learning potentials for accurate energy calculations and
+                geometry optimization.</p>
+            <div class="split">
+                <div>
+                    <h3 class="split__title">Powered by <span style="color:#22c55e">MACE-MP</span></h3>
+                    <p class="split__lead">Calculate molecular energies and optimize geometries using foundation models
+                        trained on millions of DFT calculations. All running on the backend — no setup required.</p>
+                    <div class="feat-list">
+                        <div class="feat-item">
+                            <div class="feat-icon feat-icon--green"><svg viewBox="0 0 24 24">
+                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                                </svg></div>
+                            <div><strong>Single-Point Energy</strong><span>Get accurate energies in seconds</span></div>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-icon feat-icon--green"><svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83">
+                                    </path>
+                                </svg></div>
+                            <div><strong>Geometry Optimization</strong><span>Find minimum energy structures
+                                    automatically</span></div>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-icon feat-icon--green"><svg viewBox="0 0 24 24">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                                </svg></div>
+                            <div><strong>Energy Profiles</strong><span>Scan rotations and translations with energy
+                                    tracking</span></div>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-icon feat-icon--green"><svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path
+                                        d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                                    </path>
+                                </svg></div>
+                            <div><strong>Molecular Dynamics</strong><span>Run NVE/NVT simulations with MACE
+                                    potentials</span></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="mace-visual">
-                <div class="mace-screenshot-frame">
-                    <!-- TODO: Replace with screenshot -->
+                <div class="screenshot">
                     <img src="screenshots/energy.png" alt="Torsion scan energy profile with MACE-MP potential">
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ===== CTA ===== -->
-    <section class="cta-section">
-        <div class="cta-content">
-            <h2>Ready to Transform Your Molecular Work?</h2>
-            <p>Join researchers and students who are already using ChopChopMol.</p>
-            <a href="demo" class="btn btn-primary btn-large">Launch ChopChopMol Free</a>
+    <!-- CTA -->
+    <section class="cta">
+        <div class="wrap">
+            <h2 class="cta__title">Ready to Transform Your Molecular Work?</h2>
+            <p class="cta__sub">Join researchers and students who are already using ChopChopMol.</p>
+            <a href="demo" class="btn">Launch ChopChopMol Free</a>
         </div>
     </section>
 
-    <section class="section" id="video">
-        <div style="text-align: center; display: flex; justify-content: center;">
-            <iframe width="560" height="315" src="https://www.youtube.com/embed/YaDyhtO_sAQ?si=SnBV14WYjaoIN1ik"
-                title="YouTube video player" frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
-            </iframe>
-        </div>
-    </section>
-
-
-    <!-- ===== FOOTER ===== -->
-    <footer>
-        <div class="footer-container">
-            <div class="footer-top">
-                <div class="footer-brand">
-                    <div class="logo">ChopChopMol</div>
-                    <p>AI-powered 3D molecular visualization and simulation, accessible from your browser.</p>
-                </div>
-                <div class="footer-links">
-                    <h4>Product</h4>
-                    <ul>
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="#ai">AI Assistant</a></li>
-                        <li><a href="#mace">MLIP</a></li>
-                        <li><a href="#formats">File Formats</a></li>
-                    </ul>
-                </div>
-                <div class="footer-links">
-                    <h4>Resources</h4>
-                    <ul>
-                        <li><a href="#">Tutorials</a></li>
-                        <li><a href="#">Documentation</a></li>
-                        <li><a href="#">FAQ</a></li>
-                    </ul>
-                </div>
-                <div class="footer-links">
-                    <h4>Company</h4>
-                    <ul>
-                        <li><a href="#">About</a></li>
-                        <li><a href="#">Contact</a></li>
-                        <li><a href="#">Privacy</a></li>
-                        <li><a href="#">Terms</a></li>
-                    </ul>
-                </div>
+    <!-- VIDEO -->
+    <section class="section">
+        <div class="wrap">
+            <div class="video-wrap">
+                <iframe src="https://www.youtube.com/embed/YaDyhtO_sAQ?si=SnBV14WYjaoIN1ik"
+                    title="YouTube video player"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
+                </iframe>
             </div>
-            <div class="footer-bottom">
-                <p>2025 ChopChopMol. All rights reserved.</p>
-                <div class="social-links">
-                    <a href="#"><svg viewBox="0 0 24 24">
-                            <path
-                                d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z">
-                            </path>
-                        </svg></a>
-                    <a href="#"><svg viewBox="0 0 24 24">
-                            <path
-                                d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22">
-                            </path>
-                        </svg></a>
-                    <a href="#"><svg viewBox="0 0 24 24">
-                            <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z">
-                            </path>
-                            <rect x="2" y="9" width="4" height="12"></rect>
-                            <circle cx="4" cy="4" r="2"></circle>
-                        </svg></a>
-                </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="wrap">
+            <div class="footer__inner">
+                <p class="footer__brand" style="font-weight:700; font-size:1.15rem;">ChopChopMol</p>
+                <p class="footer__tagline">AI-powered molecular visualization and simulation.</p>
+                <nav class="footer__nav">
+                    <a href="#features">Features</a>
+                    <a href="#ai">AI Assistant</a>
+                    <a href="#mace">MLIP</a>
+                    <a href="#formats">Formats</a>
+                </nav>
+                <p style="font-size:.8rem; color:var(--dim); margin-top:16px;">&copy; 2025 ChopChopMol. All rights
+                    reserved.</p>
             </div>
         </div>
     </footer>
 
-    <!-- ===== Three.js Hero Molecule ===== -->
+    <!-- Three.js Hero Molecule -->
     <script
         type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 
@@ -1614,10 +722,7 @@
             renderer.setSize(container.clientWidth, container.clientHeight);
         });
 
-        // Scroll effects
-        const navbar = document.getElementById('navbar');
-        window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
-
+        // Smooth scroll
         document.querySelectorAll('a[href^="#"]').forEach(a => {
             a.addEventListener('click', e => {
                 e.preventDefault();
@@ -1625,6 +730,12 @@
             });
         });
 
+        // Mobile menu toggle
+        document.getElementById('menu-toggle')?.addEventListener('click', () => {
+            document.getElementById('main-nav')?.classList.toggle('open');
+        });
+
+        // Fade-in on scroll
         const observer = new IntersectionObserver(entries => {
             entries.forEach(e => {
                 if (e.isIntersecting) {
@@ -1634,62 +745,12 @@
             });
         }, { threshold: 0.1 });
 
-        document.querySelectorAll('.feature-card, .ai-feature, .mace-feature, .gallery-item').forEach(el => {
+        document.querySelectorAll('.card, .feat-item, .card--gallery').forEach(el => {
             el.style.opacity = '0';
-            el.style.transform = 'translateY(30px)';
-            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
             observer.observe(el);
         });
-
-        // Rolling number animation
-        function createSlotMachine(el) {
-            const target = el.dataset.target;
-            const suffix = el.dataset.suffix || '';
-            const useComma = el.dataset.format === 'comma';
-            if (el.dataset.text === 'true') return;
-            el.innerHTML = '';
-            let displayTarget = useComma ? parseInt(target).toLocaleString() : target;
-            const digits = displayTarget.split('');
-            digits.forEach((char, i) => {
-                if (char === ',') {
-                    const comma = document.createElement('span');
-                    comma.textContent = ',';
-                    comma.className = 'stat-suffix';
-                    el.appendChild(comma);
-                    return;
-                }
-                const slot = document.createElement('span');
-                slot.className = 'digit-slot';
-                const roll = document.createElement('span');
-                roll.className = 'digit-roll';
-                for (let n = 0; n <= 9; n++) {
-                    const span = document.createElement('span');
-                    span.textContent = n;
-                    roll.appendChild(span);
-                }
-                slot.appendChild(roll);
-                el.appendChild(slot);
-                setTimeout(() => {
-                    roll.style.transform = `translateY(-${parseInt(char) * 1.2}em)`;
-                }, 100 + i * 150);
-            });
-            if (suffix) {
-                const suffixSpan = document.createElement('span');
-                suffixSpan.className = 'stat-suffix';
-                suffixSpan.textContent = suffix;
-                el.appendChild(suffixSpan);
-            }
-        }
-
-        const statObserver = new IntersectionObserver(entries => {
-            entries.forEach(e => {
-                if (e.isIntersecting && !e.target.dataset.animated) {
-                    e.target.dataset.animated = 'true';
-                    createSlotMachine(e.target);
-                }
-            });
-        }, { threshold: 0.5 });
-        document.querySelectorAll('.stat-value').forEach(el => statObserver.observe(el));
     </script>
 </body>
 
