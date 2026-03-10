@@ -3,7 +3,7 @@
  * Creates a separate REMOTE section in the file explorer (alongside LOCAL)
  */
 
-import { safeFetch } from './utils/apiUtils.js';
+import { safeFetch, getBackendUrl, getBackendUrlSync, onBackendUrlOverride } from './utils/apiUtils.js';
 
 const MOLECULE_EXTENSIONS = ['xyz', 'pdb', 'mol', 'sdf', 'cif', 'mol2', 'pqr', 'gro', 'cml', 'extxyz', 'out'];
 
@@ -14,9 +14,10 @@ export class RemoteFileManager {
         this.homePath = '.';
         this.host = null;
         this.username = null;
-        this.backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? 'http://127.0.0.1:10000'
-            : 'https://chopchopmol-ai-backend.onrender.com';
+        this.backendUrl = getBackendUrlSync();
+        // Update when async resolution completes
+        getBackendUrl().then(url => { this.backendUrl = url; });
+        onBackendUrlOverride(url => { this.backendUrl = url; });
 
         this.init();
     }

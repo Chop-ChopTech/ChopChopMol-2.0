@@ -1,23 +1,8 @@
-// Backend URL - use local or production
-let BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://127.0.0.1:10000'
-    : 'https://chopchopmol-ai-backend.onrender.com';
+import { getBackendUrl, getBackendUrlSync, onBackendUrlOverride } from './apiUtils.js';
 
-window.addEventListener('keydown', (event) => {
-    if (event.key === '9') {
-        window.addEventListener('keydown', (event) => {
-            if (event.key === 'b') {
-                let code = prompt('Enter password');
-                if (code === '2626') {
-                    BACKEND_URL = 'https://zghitf9eyxg7u5-10000.proxy.runpod.net';
-                    console.log('Backend URL set to:', BACKEND_URL);
-                }
-            }
-        });
-    }
-});
-
-// https://zghitf9eyxg7u5-10000.proxy.runpod.net/health
+let BACKEND_URL = getBackendUrlSync();
+getBackendUrl().then(url => { BACKEND_URL = url; });
+onBackendUrlOverride(url => { BACKEND_URL = url; });
 
 // ============================================================================
 // Binary Decoders

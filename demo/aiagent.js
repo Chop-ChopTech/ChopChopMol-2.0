@@ -20,17 +20,17 @@ import {
     saveToFileExplorer,
     detectFormat
 } from './utils/fileWriter.js';
-
-const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://127.0.0.1:10000'
-    : 'https://chopchopmol-ai-backend.onrender.com';
+import { getBackendUrl, getBackendUrlSync, onBackendUrlOverride } from './utils/apiUtils.js';
 
 const AI_CONFIG = {
-    backendUrl: backendUrl,
+    backendUrl: getBackendUrlSync(),
     sessionId: crypto.randomUUID(),
     model: 'claude-sonnet-4-6',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
 };
+// Resolve backend URL asynchronously (updates AI_CONFIG when ready)
+getBackendUrl().then(url => { AI_CONFIG.backendUrl = url; });
+onBackendUrlOverride(url => { AI_CONFIG.backendUrl = url; });
 // Save immediately if new
 if (!localStorage.getItem('chopchop_ai_session')) {
     localStorage.setItem('chopchop_ai_session', AI_CONFIG.sessionId);

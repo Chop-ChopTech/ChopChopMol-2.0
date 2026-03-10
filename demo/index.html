@@ -47,6 +47,7 @@
     <script src="/demo/utils/undo.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
+        import { getBackendUrl } from '/demo/utils/apiUtils.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
@@ -3405,7 +3406,8 @@
                 formData.append('audio', blob, 'recording.webm');
 
                 try {
-                    const res = await fetch('https://chopchopmol-ai-backend.onrender.com/ai/transcribe', {
+                    const transcribeUrl = await getBackendUrl();
+                    const res = await fetch(`${transcribeUrl}/ai/transcribe`, {
                         method: 'POST',
                         body: formData
                     });
