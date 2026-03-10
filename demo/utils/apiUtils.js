@@ -43,7 +43,7 @@ export async function getBackendUrl() {
                 }
             }
         } catch (e) {
-            // RunPod not available
+            console.log('RunPod health check failed:', e.message);
         }
         _resolvedBackendUrl = RENDER_URL;
         console.log('Backend: Render');
