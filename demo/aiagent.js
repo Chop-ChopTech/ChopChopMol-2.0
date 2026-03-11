@@ -7,6 +7,8 @@ import {
     callMaceEnergyBatch,
     callMaceOptimize,
     callMaceMD,
+    callDftEnergy,
+    callDftEnergyBatch,
     generateSingleFrameExtxyz,
     generateMultiFrameExtxyz,
     generateTimestamp,
@@ -51,6 +53,8 @@ const toolStatusMap = {
     toggle_charge_visualization: 'Toggling charge visualization',
     calculate_energy: 'Calculating energy',
     calculate_all_energies: 'Calculating all frame energies',
+    calculate_dft_energy: 'Calculating DFT energy',
+    calculate_all_dft_energies: 'Calculating all DFT energies',
     get_cached_energies: 'Retrieving cached energies',
     optimize_geometry: 'Optimizing geometry',
     create_chart: 'Creating chart',
@@ -1880,6 +1884,45 @@ const FUNCTIONS = {
         }
     },
 
+    calculate_dft_energy: {
+        execute: async (params) => {
+            const molecule = window.main?.molecule;
+            if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
+
+            if (molecule.atoms.length > 100) {
+                return { success: false, message: `DFT is impractical for ${molecule.atoms.length} atoms. Use calculate_energy with MACE instead.` };
+            }
+
+            const includeForces = params.includeForces !== false;
+            const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+
+            try {
+                const result = await callDftEnergy(AI_CONFIG.backendUrl, atoms, {
+                    basis: params.basis || 'def2-tzvppd',
+                    xc: params.xc || 'wb97m-d3bj',
+                    charge: params.charge || 0,
+                    spin: params.spin || 0,
+                    includeForces
+                });
+
+                if (result.success && result.forces) {
+                    molecule.setForcesFromCalculation(result.forces);
+                    if (window.updateForceArrowControls) window.updateForceArrowControls();
+                }
+
+                if (result.success) {
+                    const extxyz = generateSingleFrameExtxyz(atoms, result.energy_eV, result.forces,
+                        { method: `"DFT_${params.xc || 'wb97m-d3bj'}/${params.basis || 'def2-tzvppd'}"` });
+                    await saveExtxyzFile(`dft_energy_${generateTimestamp()}.extxyz`, extxyz);
+                }
+
+                return result;
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        }
+    },
+
     optimize_geometry: {
         execute: async (params) => {
             const molecule = window.main?.molecule;
@@ -2083,10 +2126,85 @@ const FUNCTIONS = {
         }
     },
 
+    calculate_all_dft_energies: {
+        execute: async (params = {}) => {
+            const includeForces = params.includeForces !== false;
+            const frames = window.xyzFrames;
+
+            if (!frames || frames.length === 0) {
+                const molecule = window.main?.molecule;
+                if (!molecule?.atoms?.length) return { success: false, message: "No molecule or frames loaded" };
+
+                if (molecule.atoms.length > 100) {
+                    return { success: false, message: `DFT is impractical for ${molecule.atoms.length} atoms. Use calculate_all_energies with MACE.` };
+                }
+
+                const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+                try {
+                    const result = await callDftEnergy(AI_CONFIG.backendUrl, atoms, {
+                        basis: params.basis, xc: params.xc,
+                        charge: params.charge, spin: params.spin, includeForces
+                    });
+                    if (result.success && result.forces) {
+                        molecule.setForcesFromCalculation(result.forces);
+                        if (window.updateForceArrowControls) window.updateForceArrowControls();
+                    }
+                    return { success: true, frameCount: 1, energies: [result] };
+                } catch (e) {
+                    return { success: false, message: e.message };
+                }
+            }
+
+            if (frames.length > 20) {
+                return { success: false, message: `DFT batch of ${frames.length} frames would take too long. Use calculate_all_energies with MACE, or reduce frames to <=20.` };
+            }
+
+            const firstFrame = frames[0].atomData;
+            if (firstFrame.length > 100) {
+                return { success: false, message: `DFT is impractical for ${firstFrame.length} atoms. Use calculate_all_energies with MACE.` };
+            }
+
+            const allFrames = frames.map(f => f.atomData);
+
+            try {
+                const result = await callDftEnergyBatch(AI_CONFIG.backendUrl, allFrames, {
+                    basis: params.basis, xc: params.xc,
+                    charge: params.charge, spin: params.spin, includeForces
+                });
+
+                if (result.success) window.lastMaceResults = result;
+
+                if (result.success && result.energies) {
+                    window.frameEnergies = result.energies.map(e => e.energy_eV);
+                    result.energies.forEach((e, i) => {
+                        if (window.xyzFrames[i]) window.xyzFrames[i].energy = e.energy_eV;
+                    });
+                    mergeForcesIntoFrames(result.energies, includeForces);
+                    updateCurrentFrameForces();
+                }
+
+                if (result.success) {
+                    const frameData = allFrames.map((atoms, i) => ({
+                        atoms,
+                        energy: result.energies[i].energy_eV,
+                        forces: result.energies[i].forces,
+                        extraProps: { method: `"DFT_${params.xc || 'wb97m-d3bj'}/${params.basis || 'def2-tzvppd'}"` }
+                    }));
+                    const extxyz = generateMultiFrameExtxyz(frameData);
+                    await saveExtxyzFile(`dft_batch_${generateTimestamp()}.extxyz`, extxyz);
+                }
+
+                return result;
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        }
+    },
+
     get_cached_energies: {
         execute: () => {
             if (!window.lastMaceResults) {
-                return { success: false, message: "No cached MACE results. Run calculate_all_energies first." };
+                return { success: false, message: "No cached energy results. Run calculate_all_energies or calculate_all_dft_energies first." };
             }
             return window.lastMaceResults;
         }
@@ -2508,6 +2626,8 @@ const NEXT_STEPS = {
     angle_scan: ["calculate_all_energies to compute energies for each frame"],
     calculate_all_energies: ["create_chart to visualize energy profile"],
     calculate_energy: ["toggle_force_arrows to visualize forces (if includeForces was true)"],
+    calculate_dft_energy: ["toggle_force_arrows to visualize forces (if includeForces was true)"],
+    calculate_all_dft_energies: ["create_chart to visualize energy profile"],
     optimize_geometry: ["create_chart to plot convergence", "execute_python for custom analysis (energies, positions, temperatures auto-available)"],
     run_md: ["create_chart to plot energy over time", "execute_python for custom analysis (energies, positions, steps, temperatures, kinetic_energies, total_energies auto-available — no need to call get_cached_energies first)"],
     load_molecule: ["get_molecule_info to inspect structure"],
@@ -2570,8 +2690,9 @@ function compressToolResult(functionName, result) {
 
         // Energy data
         if (result.energy_eV !== undefined) compressed.energy_eV = result.energy_eV;
+        if (result.energy_hartree !== undefined) compressed.energy_hartree = result.energy_hartree;
         if (result.converged !== undefined) compressed.converged = result.converged;
-        if (result.energies && functionName === 'calculate_all_energies') {
+        if (result.energies && (functionName === 'calculate_all_energies' || functionName === 'calculate_all_dft_energies')) {
             compressed.energies_kcal = result.energies.map(e => e.energy_kcal);
             compressed.lowestEnergyFrame = result.lowestEnergyFrame;
             compressed.highestEnergyFrame = result.highestEnergyFrame;

@@ -180,6 +180,30 @@ export async function saveExtxyzFile(filename, content) {
 }
 
 /**
+ * Calls DFT energy endpoint (PySCF)
+ * @param {string} backendUrl - Backend URL
+ * @param {Array} atoms - Array of atom data {element, x, y, z}
+ * @param {Object} options - DFT options {basis, xc, charge, spin, includeForces}
+ * @returns {Promise<Object>} API response
+ */
+export async function callDftEnergy(backendUrl, atoms, options = {}) {
+    const { basis = 'def2-tzvppd', xc = 'wb97m-d3bj', charge = 0, spin = 0, includeForces = true } = options;
+    return postJson(`${backendUrl}/ai/dft/energy`, { atoms, basis, xc, charge, spin, includeForces }, {}, 300000);
+}
+
+/**
+ * Calls DFT energy-batch endpoint (PySCF)
+ * @param {string} backendUrl - Backend URL
+ * @param {Array} frames - Array of frame atom data
+ * @param {Object} options - DFT options {basis, xc, charge, spin, includeForces}
+ * @returns {Promise<Object>} API response
+ */
+export async function callDftEnergyBatch(backendUrl, frames, options = {}) {
+    const { basis = 'def2-tzvppd', xc = 'wb97m-d3bj', charge = 0, spin = 0, includeForces = true } = options;
+    return postJson(`${backendUrl}/ai/dft/energy-batch`, { frames, basis, xc, charge, spin, includeForces }, {}, 600000);
+}
+
+/**
  * Merges force data into window.xyzFrames
  * @param {Array} energyResults - Array of energy results with forces
  * @param {boolean} includeForces - Whether forces should be merged
