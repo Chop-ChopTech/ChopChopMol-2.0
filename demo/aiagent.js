@@ -1889,10 +1889,6 @@ const FUNCTIONS = {
             const molecule = window.main?.molecule;
             if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
 
-            if (molecule.atoms.length > 100) {
-                return { success: false, message: `DFT is impractical for ${molecule.atoms.length} atoms. Use calculate_energy with MACE instead.` };
-            }
-
             const includeForces = params.includeForces !== false;
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
 
@@ -2135,10 +2131,6 @@ const FUNCTIONS = {
                 const molecule = window.main?.molecule;
                 if (!molecule?.atoms?.length) return { success: false, message: "No molecule or frames loaded" };
 
-                if (molecule.atoms.length > 100) {
-                    return { success: false, message: `DFT is impractical for ${molecule.atoms.length} atoms. Use calculate_all_energies with MACE.` };
-                }
-
                 const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
                 try {
                     const result = await callDftEnergy(AI_CONFIG.backendUrl, atoms, {
@@ -2153,15 +2145,6 @@ const FUNCTIONS = {
                 } catch (e) {
                     return { success: false, message: e.message };
                 }
-            }
-
-            if (frames.length > 20) {
-                return { success: false, message: `DFT batch of ${frames.length} frames would take too long. Use calculate_all_energies with MACE, or reduce frames to <=20.` };
-            }
-
-            const firstFrame = frames[0].atomData;
-            if (firstFrame.length > 100) {
-                return { success: false, message: `DFT is impractical for ${firstFrame.length} atoms. Use calculate_all_energies with MACE.` };
             }
 
             const allFrames = frames.map(f => f.atomData);

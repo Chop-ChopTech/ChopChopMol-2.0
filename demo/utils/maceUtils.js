@@ -200,7 +200,7 @@ export async function callDftEnergy(backendUrl, atoms, options = {}) {
  */
 export async function callDftEnergyBatch(backendUrl, frames, options = {}) {
     const { basis = 'def2-tzvppd', xc = 'wb97m-d3bj', charge = 0, spin = 0, includeForces = true } = options;
-    return postJson(`${backendUrl}/ai/dft/energy-batch`, { frames, basis, xc, charge, spin, includeForces }, {}, 600000);
+    return postJson(`${backendUrl}/ai/dft/energy-batch`, { frames, basis, xc, charge, spin, includeForces }, {}, 1800000);
 }
 
 /**
