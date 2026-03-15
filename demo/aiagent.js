@@ -9,7 +9,6 @@ import {
     callMaceMD,
     callDftEnergy,
     callDftEnergyBatch,
-    streamMaceSSE,
     generateSingleFrameExtxyz,
     generateMultiFrameExtxyz,
     generateTimestamp,
@@ -1632,9 +1631,6 @@ const FUNCTIONS = {
                 // Collect all available data (coordinates, forces, energies, metadata)
                 const atoms = window.main.data.atomData;
 
-                // Check for forces
-                const hasForces = atoms.some(a => a.fx !== undefined);
-
                 // Get energy (single value or first frame)
                 let energy = window.main.data.energy;
                 if (energy === undefined && window.frameEnergies && window.frameEnergies[0] !== undefined) {
@@ -2612,63 +2608,6 @@ function compressToolResult(functionName, result) {
 
     // For errors, send full result
     return result;
-}
-
-// Add this utility function (put it near the top of aiagent.js or in a utils file)
-
-function animateAtomPositions(atomIndices, targetPositions, duration = 400) {
-    const molecule = window.main?.molecule;
-    if (!molecule) return Promise.resolve();
-
-    // Capture starting positions
-    const startPositions = {};
-    atomIndices.forEach(idx => {
-        const atom = molecule.atoms[idx];
-        startPositions[idx] = { x: atom.x, y: atom.y, z: atom.z };
-    });
-
-    const startTime = performance.now();
-
-    return new Promise(resolve => {
-        function tick() {
-            const elapsed = performance.now() - startTime;
-            const t = Math.min(elapsed / duration, 1);
-
-            // Ease-out cubic
-            const eased = 1 - Math.pow(1 - t, 3);
-
-            // Lerp all atoms
-            atomIndices.forEach(idx => {
-                const atom = molecule.atoms[idx];
-                const start = startPositions[idx];
-                const end = targetPositions[idx];
-
-                atom.x = start.x + (end.x - start.x) * eased;
-                atom.y = start.y + (end.y - start.y) * eased;
-                atom.z = start.z + (end.z - start.z) * eased;
-                atom.position.set(atom.x, atom.y, atom.z);
-
-                // Update instanced mesh matrix
-                if (typeof window.updateAtomMatrix === 'function') {
-                    window.updateAtomMatrix(idx);
-                }
-            });
-
-            // Update visuals
-            if (molecule.instancedMesh) {
-                molecule.instancedMesh.instanceMatrix.needsUpdate = true;
-            }
-            molecule.updateBonds?.(window.main.mode);
-            window.render?.();
-
-            if (t < 1) {
-                requestAnimationFrame(tick);
-            } else {
-                resolve();
-            }
-        }
-        requestAnimationFrame(tick);
-    });
 }
 
 window.AIAgent = {
