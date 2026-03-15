@@ -1239,92 +1239,79 @@ const FUNCTIONS = {
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
             const includeForces = params.includeForces !== false;
 
-            const body = {
-                atoms,
-                model: params.model || AI_CONFIG.maceModel || 'medium',
-                temperature: params.temperature || 300,
-                ...(params.frames ? { frames: params.frames } : { steps: params.steps || 500 }),
-                timestep: params.timestep || 1.0,
-                friction: params.friction || 0.01,
-                saveInterval: params.saveInterval || 10,
-                includeForces
-            };
-
             try {
-                // Use streaming endpoint — frames arrive in real-time
-                const parsedFrames = [];
-                const trajectoryData = [];  // raw frame data for extxyz export
+                const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/md`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        atoms,
+                        model: params.model || AI_CONFIG.maceModel || 'medium',
+                        temperature: params.temperature || 300,
+                        ...(params.frames ? { frames: params.frames } : { steps: params.steps || 500 }),
+                        timestep: params.timestep || 1.0,
+                        friction: params.friction || 0.01,
+                        saveInterval: params.saveInterval || 10,
+                        includeForces
+                    })
+                });
+                const result = await res.json();
 
-                const summary = await streamMaceSSE(
-                    `${AI_CONFIG.backendUrl}/ai/mace/md/stream`, body,
-                    (frame) => {
-                        // Build atomData from streamed positions
+                if (!result.success) {
+                    return { success: false, message: result.error || "MD simulation failed" };
+                }
+
+                if (result.trajectory && result.trajectory.length > 0) {
+                    const parsedFrames = result.trajectory.map((frame) => {
                         const atomData = frame.positions.map((pos, i) => {
                             const atom = { element: atoms[i].element, x: pos[0], y: pos[1], z: pos[2] };
                             if (frame.forces && frame.forces[i]) {
-                                atom.fx = frame.forces[i][0];
-                                atom.fy = frame.forces[i][1];
-                                atom.fz = frame.forces[i][2];
+                                atom.fx = frame.forces[i][0]; atom.fy = frame.forces[i][1]; atom.fz = frame.forces[i][2];
                             }
                             return atom;
                         });
-
-                        parsedFrames.push({
-                            atomData, numAtoms: atomData.length,
-                            energy: frame.energy_eV,
+                        return {
+                            atomData, numAtoms: atomData.length, energy: frame.energy_eV,
                             comment: `step=${frame.step} T=${frame.temperature_K.toFixed(1)}K E=${frame.total_eV.toFixed(4)}eV`
-                        });
-                        trajectoryData.push(frame);
+                        };
+                    });
 
-                        // Live-update frames + slider as each frame arrives
-                        window.xyzFrames = parsedFrames;
-                        window.frameEnergies = parsedFrames.map(f => f.energy);
+                    window.xyzFrames = parsedFrames;
+                    window.frameEnergies = result.trajectory.map(frame => frame.energy_eV);
+                    window.lastMaceResults = {
+                        frameCount: result.trajectory.length,
+                        energies: result.trajectory.map((frame, idx) => ({
+                            frame: idx, step: frame.step, energy_eV: frame.energy_eV,
+                            kinetic_eV: frame.kinetic_eV, total_eV: frame.total_eV,
+                            temperature_K: frame.temperature_K
+                        })),
+                        lowestEnergyFrame: 0, highestEnergyFrame: result.trajectory.length - 1
+                    };
 
+                    const frameSliderContainer = document.getElementById('frameSliderContainer');
+                    if (frameSliderContainer) {
+                        frameSliderContainer.style.display = 'flex';
                         const slider = document.getElementById('frameSlider');
                         const label = document.getElementById('frameLabel');
-                        const container = document.getElementById('frameSliderContainer');
-                        if (container) container.style.display = 'flex';
-                        if (slider) {
-                            const wasAtEnd = parseInt(slider.value) >= parseInt(slider.max || '0');
-                            slider.max = parsedFrames.length - 1;
-                            if (wasAtEnd || parsedFrames.length <= 2) {
-                                slider.value = parsedFrames.length - 1;
-                                // Animate molecule to this frame
-                                const lastFrame = parsedFrames[parsedFrames.length - 1];
-                                molecule.animateToFrame(lastFrame, 50);
-                            }
-                        }
+                        if (slider) { slider.max = parsedFrames.length - 1; slider.value = parsedFrames.length - 1; }
                         if (label) label.textContent = `Frame ${parsedFrames.length} / ${parsedFrames.length}`;
                     }
-                );
 
-                // Cache energies for charting
-                window.lastMaceResults = {
-                    frameCount: parsedFrames.length,
-                    energies: trajectoryData.map((f, i) => ({
-                        frame: i, step: f.step, energy_eV: f.energy_eV,
-                        kinetic_eV: f.kinetic_eV, total_eV: f.total_eV,
-                        temperature_K: f.temperature_K
-                    })),
-                    lowestEnergyFrame: 0,
-                    highestEnergyFrame: parsedFrames.length - 1
-                };
+                    window.undoManager?.saveState?.();
+                    molecule.animateToFrame(parsedFrames[parsedFrames.length - 1], 500);
+                    mergeForcesIntoFrames(result.trajectory, includeForces);
+                    updateCurrentFrameForces();
+                }
 
-                // Set forces from final frame
-                if (includeForces && trajectoryData.length > 0) {
-                    const lastFrame = trajectoryData[trajectoryData.length - 1];
-                    if (lastFrame.forces) {
-                        molecule.setForcesFromCalculation(lastFrame.forces);
-                        if (window.updateForceArrowControls) window.updateForceArrowControls();
-                    }
+                if (result.forces) {
+                    molecule.setForcesFromCalculation(result.forces);
+                    if (window.updateForceArrowControls) window.updateForceArrowControls();
                 }
 
                 // Auto-save extxyz
-                if (trajectoryData.length > 0) {
-                    const frameData = trajectoryData.map((f, i) => ({
+                if (result.trajectory?.length > 0) {
+                    const frameData = result.trajectory.map((f) => ({
                         atoms: f.positions.map((pos, j) => ({ element: atoms[j].element, x: pos[0], y: pos[1], z: pos[2] })),
-                        energy: f.energy_eV,
-                        forces: f.forces,
+                        energy: f.energy_eV, forces: f.forces,
                         extraProps: { temperature: f.temperature_K, step: f.step }
                     }));
                     const extxyz = generateMultiFrameExtxyz(frameData);
@@ -1333,12 +1320,9 @@ const FUNCTIONS = {
 
                 return {
                     success: true,
-                    message: `MD completed: ${summary.steps} steps at ${summary.temperature_K}K. Generated ${summary.frameCount} frames. Final E = ${summary.energy_eV.toFixed(4)} eV`,
-                    frameCount: summary.frameCount,
-                    temperature_K: summary.temperature_K,
-                    energy_eV: summary.energy_eV
+                    message: `MD completed: ${result.steps} steps at ${result.temperature_K}K. Generated ${result.frameCount} frames. Final E = ${result.energy_eV.toFixed(4)} eV`,
+                    frameCount: result.frameCount, temperature_K: result.temperature_K, energy_eV: result.energy_eV
                 };
-
             } catch (e) {
                 return { success: false, message: e.message };
             }
@@ -1895,91 +1879,75 @@ const FUNCTIONS = {
             if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
 
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
-            const stretch = molecule.stretch || 4;
             const includeForces = params.includeForces !== false;
 
-            const body = {
-                atoms,
-                model: params.model || AI_CONFIG.maceModel || 'medium',
-                fmax: params.fmax || 0.05,
-                maxSteps: params.maxSteps || 100,
-                includeForces
-            };
-
             try {
-                // Use streaming endpoint — frames arrive per BFGS step
-                const parsedFrames = [];
-                const trajectoryData = [];
+                const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/optimize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        atoms,
+                        model: params.model || AI_CONFIG.maceModel || 'medium',
+                        fmax: params.fmax || 0.05,
+                        maxSteps: params.maxSteps || 100,
+                        includeForces
+                    })
+                });
+                const result = await res.json();
 
-                window.undoManager?.saveState?.();
+                if (!result.success) {
+                    return { success: false, message: result.error || "Optimization failed" };
+                }
 
-                const summary = await streamMaceSSE(
-                    `${AI_CONFIG.backendUrl}/ai/mace/optimize/stream`, body,
-                    (frame) => {
+                if (result.trajectory && result.trajectory.length > 0) {
+                    const parsedFrames = result.trajectory.map((frame, idx) => {
                         const atomData = frame.positions.map((pos, i) => {
                             const atom = { element: atoms[i].element, x: pos[0], y: pos[1], z: pos[2] };
                             if (frame.forces && frame.forces[i]) {
-                                atom.fx = frame.forces[i][0];
-                                atom.fy = frame.forces[i][1];
-                                atom.fz = frame.forces[i][2];
+                                atom.fx = frame.forces[i][0]; atom.fy = frame.forces[i][1]; atom.fz = frame.forces[i][2];
                             }
                             return atom;
                         });
+                        return {
+                            atomData, numAtoms: atomData.length, energy: frame.energy_eV,
+                            comment: `step=${idx} energy=${frame.energy_eV.toFixed(4)}eV fmax=${frame.max_force.toFixed(4)}eV/A`
+                        };
+                    });
 
-                        parsedFrames.push({
-                            atomData, numAtoms: atomData.length,
-                            energy: frame.energy_eV,
-                            comment: `step=${frame.index} energy=${frame.energy_eV.toFixed(4)}eV fmax=${frame.max_force.toFixed(4)}eV/A`
-                        });
-                        trajectoryData.push(frame);
+                    window.xyzFrames = parsedFrames;
+                    window.frameEnergies = result.trajectory.map(frame => frame.energy_eV);
+                    window.lastMaceResults = {
+                        frameCount: result.trajectory.length,
+                        energies: result.trajectory.map((frame, idx) => ({
+                            frame: idx, energy_eV: frame.energy_eV,
+                            energy_kcal: frame.energy_eV * 23.0609, max_force_eV_A: frame.max_force
+                        })),
+                        lowestEnergyFrame: 0, highestEnergyFrame: result.trajectory.length - 1
+                    };
 
-                        // Live-update frames + slider
-                        window.xyzFrames = parsedFrames;
-                        window.frameEnergies = parsedFrames.map(f => f.energy);
-
+                    const frameSliderContainer = document.getElementById('frameSliderContainer');
+                    if (frameSliderContainer) {
+                        frameSliderContainer.style.display = 'flex';
                         const slider = document.getElementById('frameSlider');
                         const label = document.getElementById('frameLabel');
-                        const container = document.getElementById('frameSliderContainer');
-                        if (container) container.style.display = 'flex';
-                        if (slider) {
-                            slider.max = parsedFrames.length - 1;
-                            slider.value = parsedFrames.length - 1;
-                            // Animate molecule to latest optimization step
-                            const lastFrame = parsedFrames[parsedFrames.length - 1];
-                            molecule.animateToFrame(lastFrame, 50);
-                        }
-                        if (label) label.textContent = `Step ${parsedFrames.length} / ${parsedFrames.length}`;
+                        if (slider) { slider.max = parsedFrames.length - 1; slider.value = parsedFrames.length - 1; }
+                        if (label) label.textContent = `Frame ${parsedFrames.length} / ${parsedFrames.length}`;
                     }
-                );
 
-                // Cache energies for charting
-                window.lastMaceResults = {
-                    frameCount: parsedFrames.length,
-                    energies: trajectoryData.map((f, i) => ({
-                        frame: i, energy_eV: f.energy_eV,
-                        energy_kcal: f.energy_eV * 23.0609,
-                        max_force_eV_A: f.max_force
-                    })),
-                    lowestEnergyFrame: 0,
-                    highestEnergyFrame: parsedFrames.length - 1
-                };
+                    window.undoManager?.saveState?.();
+                    molecule.animateToFrame(parsedFrames[parsedFrames.length - 1], 500);
+                }
 
-                // Set forces from final frame
-                if (includeForces && trajectoryData.length > 0) {
-                    const lastFrame = trajectoryData[trajectoryData.length - 1];
-                    if (lastFrame.forces) {
-                        molecule.setForcesFromCalculation(lastFrame.forces);
-                        if (window.updateForceArrowControls) window.updateForceArrowControls();
-                    }
+                if (result.forces) {
+                    molecule.setForcesFromCalculation(result.forces);
+                    if (window.updateForceArrowControls) window.updateForceArrowControls();
                 }
 
                 // Auto-save extxyz
-                if (trajectoryData.length > 0) {
-                    const frameData = trajectoryData.map((f, i) => ({
+                if (result.trajectory?.length > 0) {
+                    const frameData = result.trajectory.map((f) => ({
                         atoms: f.positions.map((pos, j) => ({ element: atoms[j].element, x: pos[0], y: pos[1], z: pos[2] })),
-                        energy: f.energy_eV,
-                        forces: f.forces,
-                        extraProps: { config_type: '"optimized"' }
+                        energy: f.energy_eV, forces: f.forces, extraProps: { config_type: '"optimized"' }
                     }));
                     const extxyz = generateMultiFrameExtxyz(frameData);
                     await saveExtxyzFile(`mace_opt_${generateTimestamp()}.extxyz`, extxyz);
@@ -1987,8 +1955,8 @@ const FUNCTIONS = {
 
                 return {
                     success: true,
-                    message: `Optimization ${summary.converged ? 'converged' : 'completed'} in ${summary.steps} steps. Final energy: ${summary.energy_eV.toFixed(4)} eV. Max force: ${summary.max_force.toFixed(4)} eV/A.`,
-                    ...summary
+                    message: `Optimization ${result.converged ? 'converged' : 'completed'} in ${result.steps} steps. Final energy: ${result.energy_eV.toFixed(4)} eV.`,
+                    ...result
                 };
             } catch (e) {
                 return { success: false, message: e.message };
