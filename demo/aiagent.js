@@ -1238,7 +1238,6 @@ const FUNCTIONS = {
 
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
             const includeForces = params.includeForces !== false;
-            const stretch = molecule.stretch || 4;
 
             const body = {
                 atoms,
@@ -1292,13 +1291,7 @@ const FUNCTIONS = {
                                 slider.value = parsedFrames.length - 1;
                                 // Animate molecule to this frame
                                 const lastFrame = parsedFrames[parsedFrames.length - 1];
-                                molecule.atoms.forEach((a, i) => {
-                                    const ad = lastFrame.atomData[i];
-                                    a.x = ad.x * stretch;
-                                    a.y = ad.y * stretch;
-                                    a.z = ad.z * stretch;
-                                });
-                                molecule.draw();
+                                molecule.animateToFrame(lastFrame, 50);
                             }
                         }
                         if (label) label.textContent = `Frame ${parsedFrames.length} / ${parsedFrames.length}`;
@@ -1951,14 +1944,9 @@ const FUNCTIONS = {
                         if (slider) {
                             slider.max = parsedFrames.length - 1;
                             slider.value = parsedFrames.length - 1;
-                            // Update molecule to latest optimization step
-                            molecule.atoms.forEach((a, i) => {
-                                const ad = atomData[i];
-                                a.x = ad.x * stretch;
-                                a.y = ad.y * stretch;
-                                a.z = ad.z * stretch;
-                            });
-                            molecule.draw();
+                            // Animate molecule to latest optimization step
+                            const lastFrame = parsedFrames[parsedFrames.length - 1];
+                            molecule.animateToFrame(lastFrame, 50);
                         }
                         if (label) label.textContent = `Step ${parsedFrames.length} / ${parsedFrames.length}`;
                     }
