@@ -11,9 +11,13 @@ ChopChopMol 2.0 is a web-based 3D molecular visualization and AI-powered editing
 This is a **two-repo** setup:
 
 - **Frontend** (`demo/`): Vanilla HTML/JS app (no build step, ES6 modules, Three.js)
-- **Backend** (separate repo at `chopchopmol-ai-backend/`): Python Flask server for Claude AI proxy, MACE ML calculations, and Python code execution
+- **Backend** (separate repo at `chopchopmol-ai-backend/`): Python Flask server for Claude AI proxy, MACE ML calculations, DFT calculations, and Python code execution
 
-The frontend is a static site deployed to Firebase Hosting. The backend deploys to Render.com via `render.yaml`.
+The frontend is a static site deployed to Firebase Hosting. The backend deploys to Render.com via `render.yaml` and RunPod GPU via Docker (`Dockerfile` + `deploy.sh`).
+
+**Reference repos** (read-only, for copying patterns — do NOT modify):
+- `ChopChopMol 3.0/` — Next-gen frontend (FastAPI-based patterns, streaming tools)
+- `ChopChopMol Backend/` — Next-gen backend (native torch_geometric batching, streaming MD, FastAPI+Uvicorn). The working backend is `chopchopmol-ai-backend/`, not this one.
 
 ### Frontend File Structure
 
