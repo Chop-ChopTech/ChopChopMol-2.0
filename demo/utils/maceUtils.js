@@ -160,6 +160,56 @@ export async function callMaceMD(backendUrl, atoms, model, options = {}) {
 }
 
 /**
+ * Stream SSE endpoint — calls onFrame for each frame, returns final summary.
+ * @param {string} url - Full endpoint URL
+ * @param {Object} body - POST body
+ * @param {Function} onFrame - Callback for each frame event: (frameData) => void
+ * @returns {Promise<Object>} Final summary from 'done' event
+ */
+export async function streamMaceSSE(url, body, onFrame) {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let summary = null;
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIdx;
+        while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
+            const line = buffer.slice(0, newlineIdx).trim();
+            buffer = buffer.slice(newlineIdx + 1);
+            if (!line.startsWith('data: ')) continue;
+            const json = line.slice(6);
+            try {
+                const event = JSON.parse(json);
+                if (event.type === 'frame') {
+                    onFrame(event);
+                } else if (event.type === 'done') {
+                    summary = event.summary;
+                } else if (event.type === 'error') {
+                    throw new Error(event.error);
+                }
+            } catch (e) {
+                if (e.message && !e.message.includes('JSON')) throw e;
+            }
+        }
+    }
+    return summary || { success: true };
+}
+
+/**
  * Saves extxyz file to file explorer if available
  * @param {string} filename - File name
  * @param {string} content - File content
