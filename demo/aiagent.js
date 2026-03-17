@@ -2645,11 +2645,14 @@ async function warmupCache() {
     try {
         console.log('🔥 Warming up AI cache...');
         const dummyState = getMoleculeState();
+        // Use a disposable session ID so we don't pollute the real chat session
+        // (the cancelled stream would leave an orphaned "ping" user message in history)
+        const warmupSessionId = '_warmup_' + crypto.randomUUID();
         const response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat/stream`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                sessionId: AI_CONFIG.sessionId,
+                sessionId: warmupSessionId,
                 message: 'ping',
                 state: dummyState,
                 model: AI_CONFIG.model
