@@ -704,7 +704,7 @@ export default class Molecule {
             ctx.shadowOffsetX = 1 * dpr;
             ctx.shadowOffsetY = 1 * dpr;
 
-            const indexColor = '#5ce0d2';
+            const indexColor = '#00ff00';
 
             if (hasLabel && hasCharge) {
                 ctx.font = `bold ${baseFontMedium}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
