@@ -2336,7 +2336,6 @@ function getMoleculeState() {
 let _abortController = null;
 
 async function sendToAI(userMessage, onChunk) {
-    const state = getMoleculeState();
     let executed = [];
     let sessionId = AI_CONFIG.sessionId;
     let assistantMessage = null;
@@ -2350,6 +2349,9 @@ async function sendToAI(userMessage, onChunk) {
     try {
         const MAX_ITERATIONS = 10;
         for (let i = 0; i < MAX_ITERATIONS; i++) {
+            // Refresh state each iteration so Claude sees up-to-date atom/frame counts
+            // after tool calls modify the molecule (load_molecule, run_md, etc.)
+            const state = getMoleculeState();
             const payload = {
                 sessionId,
                 message: userMessage,
