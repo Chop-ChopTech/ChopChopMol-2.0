@@ -683,14 +683,8 @@ export default class Molecule {
             const atom = this.atoms[i];
             const displayIndex = i;
 
-            let labelText = '';
-            if (showElements && showIndices) {
-                labelText = `${atom.type}${displayIndex}`;
-            } else if (showElements) {
-                labelText = atom.type;
-            } else if (showIndices) {
-                labelText = `${displayIndex}`;
-            }
+            const elementText = showElements ? atom.type : '';
+            const indexText = showIndices ? `${displayIndex}` : '';
             let chargeValue = null;
             if (showCharges) {
                 if (charges && typeof charges[i] === 'number' && !Number.isNaN(charges[i])) {
@@ -702,6 +696,7 @@ export default class Molecule {
 
             const chargeText = chargeValue !== null ? `${chargeValue >= 0 ? '+' : ''}${chargeValue.toFixed(3)}` : '';
             const hasCharge = chargeText.length > 0;
+            const hasLabel = elementText || indexText;
 
             // Draw text with shadow for better visibility
             ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
@@ -709,15 +704,47 @@ export default class Molecule {
             ctx.shadowOffsetX = 1 * dpr;
             ctx.shadowOffsetY = 1 * dpr;
 
-            if (labelText && hasCharge) {
+            const indexColor = '#5ce0d2';
+
+            if (hasLabel && hasCharge) {
                 ctx.font = `bold ${baseFontMedium}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
-                ctx.fillText(labelText, x, y - 16 * dpr);
+                if (elementText && indexText) {
+                    const elemWidth = ctx.measureText(elementText).width;
+                    const idxWidth = ctx.measureText(indexText).width;
+                    const totalWidth = elemWidth + idxWidth;
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(elementText, x - totalWidth / 2 + elemWidth / 2, y - 16 * dpr);
+                    ctx.fillStyle = indexColor;
+                    ctx.fillText(indexText, x - totalWidth / 2 + elemWidth + idxWidth / 2, y - 16 * dpr);
+                } else if (indexText) {
+                    ctx.fillStyle = indexColor;
+                    ctx.fillText(indexText, x, y - 16 * dpr);
+                } else {
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(elementText, x, y - 16 * dpr);
+                }
+                ctx.fillStyle = 'white';
                 ctx.font = `bold ${baseFontSmall}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
                 ctx.fillText(chargeText, x, y + 24 * dpr);
-            } else if (labelText) {
+            } else if (hasLabel) {
                 ctx.font = `bold ${baseFontLarge}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
-                ctx.fillText(labelText, x, y);
+                if (elementText && indexText) {
+                    const elemWidth = ctx.measureText(elementText).width;
+                    const idxWidth = ctx.measureText(indexText).width;
+                    const totalWidth = elemWidth + idxWidth;
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(elementText, x - totalWidth / 2 + elemWidth / 2, y);
+                    ctx.fillStyle = indexColor;
+                    ctx.fillText(indexText, x - totalWidth / 2 + elemWidth + idxWidth / 2, y);
+                } else if (indexText) {
+                    ctx.fillStyle = indexColor;
+                    ctx.fillText(indexText, x, y);
+                } else {
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(elementText, x, y);
+                }
             } else if (hasCharge) {
+                ctx.fillStyle = 'white';
                 ctx.font = `bold ${baseFontCharge}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
                 ctx.fillText(chargeText, x, y);
             }
