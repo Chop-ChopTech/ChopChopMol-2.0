@@ -6,7 +6,7 @@ import { postJson } from './apiUtils.js';
  */
 export const MACE_CONFIG = {
     lattice: 'Lattice="100.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0 100.0"',
-    pbc: 'pbc="F F F"'
+    pbc: 'pbc="T T T"'
 };
 
 /**
