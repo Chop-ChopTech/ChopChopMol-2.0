@@ -116,7 +116,7 @@ export function writeExtXYZ(data, options = {}) {
             const pbcStr = metadata.pbc.map(b => b ? 'T' : 'F').join(' ');
             commentParts.push(`pbc="${pbcStr}"`);
         } else {
-            commentParts.push(`pbc="F F F"`); // Default: no periodic boundaries
+            commentParts.push(`pbc="T T T"`); // Default: periodic boundaries enabled
         }
 
         // Virial

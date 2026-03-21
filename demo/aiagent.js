@@ -68,6 +68,8 @@ const toolStatusMap = {
     angle_scan: 'Running angle scan',
     run_md: 'Running MD simulation',
     web_search: 'Searching the web',
+    finetune_model: 'Fine-tuning MACE model',
+    list_finetuned_models: 'Listing fine-tuned models',
 };
 // ALL functions the AI can execute (kept on frontend - they manipulate DOM/Three.js)
 const FUNCTIONS = {
@@ -2284,6 +2286,127 @@ const FUNCTIONS = {
             }
         }
     },
+
+    finetune_model: {
+        execute: async (params) => {
+            const frames = window.xyzFrames;
+            if (!frames || frames.length === 0) {
+                return { success: false, message: "No trajectory frames loaded. Generate training data first (run_md + calculate_all_dft_energies)." };
+            }
+            const modelName = params.modelName;
+            if (!modelName || /\s/.test(modelName)) {
+                return { success: false, message: "modelName must be a non-empty string with no spaces." };
+            }
+
+            // Build multi-frame ExtXYZ from current frames + energies
+            const energies = window.frameEnergies || [];
+            const frameData = frames.map((f, i) => {
+                const atoms = f.atomData;
+                const hasForces = atoms[0]?.fx !== undefined;
+                return {
+                    atoms: atoms.map(a => ({ element: a.element, x: a.x, y: a.y, z: a.z })),
+                    energy: energies[i] ?? null,
+                    forces: hasForces ? atoms.map(a => [a.fx, a.fy, a.fz]) : null,
+                    extraProps: {}
+                };
+            });
+            const extxyz = generateMultiFrameExtxyz(frameData);
+
+            const body = {
+                extxyz,
+                modelName,
+                foundationModel: params.foundationModel || 'mace-mp-0a',
+                epochs: params.epochs || 100,
+                batchSize: params.batchSize || 4,
+                rMax: params.rMax || 4.0,
+                correlation: params.correlation || 3,
+                validFraction: params.validFraction || 0.1,
+            };
+
+            try {
+                const resp = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/finetune`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                    signal: _abortController?.signal
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    return { success: false, message: err.error || `Fine-tuning request failed (${resp.status})` };
+                }
+
+                // SSE streaming — read line by line
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let finalResult = null;
+                let epochsCompleted = 0;
+                let lastLoss = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        let evt;
+                        try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+
+                        if (evt.type === 'progress') {
+                            epochsCompleted = evt.epoch;
+                            lastLoss = evt.loss;
+                        } else if (evt.type === 'done') {
+                            finalResult = evt;
+                            if (!window.finetunedModels) window.finetunedModels = {};
+                            window.finetunedModels[evt.modelName] = evt.modelPath;
+                        } else if (evt.type === 'error') {
+                            return { success: false, message: evt.error };
+                        }
+                    }
+                }
+
+                if (!finalResult) {
+                    return { success: false, message: 'Fine-tuning stream ended without completion.' };
+                }
+
+                return {
+                    success: true,
+                    modelName: finalResult.modelName,
+                    epochsCompleted,
+                    finalLoss: lastLoss,
+                    message: `Fine-tuning complete. Model "${finalResult.modelName}" registered. Use it with calculate_energy(model="${finalResult.modelName}"), optimize_geometry(model="${finalResult.modelName}"), or run_md(model="${finalResult.modelName}").`
+                };
+            } catch (e) {
+                if (e.name === 'AbortError') return { success: false, message: 'Fine-tuning cancelled.' };
+                return { success: false, message: e.message };
+            }
+        }
+    },
+
+    list_finetuned_models: {
+        execute: async () => {
+            try {
+                const resp = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/finetune/models`);
+                const data = await resp.json();
+                const local = window.finetunedModels || {};
+                const merged = { ...data.models, ...local };
+                const names = Object.keys(merged);
+                return {
+                    success: true,
+                    models: names,
+                    message: names.length
+                        ? `${names.length} fine-tuned model(s): ${names.join(', ')}`
+                        : 'No fine-tuned models registered yet.'
+                };
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        }
+    },
 };
 
 function getMoleculeState() {
@@ -2329,7 +2452,8 @@ function getMoleculeState() {
         aiModel: AI_CONFIG.model,
         currentFileName: window.fileName,
         hasFolder: !!window.fileExplorer?.directoryHandle,
-        folderFiles: window.fileExplorer?.fileHandles ? Array.from(window.fileExplorer.fileHandles.keys()) : []
+        folderFiles: window.fileExplorer?.fileHandles ? Array.from(window.fileExplorer.fileHandles.keys()) : [],
+        finetunedModels: Object.keys(window.finetunedModels || {})
     };
 }
 
