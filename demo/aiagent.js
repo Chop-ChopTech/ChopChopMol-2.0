@@ -2650,12 +2650,13 @@ const NEXT_STEPS = {
     calculate_all_energies: ["create_chart to visualize energy profile"],
     calculate_energy: ["toggle_force_arrows to visualize forces (if includeForces was true)"],
     calculate_dft_energy: ["toggle_force_arrows to visualize forces (if includeForces was true)"],
-    calculate_all_dft_energies: ["create_chart to visualize energy profile"],
+    calculate_all_dft_energies: ["create_chart to visualize energy profile", "finetune_model to train a custom MACE model on this DFT data"],
     optimize_geometry: ["create_chart to plot convergence", "execute_python for custom analysis (energies, positions, temperatures auto-available)"],
     run_md: ["create_chart to plot energy over time", "execute_python for custom analysis (energies, positions, steps, temperatures, kinetic_energies, total_energies auto-available — no need to call get_cached_energies first)"],
     load_molecule: ["get_molecule_info to inspect structure"],
     split_molecule: ["rotational_scan to scan around the split bond"],
     get_cached_energies: ["create_chart to visualize the energy data"],
+    finetune_model: ["calculate_energy(model='YOUR_MODEL_NAME') to test the fine-tuned model", "optimize_geometry(model='YOUR_MODEL_NAME') or run_md(model='YOUR_MODEL_NAME')"],
 };
 
 // Extract scan x-axis values from frame comments for chart plotting
@@ -2735,6 +2736,16 @@ function compressToolResult(functionName, result) {
             if (result.stdout) compressed.stdout = result.stdout;
             if (result.stderr) compressed.stderr = result.stderr;
             if (result.figures?.length) compressed.figureCount = result.figures.length;
+        }
+
+        // Fine-tuning results — pass model name so AI can reference it
+        if (functionName === 'finetune_model') {
+            if (result.modelName) compressed.modelName = result.modelName;
+            if (result.epochsCompleted) compressed.epochsCompleted = result.epochsCompleted;
+            if (result.finalLoss) compressed.finalLoss = result.finalLoss;
+        }
+        if (functionName === 'list_finetuned_models') {
+            if (result.models) compressed.models = result.models;
         }
 
         return compressed;
