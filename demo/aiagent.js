@@ -2344,29 +2344,37 @@ const FUNCTIONS = {
                 let epochsCompleted = 0;
                 let lastLoss = null;
 
+                const processLine = (line) => {
+                    if (!line.startsWith('data: ')) return;
+                    let evt;
+                    try { evt = JSON.parse(line.slice(6)); } catch { return; }
+
+                    if (evt.type === 'progress') {
+                        epochsCompleted = evt.epoch;
+                        lastLoss = evt.loss;
+                    } else if (evt.type === 'done') {
+                        finalResult = evt;
+                        if (!window.finetunedModels) window.finetunedModels = {};
+                        window.finetunedModels[evt.modelName] = evt.modelPath;
+                    } else if (evt.type === 'error') {
+                        errorMsg = evt.error;
+                    }
+                };
+
+                let errorMsg = null;
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split('\n');
                     buffer = lines.pop();
+                    for (const line of lines) processLine(line);
+                }
+                // Process any remaining data in buffer after stream ends
+                if (buffer.trim()) processLine(buffer.trim());
 
-                    for (const line of lines) {
-                        if (!line.startsWith('data: ')) continue;
-                        let evt;
-                        try { evt = JSON.parse(line.slice(6)); } catch { continue; }
-
-                        if (evt.type === 'progress') {
-                            epochsCompleted = evt.epoch;
-                            lastLoss = evt.loss;
-                        } else if (evt.type === 'done') {
-                            finalResult = evt;
-                            if (!window.finetunedModels) window.finetunedModels = {};
-                            window.finetunedModels[evt.modelName] = evt.modelPath;
-                        } else if (evt.type === 'error') {
-                            return { success: false, message: evt.error };
-                        }
-                    }
+                if (errorMsg) {
+                    return { success: false, message: errorMsg };
                 }
 
                 if (!finalResult) {
