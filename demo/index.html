@@ -51,7 +51,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy, serverTimestamp, where, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy, serverTimestamp, where, writeBatch, deleteField, limit } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAAlbmJmNxVGJ3wv1KiyoFWJ86Ik31jY-w",
@@ -594,6 +594,97 @@
 
         window.deleteCloudFolder = deleteCloudFolder;
         window.moveMoleculeToFolder = moveMoleculeToFolder;
+
+        // ── Conversation History CRUD ──
+
+        async function saveConversation(conversationId, data) {
+            const user = auth.currentUser;
+            if (!user) return null;
+            try {
+                if (conversationId) {
+                    const ref = doc(db, 'users', user.uid, 'conversations', conversationId);
+                    await setDoc(ref, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+                    return conversationId;
+                } else {
+                    const ref = collection(db, 'users', user.uid, 'conversations');
+                    const docRef = await addDoc(ref, { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+                    return docRef.id;
+                }
+            } catch (error) {
+                console.warn('Error saving conversation:', error);
+                return null;
+            }
+        }
+
+        async function loadConversationsList() {
+            const user = auth.currentUser;
+            if (!user) return [];
+            try {
+                const ref = collection(db, 'users', user.uid, 'conversations');
+                const q = query(ref, orderBy('updatedAt', 'desc'), limit(50));
+                const snapshot = await getDocs(q);
+                return snapshot.docs.map(d => {
+                    const data = d.data();
+                    return {
+                        id: d.id,
+                        title: data.title || 'Untitled',
+                        preview: data.preview || '',
+                        updatedAt: data.updatedAt?.toDate?.() || new Date(),
+                        messageCount: data.messageCount || 0,
+                        model: data.model || ''
+                    };
+                });
+            } catch (error) {
+                console.warn('Error loading conversations:', error);
+                return [];
+            }
+        }
+
+        async function loadConversation(conversationId) {
+            const user = auth.currentUser;
+            if (!user) return null;
+            try {
+                const ref = doc(db, 'users', user.uid, 'conversations', conversationId);
+                const snap = await getDoc(ref);
+                if (!snap.exists()) return null;
+                return { id: snap.id, ...snap.data() };
+            } catch (error) {
+                console.warn('Error loading conversation:', error);
+                return null;
+            }
+        }
+
+        async function deleteConversation(conversationId) {
+            const user = auth.currentUser;
+            if (!user) return false;
+            try {
+                await deleteDoc(doc(db, 'users', user.uid, 'conversations', conversationId));
+                return true;
+            } catch (error) {
+                console.warn('Error deleting conversation:', error);
+                return false;
+            }
+        }
+
+        async function renameConversation(conversationId, newTitle) {
+            const user = auth.currentUser;
+            if (!user) return false;
+            try {
+                const ref = doc(db, 'users', user.uid, 'conversations', conversationId);
+                await setDoc(ref, { title: newTitle }, { merge: true });
+                return true;
+            } catch (error) {
+                console.warn('Error renaming conversation:', error);
+                return false;
+            }
+        }
+
+        window.saveConversation = saveConversation;
+        window.loadConversationsList = loadConversationsList;
+        window.loadConversation = loadConversation;
+        window.deleteConversation = deleteConversation;
+        window.renameConversation = renameConversation;
+
         window.currentUser = null;
 
 
@@ -2171,8 +2262,11 @@
                 AI Assistant
             </div>
             <div class="ai-header-buttons">
-                <button id="aiClearBtn" class="ai-header-btn ai-clear-btn" title="Clear chat">
-                    <i class="fas fa-trash-alt"></i>
+                <button id="aiHistoryBtn" class="ai-header-btn" title="Chat history">
+                    <i class="fas fa-history"></i>
+                </button>
+                <button id="aiClearBtn" class="ai-header-btn ai-clear-btn" title="New chat">
+                    <i class="fas fa-plus"></i>
                 </button>
                 <button id="aiSettingsBtn" style="display: none;" class="ai-header-btn" title="API Settings">
                     <i class="fas fa-cog"></i>
@@ -2294,6 +2388,12 @@
             const saveKeyBtn = document.getElementById('aiSaveKeyBtn');
             const cancelKeyBtn = document.getElementById('aiCancelKeyBtn');
             const apiKeyInput = null;
+            const historyBtn = document.getElementById('aiHistoryBtn');
+
+            // ── Conversation history state ──
+            let currentConversationId = null;
+            let autoSaveTimer = null;
+
             const chatInput = document.getElementById('aiChatInput');
             // Auto-resize textarea
             chatInput.addEventListener('input', () => {
@@ -2354,13 +2454,20 @@
                 window.updateRendererSize?.();
             });
 
-            // Clear chat
+            // New chat (clear + reset conversation)
             clearBtn.addEventListener('click', () => {
                 messagesContainer.innerHTML = `
                     <div class="ai-welcome">
+                        <div class="ai-welcome-icon"><i class="fas fa-flask"></i></div>
+                        <h4>ChopChopMol AI</h4>
+                        <p>Ask me to edit molecules, run torsion scans, optimize geometries, or calculate energies.</p>
                     </div>
                 `;
                 if (window.AIAgent) window.AIAgent.clearHistory();
+                currentConversationId = null;
+                clearTimeout(autoSaveTimer);
+                localStorage.removeItem('chopchop_conversation_id');
+                window._loadedConversationContext = null;
             });
 
             // Settings modal
@@ -2582,6 +2689,7 @@
                 // Prepare message element (added after first chunk)
                 const msgEl = document.createElement('div');
                 msgEl.className = 'ai-message assistant';
+                msgEl.dataset.timestamp = Date.now();
                 msgEl.innerHTML = `
                     <div class="ai-message-label assistant-label">
                         <i class="fas fa-atom"></i> ChopChopMol
@@ -2734,6 +2842,7 @@
                 sendBtn.innerHTML = '<i class="fas fa-stop"></i>';
                 sendBtn.classList.add('ai-stop-mode');
                 sendBtn.disabled = false;
+                if (historyBtn) historyBtn.disabled = true;
                 const stopHandler = () => { window.AIAgent?.abort(); };
                 sendBtn.addEventListener('click', stopHandler);
 
@@ -2763,6 +2872,7 @@
 
                     const chartContainer = document.createElement('div');
                     chartContainer.className = 'chart-inline-container';
+                    chartContainer._chartData = data; // Store for history serialization
 
                     const chartHeader = document.createElement('div');
                     chartHeader.className = 'chart-inline-header';
@@ -3196,7 +3306,12 @@
                 sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
                 sendBtn.classList.remove('ai-stop-mode');
                 sendBtn.disabled = false;
+                if (historyBtn) historyBtn.disabled = false;
                 chatInput.focus();
+
+                // Auto-save conversation (debounced)
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(() => autoSaveConversation(), 3000);
             }
             sendBtn.addEventListener('click', handleSend);
 
@@ -3242,6 +3357,7 @@
 
                 const msgEl = document.createElement('div');
                 msgEl.className = `ai-message ${type}`;
+                msgEl.dataset.timestamp = Date.now();
 
                 const labelIcon = type === 'user' ? 'fa-user' : 'fa-atom';
                 const labelText = type === 'user' ? 'You' : 'ChopChopMol';
@@ -3312,6 +3428,610 @@
             function renderMarkdown(text) {
                 return marked.parse(text);
             }
+
+            // ── Conversation History: Serialization, Auto-Save, Drawer ──
+
+            function serializeConversation() {
+                const messages = [];
+                const msgEls = messagesContainer.querySelectorAll(':scope > .ai-message');
+                for (const msgEl of msgEls) {
+                    const ts = parseInt(msgEl.dataset.timestamp) || Date.now();
+                    if (msgEl.classList.contains('user')) {
+                        const contentEl = msgEl.querySelector('.ai-message-content');
+                        // Get text only (not attachment badges)
+                        let text = '';
+                        for (const child of contentEl.childNodes) {
+                            if (child.nodeType === 3) text += child.textContent;
+                            else if (!child.classList?.contains('ai-attached-files')) text += child.textContent;
+                        }
+                        const attachments = [...msgEl.querySelectorAll('.ai-attached-file-badge')]
+                            .map(b => b.textContent.trim().replace(/^[\uD800-\uDBFF][\uDC00-\uDFFF]\s*/, ''));
+                        messages.push({ role: 'user', text: text.trim(), attachments, timestamp: ts });
+                    } else if (msgEl.classList.contains('assistant')) {
+                        const contentEl = msgEl.querySelector('.ai-message-content');
+                        if (!contentEl) continue;
+                        const segments = [];
+                        for (const child of contentEl.children) {
+                            if (child.classList.contains('ai-response-thinking')) {
+                                for (const block of child.querySelectorAll('.ai-thinking-block')) {
+                                    const label = block.querySelector('.ai-thinking-label')?.textContent || '';
+                                    const match = label.match(/(\d+)s/);
+                                    segments.push({ type: 'thinking', duration: match ? parseInt(match[1]) : 0 });
+                                }
+                            } else if (child.classList.contains('ai-response-text')) {
+                                segments.push({ type: 'text', content: child.innerHTML });
+                            } else if (child.classList.contains('ai-tool-row')) {
+                                segments.push({
+                                    type: 'tool',
+                                    name: child.dataset.tool || '',
+                                    label: child.querySelector('.ai-tool-row-name')?.textContent?.trim() || '',
+                                    status: child.classList.contains('completed') ? 'completed' : 'failed',
+                                    params: child.querySelector('.ai-tool-row-params')?.textContent?.trim() || '',
+                                    result: child.querySelector('.ai-tool-row-result')?.textContent?.trim() || ''
+                                });
+                            } else if (child.classList.contains('chart-inline-container')) {
+                                const chartData = child._chartData || null;
+                                if (chartData) {
+                                    // Strip non-serializable fields
+                                    const clean = { ...chartData };
+                                    delete clean._rendered;
+                                    segments.push({ type: 'chart', chartData: clean });
+                                }
+                            } else if (child.classList.contains('python-figure-wrapper')) {
+                                segments.push({ type: 'figure', placeholder: true });
+                            }
+                        }
+                        if (segments.length > 0) {
+                            messages.push({ role: 'assistant', segments, timestamp: ts });
+                        }
+                    }
+                }
+                return messages;
+            }
+
+            function generateTitle(text) {
+                if (!text) return 'Untitled';
+                // Strip common prefixes
+                let t = text.replace(/^(please|can you|could you|i want to|i need to|help me)\s+/i, '');
+                t = t.charAt(0).toUpperCase() + t.slice(1);
+                return t.length > 60 ? t.substring(0, 57) + '...' : t;
+            }
+
+            function generatePreview(messages) {
+                for (const msg of messages) {
+                    if (msg.role === 'assistant') {
+                        for (const seg of msg.segments) {
+                            if (seg.type === 'text') {
+                                const plain = seg.content.replace(/<[^>]*>/g, '').trim();
+                                return plain.length > 120 ? plain.substring(0, 117) + '...' : plain;
+                            }
+                        }
+                    }
+                }
+                return '';
+            }
+
+            async function autoSaveConversation() {
+                if (!window.currentUser) return;
+                // Don't save if streaming
+                if (sendBtn.classList.contains('ai-stop-mode')) return;
+
+                const messages = serializeConversation();
+                // Need at least 1 user + 1 assistant message
+                const hasUser = messages.some(m => m.role === 'user');
+                const hasAssistant = messages.some(m => m.role === 'assistant');
+                if (!hasUser || !hasAssistant) return;
+
+                // Size guard: trim oldest message pairs if too large
+                let serialized = JSON.stringify(messages);
+                while (serialized.length > 800000 && messages.length > 4) {
+                    messages.splice(0, 2); // Remove oldest user+assistant pair
+                    serialized = JSON.stringify(messages);
+                }
+
+                const model = document.getElementById('aiModelSelect')?.value || '';
+                const msgCount = messages.length;
+
+                try {
+                    if (!currentConversationId) {
+                        const firstUserMsg = messages.find(m => m.role === 'user');
+                        const title = generateTitle(firstUserMsg?.text || '');
+                        const preview = generatePreview(messages);
+                        const id = await window.saveConversation(null, {
+                            title, preview, messageCount: msgCount, model, messages
+                        });
+                        if (id) {
+                            currentConversationId = id;
+                            localStorage.setItem('chopchop_conversation_id', id);
+                        }
+                    } else {
+                        const preview = generatePreview(messages);
+                        await window.saveConversation(currentConversationId, {
+                            preview, messageCount: msgCount, model, messages
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Auto-save failed:', e);
+                }
+            }
+
+            function timeAgo(date) {
+                const now = new Date();
+                const diff = Math.floor((now - date) / 1000);
+                if (diff < 60) return 'just now';
+                if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+                if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+                if (diff < 172800) return 'Yesterday';
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+
+            function formatModelName(model) {
+                if (!model) return '';
+                // Shorten common model names
+                if (model.includes('claude-sonnet')) return 'Sonnet';
+                if (model.includes('claude-opus')) return 'Opus';
+                if (model.includes('claude-haiku')) return 'Haiku';
+                if (model.includes('gpt-5.2')) return 'GPT-5.2';
+                if (model.includes('gpt-5.1')) return 'GPT-5.1';
+                if (model.includes('gpt-5')) return 'GPT-5';
+                if (model.includes('gpt-4.1')) return 'GPT-4.1';
+                if (model.startsWith('o3')) return 'o3';
+                if (model.startsWith('o4')) return 'o4-mini';
+                return model;
+            }
+
+            // ── History Drawer ──
+
+            let historyDrawer = null;
+
+            function createHistoryDrawer() {
+                if (historyDrawer) return historyDrawer;
+                historyDrawer = document.createElement('div');
+                historyDrawer.id = 'aiHistoryDrawer';
+                historyDrawer.className = 'ai-history-drawer';
+                historyDrawer.innerHTML = `
+                    <div class="ai-history-header">
+                        <span class="ai-history-title">Chat History</span>
+                        <button class="ai-history-close"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="ai-history-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search conversations..." id="aiHistorySearch">
+                    </div>
+                    <div class="ai-history-list" id="aiHistoryList"></div>
+                    <div class="ai-history-empty" id="aiHistoryEmpty" style="display:none">
+                        <i class="fas fa-comments"></i>
+                        <p>No conversations yet</p>
+                    </div>
+                    <div class="ai-history-signin" id="aiHistorySignIn" style="display:none">
+                        <i class="fas fa-lock"></i>
+                        <p>Sign in with Google to save and access chat history</p>
+                    </div>
+                `;
+                // Insert inside chat panel, before messages
+                const chatPanel = document.getElementById('aiChatPanel');
+                chatPanel.appendChild(historyDrawer);
+
+                // Close button
+                historyDrawer.querySelector('.ai-history-close').addEventListener('click', closeHistoryDrawer);
+
+                // Search
+                const searchInput = historyDrawer.querySelector('#aiHistorySearch');
+                searchInput.addEventListener('input', () => {
+                    const q = searchInput.value.toLowerCase();
+                    const items = historyDrawer.querySelectorAll('.ai-history-item');
+                    items.forEach(item => {
+                        const title = item.querySelector('.ai-history-item-title')?.textContent?.toLowerCase() || '';
+                        const preview = item.querySelector('.ai-history-item-preview')?.textContent?.toLowerCase() || '';
+                        item.style.display = (title.includes(q) || preview.includes(q)) ? '' : 'none';
+                    });
+                });
+
+                return historyDrawer;
+            }
+
+            async function openHistoryDrawer() {
+                const drawer = createHistoryDrawer();
+                const list = drawer.querySelector('#aiHistoryList');
+                const empty = drawer.querySelector('#aiHistoryEmpty');
+                const signIn = drawer.querySelector('#aiHistorySignIn');
+
+                if (!window.currentUser) {
+                    list.innerHTML = '';
+                    empty.style.display = 'none';
+                    signIn.style.display = '';
+                    drawer.classList.add('open');
+                    return;
+                }
+
+                signIn.style.display = 'none';
+                list.innerHTML = '<div class="ai-history-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+                drawer.classList.add('open');
+
+                const conversations = await window.loadConversationsList();
+                list.innerHTML = '';
+
+                if (conversations.length === 0) {
+                    empty.style.display = '';
+                    return;
+                }
+                empty.style.display = 'none';
+
+                for (const conv of conversations) {
+                    const item = document.createElement('div');
+                    item.className = 'ai-history-item';
+                    if (conv.id === currentConversationId) item.classList.add('active');
+                    item.dataset.id = conv.id;
+                    item.innerHTML = `
+                        <div class="ai-history-item-top">
+                            <span class="ai-history-item-title">${escapeHtml(conv.title)}</span>
+                            <span class="ai-history-item-date">${timeAgo(conv.updatedAt)}</span>
+                        </div>
+                        <div class="ai-history-item-preview">${escapeHtml(conv.preview)}</div>
+                        <div class="ai-history-item-footer">
+                            <span class="ai-history-item-model">${escapeHtml(formatModelName(conv.model))}</span>
+                            <span class="ai-history-item-count">${conv.messageCount} msgs</span>
+                            <div class="ai-history-item-actions">
+                                <button class="ai-history-rename" title="Rename"><i class="fas fa-pen"></i></button>
+                                <button class="ai-history-delete" title="Delete"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `;
+
+                    // Click to load conversation
+                    item.addEventListener('click', async (e) => {
+                        if (e.target.closest('.ai-history-item-actions')) return;
+                        await loadAndRenderConversation(conv.id);
+                        closeHistoryDrawer();
+                    });
+
+                    // Rename
+                    item.querySelector('.ai-history-rename').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const titleEl = item.querySelector('.ai-history-item-title');
+                        const oldTitle = titleEl.textContent;
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'ai-history-rename-input';
+                        input.value = oldTitle;
+                        titleEl.replaceWith(input);
+                        input.focus();
+                        input.select();
+
+                        const save = async () => {
+                            const newTitle = input.value.trim() || oldTitle;
+                            const span = document.createElement('span');
+                            span.className = 'ai-history-item-title';
+                            span.textContent = newTitle;
+                            input.replaceWith(span);
+                            if (newTitle !== oldTitle) {
+                                await window.renameConversation(conv.id, newTitle);
+                            }
+                        };
+                        input.addEventListener('blur', save);
+                        input.addEventListener('keydown', (ev) => {
+                            if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+                            if (ev.key === 'Escape') { input.value = oldTitle; input.blur(); }
+                        });
+                    });
+
+                    // Delete
+                    item.querySelector('.ai-history-delete').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const actions = item.querySelector('.ai-history-item-actions');
+                        const origHTML = actions.innerHTML;
+                        actions.innerHTML = `
+                            <span class="ai-history-confirm-text">Delete?</span>
+                            <button class="ai-history-confirm-yes">Yes</button>
+                            <button class="ai-history-confirm-no">No</button>
+                        `;
+                        actions.querySelector('.ai-history-confirm-yes').addEventListener('click', async (ev) => {
+                            ev.stopPropagation();
+                            const ok = await window.deleteConversation(conv.id);
+                            if (ok) {
+                                item.style.transition = 'opacity 0.2s, max-height 0.3s';
+                                item.style.opacity = '0';
+                                item.style.maxHeight = '0';
+                                item.style.overflow = 'hidden';
+                                setTimeout(() => item.remove(), 300);
+                                if (conv.id === currentConversationId) {
+                                    currentConversationId = null;
+                                    localStorage.removeItem('chopchop_conversation_id');
+                                }
+                                // Check if list is now empty
+                                if (!list.querySelector('.ai-history-item')) {
+                                    empty.style.display = '';
+                                }
+                            }
+                        });
+                        actions.querySelector('.ai-history-confirm-no').addEventListener('click', (ev) => {
+                            ev.stopPropagation();
+                            actions.innerHTML = origHTML;
+                            // Re-attach event listeners on restored buttons
+                            // (skip — drawer will reload on next open)
+                        });
+                    });
+
+                    list.appendChild(item);
+                }
+            }
+
+            function closeHistoryDrawer() {
+                if (historyDrawer) historyDrawer.classList.remove('open');
+            }
+
+            async function loadAndRenderConversation(conversationId) {
+                const conv = await window.loadConversation(conversationId);
+                if (!conv || !conv.messages) return;
+
+                // Clear backend session and start fresh
+                if (window.AIAgent) await window.AIAgent.clearHistory();
+
+                currentConversationId = conversationId;
+                localStorage.setItem('chopchop_conversation_id', conversationId);
+
+                // Generate context summary for continuation
+                window._loadedConversationContext = generateContextSummary(conv.messages);
+
+                renderConversationFromHistory(conv.messages);
+            }
+
+            function generateContextSummary(messages) {
+                let summary = '';
+                for (const msg of messages) {
+                    if (msg.role === 'user') {
+                        summary += `User: ${msg.text}\n`;
+                    } else if (msg.role === 'assistant') {
+                        for (const seg of msg.segments || []) {
+                            if (seg.type === 'text') {
+                                const plain = seg.content.replace(/<[^>]*>/g, '');
+                                summary += `Assistant: ${plain}\n`;
+                            } else if (seg.type === 'tool') {
+                                summary += `[Used tool: ${seg.name} → ${seg.result || 'done'}]\n`;
+                            }
+                        }
+                    }
+                }
+                return summary.substring(0, 4000);
+            }
+
+            function renderConversationFromHistory(messages) {
+                messagesContainer.innerHTML = '';
+
+                for (const msg of messages) {
+                    if (msg.role === 'user') {
+                        addMessage('user', msg.text, msg.attachments || []);
+                    } else if (msg.role === 'assistant') {
+                        const msgEl = document.createElement('div');
+                        msgEl.className = 'ai-message assistant';
+                        msgEl.dataset.timestamp = msg.timestamp || '';
+                        msgEl.innerHTML = `
+                            <div class="ai-message-label assistant-label">
+                                <i class="fas fa-atom"></i> ChopChopMol
+                            </div>
+                            <div class="ai-message-content"></div>
+                        `;
+                        const contentEl = msgEl.querySelector('.ai-message-content');
+
+                        for (const seg of msg.segments || []) {
+                            switch (seg.type) {
+                                case 'thinking': {
+                                    const thinkEl = document.createElement('div');
+                                    thinkEl.className = 'ai-response-thinking';
+                                    thinkEl.innerHTML = `
+                                        <div class="ai-thinking-block collapsed">
+                                            <div class="ai-thinking-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                                <i class="fas fa-brain"></i>
+                                                <span class="ai-thinking-label">Thought for ${seg.duration || 0}s</span>
+                                                <i class="fas fa-chevron-down ai-thinking-chevron"></i>
+                                            </div>
+                                        </div>
+                                    `;
+                                    contentEl.appendChild(thinkEl);
+                                    break;
+                                }
+                                case 'text': {
+                                    const textEl = document.createElement('div');
+                                    textEl.className = 'ai-response-text';
+                                    textEl.innerHTML = seg.content;
+                                    contentEl.appendChild(textEl);
+                                    break;
+                                }
+                                case 'tool': {
+                                    const iconClass = toolIconMap[seg.name] || toolIconMap._default || 'fa-cog';
+                                    const toolRow = document.createElement('div');
+                                    toolRow.className = 'ai-tool-row completed';
+                                    toolRow.dataset.tool = seg.name;
+                                    toolRow.dataset.populated = 'true';
+                                    toolRow.innerHTML = `
+                                        <div class="ai-tool-row-header">
+                                            <i class="fas ${iconClass} ai-tool-icon"></i>
+                                            <span class="ai-tool-row-name">${escapeHtml(seg.label || seg.name)}</span>
+                                            <span class="ai-tool-row-status"><i class="fas fa-check"></i></span>
+                                        </div>
+                                        <div class="ai-tool-row-details" style="display:none">
+                                            <div class="ai-tool-row-params">${escapeHtml(seg.params || '')}</div>
+                                            <div class="ai-tool-row-result">${escapeHtml(seg.result || '')}</div>
+                                        </div>
+                                    `;
+                                    toolRow.querySelector('.ai-tool-row-header').addEventListener('click', () => {
+                                        const details = toolRow.querySelector('.ai-tool-row-details');
+                                        details.style.display = details.style.display === 'none' ? '' : 'none';
+                                    });
+                                    contentEl.appendChild(toolRow);
+                                    break;
+                                }
+                                case 'chart': {
+                                    if (seg.chartData && typeof renderInlineChart === 'function') {
+                                        // Will be rendered after element is in DOM — use a temp container ref
+                                        const chartPlaceholder = document.createElement('div');
+                                        chartPlaceholder.className = 'chart-history-placeholder';
+                                        chartPlaceholder.dataset.chartIndex = contentEl.children.length;
+                                        contentEl.appendChild(chartPlaceholder);
+                                        // Defer rendering until msgEl is in DOM
+                                        requestAnimationFrame(() => {
+                                            chartPlaceholder.remove();
+                                            // renderInlineChart requires contentEl in scope — call manually
+                                            try {
+                                                const data = { ...seg.chartData, _rendered: false };
+                                                const lineColor = data.lineColor || '#667eea';
+                                                const pointColor = data.pointColor || lineColor;
+                                                const highlightColor = data.highlightColor || '#f093fb';
+                                                const lineWidth = data.lineWidth ?? 2;
+                                                const basePointSize = data.pointSize ?? 3;
+                                                const curveTension = data.tension ?? 0.3;
+                                                const showGrid = data.showGrid ?? true;
+                                                const showLegend = data.showLegend ?? false;
+                                                const showPoints = data.showPoints ?? true;
+                                                const fontSize = data.fontSize ?? 11;
+                                                const gridColor = showGrid ? 'rgba(255,255,255,0.05)' : 'transparent';
+                                                const axisLabelColor = 'rgba(180,180,210,0.6)';
+                                                const tickColor = 'rgba(180,180,210,0.4)';
+                                                const borderColor = 'rgba(255,255,255,0.07)';
+
+                                                const chartContainer = document.createElement('div');
+                                                chartContainer.className = 'chart-inline-container';
+                                                const chartHeader = document.createElement('div');
+                                                chartHeader.className = 'chart-inline-header';
+                                                chartHeader.innerHTML = `<span class="chart-inline-title">${data.title || ''}</span>`;
+                                                chartContainer.appendChild(chartHeader);
+
+                                                const canvasWrap = document.createElement('div');
+                                                canvasWrap.className = 'chart-canvas-wrap';
+                                                const canvas = document.createElement('canvas');
+                                                canvasWrap.appendChild(canvas);
+                                                chartContainer.appendChild(canvasWrap);
+                                                contentEl.appendChild(chartContainer);
+
+                                                const multiColors = ['#818cf8', '#34d399', '#f472b6', '#fb923c', '#60a5fa'];
+                                                let datasets;
+                                                if (data.datasets?.length) {
+                                                    datasets = data.datasets.map((ds, idx) => {
+                                                        const dsColor = ds.color || multiColors[idx % multiColors.length];
+                                                        return {
+                                                            label: ds.label || `Series ${idx + 1}`,
+                                                            data: ds.y,
+                                                            borderColor: dsColor,
+                                                            borderWidth: lineWidth,
+                                                            backgroundColor: showPoints ? dsColor : 'transparent',
+                                                            pointRadius: showPoints ? basePointSize : 0,
+                                                            tension: curveTension,
+                                                            showLine: true, fill: false
+                                                        };
+                                                    });
+                                                } else {
+                                                    datasets = [{
+                                                        label: data.yLabel || 'Energy (eV)',
+                                                        data: data.y,
+                                                        borderColor: lineColor,
+                                                        borderWidth: lineWidth,
+                                                        backgroundColor: showPoints ? pointColor : 'transparent',
+                                                        pointRadius: showPoints ? basePointSize : 0,
+                                                        tension: curveTension, fill: false
+                                                    }];
+                                                }
+
+                                                new Chart(canvas, {
+                                                    type: 'line',
+                                                    data: { labels: data.x, datasets },
+                                                    options: {
+                                                        responsive: true,
+                                                        maintainAspectRatio: false,
+                                                        plugins: {
+                                                            legend: { display: showLegend, labels: { color: axisLabelColor, font: { size: fontSize } } },
+                                                            tooltip: { backgroundColor: 'rgba(15,15,35,0.9)', titleColor: '#e2e8f0', bodyColor: '#cbd5e1' }
+                                                        },
+                                                        scales: {
+                                                            x: { title: { display: !!data.xLabel, text: data.xLabel || '', color: axisLabelColor, font: { size: fontSize } }, ticks: { color: tickColor, font: { size: fontSize - 1 } }, grid: { color: gridColor }, border: { color: borderColor } },
+                                                            y: { title: { display: !!data.yLabel, text: data.yLabel || '', color: axisLabelColor, font: { size: fontSize } }, ticks: { color: tickColor, font: { size: fontSize - 1 } }, grid: { color: gridColor }, border: { color: borderColor } }
+                                                        }
+                                                    }
+                                                });
+                                            } catch (chartErr) {
+                                                console.warn('Failed to render saved chart:', chartErr);
+                                            }
+                                        });
+                                    }
+                                    break;
+                                }
+                                case 'figure': {
+                                    const placeholder = document.createElement('div');
+                                    placeholder.className = 'figure-placeholder';
+                                    placeholder.innerHTML = '<i class="fas fa-image"></i> Figure (not saved in history)';
+                                    contentEl.appendChild(placeholder);
+                                    break;
+                                }
+                            }
+                        }
+
+                        messagesContainer.appendChild(msgEl);
+                    }
+                }
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            // Reference to toolIconMap for renderConversationFromHistory
+            // (defined inside handleSend scope, need a copy here)
+            const toolIconMap = {
+                select_atoms: 'fa-mouse-pointer', select_atoms_by_element: 'fa-mouse-pointer',
+                select_all_atoms: 'fa-object-group', select_connected: 'fa-project-diagram',
+                clear_selection: 'fa-times-circle', isolate_selection: 'fa-crosshairs',
+                load_molecule: 'fa-flask', add_atom: 'fa-plus-circle',
+                remove_atoms: 'fa-trash', change_atom_element: 'fa-exchange-alt',
+                transform_atoms: 'fa-arrows-alt', set_bond_distance: 'fa-ruler',
+                set_angle: 'fa-drafting-compass', set_dihedral_angle: 'fa-drafting-compass',
+                measure_distance: 'fa-ruler', measure_angle: 'fa-drafting-compass',
+                measure_dihedral: 'fa-drafting-compass', create_fragment: 'fa-puzzle-piece',
+                delete_atoms: 'fa-trash', split_molecule: 'fa-cut',
+                add_hydrogens: 'fa-plus', save_file: 'fa-save', save_image: 'fa-camera',
+                toggle_labels: 'fa-tag', toggle_force_arrows: 'fa-arrows-alt',
+                toggle_charge_visualization: 'fa-bolt', toggle_ribbon: 'fa-ribbon',
+                calculate_energy: 'fa-bolt', calculate_all_energies: 'fa-bolt',
+                calculate_dft_energy: 'fa-atom', calculate_all_dft_energies: 'fa-atom',
+                get_cached_energies: 'fa-database', optimize_geometry: 'fa-compress-arrows-alt',
+                create_chart: 'fa-chart-line', read_file: 'fa-file-alt',
+                list_folder_files: 'fa-folder-open', create_file: 'fa-file-medical',
+                edit_file: 'fa-file-code', rotational_scan: 'fa-sync',
+                translation_scan: 'fa-arrows-alt-h', angle_scan: 'fa-drafting-compass',
+                run_md: 'fa-running', web_search: 'fa-search', set_style: 'fa-palette',
+                show_all_bond_lengths: 'fa-ruler-combined', remove_bond_label: 'fa-eraser',
+                clear_measurements: 'fa-eraser', reset_camera: 'fa-video',
+                zoom_to_fit: 'fa-expand', rotate_camera: 'fa-redo',
+                get_molecule_info: 'fa-info-circle', get_atom_info: 'fa-atom',
+                get_bonded_atoms: 'fa-project-diagram', define_axis: 'fa-ruler-vertical',
+                remove_axis: 'fa-times', undo: 'fa-undo', redo: 'fa-redo',
+                execute_python: 'fa-terminal', finetune_model: 'fa-graduation-cap',
+                list_finetuned_models: 'fa-list', _default: 'fa-cog'
+            };
+
+            // History button handler
+            historyBtn.addEventListener('click', () => {
+                if (historyDrawer?.classList.contains('open')) {
+                    closeHistoryDrawer();
+                } else {
+                    openHistoryDrawer();
+                }
+            });
+
+            // Auto-load last conversation on sign-in
+            window.addEventListener('authStateChanged', async (e) => {
+                if (e.detail?.isSignedIn) {
+                    const savedId = localStorage.getItem('chopchop_conversation_id');
+                    if (savedId && !currentConversationId) {
+                        // Only auto-load if chat is empty (welcome screen showing)
+                        const hasWelcome = messagesContainer.querySelector('.ai-welcome');
+                        if (hasWelcome) {
+                            await loadAndRenderConversation(savedId);
+                        }
+                    }
+                } else {
+                    // Signed out
+                    currentConversationId = null;
+                    clearTimeout(autoSaveTimer);
+                    localStorage.removeItem('chopchop_conversation_id');
+                    window._loadedConversationContext = null;
+                }
+            });
 
             // Check if API key exists on load
             if (window.AIAgent?.hasApiKey()) {

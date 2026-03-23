@@ -2492,6 +2492,12 @@ async function sendToAI(userMessage, onChunk) {
                 thinkingBudget: window._thinkingBudget ?? 4096
             };
 
+            // Inject prior conversation context when continuing a saved conversation
+            if (i === 0 && window._loadedConversationContext) {
+                payload.priorContext = window._loadedConversationContext;
+                window._loadedConversationContext = null;
+            }
+
             if (assistantMessage) {
                 payload.toolResults = {
                     assistantMessage,
@@ -2770,6 +2776,8 @@ window.AIAgent = {
         // Generate NEW session ID so it's a fresh conversation
         AI_CONFIG.sessionId = crypto.randomUUID();
         localStorage.setItem('chopchop_ai_session', AI_CONFIG.sessionId);
+        // Reset conversation history tracking
+        window._loadedConversationContext = null;
     },
     // Keep these for backwards compatibility but they're not needed anymore
     setApiKey: () => console.log('API key is now stored on the backend'),
