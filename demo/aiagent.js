@@ -1239,6 +1239,10 @@ const FUNCTIONS = {
 
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
             const includeForces = params.includeForces !== false;
+            const jobId = crypto.randomUUID();
+            window.dispatchEvent(new CustomEvent('mace-job-started', {
+                detail: { jobId, toolName: 'run_md', atoms }
+            }));
 
             try {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/md`, {
@@ -1252,7 +1256,8 @@ const FUNCTIONS = {
                         timestep: params.timestep || 1.0,
                         friction: params.friction || 0.01,
                         saveInterval: params.saveInterval || 10,
-                        includeForces
+                        includeForces,
+                        jobId
                     })
                 });
                 const result = await res.json();
@@ -1319,6 +1324,7 @@ const FUNCTIONS = {
                     await saveExtxyzFile(`mace_md_${generateTimestamp()}.extxyz`, extxyz);
                 }
 
+                window.dispatchEvent(new CustomEvent('mace-job-done', { detail: { jobId } }));
                 return {
                     success: true,
                     message: `MD completed: ${result.steps} steps at ${result.temperature_K}K. Generated ${result.frameCount} frames. Final E = ${result.energy_eV.toFixed(4)} eV`,
@@ -1878,6 +1884,10 @@ const FUNCTIONS = {
 
             const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
             const includeForces = params.includeForces !== false;
+            const jobId = crypto.randomUUID();
+            window.dispatchEvent(new CustomEvent('mace-job-started', {
+                detail: { jobId, toolName: 'optimize_geometry', atoms }
+            }));
 
             try {
                 const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/optimize`, {
@@ -1888,7 +1898,8 @@ const FUNCTIONS = {
                         model: params.model || AI_CONFIG.maceModel || 'medium',
                         fmax: params.fmax || 0.05,
                         maxSteps: params.maxSteps || 100,
-                        includeForces
+                        includeForces,
+                        jobId
                     })
                 });
                 const result = await res.json();
@@ -1951,6 +1962,7 @@ const FUNCTIONS = {
                     await saveExtxyzFile(`mace_opt_${generateTimestamp()}.extxyz`, extxyz);
                 }
 
+                window.dispatchEvent(new CustomEvent('mace-job-done', { detail: { jobId } }));
                 return {
                     success: true,
                     message: `Optimization ${result.converged ? 'converged' : 'completed'} in ${result.steps} steps. Final energy: ${result.energy_eV.toFixed(4)} eV.`,
@@ -1995,9 +2007,13 @@ const FUNCTIONS = {
             }
 
             const allFrames = frames.map(f => f.atomData);
+            const jobId = crypto.randomUUID();
+            window.dispatchEvent(new CustomEvent('mace-job-started', {
+                detail: { jobId, toolName: 'calculate_all_energies' }
+            }));
 
             try {
-                const result = await callMaceEnergyBatch(AI_CONFIG.backendUrl, allFrames, params.model || AI_CONFIG.maceModel || 'mace-mp-0a', includeForces);
+                const result = await callMaceEnergyBatch(AI_CONFIG.backendUrl, allFrames, params.model || AI_CONFIG.maceModel || 'mace-mp-0a', includeForces, jobId);
 
                 if (result.success) window.lastMaceResults = result;
 
@@ -2023,6 +2039,7 @@ const FUNCTIONS = {
                     await saveExtxyzFile(`mace_batch_${generateTimestamp()}.extxyz`, extxyz);
                 }
 
+                window.dispatchEvent(new CustomEvent('mace-job-done', { detail: { jobId } }));
                 return result;
             } catch (e) {
                 return { success: false, message: e.message };
@@ -2784,7 +2801,8 @@ window.AIAgent = {
     getApiKey: () => '',
     hasApiKey: () => true, // Always true since backend handles it
     setModel: (m) => { AI_CONFIG.model = m; },
-    getModel: () => AI_CONFIG.model
+    getModel: () => AI_CONFIG.model,
+    getBackendUrl: () => AI_CONFIG.backendUrl
 };
 
 // Warmup cache on page load to make first real request instant

@@ -3068,6 +3068,11 @@
                                 messagesContainer.appendChild(msgEl);
                             }
 
+                            // Incremental save: save conversation so far when a tool starts
+                            // (captures state before long-running operations like MACE MD, DFT)
+                            clearTimeout(autoSaveTimer);
+                            autoSaveTimer = setTimeout(() => autoSaveConversation(), 1000);
+
                             // Mark previous active tool as completed
                             if (activeToolRow) {
                                 activeToolRow.classList.remove('active');
@@ -3465,7 +3470,9 @@
                                     type: 'tool',
                                     name: child.dataset.tool || '',
                                     label: child.querySelector('.ai-tool-row-name')?.textContent?.trim() || '',
-                                    status: child.classList.contains('completed') ? 'completed' : 'failed',
+                                    status: child.classList.contains('completed') ? 'completed'
+                                         : child.classList.contains('active') ? 'interrupted'
+                                         : 'failed',
                                     params: child.querySelector('.ai-tool-row-params')?.textContent?.trim() || '',
                                     result: child.querySelector('.ai-tool-row-result')?.textContent?.trim() || ''
                                 });
@@ -3513,9 +3520,6 @@
 
             async function autoSaveConversation() {
                 if (!window.currentUser) return;
-                // Don't save if streaming
-                if (sendBtn.classList.contains('ai-stop-mode')) return;
-
                 const messages = serializeConversation();
                 // Need at least 1 user + 1 assistant message
                 const hasUser = messages.some(m => m.role === 'user');
@@ -3529,6 +3533,20 @@
                     serialized = JSON.stringify(messages);
                 }
 
+                // Capture current molecule state as XYZ string
+                let moleculeXYZ = null;
+                let moleculeFileName = null;
+                if (window.main?.data?.atomData?.length) {
+                    try {
+                        moleculeXYZ = window.exportToXYZ(window.fileName || 'molecule');
+                        moleculeFileName = window.fileName || null;
+                        // Skip very large molecules (> 200KB XYZ)
+                        if (moleculeXYZ && moleculeXYZ.length > 200000) moleculeXYZ = null;
+                    } catch (e) {
+                        console.warn('Failed to serialize molecule:', e);
+                    }
+                }
+
                 const model = document.getElementById('aiModelSelect')?.value || '';
                 const msgCount = messages.length;
 
@@ -3538,7 +3556,8 @@
                         const title = generateTitle(firstUserMsg?.text || '');
                         const preview = generatePreview(messages);
                         const id = await window.saveConversation(null, {
-                            title, preview, messageCount: msgCount, model, messages
+                            title, preview, messageCount: msgCount, model, messages,
+                            moleculeXYZ, moleculeFileName
                         });
                         if (id) {
                             currentConversationId = id;
@@ -3547,7 +3566,8 @@
                     } else {
                         const preview = generatePreview(messages);
                         await window.saveConversation(currentConversationId, {
-                            preview, messageCount: msgCount, model, messages
+                            preview, messageCount: msgCount, model, messages,
+                            moleculeXYZ, moleculeFileName
                         });
                     }
                 } catch (e) {
@@ -3774,6 +3794,35 @@
                 window._loadedConversationContext = generateContextSummary(conv.messages);
 
                 renderConversationFromHistory(conv.messages);
+
+                // Restore molecule if saved with conversation
+                if (conv.moleculeXYZ && window.main?.loader) {
+                    try {
+                        const parsedData = window.main.loader.parseXYZ(conv.moleculeXYZ);
+                        if (parsedData && parsedData.numAtoms > 0) {
+                            // Clear frames/slider since we only restore current frame
+                            window.xyzFrames = null;
+                            window.frameEnergies = null;
+                            const frameSliderContainer = document.getElementById('frameSliderContainer');
+                            if (frameSliderContainer) frameSliderContainer.style.display = 'none';
+
+                            window.main.newMolecule(
+                                parsedData,
+                                window.main.setNewMode(parsedData.numAtoms <= 2000)
+                            );
+                            window.main.zoomCameraToFitMolecule();
+
+                            if (conv.moleculeFileName) {
+                                window.fileName = conv.moleculeFileName;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Failed to restore molecule:', e);
+                    }
+                }
+
+                // Check for pending background jobs (MACE operations that may have completed)
+                checkPendingJobs(conv);
             }
 
             function generateContextSummary(messages) {
@@ -3840,14 +3889,30 @@
                                 case 'tool': {
                                     const iconClass = toolIconMap[seg.name] || toolIconMap._default || 'fa-cog';
                                     const toolRow = document.createElement('div');
-                                    toolRow.className = 'ai-tool-row completed';
+
+                                    let statusClass, statusIcon, labelSuffix;
+                                    if (seg.status === 'interrupted') {
+                                        statusClass = 'interrupted';
+                                        statusIcon = 'fa-exclamation-circle';
+                                        labelSuffix = ' (interrupted)';
+                                    } else if (seg.status === 'failed') {
+                                        statusClass = 'failed';
+                                        statusIcon = 'fa-times';
+                                        labelSuffix = ' (failed)';
+                                    } else {
+                                        statusClass = 'completed';
+                                        statusIcon = 'fa-check';
+                                        labelSuffix = '';
+                                    }
+
+                                    toolRow.className = `ai-tool-row ${statusClass}`;
                                     toolRow.dataset.tool = seg.name;
                                     toolRow.dataset.populated = 'true';
                                     toolRow.innerHTML = `
                                         <div class="ai-tool-row-header">
                                             <i class="fas ${iconClass} ai-tool-icon"></i>
-                                            <span class="ai-tool-row-name">${escapeHtml(seg.label || seg.name)}</span>
-                                            <span class="ai-tool-row-status"><i class="fas fa-check"></i></span>
+                                            <span class="ai-tool-row-name">${escapeHtml(seg.label || seg.name)}${labelSuffix}</span>
+                                            <span class="ai-tool-row-status"><i class="fas ${statusIcon}"></i></span>
                                         </div>
                                         <div class="ai-tool-row-details" style="display:none">
                                             <div class="ai-tool-row-params">${escapeHtml(seg.params || '')}</div>
@@ -3967,6 +4032,25 @@
                         messagesContainer.appendChild(msgEl);
                     }
                 }
+                // Show interruption banner if last message had interrupted tools
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg?.role === 'assistant') {
+                    const hasInterrupted = (lastMsg.segments || []).some(
+                        s => s.type === 'tool' && s.status === 'interrupted'
+                    );
+                    if (hasInterrupted) {
+                        const notice = document.createElement('div');
+                        notice.className = 'ai-message system-notice';
+                        notice.innerHTML = `
+                            <div class="ai-interruption-notice">
+                                <i class="fas fa-info-circle"></i>
+                                <span>This conversation was interrupted. Some operations may not have completed. Send a message to continue.</span>
+                            </div>
+                        `;
+                        messagesContainer.appendChild(notice);
+                    }
+                }
+
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
 
@@ -4032,6 +4116,219 @@
                     window._loadedConversationContext = null;
                 }
             });
+
+            // Save conversation when user leaves or switches tabs (catches mid-operation exits)
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden' && window.currentUser && currentConversationId) {
+                    autoSaveConversation();
+                }
+            });
+
+            window.addEventListener('beforeunload', () => {
+                if (window.currentUser && currentConversationId) {
+                    // Attempt a final save — autoSaveConversation is async so it may not complete,
+                    // but visibilitychange (above) usually fires first and has better reliability
+                    autoSaveConversation();
+                }
+            });
+
+            // ── Background Job Tracking ──
+            // When a MACE operation starts, save its jobId to Firestore so we can retrieve results on return
+            let pendingJobs = []; // [{jobId, toolName, atoms, timestamp}]
+
+            window.addEventListener('mace-job-started', (e) => {
+                const { jobId, toolName, atoms } = e.detail;
+                pendingJobs.push({ jobId, toolName, atoms, timestamp: Date.now() });
+                // Save immediately so it persists if tab closes
+                if (window.currentUser && currentConversationId) {
+                    window.saveConversation(currentConversationId, {
+                        pendingJobs: pendingJobs.map(j => ({ jobId: j.jobId, toolName: j.toolName, timestamp: j.timestamp }))
+                    });
+                }
+            });
+
+            window.addEventListener('mace-job-done', (e) => {
+                const { jobId } = e.detail;
+                pendingJobs = pendingJobs.filter(j => j.jobId !== jobId);
+                // Clear from Firestore
+                if (window.currentUser && currentConversationId) {
+                    window.saveConversation(currentConversationId, { pendingJobs });
+                }
+            });
+
+            // Process completed background jobs when restoring a conversation
+            async function checkPendingJobs(conv) {
+                if (!conv.pendingJobs?.length) return;
+
+                const backendUrl = window.AIAgent?.getBackendUrl?.() ||
+                    (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+                        ? 'http://127.0.0.1:10000' : 'https://chopchopmol-ai-backend.onrender.com');
+
+                for (const job of conv.pendingJobs) {
+                    try {
+                        const res = await fetch(`${backendUrl}/ai/jobs/${job.jobId}`);
+                        if (!res.ok) continue;
+                        const data = await res.json();
+
+                        if (data.status === 'completed' && data.result) {
+                            processCompletedJob(job.toolName, data.result, conv);
+                            // Update the tool row in the UI
+                            updateToolRowStatus(job.toolName, 'completed',
+                                `Completed in background: ${data.result.energy_eV?.toFixed(4) || ''} eV`);
+                            // Clean up job on backend
+                            fetch(`${backendUrl}/ai/jobs/${job.jobId}`, { method: 'DELETE' });
+                        } else if (data.status === 'running') {
+                            // Still running — start polling
+                            pollForJob(job, backendUrl, conv);
+                            return; // Don't clear pendingJobs yet
+                        }
+                        // If not_found or error, the job expired — leave tool row as interrupted
+                    } catch (e) {
+                        console.warn('Failed to check job:', job.jobId, e);
+                    }
+                }
+
+                // All jobs resolved — clear pendingJobs
+                if (currentConversationId) {
+                    window.saveConversation(currentConversationId, { pendingJobs: [] });
+                }
+                pendingJobs = [];
+            }
+
+            async function pollForJob(job, backendUrl, conv) {
+                // Update tool row to show it's still computing
+                updateToolRowStatus(job.toolName, 'active', 'Still computing...');
+
+                const poll = async () => {
+                    try {
+                        const res = await fetch(`${backendUrl}/ai/jobs/${job.jobId}`);
+                        if (!res.ok) return;
+                        const data = await res.json();
+
+                        if (data.status === 'completed' && data.result) {
+                            processCompletedJob(job.toolName, data.result, conv);
+                            updateToolRowStatus(job.toolName, 'completed',
+                                `Completed: ${data.result.energy_eV?.toFixed(4) || data.result.frameCount || ''}`);
+                            fetch(`${backendUrl}/ai/jobs/${job.jobId}`, { method: 'DELETE' });
+                            pendingJobs = pendingJobs.filter(j => j.jobId !== job.jobId);
+                            if (currentConversationId) {
+                                window.saveConversation(currentConversationId, { pendingJobs: [] });
+                            }
+                            // Trigger auto-save with updated molecule state
+                            clearTimeout(autoSaveTimer);
+                            autoSaveTimer = setTimeout(() => autoSaveConversation(), 2000);
+                        } else if (data.status === 'running') {
+                            setTimeout(poll, 3000); // Poll every 3 seconds
+                        }
+                    } catch (e) {
+                        console.warn('Poll failed:', e);
+                    }
+                };
+                setTimeout(poll, 3000);
+            }
+
+            function updateToolRowStatus(toolName, status, resultText) {
+                const rows = messagesContainer.querySelectorAll(`.ai-tool-row[data-tool="${toolName}"]`);
+                const row = rows[rows.length - 1]; // Last matching row
+                if (!row) return;
+
+                row.className = `ai-tool-row ${status}`;
+                const statusEl = row.querySelector('.ai-tool-row-status');
+                const nameEl = row.querySelector('.ai-tool-row-name');
+                if (status === 'completed') {
+                    if (statusEl) statusEl.innerHTML = '<i class="fas fa-check"></i>';
+                    if (nameEl) nameEl.textContent = nameEl.textContent.replace(' (interrupted)', '');
+                } else if (status === 'active') {
+                    if (statusEl) statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    if (nameEl) nameEl.textContent = nameEl.textContent.replace(' (interrupted)', ' (computing...)');
+                }
+                if (resultText) {
+                    const resultEl = row.querySelector('.ai-tool-row-result');
+                    if (resultEl) resultEl.textContent = resultText;
+                }
+
+                // Remove interruption notice
+                const notice = messagesContainer.querySelector('.system-notice');
+                if (notice && status === 'completed') notice.remove();
+            }
+
+            function processCompletedJob(toolName, result, conv) {
+                if (!result.success && result.success !== undefined) return;
+                const molecule = window.main?.molecule;
+
+                if (toolName === 'run_md' && result.trajectory?.length > 0) {
+                    // Need element types from the saved molecule
+                    const elements = window.main?.data?.atomData?.map(a => a.element) || [];
+                    const parsedFrames = result.trajectory.map((frame) => {
+                        const atomData = frame.positions.map((pos, i) => {
+                            const atom = { element: elements[i] || 'C', x: pos[0], y: pos[1], z: pos[2] };
+                            if (frame.forces?.[i]) {
+                                atom.fx = frame.forces[i][0]; atom.fy = frame.forces[i][1]; atom.fz = frame.forces[i][2];
+                            }
+                            return atom;
+                        });
+                        return { atomData, numAtoms: atomData.length, energy: frame.energy_eV,
+                            comment: `step=${frame.step} T=${frame.temperature_K?.toFixed(1)}K E=${frame.total_eV?.toFixed(4)}eV` };
+                    });
+                    window.xyzFrames = parsedFrames;
+                    window.frameEnergies = result.trajectory.map(f => f.energy_eV);
+                    window.lastMaceResults = {
+                        frameCount: result.trajectory.length,
+                        energies: result.trajectory.map((f, i) => ({
+                            frame: i, step: f.step, energy_eV: f.energy_eV,
+                            kinetic_eV: f.kinetic_eV, total_eV: f.total_eV, temperature_K: f.temperature_K
+                        }))
+                    };
+                    showFrameSlider(parsedFrames);
+                    if (molecule) molecule.animateToFrame(parsedFrames[parsedFrames.length - 1], 500);
+
+                } else if (toolName === 'optimize_geometry' && result.trajectory?.length > 0) {
+                    const elements = window.main?.data?.atomData?.map(a => a.element) || [];
+                    const parsedFrames = result.trajectory.map((frame, idx) => {
+                        const atomData = frame.positions.map((pos, i) => {
+                            const atom = { element: elements[i] || 'C', x: pos[0], y: pos[1], z: pos[2] };
+                            if (frame.forces?.[i]) {
+                                atom.fx = frame.forces[i][0]; atom.fy = frame.forces[i][1]; atom.fz = frame.forces[i][2];
+                            }
+                            return atom;
+                        });
+                        return { atomData, numAtoms: atomData.length, energy: frame.energy_eV,
+                            comment: `step=${idx} energy=${frame.energy_eV?.toFixed(4)}eV` };
+                    });
+                    window.xyzFrames = parsedFrames;
+                    window.frameEnergies = result.trajectory.map(f => f.energy_eV);
+                    window.lastMaceResults = {
+                        frameCount: result.trajectory.length,
+                        energies: result.trajectory.map((f, i) => ({
+                            frame: i, energy_eV: f.energy_eV, max_force_eV_A: f.max_force
+                        }))
+                    };
+                    showFrameSlider(parsedFrames);
+                    if (molecule) molecule.animateToFrame(parsedFrames[parsedFrames.length - 1], 500);
+
+                } else if (toolName === 'calculate_all_energies' && result.energies) {
+                    window.lastMaceResults = result;
+                    window.frameEnergies = result.energies.map(e => e.energy_eV);
+                    result.energies.forEach((e, i) => {
+                        if (window.xyzFrames?.[i]) window.xyzFrames[i].energy = e.energy_eV;
+                    });
+                }
+
+                // Trigger auto-save with updated state
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(() => autoSaveConversation(), 2000);
+            }
+
+            function showFrameSlider(parsedFrames) {
+                const frameSliderContainer = document.getElementById('frameSliderContainer');
+                if (frameSliderContainer) {
+                    frameSliderContainer.style.display = 'flex';
+                    const slider = document.getElementById('frameSlider');
+                    const label = document.getElementById('frameLabel');
+                    if (slider) { slider.max = parsedFrames.length - 1; slider.value = parsedFrames.length - 1; }
+                    if (label) label.textContent = `Frame ${parsedFrames.length} / ${parsedFrames.length}`;
+                }
+            }
 
             // Check if API key exists on load
             if (window.AIAgent?.hasApiKey()) {

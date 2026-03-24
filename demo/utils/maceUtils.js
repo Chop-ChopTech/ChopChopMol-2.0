@@ -124,8 +124,10 @@ export async function callMaceEnergy(backendUrl, atoms, model, includeForces = f
  * @param {boolean} includeForces - Whether to include forces
  * @returns {Promise<Object>} API response
  */
-export async function callMaceEnergyBatch(backendUrl, frames, model, includeForces = false) {
-    return postJson(`${backendUrl}/ai/mace/energy-batch`, { frames, model, includeForces }, {}, 120000);
+export async function callMaceEnergyBatch(backendUrl, frames, model, includeForces = false, jobId = null) {
+    const body = { frames, model, includeForces };
+    if (jobId) body.jobId = jobId;
+    return postJson(`${backendUrl}/ai/mace/energy-batch`, body, {}, 120000);
 }
 
 /**
@@ -137,8 +139,10 @@ export async function callMaceEnergyBatch(backendUrl, frames, model, includeForc
  * @returns {Promise<Object>} API response
  */
 export async function callMaceOptimize(backendUrl, atoms, model, options = {}) {
-    const { fmax = 0.05, maxSteps = 100, includeForces = false } = options;
-    return postJson(`${backendUrl}/ai/mace/optimize`, { atoms, model, fmax, maxSteps, includeForces }, {}, 120000);
+    const { fmax = 0.05, maxSteps = 100, includeForces = false, jobId = null } = options;
+    const body = { atoms, model, fmax, maxSteps, includeForces };
+    if (jobId) body.jobId = jobId;
+    return postJson(`${backendUrl}/ai/mace/optimize`, body, {}, 120000);
 }
 
 /**
@@ -154,9 +158,12 @@ export async function callMaceMD(backendUrl, atoms, model, options = {}) {
         temperature_K = 300,
         timestep_fs = 1.0,
         steps = 100,
-        includeForces = false
+        includeForces = false,
+        jobId = null
     } = options;
-    return postJson(`${backendUrl}/ai/mace/md`, { atoms, model, temperature_K, timestep_fs, steps, includeForces }, {}, 120000);
+    const body = { atoms, model, temperature_K, timestep_fs, steps, includeForces };
+    if (jobId) body.jobId = jobId;
+    return postJson(`${backendUrl}/ai/mace/md`, body, {}, 120000);
 }
 
 /**
