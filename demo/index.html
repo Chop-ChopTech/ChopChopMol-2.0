@@ -3555,9 +3555,11 @@
                         const firstUserMsg = messages.find(m => m.role === 'user');
                         const title = generateTitle(firstUserMsg?.text || '');
                         const preview = generatePreview(messages);
+                        const pj = pendingJobs.map(j => ({ jobId: j.jobId, toolName: j.toolName, timestamp: j.timestamp }));
                         const id = await window.saveConversation(null, {
                             title, preview, messageCount: msgCount, model, messages,
-                            moleculeXYZ, moleculeFileName
+                            moleculeXYZ, moleculeFileName,
+                            ...(pj.length ? { pendingJobs: pj } : {})
                         });
                         if (id) {
                             currentConversationId = id;
@@ -3565,9 +3567,11 @@
                         }
                     } else {
                         const preview = generatePreview(messages);
+                        const pj2 = pendingJobs.map(j => ({ jobId: j.jobId, toolName: j.toolName, timestamp: j.timestamp }));
                         await window.saveConversation(currentConversationId, {
                             preview, messageCount: msgCount, model, messages,
-                            moleculeXYZ, moleculeFileName
+                            moleculeXYZ, moleculeFileName,
+                            ...(pj2.length ? { pendingJobs: pj2 } : {})
                         });
                     }
                 } catch (e) {
@@ -3796,28 +3800,40 @@
                 renderConversationFromHistory(conv.messages);
 
                 // Restore molecule if saved with conversation
-                if (conv.moleculeXYZ && window.main?.loader) {
-                    try {
-                        const parsedData = window.main.loader.parseXYZ(conv.moleculeXYZ);
-                        if (parsedData && parsedData.numAtoms > 0) {
-                            // Clear frames/slider since we only restore current frame
-                            window.xyzFrames = null;
-                            window.frameEnergies = null;
-                            const frameSliderContainer = document.getElementById('frameSliderContainer');
-                            if (frameSliderContainer) frameSliderContainer.style.display = 'none';
+                if (conv.moleculeXYZ) {
+                    const restoreMol = () => {
+                        if (!window.main?.loader) return false;
+                        try {
+                            const parsedData = window.main.loader.parseXYZ(conv.moleculeXYZ);
+                            if (parsedData && parsedData.numAtoms > 0) {
+                                window.xyzFrames = null;
+                                window.frameEnergies = null;
+                                const frameSliderContainer = document.getElementById('frameSliderContainer');
+                                if (frameSliderContainer) frameSliderContainer.style.display = 'none';
 
-                            window.main.newMolecule(
-                                parsedData,
-                                window.main.setNewMode(parsedData.numAtoms <= 2000)
-                            );
-                            window.main.zoomCameraToFitMolecule();
+                                window.main.newMolecule(
+                                    parsedData,
+                                    window.main.setNewMode(parsedData.numAtoms <= 2000)
+                                );
+                                window.main.zoomCameraToFitMolecule();
 
-                            if (conv.moleculeFileName) {
-                                window.fileName = conv.moleculeFileName;
+                                if (conv.moleculeFileName) {
+                                    window.fileName = conv.moleculeFileName;
+                                }
                             }
+                            return true;
+                        } catch (e) {
+                            console.warn('Failed to restore molecule:', e);
+                            return true; // Don't retry on parse errors
                         }
-                    } catch (e) {
-                        console.warn('Failed to restore molecule:', e);
+                    };
+                    // window.main may not be ready yet on page load — retry until it is
+                    if (!restoreMol()) {
+                        let attempts = 0;
+                        const retry = setInterval(() => {
+                            attempts++;
+                            if (restoreMol() || attempts > 20) clearInterval(retry);
+                        }, 250);
                     }
                 }
 
@@ -4032,25 +4048,6 @@
                         messagesContainer.appendChild(msgEl);
                     }
                 }
-                // Show interruption banner if last message had interrupted tools
-                const lastMsg = messages[messages.length - 1];
-                if (lastMsg?.role === 'assistant') {
-                    const hasInterrupted = (lastMsg.segments || []).some(
-                        s => s.type === 'tool' && s.status === 'interrupted'
-                    );
-                    if (hasInterrupted) {
-                        const notice = document.createElement('div');
-                        notice.className = 'ai-message system-notice';
-                        notice.innerHTML = `
-                            <div class="ai-interruption-notice">
-                                <i class="fas fa-info-circle"></i>
-                                <span>This conversation was interrupted. Some operations may not have completed. Send a message to continue.</span>
-                            </div>
-                        `;
-                        messagesContainer.appendChild(notice);
-                    }
-                }
-
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
 
@@ -4134,23 +4131,37 @@
 
             // ── Background Job Tracking ──
             // When a MACE operation starts, save its jobId to Firestore so we can retrieve results on return
-            let pendingJobs = []; // [{jobId, toolName, atoms, timestamp}]
+            let pendingJobs = []; // [{jobId, toolName, timestamp}]
 
-            window.addEventListener('mace-job-started', (e) => {
-                const { jobId, toolName, atoms } = e.detail;
-                pendingJobs.push({ jobId, toolName, atoms, timestamp: Date.now() });
-                // Save immediately so it persists if tab closes
-                if (window.currentUser && currentConversationId) {
-                    window.saveConversation(currentConversationId, {
+            function getBackendUrl() {
+                return window.AIAgent?.getBackendUrl?.() ||
+                    (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+                        ? 'http://127.0.0.1:10000' : 'https://chopchopmol-ai-backend.onrender.com');
+            }
+
+            window.addEventListener('mace-job-started', async (e) => {
+                const { jobId, toolName } = e.detail;
+                pendingJobs.push({ jobId, toolName, timestamp: Date.now() });
+
+                if (!window.currentUser) return;
+
+                // Force-create conversation if it doesn't exist yet (first message)
+                if (!currentConversationId) {
+                    await autoSaveConversation();
+                }
+
+                // Now save pendingJobs
+                if (currentConversationId) {
+                    await window.saveConversation(currentConversationId, {
                         pendingJobs: pendingJobs.map(j => ({ jobId: j.jobId, toolName: j.toolName, timestamp: j.timestamp }))
                     });
+                    console.log('Saved pendingJob to Firestore:', jobId, toolName);
                 }
             });
 
             window.addEventListener('mace-job-done', (e) => {
                 const { jobId } = e.detail;
                 pendingJobs = pendingJobs.filter(j => j.jobId !== jobId);
-                // Clear from Firestore
                 if (window.currentUser && currentConversationId) {
                     window.saveConversation(currentConversationId, { pendingJobs });
                 }
@@ -4159,97 +4170,130 @@
             // Process completed background jobs when restoring a conversation
             async function checkPendingJobs(conv) {
                 if (!conv.pendingJobs?.length) return;
+                console.log('Checking pending jobs:', conv.pendingJobs);
 
-                const backendUrl = window.AIAgent?.getBackendUrl?.() ||
-                    (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-                        ? 'http://127.0.0.1:10000' : 'https://chopchopmol-ai-backend.onrender.com');
+                const backendUrl = getBackendUrl();
 
                 for (const job of conv.pendingJobs) {
-                    try {
-                        const res = await fetch(`${backendUrl}/ai/jobs/${job.jobId}`);
-                        if (!res.ok) continue;
-                        const data = await res.json();
+                    // Immediately show the tool row as "computing" — the backend is likely still running
+                    updateToolRowStatus(job.toolName, 'active', 'Checking background computation...');
 
-                        if (data.status === 'completed' && data.result) {
-                            processCompletedJob(job.toolName, data.result, conv);
-                            // Update the tool row in the UI
-                            updateToolRowStatus(job.toolName, 'completed',
-                                `Completed in background: ${data.result.energy_eV?.toFixed(4) || ''} eV`);
-                            // Clean up job on backend
-                            fetch(`${backendUrl}/ai/jobs/${job.jobId}`, { method: 'DELETE' });
-                        } else if (data.status === 'running') {
-                            // Still running — start polling
-                            pollForJob(job, backendUrl, conv);
-                            return; // Don't clear pendingJobs yet
-                        }
-                        // If not_found or error, the job expired — leave tool row as interrupted
-                    } catch (e) {
-                        console.warn('Failed to check job:', job.jobId, e);
-                    }
+                    // Start polling — the first check may block if server is single-threaded
+                    // (Flask dev server) because the MACE computation is using the only thread.
+                    // That's OK — the request will unblock once the computation finishes.
+                    pollForJob(job, backendUrl);
                 }
-
-                // All jobs resolved — clear pendingJobs
-                if (currentConversationId) {
-                    window.saveConversation(currentConversationId, { pendingJobs: [] });
-                }
-                pendingJobs = [];
             }
 
-            async function pollForJob(job, backendUrl, conv) {
-                // Update tool row to show it's still computing
-                updateToolRowStatus(job.toolName, 'active', 'Still computing...');
+            async function pollForJob(job, backendUrl) {
+                updateToolRowStatus(job.toolName, 'active', 'Computing in background...');
 
                 const poll = async () => {
                     try {
                         const res = await fetch(`${backendUrl}/ai/jobs/${job.jobId}`);
-                        if (!res.ok) return;
                         const data = await res.json();
+                        console.log('Job poll result:', job.jobId, data.status);
 
                         if (data.status === 'completed' && data.result) {
-                            processCompletedJob(job.toolName, data.result, conv);
+                            // Job finished — process results
+                            processCompletedJob(job.toolName, data.result);
                             updateToolRowStatus(job.toolName, 'completed',
-                                `Completed: ${data.result.energy_eV?.toFixed(4) || data.result.frameCount || ''}`);
+                                formatJobResult(job.toolName, data.result));
+                            // Clean up
                             fetch(`${backendUrl}/ai/jobs/${job.jobId}`, { method: 'DELETE' });
                             pendingJobs = pendingJobs.filter(j => j.jobId !== job.jobId);
                             if (currentConversationId) {
-                                window.saveConversation(currentConversationId, { pendingJobs: [] });
+                                window.saveConversation(currentConversationId, { pendingJobs });
                             }
-                            // Trigger auto-save with updated molecule state
                             clearTimeout(autoSaveTimer);
                             autoSaveTimer = setTimeout(() => autoSaveConversation(), 2000);
                         } else if (data.status === 'running') {
-                            setTimeout(poll, 3000); // Poll every 3 seconds
+                            // Still computing — keep polling
+                            updateToolRowStatus(job.toolName, 'active', 'Still computing...');
+                            setTimeout(poll, 2000);
+                        } else if (data.status === 'error') {
+                            updateToolRowStatus(job.toolName, 'failed',
+                                data.result?.error || 'Computation failed');
+                            pendingJobs = pendingJobs.filter(j => j.jobId !== job.jobId);
+                            if (currentConversationId) {
+                                window.saveConversation(currentConversationId, { pendingJobs });
+                            }
+                        } else {
+                            // not_found — server may have restarted. Keep polling a few times.
+                            if (!job._retries) job._retries = 0;
+                            job._retries++;
+                            if (job._retries < 10) {
+                                updateToolRowStatus(job.toolName, 'active', 'Waiting for backend...');
+                                setTimeout(poll, 3000);
+                            } else {
+                                updateToolRowStatus(job.toolName, 'interrupted',
+                                    'Backend lost this job (server may have restarted)');
+                            }
                         }
                     } catch (e) {
-                        console.warn('Poll failed:', e);
+                        // Network error — backend might be starting up, retry
+                        if (!job._retries) job._retries = 0;
+                        job._retries++;
+                        if (job._retries < 15) {
+                            setTimeout(poll, 3000);
+                        }
                     }
                 };
-                setTimeout(poll, 3000);
+                // Start first poll immediately (don't wait 3s)
+                poll();
+            }
+
+            function formatJobResult(toolName, result) {
+                if (toolName === 'run_md') {
+                    return `Completed: ${result.frameCount} frames, E = ${result.energy_eV?.toFixed(4)} eV`;
+                } else if (toolName === 'optimize_geometry') {
+                    return `${result.converged ? 'Converged' : 'Completed'} in ${result.steps} steps, E = ${result.energy_eV?.toFixed(4)} eV`;
+                } else if (toolName === 'calculate_all_energies') {
+                    return `Completed: ${result.frameCount} frames calculated`;
+                }
+                return 'Completed';
             }
 
             function updateToolRowStatus(toolName, status, resultText) {
                 const rows = messagesContainer.querySelectorAll(`.ai-tool-row[data-tool="${toolName}"]`);
-                const row = rows[rows.length - 1]; // Last matching row
+                const row = rows[rows.length - 1];
                 if (!row) return;
 
                 row.className = `ai-tool-row ${status}`;
                 const statusEl = row.querySelector('.ai-tool-row-status');
                 const nameEl = row.querySelector('.ai-tool-row-name');
+
+                // Get base label (strip any previous suffix)
+                const baseLabel = (nameEl?.textContent || '').replace(/ \(.*\)$/, '');
+
                 if (status === 'completed') {
                     if (statusEl) statusEl.innerHTML = '<i class="fas fa-check"></i>';
-                    if (nameEl) nameEl.textContent = nameEl.textContent.replace(' (interrupted)', '');
+                    if (nameEl) nameEl.textContent = baseLabel;
                 } else if (status === 'active') {
                     if (statusEl) statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                    if (nameEl) nameEl.textContent = nameEl.textContent.replace(' (interrupted)', ' (computing...)');
-                }
-                if (resultText) {
-                    const resultEl = row.querySelector('.ai-tool-row-result');
-                    if (resultEl) resultEl.textContent = resultText;
+                    if (nameEl) nameEl.textContent = baseLabel + ' (computing...)';
+                } else if (status === 'interrupted') {
+                    if (statusEl) statusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+                    if (nameEl) nameEl.textContent = baseLabel + ' (interrupted)';
+                } else if (status === 'failed') {
+                    if (statusEl) statusEl.innerHTML = '<i class="fas fa-times"></i>';
+                    if (nameEl) nameEl.textContent = baseLabel + ' (failed)';
                 }
 
-                // Remove interruption notice
-                const notice = messagesContainer.querySelector('.system-notice');
-                if (notice && status === 'completed') notice.remove();
+                if (resultText) {
+                    let detailsEl = row.querySelector('.ai-tool-row-details');
+                    if (detailsEl) {
+                        detailsEl.style.display = '';
+                        const resultEl = detailsEl.querySelector('.ai-tool-row-result');
+                        if (resultEl) resultEl.textContent = resultText;
+                    }
+                }
+
+                // Remove interruption notice when job completes
+                if (status === 'completed') {
+                    const notice = messagesContainer.querySelector('.system-notice');
+                    if (notice) notice.remove();
+                }
             }
 
             function processCompletedJob(toolName, result, conv) {
