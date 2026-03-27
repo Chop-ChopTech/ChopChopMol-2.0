@@ -3536,12 +3536,20 @@
                 // Capture current molecule state as XYZ string
                 let moleculeXYZ = null;
                 let moleculeFileName = null;
-                if (window.main?.data?.atomData?.length) {
+                // Try multiple sources for atom data
+                const atomData = window.main?.data?.atomData
+                    || window.main?.molecule?.atoms?.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+                if (atomData?.length) {
                     try {
-                        moleculeXYZ = window.exportToXYZ(window.fileName || 'molecule');
+                        // Build XYZ directly from atomData to avoid any issues with exportToXYZ
+                        let xyz = `${atomData.length}\n${window.fileName || 'molecule'}\n`;
+                        atomData.forEach(a => {
+                            xyz += `${(a.element || 'C').padEnd(4)} ${a.x.toFixed(6).padStart(12)} ${a.y.toFixed(6).padStart(12)} ${a.z.toFixed(6).padStart(12)}\n`;
+                        });
+                        moleculeXYZ = xyz;
                         moleculeFileName = window.fileName || null;
                         // Skip very large molecules (> 200KB XYZ)
-                        if (moleculeXYZ && moleculeXYZ.length > 200000) moleculeXYZ = null;
+                        if (moleculeXYZ.length > 200000) moleculeXYZ = null;
                     } catch (e) {
                         console.warn('Failed to serialize molecule:', e);
                     }
@@ -3802,32 +3810,43 @@
                 // Restore molecule if saved with conversation
                 if (conv.moleculeXYZ) {
                     const restoreMol = () => {
-                        if (!window.main?.loader) return false;
+                        if (!window.main?.molecule) return false;
                         try {
-                            const parsedData = window.main.loader.parseXYZ(conv.moleculeXYZ);
-                            if (parsedData && parsedData.numAtoms > 0) {
-                                window.xyzFrames = null;
-                                window.frameEnergies = null;
-                                const frameSliderContainer = document.getElementById('frameSliderContainer');
-                                if (frameSliderContainer) frameSliderContainer.style.display = 'none';
-
-                                window.main.newMolecule(
-                                    parsedData,
-                                    window.main.setNewMode(parsedData.numAtoms <= 2000)
-                                );
-                                window.main.zoomCameraToFitMolecule();
-
-                                if (conv.moleculeFileName) {
-                                    window.fileName = conv.moleculeFileName;
-                                }
+                            // Parse XYZ inline — no dependency on FileHandler
+                            const lines = conv.moleculeXYZ.trim().split('\n');
+                            const numAtoms = parseInt(lines[0], 10);
+                            if (isNaN(numAtoms) || numAtoms <= 0) return true;
+                            const atomData = [];
+                            for (let i = 2; i < 2 + numAtoms && i < lines.length; i++) {
+                                const parts = lines[i].trim().split(/\s+/);
+                                if (parts.length < 4) continue;
+                                atomData.push({
+                                    element: parts[0],
+                                    x: parseFloat(parts[1]),
+                                    y: parseFloat(parts[2]),
+                                    z: parseFloat(parts[3])
+                                });
                             }
+                            if (atomData.length === 0) return true;
+
+                            window.xyzFrames = null;
+                            window.frameEnergies = null;
+                            const fsc = document.getElementById('frameSliderContainer');
+                            if (fsc) fsc.style.display = 'none';
+
+                            window.main.newMolecule(
+                                { numAtoms: atomData.length, atomData },
+                                window.main.setNewMode(atomData.length <= 2000)
+                            );
+                            window.main.zoomCameraToFitMolecule();
+                            if (conv.moleculeFileName) window.fileName = conv.moleculeFileName;
+                            console.log('Restored molecule:', atomData.length, 'atoms');
                             return true;
                         } catch (e) {
                             console.warn('Failed to restore molecule:', e);
-                            return true; // Don't retry on parse errors
+                            return true;
                         }
                     };
-                    // window.main may not be ready yet on page load — retry until it is
                     if (!restoreMol()) {
                         let attempts = 0;
                         const retry = setInterval(() => {
