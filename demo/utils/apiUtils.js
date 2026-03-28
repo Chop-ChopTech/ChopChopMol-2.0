@@ -7,7 +7,7 @@
  */
 const DEFAULT_TIMEOUT_MS = 30000;
 
-const RUNPOD_URL = 'https://ed0j2tdwwouep0-10000.proxy.runpod.net';
+const RUNPOD_URL = 'https://ctbn3fc9er7g38-10000.proxy.runpod.net';
 const RENDER_URL = 'https://chopchopmol-ai-backend.onrender.com';
 const LOCAL_URL = 'http://127.0.0.1:10000';
 
@@ -77,6 +77,21 @@ export function onBackendUrlOverride(fn) {
     _overrideListeners.push(fn);
 }
 
+/**
+ * Invalidate the cached backend URL so the next getBackendUrl() call re-detects.
+ * Called automatically when a fetch fails (timeout, network error) to trigger
+ * fallback from RunPod to Render if RunPod has gone down mid-session.
+ * Local dev URLs are never invalidated.
+ */
+export function invalidateBackendUrl() {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) return; // Never invalidate localhost
+    if (_resolvedBackendUrl === RENDER_URL) return; // Already on fallback
+    console.warn(`⚠️ Invalidating backend URL (was: ${_resolvedBackendUrl}), will re-detect on next request`);
+    _resolvedBackendUrl = null;
+    _resolvePromise = null;
+}
+
 // Press \ five times consecutively to switch backend endpoint
 let _backslashCount = 0;
 let _backslashTimer = null;
@@ -128,6 +143,9 @@ export async function safeFetch(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_M
         return response;
     } catch (error) {
         clearTimeout(timeout);
+
+        // Backend might be down — trigger re-detection on next request
+        invalidateBackendUrl();
 
         if (error.name === 'AbortError') {
             throw new Error(`Request timeout after ${timeoutMs}ms: ${url}`);

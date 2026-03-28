@@ -22,7 +22,7 @@ import {
     saveToFileExplorer,
     detectFormat
 } from './utils/fileWriter.js';
-import { getBackendUrl, getBackendUrlSync, onBackendUrlOverride } from './utils/apiUtils.js';
+import { getBackendUrl, getBackendUrlSync, onBackendUrlOverride, invalidateBackendUrl } from './utils/apiUtils.js';
 
 const AI_CONFIG = {
     backendUrl: getBackendUrlSync(),
@@ -2545,9 +2545,28 @@ async function sendToAI(userMessage, onChunk) {
             let buffer = "";
             let iterationContent = "";
             let toolCalls = null;
+            const SSE_INACTIVITY_TIMEOUT = 60000; // 60s — backend sends heartbeats every 15s
 
             while (true) {
-                const { done, value } = await reader.read();
+                // Race reader against inactivity timeout to detect hung backend
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('SSE_TIMEOUT')), SSE_INACTIVITY_TIMEOUT)
+                );
+                let readResult;
+                try {
+                    readResult = await Promise.race([reader.read(), timeoutPromise]);
+                } catch (e) {
+                    if (e.message === 'SSE_TIMEOUT') {
+                        console.warn('⚠️ Backend stream inactive for 60s, aborting');
+                        reader.cancel();
+                        // Trigger backend re-detection (may switch RunPod → Render)
+                        invalidateBackendUrl();
+                        getBackendUrl().then(url => { AI_CONFIG.backendUrl = url; });
+                        return { error: 'Backend stopped responding. Please try again.' };
+                    }
+                    throw e;
+                }
+                const { done, value } = readResult;
                 if (done) break;
 
                 buffer += decoder.decode(value, { stream: true });
@@ -2557,6 +2576,8 @@ async function sendToAI(userMessage, onChunk) {
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
                         const data = JSON.parse(line.slice(6));
+                        // Skip heartbeat events (keepalive from backend)
+                        if (data.type === 'heartbeat') continue;
 
                         if (data.type === 'text') {
                             if (!firstTokenTime) {
@@ -2661,6 +2682,9 @@ async function sendToAI(userMessage, onChunk) {
             return { content: fullContent, actions: executed, aborted: true };
         }
         console.error('AI Error:', e);
+        // Trigger backend re-detection on network/fetch errors
+        invalidateBackendUrl();
+        getBackendUrl().then(url => { AI_CONFIG.backendUrl = url; });
         return { error: e.message };
     }
 }
