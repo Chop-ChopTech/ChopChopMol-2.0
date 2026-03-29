@@ -11,6 +11,7 @@ const RUNPOD_URL = 'https://ctbn3fc9er7g38-10000.proxy.runpod.net';
 const RENDER_URL = 'https://chopchopmol-ai-backend.onrender.com';
 const LOCAL_URL = 'http://127.0.0.1:10000';
 
+
 let _resolvedBackendUrl = null;
 let _resolvePromise = null;
 const _overrideListeners = [];
