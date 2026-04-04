@@ -449,7 +449,9 @@ When `tool_status` arrives, `currentTextBlock` is set to `null` so the next text
 |--------|-----------|---------|
 | MACE_DEVICE | CUDA > MPS > CPU | ML potential computation (always CPU due to MPS float64 incompatibility) |
 | TORCH_DEVICE | CUDA > MPS > CPU | General tensor ops (orbital math can use GPU) |
-| MACE_DTYPE | `float32` | Model precision |
+| MACE_DTYPE | `float32` | Model precision (inference AND fine-tuning) |
+
+**CUDA Recovery**: If CUDA fails at runtime (e.g., transient OOM), the server temporarily falls back to CPU. Before each compute request, `_try_recover_cuda()` checks if CUDA is available again (with 30s cooldown). This prevents permanent CPU fallback for the rest of the server's lifetime.
 
 ### History Repair
 
