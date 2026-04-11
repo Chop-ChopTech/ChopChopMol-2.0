@@ -13,9 +13,13 @@ const camera = window.camera
 
 // Function to update feature access based on authentication
 export function updateFeatureAccess(user, signedIn, isPremium) {
-    isUserSignedIn = true;
-    enableAllFeatures();
-    hideRestrictionMessage();
+    isUserSignedIn = signedIn;
+    if (signedIn) {
+        enableAllFeatures();
+        hideRestrictionMessage();
+    } else {
+        restrictFeatures();
+    }
 }
 
 // Function to restrict features for non-signed-in users

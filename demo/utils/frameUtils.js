@@ -118,5 +118,8 @@ export function generateTransformFrames({
  */
 export function loadFrames(frames, initialFrame = 0) {
     window.xyzFrames = frames;
+    // Auto-sync: clear stale energy/MACE caches when frames change
+    window.frameEnergies = [];
+    window.lastMaceResults = null;
     setupFrameSlider(frames, initialFrame);
 }

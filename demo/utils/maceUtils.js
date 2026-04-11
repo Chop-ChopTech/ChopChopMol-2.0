@@ -37,7 +37,7 @@ export function getExtxyzProperties(hasForces) {
 export function formatAtomLine(atom, force = null) {
     let line = `${atom.element.padEnd(4)} ${atom.x.toFixed(8).padStart(14)} ${atom.y.toFixed(8).padStart(14)} ${atom.z.toFixed(8).padStart(14)}`;
 
-    if (force) {
+    if (Array.isArray(force)) {
         line += ` ${force[0].toFixed(8).padStart(14)} ${force[1].toFixed(8).padStart(14)} ${force[2].toFixed(8).padStart(14)}`;
     }
 
@@ -209,10 +209,28 @@ export async function streamMaceSSE(url, body, onFrame) {
                     throw new Error(event.error);
                 }
             } catch (e) {
-                if (e.message && !e.message.includes('JSON')) throw e;
+                if (!(e instanceof SyntaxError)) throw e;
             }
         }
     }
+
+    // Process remaining buffer after stream ends
+    const remaining = buffer.trim();
+    if (remaining.startsWith('data: ')) {
+        try {
+            const event = JSON.parse(remaining.slice(6));
+            if (event.type === 'frame') {
+                onFrame(event);
+            } else if (event.type === 'done') {
+                summary = event.summary;
+            } else if (event.type === 'error') {
+                throw new Error(event.error);
+            }
+        } catch (e) {
+            if (!(e instanceof SyntaxError)) throw e;
+        }
+    }
+
     return summary || { success: true };
 }
 

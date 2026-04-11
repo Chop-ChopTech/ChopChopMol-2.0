@@ -112,6 +112,7 @@ const FUNCTIONS = {
     select_atoms: {
         execute: (params) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
+            if (!params.indices || !Array.isArray(params.indices)) return { success: false, message: "indices must be an array" };
             if (!params.add && typeof window.unselectAtom === 'function') {
                 window.unselectAtom();
                 window.atomsSelected = [];
@@ -318,10 +319,18 @@ const FUNCTIONS = {
             const { axisAtom1, axisAtom2, atomsToMove, angle, distance } = params;
             const molecule = window.main.molecule;
 
+            if (!atomsToMove || !Array.isArray(atomsToMove) || atomsToMove.length === 0) {
+                return { success: false, message: "atomsToMove must be a non-empty array" };
+            }
+
             // Validate axis atoms
             const atom1 = molecule.atoms[axisAtom1];
             const atom2 = molecule.atoms[axisAtom2];
             if (!atom1 || !atom2) return { success: false, message: "Invalid axis atoms" };
+
+            if (typeof window.saveUndoState === 'function') {
+                window.saveUndoState("Transform Atoms");
+            }
 
             // Capture starting positions
             const startPositions = {};
@@ -732,6 +741,10 @@ const FUNCTIONS = {
                 return { success: false, message: "No molecule loaded" };
             }
 
+            if (typeof window.saveUndoState === 'function') {
+                window.saveUndoState("Split Molecule");
+            }
+
             const atoms = window.main.molecule.atoms;
             const bonds = window.main.molecule.bonds;
             const { atom1, atom2 } = params;
@@ -834,6 +847,7 @@ const FUNCTIONS = {
         execute: (params) => {
             if (!window.main?.data?.atomData) return { success: false, message: "No molecule loaded" };
             if (!window.atomsSelected?.length) return { success: false, message: "No atoms selected" };
+            if (!params.element || typeof params.element !== 'string') return { success: false, message: "element must be a string" };
             const element = params.element.toUpperCase();
             // Validate element
             if (!window.main.molecule.atomSettings[element]) {
@@ -894,7 +908,8 @@ const FUNCTIONS = {
                 window.createInfoLabel(idx1, idx2);
             }
             const a1 = atoms[idx1], a2 = atoms[idx2];
-            const dist = Math.sqrt((a2.x - a1.x) ** 2 + (a2.y - a1.y) ** 2 + (a2.z - a1.z) ** 2) / 4;
+            const stretch = window.main?.molecule?.stretch || 4;
+            const dist = Math.sqrt((a2.x - a1.x) ** 2 + (a2.y - a1.y) ** 2 + (a2.z - a1.z) ** 2) / stretch;
             return {
                 success: true,
                 distance_angstrom: parseFloat(dist.toFixed(4)),
@@ -1237,7 +1252,7 @@ const FUNCTIONS = {
             const molecule = window.main?.molecule;
             if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
 
-            const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+            const atoms = molecule.atoms.map(a => { const s = molecule.stretch || 4; return { element: a.type, x: a.x / s, y: a.y / s, z: a.z / s }; });
             const includeForces = params.includeForces !== false;
             const jobId = crypto.randomUUID();
             window.dispatchEvent(new CustomEvent('mace-job-started', {
@@ -1756,6 +1771,8 @@ const FUNCTIONS = {
                 }
 
                 window.xyzFrames = null;
+                window.frameEnergies = [];
+                window.lastMaceResults = null;
                 const frameSlider = document.getElementById('frameSliderContainer');
                 if (frameSlider) frameSlider.style.display = 'none';
 
@@ -1818,7 +1835,7 @@ const FUNCTIONS = {
             localStorage.setItem('chopchop_mace_model', model);
             const includeForces = params.includeForces !== false;
 
-            const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+            const atoms = molecule.atoms.map(a => { const s = molecule.stretch || 4; return { element: a.type, x: a.x / s, y: a.y / s, z: a.z / s }; });
 
             try {
                 const result = await callMaceEnergy(AI_CONFIG.backendUrl, atoms, model, includeForces);
@@ -1848,7 +1865,7 @@ const FUNCTIONS = {
             if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
 
             const includeForces = params.includeForces !== false;
-            const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+            const atoms = molecule.atoms.map(a => { const s = molecule.stretch || 4; return { element: a.type, x: a.x / s, y: a.y / s, z: a.z / s }; });
 
             try {
                 const result = await callDftEnergy(AI_CONFIG.backendUrl, atoms, {
@@ -1882,7 +1899,7 @@ const FUNCTIONS = {
             const molecule = window.main?.molecule;
             if (!molecule?.atoms?.length) return { success: false, message: "No molecule loaded" };
 
-            const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+            const atoms = molecule.atoms.map(a => { const s = molecule.stretch || 4; return { element: a.type, x: a.x / s, y: a.y / s, z: a.z / s }; });
             const includeForces = params.includeForces !== false;
             const jobId = crypto.randomUUID();
             window.dispatchEvent(new CustomEvent('mace-job-started', {
@@ -1988,7 +2005,7 @@ const FUNCTIONS = {
                 const molecule = window.main?.molecule;
                 if (!molecule?.atoms?.length) return { success: false, message: "No molecule or frames loaded" };
 
-                const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+                const atoms = molecule.atoms.map(a => { const s = molecule.stretch || 4; return { element: a.type, x: a.x / s, y: a.y / s, z: a.z / s }; });
                 try {
                     const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
                         method: 'POST',
@@ -2056,7 +2073,7 @@ const FUNCTIONS = {
                 const molecule = window.main?.molecule;
                 if (!molecule?.atoms?.length) return { success: false, message: "No molecule or frames loaded" };
 
-                const atoms = molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }));
+                const atoms = molecule.atoms.map(a => { const s = molecule.stretch || 4; return { element: a.type, x: a.x / s, y: a.y / s, z: a.z / s }; });
                 try {
                     const result = await callDftEnergy(AI_CONFIG.backendUrl, atoms, {
                         basis: params.basis, xc: params.xc,
@@ -2250,7 +2267,7 @@ const FUNCTIONS = {
             // Build request with current molecule data + trajectory if available
             const molecule = window.main?.molecule;
             const atoms = molecule?.atoms?.length
-                ? molecule.atoms.map(a => ({ element: a.type, x: a.x / 4, y: a.y / 4, z: a.z / 4 }))
+                ? molecule.atoms.map(a => { const s = molecule.stretch || 4; return { element: a.type, x: a.x / s, y: a.y / s, z: a.z / s }; })
                 : [];
 
             // Include trajectory frames and energies when available (capped at 200 frames)
@@ -2549,13 +2566,16 @@ async function sendToAI(userMessage, onChunk) {
 
             while (true) {
                 // Race reader against inactivity timeout to detect hung backend
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('SSE_TIMEOUT')), SSE_INACTIVITY_TIMEOUT)
-                );
+                let timeoutId;
+                const timeoutPromise = new Promise((_, reject) => {
+                    timeoutId = setTimeout(() => reject(new Error('SSE_TIMEOUT')), SSE_INACTIVITY_TIMEOUT);
+                });
                 let readResult;
                 try {
                     readResult = await Promise.race([reader.read(), timeoutPromise]);
+                    clearTimeout(timeoutId);
                 } catch (e) {
+                    clearTimeout(timeoutId);
                     if (e.message === 'SSE_TIMEOUT') {
                         console.warn('⚠️ Backend stream inactive for 60s, aborting');
                         reader.cancel();
@@ -2575,7 +2595,13 @@ async function sendToAI(userMessage, onChunk) {
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
-                        const data = JSON.parse(line.slice(6));
+                        let data;
+                        try {
+                            data = JSON.parse(line.slice(6));
+                        } catch (parseErr) {
+                            console.warn('Skipping malformed SSE chunk:', line.slice(0, 100));
+                            continue;
+                        }
                         // Skip heartbeat events (keepalive from backend)
                         if (data.type === 'heartbeat') continue;
 
@@ -2620,12 +2646,30 @@ async function sendToAI(userMessage, onChunk) {
                 }
             }
 
-            // Execute tool calls if any - IN PARALLEL for speed
+            // Execute tool calls — read-only (L1/L6) in parallel, mutating (L3/L4/L5) sequentially
             if (toolCalls?.length > 0) {
-                // Execute all tools in parallel
-                const toolPromises = toolCalls.map(async (tc) => {
+                const READ_ONLY_TOOLS = new Set([
+                    'get_molecule_info', 'get_atom_info', 'get_bonded_atoms',
+                    'measure_distance', 'measure_angle', 'measure_dihedral',
+                    'get_cached_energies', 'web_search', 'read_file', 'list_folder_files',
+                    'select_atoms', 'select_atoms_by_element', 'select_all_atoms',
+                    'select_connected', 'clear_selection',
+                    'toggle_labels', 'toggle_force_arrows', 'toggle_charge_visualization',
+                    'toggle_ribbon', 'set_style', 'show_all_bond_lengths',
+                    'remove_bond_label', 'clear_measurements', 'reset_camera',
+                    'zoom_to_fit', 'rotate_camera', 'define_axis', 'remove_axis',
+                    'create_fragment', 'isolate_selection', 'undo', 'redo'
+                ]);
+
+                const executeTool = async (tc) => {
                     const fn = tc.function.name;
-                    const args = JSON.parse(tc.function.arguments || '{}');
+                    let args;
+                    try {
+                        args = JSON.parse(tc.function.arguments || '{}');
+                    } catch (parseErr) {
+                        console.error('Invalid JSON in tool arguments for', fn, parseErr);
+                        return { id: tc.id, name: fn, args: {}, result: { success: false, message: `Invalid JSON arguments: ${parseErr.message}` } };
+                    }
                     console.log('AI calling:', fn, args);
 
                     if (onChunk) onChunk(null, toolStatusMap[fn] || fn.replace(/_/g, ' '));
@@ -2657,9 +2701,22 @@ async function sendToAI(userMessage, onChunk) {
                     } else {
                         return { id: tc.id, name: fn, args, result: { success: false, message: 'Function not found' } };
                     }
-                });
+                };
 
-                const results = await Promise.all(toolPromises);
+                // Partition into read-only (parallel) and mutating (sequential)
+                const readOnlyCalls = toolCalls.filter(tc => READ_ONLY_TOOLS.has(tc.function.name));
+                const mutatingCalls = toolCalls.filter(tc => !READ_ONLY_TOOLS.has(tc.function.name));
+
+                // Execute read-only tools in parallel
+                const readOnlyResults = await Promise.all(readOnlyCalls.map(executeTool));
+
+                // Execute mutating tools sequentially to prevent race conditions
+                const mutatingResults = [];
+                for (const tc of mutatingCalls) {
+                    mutatingResults.push(await executeTool(tc));
+                }
+
+                const results = [...readOnlyResults, ...mutatingResults];
                 executed.push(...results);
 
                 // Clear chart data after all tools
@@ -2741,8 +2798,8 @@ function compressToolResult(functionName, result) {
         if (result.data && functionName === 'get_molecule_info') {
             compressed.data = { atomCount: result.data.atomCount, elements: result.data.elements };
         }
-        if (result.data && functionName === 'get_bonded_atoms') {
-            compressed.data = result.data;
+        if (result.bonds && functionName === 'get_bonded_atoms') {
+            compressed.bonds = result.bonds;
         }
         if (functionName === 'web_search') {
             if (result.answer) compressed.answer = result.answer;

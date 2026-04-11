@@ -15,6 +15,8 @@ export default class FileHandler {
         let translation = { x: 0, y: 0, z: 0 };
         if (!file) return;
         window.xyzFrames = null;
+        window.frameEnergies = [];
+        window.lastMaceResults = null;
 
         // Clear previous orbital data
         window.orbitalData = null;
@@ -26,6 +28,11 @@ export default class FileHandler {
             try {
                 const text = e.target.result;
                 const fileType = findFileType(file);
+
+                if (!fileType) {
+                    window.toastError?.(`Unsupported file type: ${fileName}`);
+                    return;
+                }
 
                 // Store raw file content for cloud saving
                 window.currentFileFormat = fileType;
@@ -62,6 +69,11 @@ export default class FileHandler {
                     parsedData = FileHandler.convertBohrIfNeeded(parsedData);
                 }
 
+                if (!parsedData || !parsedData.atomData || parsedData.numAtoms === 0) {
+                    window.toastError?.(`No atoms found in file: ${fileName}`);
+                    return;
+                }
+
                 if (overlay) {
                     const transformation = alignMolecules(parsedData, this.main.data);
                     rotation = transformation.rotation;
@@ -87,7 +99,7 @@ export default class FileHandler {
                         frameSliderContainer.style.display = 'flex';
                         const slider = document.getElementById('frameSlider');
                         const label = document.getElementById('frameLabel');
-                        slider.max = window.xyzFrames.length - 1;
+                        slider.max = Math.max(0, window.xyzFrames.length - 1);
                         slider.value = 0;
                         label.textContent = `Frame 1 / ${window.xyzFrames.length}`;
                     } else {
@@ -1543,8 +1555,6 @@ export default class FileHandler {
                     }
                     j++;
                 }
-                frameEnergies.push(energy);
-
                 // Search for the next CARTESIAN GRADIENT section to extract forces
                 j = i;
                 while (j < lines.length && j < i + 500) {
@@ -1573,13 +1583,14 @@ export default class FileHandler {
                     j++;
                 }
 
-                // Add this frame if it has atoms
+                // Add this frame if it has atoms — push energy only when frame is added
                 if (atomData.length > 0) {
                     frames.push({
                         atomData,
                         numAtoms: atomData.length,
                         comment: `ORCA Frame ${frameNumber}`
                     });
+                    frameEnergies.push(energy);
                 }
             }
         }

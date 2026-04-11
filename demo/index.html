@@ -1606,7 +1606,7 @@
                 loading.classList.remove('on');
             } catch (error) {
                 //chatOutput.innerHTML += `<p><strong>Error:</strong> Network issue</p>`;
-                loadingText.classList.remove('on');
+                loading.classList.remove('on');
             }
         }
 
@@ -2225,6 +2225,8 @@
                         class="fas fa-sync-alt"></i></button>
                 <button id="openFolderBtn" class="local-toolbar-button" title="Open Folder"><i
                         class="fas fa-folder-open"></i></button>
+                <button id="openFileBtn" class="local-toolbar-button" title="Open File"><i
+                        class="fas fa-file-import"></i></button>
                 <button id="createFolderBtn" class="local-toolbar-button" title="Create Folder" disabled><i
                         class="fas fa-folder-plus"></i></button>
                 <button id="saveLocalBtn" class="local-toolbar-button" title="Save to Local Folder" disabled><i
@@ -2394,6 +2396,12 @@
             let currentConversationId = null;
             let autoSaveTimer = null;
 
+            // On mobile, start with panel closed so toolbar is visible
+            if (window.innerWidth <= 768) {
+                panel.classList.remove('open');
+                if (toggleBtn) toggleBtn.classList.remove('active');
+            }
+
             const chatInput = document.getElementById('aiChatInput');
             // Auto-resize textarea
             chatInput.addEventListener('input', () => {
@@ -2442,6 +2450,10 @@
             toggleBtn.addEventListener('click', () => {
                 panel.classList.toggle('open');
                 toggleBtn.classList.toggle('active');
+                // On mobile, clear inline width so CSS 100vw applies
+                if (window.innerWidth <= 768) {
+                    panel.style.width = '';
+                }
                 if (panel.classList.contains('open')) {
                     chatInput.focus();
                 }
@@ -2992,6 +3004,11 @@
                         }
                     };
 
+                    // Destroy previous chart to prevent memory leak
+                    if (window._activeInlineChatChart) {
+                        window._activeInlineChatChart.destroy();
+                        window._activeInlineChatChart = null;
+                    }
                     const chart = new Chart(canvas.getContext('2d'), chartConfig);
                     window._activeInlineChatChart = chart;
                     window._activeInlineChatData = data;
@@ -3287,6 +3304,12 @@
                         });
                     }
 
+                    // Clean up thinking timer if stream ended without thinking_done
+                    if (thinkingEl && thinkingEl._timerInterval) {
+                        clearInterval(thinkingEl._timerInterval);
+                        thinkingEl._timerInterval = null;
+                    }
+
                     // Clean up empty sub-containers
                     if (!thinkingContainer.children.length) thinkingContainer.remove();
                     contentEl.querySelectorAll('.ai-response-text').forEach(el => {
@@ -3297,6 +3320,11 @@
                     if (!typingRemoved) {
                         typingEl.remove();
                         messagesContainer.appendChild(msgEl);
+                    }
+                    // Clean up thinking timer if still running
+                    if (thinkingEl && thinkingEl._timerInterval) {
+                        clearInterval(thinkingEl._timerInterval);
+                        thinkingEl._timerInterval = null;
                     }
                     msgEl.classList.add('error');
                     const errBlock = document.createElement('div');
@@ -4536,8 +4564,10 @@
 
             if (aiResizer && aiPanel) {
                 let startX, startWidth;
+                const isMobile = () => window.innerWidth <= 768;
 
                 aiResizer.addEventListener('mousedown', (e) => {
+                    if (isMobile()) return; // Disable resize on mobile
                     e.preventDefault();
                     startX = e.clientX;
                     startWidth = aiPanel.offsetWidth;

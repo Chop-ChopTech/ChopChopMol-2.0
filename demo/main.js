@@ -720,6 +720,13 @@ function loadEnvMap(name, resolution) {
 }
 
 function applyEnvTexture(envTexture) {
+    // Dispose old env/background textures to prevent memory leaks
+    if (scene.environment && scene.environment.isTexture && scene.environment !== envTexture) {
+        scene.environment.dispose();
+    }
+    if (scene.background && scene.background.isTexture && scene.background !== envTexture) {
+        scene.background.dispose();
+    }
     scene.environment = envTexture;
     if (!savedBackgroundColor && scene.background && scene.background.isColor) {
         savedBackgroundColor = scene.background.clone();
@@ -3508,7 +3515,8 @@ function recreateRenderer(antialiasEnabled) {
     const width = renderer.domElement.width;
     const height = renderer.domElement.height;
 
-    // Remove old renderer
+    // Dispose old renderer to prevent memory leak
+    renderer.dispose();
     document.body.removeChild(renderer.domElement);
 
     // Create new renderer with updated antialias
@@ -3535,8 +3543,8 @@ function recreateRenderer(antialiasEnabled) {
     controls.enableAnimations = true;
 
 
-    // IMPORTANT: Re-attach the pointer down event for atom selection
-    renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
+    // IMPORTANT: Re-attach the enhanced pointer down event for atom selection
+    renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
 
     // Env map textures depend on the renderer's PMREMGenerator, so invalidate cache
     Object.keys(envMapCache).forEach(k => delete envMapCache[k]);
@@ -3689,6 +3697,7 @@ function arraysEqual(a, b) {
 
 function selectAtom(index, reset = true) {
     if (!main.molecule || !main.molecule.instancedMesh || !main.molecule.atoms) return;
+    if (index < 0 || index >= main.molecule.atoms.length) return;
 
     const colorAttr = main.molecule.instancedMesh.geometry.getAttribute('color');
     if (!colorAttr) return;
@@ -5435,8 +5444,9 @@ function enhancedOnPointerDown(event) {
     }
 }
 
-// Replace the existing event listener
+// Replace the existing event listener — remove both old handlers before re-adding
 renderer.domElement.removeEventListener('pointerdown', onPointerDown, false);
+renderer.domElement.removeEventListener('pointerdown', enhancedOnPointerDown, false);
 renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
 
 // Prevent default context menu
@@ -6171,9 +6181,9 @@ function toggleRibbon() {
 }
 
 function disableAtomInteractions() {
-    // Remove pointer event listeners
-    renderer.domElement.removeEventListener('pointerdown', onPointerDown, false);
-    renderer.domElement.removeEventListener('pointermove', onPointerMove2, false);
+    // Remove pointer event listeners — use window consistently
+    window.removeEventListener('pointerdown', enhancedOnPointerDown, false);
+    window.removeEventListener('pointermove', onPointerMove2, false);
     renderer.domElement.style.cursor = 'default';
 
     // Clear any selections
@@ -6184,11 +6194,11 @@ function disableAtomInteractions() {
 }
 
 function enableAtomInteractions() {
-    // Re-attach pointer event listeners (avoid duplicates)
-    renderer.domElement.removeEventListener('pointerdown', onPointerDown, false);
-    renderer.domElement.removeEventListener('pointermove', onPointerMove2, false);
+    // Re-attach pointer event listeners — use window consistently (avoid duplicates)
+    window.removeEventListener('pointerdown', enhancedOnPointerDown, false);
+    window.removeEventListener('pointermove', onPointerMove2, false);
 
-    renderer.domElement.addEventListener('pointerdown', onPointerDown, false);
+    window.addEventListener('pointerdown', enhancedOnPointerDown, false);
     window.addEventListener('pointermove', onPointerMove2, false);
 
     console.log('Atom interactions enabled');

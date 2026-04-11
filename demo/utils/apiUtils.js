@@ -202,13 +202,13 @@ export async function safeFetchText(url, options = {}, timeoutMs = DEFAULT_TIMEO
  */
 export async function postJson(url, body, options = {}, timeoutMs = DEFAULT_TIMEOUT_MS) {
     return safeFetchJson(url, {
+        ...options,
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             ...options.headers
         },
         body: JSON.stringify(body),
-        ...options
     }, timeoutMs);
 }
 

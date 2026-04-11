@@ -77,7 +77,7 @@ function findFileType(file) {
     if (name.endsWith('.out')) return 'out';
     if (name.endsWith('.cube') || name.endsWith('.cub')) return 'cube';
     if (name.endsWith('.molden') || name.endsWith('.mold')) return 'molden';
-    return 'mol';
+    return null;
 }
 function alignMolecules(movingMolecule, fixedMolecule) {
     // Helper function to calculate distance between two atoms

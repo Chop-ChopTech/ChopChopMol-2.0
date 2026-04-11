@@ -1,4 +1,5 @@
 const undoManager = new UndoManager();
+window.undoManager = undoManager; // Fix 6: expose globally so AI undo/redo tools work
 let savedLabels = [];
 
 undoManager.setLimit(30); // Keep last 30 actions

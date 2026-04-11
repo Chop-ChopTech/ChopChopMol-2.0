@@ -33,6 +33,7 @@ class FileExplorer {
         document.getElementById('toggleFileExplorer')?.addEventListener('click', () => this.toggle());
         document.getElementById('openFolderBtn')?.addEventListener('click', () => this.openFolder());
         document.getElementById('openFolderPrompt')?.addEventListener('click', () => this.openFolder());
+        document.getElementById('openFileBtn')?.addEventListener('click', () => this.openSingleFile());
         document.getElementById('refreshFolderBtn')?.addEventListener('click', () => this.refresh());
         document.getElementById('cloudRefreshBtn')?.addEventListener('click', () => this.loadCloudMolecules());
 
@@ -936,6 +937,30 @@ class FileExplorer {
             if (err.name !== 'AbortError') {
                 console.error('Error opening folder:', err);
                 window.toastError?.('Could not open folder');
+            }
+        }
+    }
+
+    async openSingleFile() {
+        try {
+            const [fileHandle] = await window.showOpenFilePicker({
+                multiple: false
+            });
+            const file = await fileHandle.getFile();
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (MOLECULE_EXTENSIONS.includes(ext)) {
+                await this.loadMoleculeFile(file);
+            } else {
+                // Open non-molecule files in text editor
+                const path = file.name;
+                this.fileHandles.set(path, fileHandle);
+                await this.openTextEditor(path, file);
+            }
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('Error opening file:', err);
+                window.toastError?.('Could not open file');
             }
         }
     }

@@ -151,6 +151,10 @@ export function generateAngleScan({
         return { success: false, message: "Atoms are collinear" };
     }
 
+    if (!atomsToMove || atomsToMove.length === 0) {
+        return { success: false, message: "No atoms to move" };
+    }
+
     const pivot = a2.position.clone();
 
     // Store original positions
