@@ -4,6 +4,13 @@
     user-select: none;
 }
 
+/* Force dark-mode native controls (fixes white dropdowns on Windows) */
+select,
+select option,
+select optgroup {
+    color-scheme: dark;
+}
+
 body>canvas,
 #frameSliderContainer {
     transition: none !important;
