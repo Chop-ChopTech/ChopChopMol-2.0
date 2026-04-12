@@ -2464,12 +2464,24 @@ input[type="range"]:focus {
     font-size: 11px;
     cursor: pointer;
     flex: 1;
-    min-width: 80px;
+    min-width: 120px;
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
     font-family: 'Rubik', sans-serif;
     transition: background 0.2s, border-color 0.2s;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='rgba(255,255,255,0.4)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 20px;
+}
+
+.ai-model-select option,
+.ai-model-select optgroup {
+    background: #1a1d2e;
+    color: rgba(255, 255, 255, 0.85);
+    padding: 4px 8px;
 }
 
 .ai-model-select:hover {
@@ -7634,5 +7646,48 @@ input[type="color"]::-moz-color-swatch {
         width: 28px;
         height: 28px;
         font-size: 11px;
+    }
+
+    /* Sign-in button: keep accessible on small screens */
+    #signInButton {
+        font-size: 11px;
+        padding: 4px 10px;
+    }
+
+    /* Frame slider: full width on mobile */
+    #frameSliderContainer {
+        width: calc(100vw - 20px) !important;
+        left: 10px !important;
+        right: 10px !important;
+        max-width: none !important;
+    }
+
+    /* Modals: full-width on mobile */
+    .modal-dialog,
+    .text-editor-modal {
+        width: calc(100vw - 20px) !important;
+        max-width: none !important;
+        margin: 10px auto !important;
+    }
+
+    /* Prevent horizontal scroll */
+    body {
+        overflow-x: hidden;
+    }
+
+    /* Chat messages: tighter padding */
+    .ai-chat-messages {
+        padding: 6px !important;
+    }
+
+    /* Tool rows: prevent overflow */
+    .ai-tool-row {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Chart containers: fit mobile width */
+    .chart-inline-container {
+        max-width: 100% !important;
     }
 }

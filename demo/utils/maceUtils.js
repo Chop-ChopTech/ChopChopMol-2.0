@@ -290,7 +290,7 @@ export function mergeForcesIntoFrames(energyResults, includeForces) {
         if (energyResult.forces && window.xyzFrames[frameIdx]) {
             window.xyzFrames[frameIdx].atomData.forEach((atom, atomIdx) => {
                 const force = energyResult.forces[atomIdx];
-                if (force) {
+                if (Array.isArray(force)) {
                     atom.fx = force[0];
                     atom.fy = force[1];
                     atom.fz = force[2];

@@ -1411,7 +1411,7 @@ window.addEventListener('replyUpdated', (event) => {
 
 });
 
-renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
+window.addEventListener('pointerdown', enhancedOnPointerDown, false);
 renderer.domElement.addEventListener('contextmenu', (event) => {
     event.preventDefault();
     return false;
@@ -3544,10 +3544,13 @@ function recreateRenderer(antialiasEnabled) {
 
 
     // IMPORTANT: Re-attach the enhanced pointer down event for atom selection
-    renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
+    window.addEventListener('pointerdown', enhancedOnPointerDown, false);
 
     // Env map textures depend on the renderer's PMREMGenerator, so invalidate cache
-    Object.keys(envMapCache).forEach(k => delete envMapCache[k]);
+    Object.keys(envMapCache).forEach(k => {
+        if (envMapCache[k] && envMapCache[k].dispose) envMapCache[k].dispose();
+        delete envMapCache[k];
+    });
     if (window.envMapEnabled) {
         applyEnvMap(true, window.envMapPreset);
     }
@@ -5445,9 +5448,9 @@ function enhancedOnPointerDown(event) {
 }
 
 // Replace the existing event listener — remove both old handlers before re-adding
-renderer.domElement.removeEventListener('pointerdown', onPointerDown, false);
-renderer.domElement.removeEventListener('pointerdown', enhancedOnPointerDown, false);
-renderer.domElement.addEventListener('pointerdown', enhancedOnPointerDown, false);
+window.removeEventListener('pointerdown', onPointerDown, false);
+window.removeEventListener('pointerdown', enhancedOnPointerDown, false);
+window.addEventListener('pointerdown', enhancedOnPointerDown, false);
 
 // Prevent default context menu
 renderer.domElement.addEventListener('contextmenu', (event) => {
@@ -6606,8 +6609,10 @@ window.toggleRibbon = toggleRibbon;
     }
 
     function loadMolecule(molData) {
-        // Clear frames and hide slider when loading from database
+        // Clear frames, energies, and MACE cache when loading from database
         window.xyzFrames = null;
+        window.frameEnergies = [];
+        window.lastMaceResults = null;
         const frameSliderContainer = document.getElementById('frameSliderContainer');
         if (frameSliderContainer) {
             frameSliderContainer.style.display = 'none';

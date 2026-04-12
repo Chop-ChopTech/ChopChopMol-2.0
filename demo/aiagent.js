@@ -142,6 +142,7 @@ const FUNCTIONS = {
     add_atom: {
         execute: (params) => {
             if (!window.main?.data?.atomData) return { success: false, message: "No molecule loaded" };
+            if (!params.element || typeof params.element !== 'string') return { success: false, message: "element must be a string" };
             let x, y, z;
             if (params.bondToSelected && window.atomsSelected?.length === 1) {
                 const selectedAtom = window.main.data.atomData[window.atomsSelected[0]];
@@ -458,7 +459,8 @@ const FUNCTIONS = {
             const anchorAtom = atoms[anchorIdx];
             const refAtom = atoms[refIdx];
 
-            const targetInternal = params.distance * 4;
+            const stretch = molecule.stretch || 4;
+            const targetInternal = params.distance * stretch;
             const currentVector = new window.THREE.Vector3().subVectors(refAtom.position, anchorAtom.position);
             const currentDist = currentVector.length();
             if (currentDist === 0) return { success: false, message: "Atoms at same position" };
@@ -616,6 +618,7 @@ const FUNCTIONS = {
     select_atoms_by_element: {
         execute: (params) => {
             if (!window.main?.molecule?.atoms) return { success: false, message: "No molecule loaded" };
+            if (!params.element || typeof params.element !== 'string') return { success: false, message: "element must be a string" };
             const matchingIndices = [];
             window.main.molecule.atoms.forEach((atom, idx) => {
                 if (atom.type.toUpperCase() === params.element.toUpperCase()) matchingIndices.push(idx);

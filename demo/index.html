@@ -4059,6 +4059,9 @@
                                                     }];
                                                 }
 
+                                                // Destroy any existing chart on this canvas to prevent memory leak
+                                                const existingChart = Chart.getChart(canvas);
+                                                if (existingChart) existingChart.destroy();
                                                 new Chart(canvas, {
                                                     type: 'line',
                                                     data: { labels: data.x, datasets },

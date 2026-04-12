@@ -106,6 +106,8 @@ export default class FileHandler {
                         frameSliderContainer.style.display = 'none';
                         document.getElementById('frameSlider').value = 0;
                         window.xyzFrames = null;
+                        window.frameEnergies = [];
+                        window.lastMaceResults = null;
                     }
                 }
                 window.resetCamera();
