@@ -47,11 +47,10 @@ function restoreMoleculeState(state) {
         window.main.newMolecule(
             window.main.data,
             window.main.data.atomData.length <= 2000 ? 1 : 0,
-            false,
-            { x: 0, y: 0, z: 0 },
-            { x: 0, y: 0, z: 0 },
-            true,
-            true
+            false,    // center — don't re-center camera
+            false,    // soft — full reset (clear axis/fragments/labels)
+            false,    // useRibbonMode — normal atom rendering
+            false     // animate — instant restore, no silly-mode animation
         );
 
         // Restore atom selection - filter out invalid indices
