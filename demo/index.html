@@ -985,7 +985,7 @@
                     <span class="toolbar-label">Ribbon</span>
                 </button>
                 <button class="dropdown-icon dropdown"
-                    onclick="document.getElementById('stylePanel').classList.toggle('open')" style="border: none;"
+                    onclick="document.getElementById('stylePanel').classList.toggle('open'); window.mobilePanelCoordinator?.onFloatingPanelToggle('stylePanel')" style="border: none;"
                     title="Visual style settings">
                     <i class="fa-solid fa-sliders"></i>
                     <span class="toolbar-label">Style</span>
@@ -1072,7 +1072,16 @@
                     </div>
                 </div>
             </div>
+
+            <!-- MOBILE OVERFLOW (hidden on desktop) -->
+            <div class="toolbar-group mobile-only">
+                <button class="dropdown-icon" id="mobileOverflowBtn" title="More options" style="border: none;">
+                    <i class="fa-solid fa-ellipsis"></i>
+                </button>
+            </div>
         </div>
+        <!-- Mobile overflow dropdown menu -->
+        <div id="mobileOverflowMenu" class="mobile-overflow-menu"></div>
 
 
     </div>
@@ -2396,10 +2405,11 @@
             let currentConversationId = null;
             let autoSaveTimer = null;
 
-            // On mobile, start with panel closed so toolbar is visible
+            // On mobile, AI panel is always visible (no toggle needed)
+            // mobile.js forces it open; clear any inline width from desktop resizing
             if (window.innerWidth <= 768) {
-                panel.classList.remove('open');
-                if (toggleBtn) toggleBtn.classList.remove('active');
+                panel.classList.add('open');
+                panel.style.width = '';
             }
 
             const chatInput = document.getElementById('aiChatInput');
@@ -2446,14 +2456,10 @@
                 localStorage.setItem('chopchop_thinking_budget', btn.dataset.budget);
             });
 
-            // Toggle panel
+            // Toggle panel (button is hidden on mobile — panel always visible there)
             toggleBtn.addEventListener('click', () => {
                 panel.classList.toggle('open');
                 toggleBtn.classList.toggle('active');
-                // On mobile, clear inline width so CSS 100vw applies
-                if (window.innerWidth <= 768) {
-                    panel.style.width = '';
-                }
                 if (panel.classList.contains('open')) {
                     chatInput.focus();
                 }
@@ -2461,6 +2467,8 @@
             });
 
             closeBtn.addEventListener('click', () => {
+                // On mobile the panel is always visible, close does nothing
+                if (window.isMobile?.()) return;
                 panel.classList.remove('open');
                 toggleBtn.classList.remove('active');
                 window.updateRendererSize?.();
@@ -4682,6 +4690,8 @@
 
             // AI Panel collapse toggle (LEFT side panel)
             aiToggle?.addEventListener('click', () => {
+                // On mobile, panel is always visible — collapse toggle is hidden
+                if (window.isMobile?.()) return;
                 aiPanel.classList.toggle('open');
                 aiToggle.classList.toggle('collapsed', !aiPanel.classList.contains('open'));
                 document.getElementById('aiToggleBtn')?.classList.toggle('active', aiPanel.classList.contains('open'));
@@ -4689,9 +4699,13 @@
             });
 
             explorerToggle?.addEventListener('click', () => {
+                if (window.mobilePanelCoordinator) {
+                    window.mobilePanelCoordinator.toggleFileExplorer();
+                    return;
+                }
                 explorerPanel.classList.toggle('open');
                 explorerToggle.classList.toggle('collapsed', !explorerPanel.classList.contains('open'));
-                document.getElementById('stylePanel')?.classList.toggle('open-explorer', explorerPanel.classList.contains('open')); // ADD THIS LINE
+                document.getElementById('stylePanel')?.classList.toggle('open-explorer', explorerPanel.classList.contains('open'));
                 document.getElementById('aiToggleBtn')?.classList.toggle('active', aiPanel.classList.contains('open'));
                 window.updateRendererSize?.();
             });
@@ -5438,10 +5452,21 @@
     <pre id="output"></pre>
     <script src="/demo/utils/stripe.js"></script>
 
+    <!-- Mobile AI mini-bar (visible only on mobile when AI panel is collapsed) -->
+    <div id="aiMiniBar" class="ai-mini-bar">
+        <i class="fas fa-atom ai-mini-icon"></i>
+        <span class="ai-mini-placeholder">Ask me anything...</span>
+        <button class="ai-mini-send"><i class="fas fa-paper-plane"></i></button>
+    </div>
+
+    <!-- Mobile backdrop for dismissing panels -->
+    <div id="mobileBackdrop" class="mobile-backdrop"></div>
+
     <script type="module" src="/demo/main.js"></script>
     <script src="/demo/fileExplorer.js"></script>
     <script type="module" src="/demo/aiagent.js"></script>
     <script type="module" src="/demo/remoteFiles.js"></script>
+    <script src="/demo/mobile.js"></script>
 
 </body>
 

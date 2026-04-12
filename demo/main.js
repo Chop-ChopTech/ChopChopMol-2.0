@@ -6115,12 +6115,24 @@ function updateRendererSize() {
     // Calculate available space accounting for open panels
     const aiPanel = document.getElementById('aiChatPanel');
     const explorerPanel = document.getElementById('fileExplorerPanel');
+    const mobile = window.isMobile?.() || window.matchMedia('(max-width: 768px)').matches;
 
-    const leftOffset = (aiPanel && aiPanel.classList.contains('open')) ? aiPanel.offsetWidth : 0;
-    const rightOffset = (explorerPanel && explorerPanel.classList.contains('open')) ? explorerPanel.offsetWidth : 0;
+    // On mobile, panels overlay the canvas — no offset needed
+    let leftOffset = 0;
+    let rightOffset = 0;
+    if (!mobile) {
+        leftOffset = (aiPanel && aiPanel.classList.contains('open')) ? aiPanel.offsetWidth : 0;
+        rightOffset = (explorerPanel && explorerPanel.classList.contains('open')) ? explorerPanel.offsetWidth : 0;
+    }
 
     const width = window.innerWidth - leftOffset - rightOffset;
-    const height = window.innerHeight;
+    let height = window.innerHeight;
+
+    // On mobile, canvas only fills the space above the fixed AI panel
+    if (mobile && aiPanel) {
+        const panelHeight = aiPanel.offsetHeight || 0;
+        height = window.innerHeight - panelHeight;
+    }
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -6138,29 +6150,33 @@ function updateRendererSize() {
     renderer.setSize(width, height);
     renderer.domElement.style.marginLeft = leftOffset + 'px';
 
-    // Sync text editor position with viewport area
-    const textEditor = document.getElementById('textEditorModal');
-    if (textEditor) {
-        textEditor.style.left = leftOffset + 'px';
-        textEditor.style.right = rightOffset + 'px';
+    // On mobile, CSS handles positioning — skip JS overrides
+    if (!mobile) {
+        // Sync text editor position with viewport area
+        const textEditor = document.getElementById('textEditorModal');
+        if (textEditor) {
+            textEditor.style.left = leftOffset + 'px';
+            textEditor.style.right = rightOffset + 'px';
+        }
+
+        // Center frame slider on canvas
+        const frameSlider = document.getElementById('frameSliderContainer');
+        if (frameSlider) {
+            frameSlider.style.left = (leftOffset + width / 2) + 'px';
+        }
+        const toolbarBg = document.getElementById('toolbar-background');
+        const canvasCenter = leftOffset + width / 2;
+        if (toolbarBg) {
+            toolbarBg.style.left = canvasCenter + 'px';
+            toolbarBg.style.transform = 'translateX(-50%)';
+        }
+        document.documentElement.style.setProperty('--properties-panel-left', canvasCenter + 'px');
+        const fragmentListContainer = document.getElementById('fragmentListContainer');
+        if (fragmentListContainer) {
+            fragmentListContainer.style.left = (leftOffset + 10) + 'px';
+        }
     }
 
-    // Center frame slider on canvas
-    const frameSlider = document.getElementById('frameSliderContainer');
-    if (frameSlider) {
-        frameSlider.style.left = (leftOffset + width / 2) + 'px';
-    }
-    const toolbarBg = document.getElementById('toolbar-background');
-    const canvasCenter = leftOffset + width / 2;
-    if (toolbarBg) {
-        toolbarBg.style.left = canvasCenter + 'px';
-        toolbarBg.style.transform = 'translateX(-50%)';
-    }
-    document.documentElement.style.setProperty('--properties-panel-left', canvasCenter + 'px');
-    const fragmentListContainer = document.getElementById('fragmentListContainer');
-    if (fragmentListContainer) {
-        fragmentListContainer.style.left = (leftOffset + 10) + 'px';
-    }
     render();
 }
 window.addEventListener('resize', updateRendererSize);

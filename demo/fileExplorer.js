@@ -897,11 +897,21 @@ class FileExplorer {
     }
 
     toggle() {
+        if (window.mobilePanelCoordinator) {
+            window.mobilePanelCoordinator.toggleFileExplorer();
+            return;
+        }
         this.panel?.classList.toggle('open');
         window.updateRendererSize?.();
     }
 
     close() {
+        if (window.mobilePanelCoordinator) {
+            if (this.panel?.classList.contains('open')) {
+                window.mobilePanelCoordinator.toggleFileExplorer();
+            }
+            return;
+        }
         this.panel?.classList.remove('open');
         window.updateRendererSize?.();
     }

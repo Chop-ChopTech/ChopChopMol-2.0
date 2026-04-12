@@ -7469,17 +7469,137 @@ input[type="color"]::-moz-color-swatch {
 }
 
 /* ============================================================================
-   MOBILE RESPONSIVENESS
+   MOBILE-ONLY ELEMENTS (hidden on desktop)
+   ============================================================================ */
+
+.mobile-only { display: none !important; }
+
+/* AI Mini-bar — not used in current layout, hidden */
+.ai-mini-bar {
+    display: none;
+}
+
+/* Mobile overflow menu */
+.mobile-overflow-menu {
+    display: none;
+    position: fixed;
+    top: 52px;
+    right: 10px;
+    z-index: 10004;
+    background: rgba(20, 20, 22, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 6px 0;
+    min-width: 180px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.mobile-overflow-menu.open {
+    display: block;
+}
+
+.mobile-overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.mobile-overflow-item:active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.mobile-overflow-item i {
+    width: 18px;
+    text-align: center;
+    font-size: 14px;
+    color: rgba(100, 180, 255, 0.7);
+}
+
+/* Mobile backdrop overlay */
+.mobile-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 10002;
+}
+
+.mobile-backdrop.active {
+    display: block;
+}
+
+
+/* ============================================================================
+   MOBILE RESPONSIVENESS — 768px breakpoint
    ============================================================================ */
 
 @media (max-width: 768px) {
-    /* Toolbar: shrink buttons and wrap */
+
+    /* Prevent horizontal scroll + fix position:fixed with perspective */
+    body {
+        overflow-x: hidden;
+        perspective: none !important;
+    }
+
+    /* ── TOOLBAR: compact icon-only row, fixed at top ── */
     #toolbar-background {
-        padding: 4px 8px;
-        flex-wrap: wrap;
-        max-width: 95vw;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        transform: none !important;
+        padding: 6px 10px !important;
+        flex-wrap: nowrap !important;
+        gap: 2px;
+        z-index: 10000 !important;
+        border-radius: 0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        box-sizing: border-box;
+        justify-content: center;
+    }
+
+    /* Hide all text labels — icon only */
+    .toolbar-label {
+        display: none !important;
+    }
+
+    .toolbar-divider {
+        display: none !important;
+    }
+
+    .toolbar-group {
         gap: 2px;
     }
+
+    /* Show mobile overflow button */
+    .mobile-only {
+        display: flex !important;
+    }
+
+    /* Hide non-essential toolbar items on mobile */
+    #reset-camera { display: none !important; }
+    #toggle-ribbon { display: none !important; }
+    .toolbar-group button[onclick*="propertiesPanel"] { display: none !important; }
+    .toolbar-group button[onclick*="fragmentListContainer"] { display: none !important; }
+    #energyChartDropdown { display: none !important; }
+    #showAllBondLengths { display: none !important; }
+    #switchMode { display: none !important; }
+    .toolbar-group button[onclick*="toggleFullscreen"] { display: none !important; }
+    #startTutorialBtn { display: none !important; }
+    #settingsGear { display: none !important; }
+    /* Hide AI toggle button — panel is always visible on mobile */
+    #aiToggleBtn { display: none !important; }
 
     .fancy-button {
         width: auto;
@@ -7488,76 +7608,119 @@ input[type="color"]::-moz-color-swatch {
         font-size: 11px;
     }
 
-    .toolbar-group {
-        gap: 2px;
+    .dropdown-icon {
+        padding: 6px 10px;
+        font-size: 15px;
     }
 
-    .toolbar-divider {
-        margin: 0 2px;
-    }
-
-    /* ── AI Chat: bottom sheet on mobile ── */
-    .ai-chat-panel {
-        /* Override desktop sidebar → bottom sheet */
+    /* ── AI CHAT PANEL: always-visible bottom section ── */
+    .ai-chat-panel,
+    .ai-chat-panel.open {
+        position: fixed !important;
+        display: flex !important;
+        flex-direction: column !important;
         width: 100vw !important;
         max-width: 100vw !important;
-        height: 65vh !important;
+        height: 40vh !important;
         top: auto !important;
         bottom: 0 !important;
         left: 0 !important;
-        border-right: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px 16px 0 0;
-        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
-        /* Slide up from bottom instead of left */
-        transform: translateY(100%) !important;
-        transition: transform 0.3s ease !important;
+        right: 0 !important;
+        border-right: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        transform: none !important;
+        transition: none !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 10001 !important;
     }
 
-    .ai-chat-panel.open {
-        transform: translateY(0) !important;
-    }
-
-    /* Hide panel resizer & collapse toggle on mobile */
+    /* Hide desktop-only panel controls */
     .ai-chat-panel .panel-resizer-horizontal,
     .ai-chat-panel .panel-collapse-toggle {
+        display: none !important;
+    }
+
+    /* Hide the full header bar on mobile — save space */
+    .ai-chat-header {
+        display: none !important;
+    }
+
+    /* Messages area fills available space */
+    .ai-chat-messages {
+        flex: 1;
+        min-height: 0;
+        padding: 8px 10px !important;
+    }
+
+    /* Chat input area */
+    .ai-chat-input-area {
+        padding: 6px 8px !important;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+        gap: 4px !important;
+    }
+
+    /* Input: 14px minimum to prevent iOS auto-zoom */
+    #aiChatInput {
+        font-size: 14px !important;
+        min-height: 36px;
+        max-height: 80px;
+        padding: 8px 10px !important;
+    }
+
+    /* Bottom options: single compact row */
+    #bottom-options {
+        flex-wrap: nowrap;
+        gap: 4px;
+    }
+
+    .ai-model-select {
+        min-width: 0;
+        max-width: 100px;
+        flex: 0 1 auto;
+        font-size: 10px;
+    }
+
+    /* Thinking control: compact */
+    .ai-thinking-control {
+        font-size: 10px;
+        gap: 3px;
+    }
+
+    .ai-thinking-control-label {
         display: none;
     }
 
-    /* Chat header: add grab handle for bottom sheet feel */
-    .ai-chat-header {
-        position: relative;
+    .ai-thinking-control > i {
+        display: none;
     }
 
-    .ai-chat-header::before {
-        content: '';
-        position: absolute;
-        top: -8px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 36px;
-        height: 4px;
-        border-radius: 2px;
-        background: rgba(255, 255, 255, 0.2);
+    .ai-thinking-opt {
+        padding: 2px 5px;
+        font-size: 9px;
     }
 
-    /* ── File explorer: also bottom sheet ── */
+    /* ── FILE EXPLORER: full overlay ── */
     .file-explorer-panel {
         width: 100vw !important;
         max-width: 100vw !important;
-        height: 65vh !important;
-        top: auto !important;
+        height: 100vh !important;
+        top: 0 !important;
         bottom: 0 !important;
+        left: 0 !important;
         right: 0 !important;
-        border-left: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px 16px 0 0;
-        transform: translateY(100%);
+        border-left: none !important;
+        border-top: none !important;
+        border-radius: 0;
+        transform: translateX(100%);
         transition: transform 0.3s ease;
+        z-index: 10002 !important;
     }
 
     .file-explorer-panel.open {
-        transform: translateY(0);
+        transform: translateX(0);
     }
 
     .file-explorer-panel .panel-resizer-horizontal,
@@ -7565,35 +7728,83 @@ input[type="color"]::-moz-color-swatch {
         display: none;
     }
 
-    /* Bottom options: wrap for smaller screens */
-    #bottom-options {
-        flex-wrap: wrap;
-        gap: 4px;
+    /* ── FLOATING PANELS → overlays above chat ── */
+    .style-panel {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 40vh !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        max-height: 50vh !important;
+        transform: none !important;
+        margin: 0 !important;
+        border-radius: 12px 12px 0 0 !important;
+        z-index: 10003 !important;
+        overflow-y: auto;
     }
 
-    .ai-model-select {
-        min-width: 0;
-        flex: 1 1 auto;
-        font-size: 10px;
+    .style-panel.open .style-panel-content {
+        max-height: calc(50vh - 60px);
+        flex-direction: column;
     }
 
-    /* Thinking control: tighten */
-    .ai-thinking-control {
-        font-size: 10px;
-        gap: 4px;
+    .properties-panel {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 40vh !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        max-height: 50vh !important;
+        transform: none !important;
+        border-radius: 12px 12px 0 0 !important;
+        z-index: 10003 !important;
+        overflow-y: auto;
     }
 
-    .ai-thinking-opt {
-        padding: 2px 6px;
-        font-size: 9px;
+    .orbital-table-panel {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 40vh !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        max-height: 50vh !important;
+        border-radius: 12px 12px 0 0 !important;
+        z-index: 10003 !important;
+        overflow-y: auto;
     }
 
-    /* Dropdown labels: hide text on mobile, show icon only */
-    .dropdown-icon .toolbar-label {
-        display: none;
+    #fragmentListContainer {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 40vh !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100vw !important;
+        height: auto !important;
+        max-height: 50vh !important;
+        border-radius: 12px 12px 0 0 !important;
+        z-index: 10003 !important;
+        overflow-y: auto;
+        padding: 10px !important;
     }
 
-    /* Undo buttons: reposition */
+    /* ── FRAME SLIDER: sits just above the AI panel ── */
+    #frameSliderContainer {
+        bottom: calc(40vh + 8px) !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: calc(100vw - 20px) !important;
+        max-width: none !important;
+        transform: none !important;
+    }
+
+    /* ── UNDO BUTTONS ── */
     #undoContainer {
         top: 50px !important;
         right: 10px !important;
@@ -7604,13 +7815,62 @@ input[type="color"]::-moz-color-swatch {
         height: 30px !important;
         font-size: 14px !important;
     }
+
+    /* ── MODALS: full-width ── */
+    .modal-dialog,
+    .text-editor-modal {
+        width: calc(100vw - 20px) !important;
+        max-width: none !important;
+        margin: 10px auto !important;
+    }
+
+    /* ── DB Search panel ── */
+    .db-search-panel {
+        width: calc(100vw - 40px) !important;
+        min-width: unset !important;
+        max-width: calc(100vw - 40px) !important;
+    }
+
+    /* ── Tool rows: prevent overflow ── */
+    .ai-tool-row {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .chart-inline-container {
+        max-width: 100% !important;
+    }
+
+    /* ── Welcome message: compact ── */
+    .ai-welcome h4 {
+        font-size: 14px;
+        margin: 4px 0;
+    }
+
+    .ai-welcome p {
+        font-size: 11px;
+        margin: 0;
+    }
+
+    .ai-welcome-icon {
+        font-size: 20px !important;
+        margin-bottom: 4px !important;
+    }
 }
+
+
+/* ============================================================================
+   MOBILE RESPONSIVENESS — 480px breakpoint (small phones)
+   ============================================================================ */
 
 @media (max-width: 480px) {
     #toolbar-background {
-        top: 5px;
-        padding: 3px 6px;
-        border-radius: 16px;
+        padding: 4px 8px !important;
+    }
+
+    .dropdown-icon {
+        padding: 5px 8px;
+        font-size: 13px;
     }
 
     .fancy-button {
@@ -7619,27 +7879,11 @@ input[type="color"]::-moz-color-swatch {
         border-radius: 20px;
     }
 
-    /* Bottom sheet: taller on very small screens */
-    .ai-chat-panel {
-        height: 70vh !important;
+    .ai-model-select {
+        max-width: 80px;
+        font-size: 9px;
     }
 
-    /* Thinking: hide label, keep toggle buttons */
-    .ai-thinking-control-label {
-        display: none;
-    }
-
-    .ai-thinking-control i {
-        display: none;
-    }
-
-    /* Chat input: slightly smaller */
-    #aiChatInput {
-        font-size: 13px;
-        rows: 2;
-    }
-
-    /* Action buttons: tighter */
     .ai-attach-btn,
     #aiSendBtn,
     .ai-mic-btn {
@@ -7648,46 +7892,34 @@ input[type="color"]::-moz-color-swatch {
         font-size: 11px;
     }
 
-    /* Sign-in button: keep accessible on small screens */
     #signInButton {
         font-size: 11px;
         padding: 4px 10px;
     }
 
-    /* Frame slider: full width on mobile */
-    #frameSliderContainer {
-        width: calc(100vw - 20px) !important;
-        left: 10px !important;
-        right: 10px !important;
-        max-width: none !important;
-    }
-
-    /* Modals: full-width on mobile */
-    .modal-dialog,
-    .text-editor-modal {
-        width: calc(100vw - 20px) !important;
-        max-width: none !important;
-        margin: 10px auto !important;
-    }
-
-    /* Prevent horizontal scroll */
-    body {
-        overflow-x: hidden;
-    }
-
-    /* Chat messages: tighter padding */
     .ai-chat-messages {
         padding: 6px !important;
     }
+}
 
-    /* Tool rows: prevent overflow */
-    .ai-tool-row {
-        max-width: 100%;
-        overflow-x: hidden;
+
+/* ============================================================================
+   MOBILE LANDSCAPE — give more room to viewport
+   ============================================================================ */
+
+@media (max-width: 768px) and (orientation: landscape) {
+    .ai-chat-panel {
+        height: 35vh !important;
     }
 
-    /* Chart containers: fit mobile width */
-    .chart-inline-container {
-        max-width: 100% !important;
+    .style-panel,
+    .properties-panel,
+    .orbital-table-panel,
+    #fragmentListContainer {
+        bottom: 35vh !important;
+    }
+
+    #frameSliderContainer {
+        bottom: calc(35vh + 8px) !important;
     }
 }
