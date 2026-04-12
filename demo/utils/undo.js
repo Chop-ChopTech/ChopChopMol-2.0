@@ -1,8 +1,12 @@
 const undoManager = new UndoManager();
-window.undoManager = undoManager; // Fix 6: expose globally so AI undo/redo tools work
-let savedLabels = [];
+window.undoManager = undoManager;
 
 undoManager.setLimit(30); // Keep last 30 actions
+
+// Track the last stable state so we always have a reliable "before" snapshot.
+// When saveUndoState() is called AFTER a mutation, _lastStableState holds the
+// pre-mutation state and the current getMoleculeState() holds the post-mutation state.
+let _lastStableState = null;
 
 // Helper to get current state
 function getMoleculeState() {
@@ -27,7 +31,7 @@ function getMoleculeState() {
     return {
         moleculeData: JSON.parse(JSON.stringify(window.main.data)),
         selectedAtoms: [...(window.atomsSelected || [])],
-        labels: labelsState  // ADD THIS: Save labels state
+        labels: labelsState
     };
 }
 
@@ -62,7 +66,7 @@ function restoreMoleculeState(state) {
             });
         }
 
-        // ADD THIS: Restore bond/angle labels
+        // Restore bond/angle labels
         if (state.labels && state.labels.length > 0) {
             // Clear existing labels first
             if (typeof window.clearAllBondLengthLabels === 'function') {
@@ -92,38 +96,54 @@ function restoreMoleculeState(state) {
     }
 }
 
-// Main function to save an action
+// Initialize the undo baseline — call after molecule loads so the first
+// mutation has a valid "before" state to undo to.
+window.initUndoState = function () {
+    _lastStableState = getMoleculeState();
+};
+
+// Main function to save an undo entry.
+// Call AFTER the mutation completes. The function uses the previously
+// saved _lastStableState as "before" and the current state as "after".
+// No setTimeout — captures state synchronously and reliably.
 window.saveUndoState = function (actionName = "Action") {
     // Don't save during undo/redo
     if (window._isUndoing) return;
 
-    const previousState = getMoleculeState();
-    if (!previousState) return;
+    const currentState = getMoleculeState();
+    if (!currentState) return;
 
-    // Wait for action to complete
-    setTimeout(() => {
-        const currentState = getMoleculeState();
-        if (!currentState) return;
-
-        // Add to undo manager
-        undoManager.add({
-            undo: function () {
-                window._isUndoing = true;
-                restoreMoleculeState(previousState);
-                window._isUndoing = false;
-                updateUndoButtons();
-            },
-            redo: function () {
-                window._isUndoing = true;
-                restoreMoleculeState(currentState);
-                window._isUndoing = false;
-                updateUndoButtons();
-            }
-        });
-
-        console.log(`Saved: ${actionName}`);
+    // First call or after molecule load — just establish baseline
+    if (!_lastStableState) {
+        _lastStableState = currentState;
         updateUndoButtons();
-    }, 50);
+        return;
+    }
+
+    const before = _lastStableState;
+    const after = currentState;
+
+    // Add to undo manager
+    undoManager.add({
+        undo: function () {
+            window._isUndoing = true;
+            restoreMoleculeState(before);
+            _lastStableState = before;
+            window._isUndoing = false;
+            updateUndoButtons();
+        },
+        redo: function () {
+            window._isUndoing = true;
+            restoreMoleculeState(after);
+            _lastStableState = after;
+            window._isUndoing = false;
+            updateUndoButtons();
+        }
+    });
+
+    _lastStableState = after;
+    console.log(`Undo saved: ${actionName}`);
+    updateUndoButtons();
 };
 
 // Keyboard shortcuts
@@ -261,5 +281,6 @@ document.addEventListener('DOMContentLoaded', function () {
 // Clear history helper
 window.clearUndoHistory = function () {
     undoManager.clear();
+    _lastStableState = null;
     updateUndoButtons();
 };

@@ -380,6 +380,14 @@ export default class Main {
         if (window.updateRibbonToggle) {
             window.updateRibbonToggle();
         }
+
+        // Clear stale undo history and initialize baseline for the new molecule
+        if (typeof window.clearUndoHistory === 'function') {
+            window.clearUndoHistory();
+        }
+        if (typeof window.initUndoState === 'function') {
+            window.initUndoState();
+        }
     }
     toggleLabels(override = null) {
         labelMode = override ?? !labelMode;
@@ -3306,11 +3314,6 @@ function resetRotation() {
 function finalizeRotation() {
     if (!rotationState.isActive) return;
 
-    // Save undo state if available
-    if (typeof saveUndoState === 'function') {
-        saveUndoState("Rotate Atoms");
-    }
-
     // Update base positions to current positions
     rotationState.selectedAtoms.forEach(idx => {
         const atom = main.molecule.atoms[idx];
@@ -3319,9 +3322,14 @@ function finalizeRotation() {
         }
     });
 
-    // Update molecule coordinates
+    // Sync atom positions → main.data BEFORE saving undo state
     if (main.molecule.updateMainCoordinates) {
         main.molecule.updateMainCoordinates();
+    }
+
+    // Save undo AFTER updateMainCoordinates so main.data reflects the change
+    if (typeof saveUndoState === 'function') {
+        saveUndoState("Rotate Atoms");
     }
 
     console.log(`Rotation finalized at ${rotationState.currentAngle}°`);
@@ -3575,9 +3583,9 @@ function updateAtomMatrix(atomIndex) {
 
 function onPointerUp(event) {
     // Handle dragging cleanup
+    const wasDragging = dragging;
     if (dragging) {
         dragging = false;
-        saveUndoState("Move Atoms");
         dragOffsets = {};
 
         // Clean up axis dragging variables
@@ -3597,7 +3605,13 @@ function onPointerUp(event) {
     }
 
     if (main.molecule) {
+        // Sync atom positions → main.data BEFORE saving undo state
         main.molecule.updateMainCoordinates();
+    }
+
+    // Save undo AFTER updateMainCoordinates so main.data reflects the drag
+    if (wasDragging) {
+        saveUndoState("Move Atoms");
     }
 }
 function selectFragment(fragmentAtoms, fragmentIndex) {
@@ -4342,8 +4356,8 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
 
                     justAppliedTransform = true;
                     updateAllBondLengthLabels();
-                    saveUndoState("Set Distance");
                     main.molecule.updateMainCoordinates();
+                    saveUndoState("Set Distance");
                     render();
 
                     input.blur();
@@ -4533,8 +4547,8 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
 
                     justAppliedTransform = true;
                     updateAllBondLengthLabels();
-                    saveUndoState("Set Dihedral");
                     main.molecule.updateMainCoordinates();
+                    saveUndoState("Set Dihedral");
                     render();
 
                     input.blur();
@@ -4739,8 +4753,8 @@ function createInfoLabel(atom1Index, atom2Index, atom3Index = null, atom4Index =
 
                     justAppliedTransform = true;
                     updateAllBondLengthLabels();
-                    saveUndoState("Set Angle");
                     main.molecule.updateMainCoordinates();
+                    saveUndoState("Set Angle");
                     render();
 
                     input.value = calculateAngle(
@@ -5063,8 +5077,8 @@ window.addEventListener('keyup', function (e) {
         controls.enabled = true;
 
         if (Object.keys(rotationBasePositions).length > 0) {
-            saveUndoState("Fine-tune Transformation");
             main.molecule.updateMainCoordinates();
+            saveUndoState("Fine-tune Transformation");
         }
     }
 });

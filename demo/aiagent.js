@@ -222,10 +222,10 @@ const FUNCTIONS = {
             if (typeof window.updateAllBondLengthLabels === 'function') {
                 window.updateAllBondLengthLabels();
             }
+            window.main.molecule.updateMainCoordinates();
             if (typeof window.saveUndoState === 'function') {
                 window.saveUndoState("Set Angle");
             }
-            window.main.molecule.updateMainCoordinates();
             if (typeof window.render === 'function') {
                 window.render();
             }
@@ -329,10 +329,6 @@ const FUNCTIONS = {
             const atom2 = molecule.atoms[axisAtom2];
             if (!atom1 || !atom2) return { success: false, message: "Invalid axis atoms" };
 
-            if (typeof window.saveUndoState === 'function') {
-                window.saveUndoState("Transform Atoms");
-            }
-
             // Capture starting positions
             const startPositions = {};
             atomsToMove.forEach(idx => {
@@ -424,6 +420,7 @@ const FUNCTIONS = {
             });
 
             if (typeof window.updateMoleculeVisualization === 'function') window.updateMoleculeVisualization();
+            if (typeof window.saveUndoState === 'function') window.saveUndoState("Transform Atoms");
 
             const action = angle !== undefined ? `Rotated ${angle}°` : `Translated ${distance} Å`;
             return { success: true, message: `${action} for ${atomsToMove.length} atoms` };
@@ -488,10 +485,10 @@ const FUNCTIONS = {
             if (typeof window.updateAllBondLengthLabels === 'function') {
                 window.updateAllBondLengthLabels();
             }
+            window.main.molecule.updateMainCoordinates();
             if (typeof window.saveUndoState === 'function') {
                 window.saveUndoState("Set Distance");
             }
-            window.main.molecule.updateMainCoordinates();
             if (typeof window.render === 'function') {
                 window.render();
             }
@@ -586,10 +583,10 @@ const FUNCTIONS = {
             if (typeof window.updateAllBondLengthLabels === 'function') {
                 window.updateAllBondLengthLabels();
             }
+            window.main.molecule.updateMainCoordinates();
             if (typeof window.saveUndoState === 'function') {
                 window.saveUndoState("Set Dihedral");
             }
-            window.main.molecule.updateMainCoordinates();
             if (typeof window.render === 'function') {
                 window.render();
             }
@@ -744,10 +741,6 @@ const FUNCTIONS = {
                 return { success: false, message: "No molecule loaded" };
             }
 
-            if (typeof window.saveUndoState === 'function') {
-                window.saveUndoState("Split Molecule");
-            }
-
             const atoms = window.main.molecule.atoms;
             const bonds = window.main.molecule.bonds;
             const { atom1, atom2 } = params;
@@ -835,6 +828,9 @@ const FUNCTIONS = {
 
             if (typeof window.render === 'function') {
                 window.render();
+            }
+            if (typeof window.saveUndoState === 'function') {
+                window.saveUndoState("Split Molecule");
             }
 
             return {
@@ -1320,7 +1316,7 @@ const FUNCTIONS = {
                         if (label) label.textContent = `Frame ${parsedFrames.length} / ${parsedFrames.length}`;
                     }
 
-                    window.undoManager?.saveState?.();
+                    if (typeof window.saveUndoState === 'function') window.saveUndoState("Optimize/MD");
                     molecule.animateToFrame(parsedFrames[parsedFrames.length - 1], 500);
                     mergeForcesIntoFrames(result.trajectory, includeForces);
                     updateCurrentFrameForces();
@@ -1963,7 +1959,7 @@ const FUNCTIONS = {
                         if (label) label.textContent = `Frame ${parsedFrames.length} / ${parsedFrames.length}`;
                     }
 
-                    window.undoManager?.saveState?.();
+                    if (typeof window.saveUndoState === 'function') window.saveUndoState("Optimize/MD");
                     molecule.animateToFrame(parsedFrames[parsedFrames.length - 1], 500);
                 }
 
