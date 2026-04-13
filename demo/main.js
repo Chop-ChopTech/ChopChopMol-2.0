@@ -3552,6 +3552,8 @@ function recreateRenderer(antialiasEnabled) {
 
 
     // IMPORTANT: Re-attach the enhanced pointer down event for atom selection
+    // Remove first to prevent duplicate listeners across multiple recreateRenderer calls
+    window.removeEventListener('pointerdown', enhancedOnPointerDown, false);
     window.addEventListener('pointerdown', enhancedOnPointerDown, false);
 
     // Env map textures depend on the renderer's PMREMGenerator, so invalidate cache

@@ -2482,6 +2482,9 @@ input[type="range"]:focus {
     background-repeat: no-repeat;
     background-position: right 8px center;
     padding-right: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .ai-model-select option,
