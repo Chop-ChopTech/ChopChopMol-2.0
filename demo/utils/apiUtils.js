@@ -7,7 +7,7 @@
  */
 const DEFAULT_TIMEOUT_MS = 30000;
 
-const RUNPOD_URL = 'https://o1iae4xinpycz3-10000.proxy.runpod.net';
+const RUNPOD_URL = 'https://b9uh85hcdjt7ge-10000.proxy.runpod.net';
 const RENDER_URL = 'https://chopchopmol-ai-backend.onrender.com';
 const LOCAL_URL = 'http://127.0.0.1:10000';
 
