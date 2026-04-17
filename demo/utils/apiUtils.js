@@ -240,5 +240,72 @@ export async function retryFetch(fetchFn, maxRetries = 3, baseDelayMs = 1000) {
     throw lastError;
 }
 
+/**
+ * Generic SSE streaming POST helper. Calls `onEvent(event)` for every SSE
+ * `data:` line. Returns the final `done` event's summary (or `{success:true}`).
+ *
+ * Events emitted by the backend follow the shape:
+ *   {type: 'progress' | 'frame' | 'scf' | 'stdout' | 'stderr' | 'status'
+ *         | 'heartbeat' | 'figure' | 'done' | 'error', ...payload}
+ *
+ * @param {string} url         Full endpoint URL
+ * @param {object} body        POST body (JSON-serialized)
+ * @param {object} opts
+ * @param {(ev:object)=>void} opts.onEvent  Per-event callback
+ * @param {AbortSignal}       [opts.signal] Abort signal
+ * @param {Record<string,string>} [opts.headers]
+ */
+export async function streamSSE(url, body, { onEvent, signal, headers } = {}) {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(headers || {}) },
+        body: JSON.stringify(body),
+        signal,
+    });
+    if (!res.ok) {
+        let err;
+        try { err = await res.json(); } catch { err = { error: res.statusText }; }
+        throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let summary = null;
+
+    const handle = (event) => {
+        if (event.type === 'done') {
+            summary = event.summary || { success: true };
+        } else if (event.type === 'error') {
+            throw new Error(event.error || 'stream error');
+        }
+        if (onEvent) onEvent(event);
+    };
+
+    const parseLine = (line) => {
+        if (!line.startsWith('data: ')) return;
+        const json = line.slice(6);
+        try {
+            handle(JSON.parse(json));
+        } catch (e) {
+            if (!(e instanceof SyntaxError)) throw e;
+        }
+    };
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let nl;
+        while ((nl = buffer.indexOf('\n')) !== -1) {
+            const line = buffer.slice(0, nl).trim();
+            buffer = buffer.slice(nl + 1);
+            if (line) parseLine(line);
+        }
+    }
+    const remaining = buffer.trim();
+    if (remaining) parseLine(remaining);
+    return summary || { success: true };
+}
+
 // Resolve backend URL on module load so it's logged immediately
 getBackendUrl();

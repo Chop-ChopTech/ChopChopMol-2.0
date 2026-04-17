@@ -3119,11 +3119,38 @@
                                     <span class="ai-tool-row-status"><i class="fas fa-spinner fa-spin"></i></span>
                                     <i class="fas fa-chevron-right ai-tool-row-chevron"></i>
                                 </div>
+                                <div class="ai-tool-row-progress">
+                                    <div class="ai-tool-row-progress-bar"><div class="ai-tool-row-progress-fill"></div></div>
+                                    <div class="ai-tool-row-progress-text"><span class="progress-label"></span><span class="progress-meta"></span></div>
+                                </div>
                                 <div class="ai-tool-row-details"></div>
                             `;
                             row.querySelector('.ai-tool-row-header').addEventListener('click', () => {
                                 row.classList.toggle('expanded');
                             });
+
+                            // Streaming tools: show the progress strip immediately with a small
+                            // indeterminate fill so the user sees "something is happening" before
+                            // the first SSE event arrives. The sheen animation runs from the start.
+                            const STREAMING_TOOLS = new Set([
+                                'calculate_all_energies',
+                                'calculate_all_dft_energies',
+                                'calculate_dft_energy',
+                                'run_md',
+                                'optimize_geometry',
+                                'finetune_model',
+                                'execute_python',
+                            ]);
+                            if (STREAMING_TOOLS.has(toolName)) {
+                                const prog = row.querySelector('.ai-tool-row-progress');
+                                const fill = row.querySelector('.ai-tool-row-progress-fill');
+                                const lbl = row.querySelector('.progress-label');
+                                if (prog && fill) {
+                                    prog.classList.add('visible');
+                                    fill.style.width = '6%';  // thin seed fill; sheen carries the motion
+                                    if (lbl) lbl.textContent = 'starting…';
+                                }
+                            }
 
                             contentEl.appendChild(row);
                             activeToolRow = row;
@@ -4214,6 +4241,82 @@
                         pendingJobs: pendingJobs.map(j => ({ jobId: j.jobId, toolName: j.toolName, timestamp: j.timestamp }))
                     });
                     console.log('Saved pendingJob to Firestore:', jobId, toolName);
+                }
+            });
+
+            // Live progress events from streaming tool calls (batch energy,
+            // DFT SCF, Python stdout). aiagent.js dispatches these while a
+            // long-running tool is active; we update the *last* tool row
+            // matching the tool name.
+            const _progressStdoutBuffers = new WeakMap();
+            window.addEventListener('ai-tool-progress', (e) => {
+                const d = e.detail || {};
+                const row = Array.from(
+                    document.querySelectorAll(`.ai-tool-row[data-tool="${d.tool}"]`)
+                ).pop();
+                if (!row) return;
+
+                const progressEl = row.querySelector('.ai-tool-row-progress');
+                const fillEl = row.querySelector('.ai-tool-row-progress-fill');
+                const labelEl = row.querySelector('.progress-label');
+                const metaEl = row.querySelector('.progress-meta');
+                if (!progressEl || !fillEl) return;
+                progressEl.classList.add('visible');
+
+                if (d.kind === 'frame') {
+                    // Batch/MD/optimize/finetune: frame-of-total progress.
+                    const basePct = d.total ? ((d.frame + 1) / d.total) * 100 : 0;
+                    const pct = typeof d.overridePct === 'number' ? d.overridePct : basePct;
+                    fillEl.style.width = `${Math.max(0, Math.min(100, pct)).toFixed(1)}%`;
+                    const meta = [];
+                    if (typeof d.energy_eV === 'number') meta.push(`${d.energy_eV.toFixed(4)} eV`);
+                    if (typeof d.temperature_K === 'number') meta.push(`${d.temperature_K.toFixed(0)}K`);
+                    if (typeof d.max_force_eV_A === 'number') meta.push(`fmax=${d.max_force_eV_A.toFixed(3)}`);
+                    if (typeof d.scf_cycles === 'number') meta.push(`${d.scf_cycles} cyc`);
+                    if (typeof d.loss === 'number') meta.push(`loss=${d.loss.toFixed(4)}`);
+                    if (typeof d.rmseE === 'number') meta.push(`E=${d.rmseE.toFixed(3)}`);
+                    if (typeof d.rmseF === 'number') meta.push(`F=${d.rmseF.toFixed(3)}`);
+                    if (typeof d.elapsed_ms === 'number') meta.push(`${(d.elapsed_ms / 1000).toFixed(1)}s`);
+                    if (labelEl) {
+                        if (d.tool === 'finetune_model') {
+                            labelEl.textContent = `Epoch ${d.epoch ?? d.frame + 1}/${d.total}`;
+                        } else if (d.tool === 'run_md') {
+                            labelEl.textContent = `Frame ${d.frame + 1}/${d.total}${d.step != null ? ` · step ${d.step}` : ''}`;
+                        } else if (d.tool === 'optimize_geometry') {
+                            labelEl.textContent = `Step ${d.frame + 1}/${d.total}`;
+                        } else {
+                            labelEl.textContent = `Frame ${d.frame + 1}/${d.total}`;
+                        }
+                    }
+                    if (metaEl) metaEl.textContent = meta.join(' · ');
+                } else if (d.kind === 'scf') {
+                    // Single-point DFT: SCF convergence iterations.
+                    if (labelEl) labelEl.textContent = `SCF cycle ${d.cycle}`;
+                    const bits = [];
+                    if (typeof d.energy_eV === 'number') bits.push(`${d.energy_eV.toFixed(6)} eV`);
+                    if (typeof d.delta_e_hartree === 'number') bits.push(`ΔE=${d.delta_e_hartree.toExponential(1)}`);
+                    if (typeof d.norm_gorb === 'number') bits.push(`|g|=${d.norm_gorb.toExponential(1)}`);
+                    if (metaEl) metaEl.textContent = bits.join(' · ');
+                    // Indeterminate-looking progress: pulse between 5-95%
+                    const pct = Math.min(95, 5 + (d.cycle || 0) * 9);
+                    fillEl.style.width = `${pct}%`;
+                } else if (d.kind === 'stdout' || d.kind === 'stderr') {
+                    // Python execution: stream stdout/stderr lines into the
+                    // details block as they arrive.
+                    if (!row.classList.contains('expanded')) row.classList.add('expanded');
+                    const detailsEl = row.querySelector('.ai-tool-row-details');
+                    let stdoutPre = detailsEl.querySelector('.ai-tool-row-stdout');
+                    if (!stdoutPre) {
+                        stdoutPre = document.createElement('pre');
+                        stdoutPre.className = 'ai-tool-row-stdout';
+                        detailsEl.appendChild(stdoutPre);
+                    }
+                    const span = document.createElement('span');
+                    if (d.kind === 'stderr') span.className = 'stderr';
+                    span.textContent = (d.line || '') + '\n';
+                    stdoutPre.appendChild(span);
+                    stdoutPre.scrollTop = stdoutPre.scrollHeight;
+                    if (labelEl) labelEl.textContent = d.kind === 'stderr' ? 'stderr' : 'stdout';
                 }
             });
 

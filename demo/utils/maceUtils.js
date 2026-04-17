@@ -1,5 +1,5 @@
 // MACE backend API utilities and extxyz file generation
-import { postJson } from './apiUtils.js';
+import { postJson, streamSSE } from './apiUtils.js';
 
 /**
  * Configuration for MACE API
@@ -174,64 +174,11 @@ export async function callMaceMD(backendUrl, atoms, model, options = {}) {
  * @returns {Promise<Object>} Final summary from 'done' event
  */
 export async function streamMaceSSE(url, body, onFrame) {
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+    return streamSSE(url, body, {
+        onEvent: (event) => {
+            if (event.type === 'frame' && onFrame) onFrame(event);
+        },
     });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(err.error || `HTTP ${res.status}`);
-    }
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let summary = null;
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIdx;
-        while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
-            const line = buffer.slice(0, newlineIdx).trim();
-            buffer = buffer.slice(newlineIdx + 1);
-            if (!line.startsWith('data: ')) continue;
-            const json = line.slice(6);
-            try {
-                const event = JSON.parse(json);
-                if (event.type === 'frame') {
-                    onFrame(event);
-                } else if (event.type === 'done') {
-                    summary = event.summary;
-                } else if (event.type === 'error') {
-                    throw new Error(event.error);
-                }
-            } catch (e) {
-                if (!(e instanceof SyntaxError)) throw e;
-            }
-        }
-    }
-
-    // Process remaining buffer after stream ends
-    const remaining = buffer.trim();
-    if (remaining.startsWith('data: ')) {
-        try {
-            const event = JSON.parse(remaining.slice(6));
-            if (event.type === 'frame') {
-                onFrame(event);
-            } else if (event.type === 'done') {
-                summary = event.summary;
-            } else if (event.type === 'error') {
-                throw new Error(event.error);
-            }
-        } catch (e) {
-            if (!(e instanceof SyntaxError)) throw e;
-        }
-    }
-
-    return summary || { success: true };
 }
 
 /**
@@ -276,6 +223,91 @@ export async function callDftEnergy(backendUrl, atoms, options = {}) {
 export async function callDftEnergyBatch(backendUrl, frames, options = {}) {
     const { basis = 'def2-tzvppd', xc = 'wb97m-d3bj', charge = 0, spin = 0, includeForces = true } = options;
     return postJson(`${backendUrl}/ai/dft/energy-batch`, { frames, basis, xc, charge, spin, includeForces }, {}, 1800000);
+}
+
+/**
+ * Streaming MACE batch energy. onProgress(event) called with each
+ * {frame, total, energy_eV, max_force_eV_A, elapsed_ms} progress event.
+ * Resolves with the final summary payload (same shape as blocking endpoint).
+ */
+export async function callMaceEnergyBatchStream(backendUrl, frames, model, includeForces, onProgress) {
+    return streamSSE(`${backendUrl}/ai/mace/energy-batch/stream`, { frames, model, includeForces }, {
+        onEvent: (ev) => {
+            if (ev.type === 'progress' && onProgress) onProgress(ev);
+        },
+    });
+}
+
+/**
+ * Streaming DFT batch energy. onProgress(event) fires per frame with SCF cycle
+ * count + elapsed time. Resolves with final summary payload.
+ */
+export async function callDftEnergyBatchStream(backendUrl, frames, options = {}, onProgress) {
+    const { basis = 'def2-tzvppd', xc = 'wb97m-d3bj', charge = 0, spin = 0, includeForces = true, conv_tol } = options;
+    const body = { frames, basis, xc, charge, spin, includeForces };
+    if (conv_tol !== undefined) body.conv_tol = conv_tol;
+    return streamSSE(`${backendUrl}/ai/dft/energy-batch/stream`, body, {
+        onEvent: (ev) => {
+            if (ev.type === 'progress' && onProgress) onProgress(ev);
+        },
+    });
+}
+
+/**
+ * Streaming single-point DFT energy. onScf(event) fires per SCF iteration.
+ * Resolves with final summary (energy_eV, forces?, converged).
+ */
+export async function callDftEnergyStream(backendUrl, atoms, options = {}, onScf) {
+    const { basis = 'def2-tzvppd', xc = 'wb97m-d3bj', charge = 0, spin = 0, includeForces = true, conv_tol } = options;
+    const body = { atoms, basis, xc, charge, spin, includeForces };
+    if (conv_tol !== undefined) body.conv_tol = conv_tol;
+    return streamSSE(`${backendUrl}/ai/dft/energy/stream`, body, {
+        onEvent: (ev) => {
+            if (ev.type === 'scf' && onScf) onScf(ev);
+        },
+    });
+}
+
+/**
+ * Streaming MD via /ai/mace/md/stream. onFrame(event) is called per frame as
+ * the simulation produces it. onStatus(event) for status/heartbeat events.
+ * Resolves with summary from the `done` event.
+ */
+export async function callMaceMDStream(backendUrl, body, { onFrame, onStatus } = {}) {
+    return streamSSE(`${backendUrl}/ai/mace/md/stream`, body, {
+        onEvent: (ev) => {
+            if (ev.type === 'frame' && onFrame) onFrame(ev);
+            else if ((ev.type === 'status' || ev.type === 'heartbeat') && onStatus) onStatus(ev);
+        },
+    });
+}
+
+/**
+ * Streaming geometry optimize via /ai/mace/optimize/stream. onFrame fires per
+ * BFGS step. Resolves with summary.
+ */
+export async function callMaceOptimizeStream(backendUrl, body, { onFrame, onStatus } = {}) {
+    return streamSSE(`${backendUrl}/ai/mace/optimize/stream`, body, {
+        onEvent: (ev) => {
+            if (ev.type === 'frame' && onFrame) onFrame(ev);
+            else if ((ev.type === 'status' || ev.type === 'heartbeat') && onStatus) onStatus(ev);
+        },
+    });
+}
+
+/**
+ * Streaming Python execution. Fires stdoutLine(line) / stderrLine(line) per
+ * line as the user's code prints. Resolves with final summary (figures,
+ * figureCount, elapsed_ms, success).
+ */
+export async function streamPythonExecute(backendUrl, body, { onStdout, onStderr, onEvent } = {}) {
+    return streamSSE(`${backendUrl}/ai/python/execute/stream`, body, {
+        onEvent: (ev) => {
+            if (ev.type === 'stdout' && onStdout) onStdout(ev.line);
+            else if (ev.type === 'stderr' && onStderr) onStderr(ev.line);
+            if (onEvent) onEvent(ev);
+        },
+    });
 }
 
 /**
