@@ -3308,7 +3308,7 @@ input[type="range"]:focus {
 
 /* Live progress strip inside tool row (streaming batch ops, SCF iterations, Python stdout) */
 .ai-tool-row-progress {
-    padding: 5px 10px 7px;
+    padding: 6px 10px 8px;
     font-size: 10.5px;
     color: rgba(255, 255, 255, 0.55);
     font-family: 'SF Mono', 'Fira Code', monospace;
@@ -3321,37 +3321,39 @@ input[type="range"]:focus {
 }
 
 .ai-tool-row-progress-bar {
-    height: 3px;
+    height: 6px;
     background: rgba(255, 255, 255, 0.06);
-    border-radius: 2px;
+    border-radius: 3px;
     overflow: hidden;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
     position: relative;
 }
 
 .ai-tool-row-progress-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
-    background-size: 200% 100%;
-    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 2px;
+    background: #8b5cf6;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 3px;
     position: relative;
-    box-shadow: 0 0 8px rgba(168, 85, 247, 0.35);
 }
 
-/* Subtle sheen that travels across the fill while active — telegraphs "live". */
-.ai-tool-row.active .ai-tool-row-progress-fill::after {
+/* Traveling sheen across the whole bar (not just the fill) so even a small
+   fill telegraphs "live" and the motion never stalls. */
+.ai-tool-row.active .ai-tool-row-progress-bar::after {
     content: '';
     position: absolute;
     inset: 0;
     background: linear-gradient(90deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.22) 50%,
+        rgba(139, 92, 246, 0.18) 45%,
+        rgba(255, 255, 255, 0.18) 50%,
+        rgba(139, 92, 246, 0.18) 55%,
         transparent 100%);
     background-size: 200% 100%;
-    animation: ai-tool-progress-sheen 1.4s linear infinite;
-    border-radius: 2px;
+    animation: ai-tool-progress-sheen 1.6s linear infinite;
+    pointer-events: none;
+    border-radius: 3px;
 }
 
 @keyframes ai-tool-progress-sheen {
@@ -3359,19 +3361,17 @@ input[type="range"]:focus {
     100% { background-position: -200% 0; }
 }
 
-/* Completion flourish: snap to 100%, turn green, drop the shimmer. */
+/* Completion: snap to 100%, switch to green. */
 .ai-tool-row.completed .ai-tool-row-progress-fill {
     width: 100% !important;
-    background: linear-gradient(90deg, #4ade80, #22d3ee);
-    box-shadow: 0 0 10px rgba(74, 222, 128, 0.35);
+    background: #4ade80;
     transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-                background 0.3s ease;
+                background 0.25s ease;
 }
 
 .ai-tool-row.failed .ai-tool-row-progress-fill,
 .ai-tool-row.interrupted .ai-tool-row-progress-fill {
-    background: linear-gradient(90deg, #ef4444, #f97316);
-    box-shadow: none;
+    background: #ef4444;
 }
 
 .ai-tool-row-progress-text {

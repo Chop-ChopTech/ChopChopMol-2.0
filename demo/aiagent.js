@@ -2537,12 +2537,21 @@ const FUNCTIONS = {
 
                 const totalEpochs = body.epochs;
                 const t0 = performance.now();
+                // Rolling estimate of ms-per-epoch. Updated whenever a real
+                // epoch log line arrives. Drives the "pct from elapsed" curve
+                // below so the bar fills smoothly between sparse epoch events.
+                let msPerEpoch = null;
                 const processLine = (line) => {
                     if (!line.startsWith('data: ')) return;
                     let evt;
                     try { evt = JSON.parse(line.slice(6)); } catch { return; }
 
                     if (evt.type === 'progress') {
+                        const now = performance.now();
+                        if (evt.epoch > 0) {
+                            // Average ms-per-epoch across all observed epochs.
+                            msPerEpoch = (now - t0) / evt.epoch;
+                        }
                         epochsCompleted = evt.epoch;
                         lastLoss = evt.loss;
                         window.dispatchEvent(new CustomEvent('ai-tool-progress', {
@@ -2555,7 +2564,47 @@ const FUNCTIONS = {
                                 loss: evt.loss,
                                 rmseE: evt.rmseE,
                                 rmseF: evt.rmseF,
-                                elapsed_ms: Math.floor(performance.now() - t0),
+                                elapsed_ms: Math.floor(now - t0),
+                            },
+                        }));
+                    } else if (evt.type === 'tick') {
+                        // Smoothly interpolate between sparse epoch events by
+                        // driving the bar off elapsed time + running per-epoch
+                        // estimate. Three regimes:
+                        //   (a) Pre-first-epoch: soft curve 0 → ~12% so the
+                        //       bar visibly grows during data loading / model
+                        //       build (MACE hasn't logged any epochs yet).
+                        //   (b) Post-first-epoch: elapsed_ms / (msPerEpoch *
+                        //       totalEpochs). Smooth, continuous growth that
+                        //       matches wall-clock reality — not driven by
+                        //       sparse log lines.
+                        //   (c) Always floor with (last_epoch/total)*100 so
+                        //       confirmed epochs never regress.
+                        const elapsedSec = (evt.elapsed_ms || 0) / 1000;
+                        const ep = Math.max(epochsCompleted, evt.last_epoch || 0);
+                        const epochPct = (ep / totalEpochs) * 100;
+
+                        let pct;
+                        if (msPerEpoch && ep > 0) {
+                            const expectedTotalMs = msPerEpoch * totalEpochs;
+                            const timePct = Math.min(97, (evt.elapsed_ms / expectedTotalMs) * 100);
+                            pct = Math.max(epochPct, timePct);
+                        } else {
+                            pct = Math.max(epochPct, 12 * (1 - Math.exp(-elapsedSec / 20)));
+                        }
+                        window.dispatchEvent(new CustomEvent('ai-tool-progress', {
+                            detail: {
+                                tool: 'finetune_model',
+                                kind: 'frame',
+                                frame: Math.max(0, ep - 1),
+                                total: totalEpochs,
+                                overridePct: pct,
+                                epoch: ep,
+                                loss: evt.last_loss ?? lastLoss,
+                                rmseE: evt.last_rmseE,
+                                rmseF: evt.last_rmseF,
+                                elapsed_ms: evt.elapsed_ms,
+                                stage: evt.stage,
                             },
                         }));
                     } else if (evt.type === 'done') {

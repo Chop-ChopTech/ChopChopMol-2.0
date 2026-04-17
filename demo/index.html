@@ -4279,7 +4279,14 @@
                     if (typeof d.elapsed_ms === 'number') meta.push(`${(d.elapsed_ms / 1000).toFixed(1)}s`);
                     if (labelEl) {
                         if (d.tool === 'finetune_model') {
-                            labelEl.textContent = `Epoch ${d.epoch ?? d.frame + 1}/${d.total}`;
+                            const ep = d.epoch ?? 0;
+                            if (ep > 0) {
+                                labelEl.textContent = `Epoch ${ep}/${d.total}`;
+                            } else {
+                                const s = Math.floor((d.elapsed_ms || 0) / 1000);
+                                const stageTxt = d.stage && d.stage !== 'initializing' ? d.stage : 'preparing';
+                                labelEl.textContent = s > 0 ? `${stageTxt} · ${s}s` : `${stageTxt}…`;
+                            }
                         } else if (d.tool === 'run_md') {
                             labelEl.textContent = `Frame ${d.frame + 1}/${d.total}${d.step != null ? ` · step ${d.step}` : ''}`;
                         } else if (d.tool === 'optimize_geometry') {
