@@ -2304,22 +2304,23 @@
             </div>
             <textarea id="aiChatInput" placeholder="Ask me anything" rows="3"></textarea>
 
-            <div class="ai-thinking-control">
-                <i class="fas fa-brain"></i>
-                <span class="ai-thinking-control-label">Thinking</span>
-                <div class="ai-thinking-toggle" id="aiThinkingToggle">
-                    <button class="ai-thinking-opt" data-budget="0" title="No thinking">Off</button>
-                    <button class="ai-thinking-opt active" data-budget="4096"
-                        title="Light thinking (~4K tokens)">Low</button>
-                    <button class="ai-thinking-opt" data-budget="10000"
-                        title="Medium thinking (~10K tokens)">Med</button>
-                    <button class="ai-thinking-opt" data-budget="32000"
-                        title="Deep thinking (~32K tokens)">High</button>
-                </div>
-            </div>
-
             <div id="bottom-options">
-                <select id="aiModelSelect" class="ai-model-select" title="Select AI Model">
+                <button type="button" id="aiModelTrigger" class="ai-model-trigger" title="Select AI model & thinking mode">
+                    <i class="fas fa-microchip"></i>
+                    <span class="ai-model-trigger-name">Sonnet 4.6</span>
+                    <span class="ai-model-trigger-badge" id="aiModelTriggerBadge" style="display:none;"></span>
+                    <i class="fas fa-chevron-down ai-model-trigger-caret"></i>
+                </button>
+                <select id="aiModelSelect" class="ai-model-select" title="Select AI Model" style="display:none;">
+                    <optgroup label="GPT-5.4">
+                        <option value="gpt-5.4">GPT-5.4</option>
+                        <option value="gpt-5.4-pro">GPT-5.4 Pro</option>
+                        <option value="gpt-5.4-mini">GPT-5.4 Mini</option>
+                        <option value="gpt-5.4-nano">GPT-5.4 Nano</option>
+                    </optgroup>
+                    <optgroup label="GPT-5.3">
+                        <option value="gpt-5.3-chat-latest">GPT-5.3 Instant</option>
+                    </optgroup>
                     <optgroup label="GPT-5.2">
                         <option value="gpt-5.2">GPT-5.2</option>
                         <option value="gpt-5.2-pro">GPT-5.2 Pro</option>
@@ -2343,6 +2344,7 @@
                         <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
                     </optgroup>
                     <optgroup label="Claude Opus">
+                        <option value="claude-opus-4-7">Claude Opus 4.7</option>
                         <option value="claude-opus-4-6">Claude Opus 4.6</option>
                         <option value="claude-opus-4-5-20251101">Claude Opus 4.5</option>
                         <option value="claude-opus-4-1-20250805">Claude Opus 4.1</option>
@@ -2375,6 +2377,53 @@
         <button id="createFragment">Create Fragment</button>
         <ul id="fragmentList"></ul>
     </div>
+    <!-- AI Model Picker Modal -->
+    <div id="aiModelModal" class="ai-model-modal">
+        <div class="ai-model-modal-content">
+            <div class="ai-model-modal-header">
+                <h3><i class="fas fa-microchip"></i> Model &amp; Reasoning</h3>
+                <button id="aiModelModalClose" class="ai-model-modal-close" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="ai-model-modal-thinking">
+                <div class="ai-thinking-control">
+                    <i class="fas fa-brain"></i>
+                    <span class="ai-thinking-control-label">Thinking</span>
+                    <div class="ai-thinking-toggle" id="aiThinkingToggle">
+                        <button class="ai-thinking-opt" data-budget="0" title="No thinking">Off</button>
+                        <button class="ai-thinking-opt active" data-budget="4096"
+                            title="Light thinking (~4K tokens)">Low</button>
+                        <button class="ai-thinking-opt" data-budget="10000"
+                            title="Medium thinking (~10K tokens)">Med</button>
+                        <button class="ai-thinking-opt" data-budget="32000"
+                            title="Deep thinking (~32K tokens)">High</button>
+                    </div>
+                </div>
+            </div>
+            <div class="ai-model-modal-tabs" id="aiModelTabs">
+                <button type="button" class="ai-model-tab active" data-provider="Claude">
+                    <i class="fas fa-atom"></i><span>Claude</span>
+                </button>
+                <button type="button" class="ai-model-tab" data-provider="OpenAI">
+                    <i class="fas fa-bolt"></i><span>OpenAI</span>
+                </button>
+            </div>
+            <div class="ai-model-modal-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="aiModelSearch" placeholder="Search models..." autocomplete="off">
+            </div>
+            <div id="aiModelList" class="ai-model-list"></div>
+            <div class="ai-model-modal-footer">
+                <button type="button" id="aiModelSetDefault" class="ai-model-set-default" title="Use this model by default on page load">
+                    <i class="far fa-star"></i><span>Set as default</span>
+                </button>
+                <span class="ai-model-modal-footer-value" id="aiModelModalFooterValue">—</span>
+                <button type="button" id="aiModelModalDone" class="ai-model-modal-done">Done</button>
+            </div>
+        </div>
+    </div>
+
     <!-- AI Settings Modal -->
     <div id="aiSettingsModal" class="ai-settings-modal">
         <div class="ai-settings-content">
@@ -2421,22 +2470,241 @@
             const sendBtn = document.getElementById('aiSendBtn');
             const messagesContainer = document.getElementById('aiChatMessages');
             const modelSelect = document.getElementById('aiModelSelect');
-            modelSelect.value = 'claude-sonnet-4-6';
-            window.AIAgent?.setModel('claude-sonnet-4-6');
+            const DEFAULT_MODEL_KEY = 'chopchop_default_model';
+            const FALLBACK_MODEL = 'claude-sonnet-4-6';
+            const savedDefaultModel = localStorage.getItem(DEFAULT_MODEL_KEY);
+            const initialModel = (savedDefaultModel && modelSelect.querySelector(`option[value="${savedDefaultModel}"]`))
+                ? savedDefaultModel
+                : FALLBACK_MODEL;
+            modelSelect.value = initialModel;
+            // AIAgent is a deferred module — may not exist during parse.
+            // Retry briefly until it's available so AI_CONFIG.model stays in sync.
+            (function syncInitialModel(tries) {
+                if (window.AIAgent?.setModel) {
+                    window.AIAgent.setModel(initialModel);
+                } else if (tries < 100) {
+                    setTimeout(() => syncInitialModel(tries + 1), 30);
+                }
+            })(0);
             const thinkingControl = document.querySelector('.ai-thinking-control');
+            const thinkingWrapper = document.querySelector('.ai-model-modal-thinking');
             function updateThinkingVisibility() {
                 const val = modelSelect.value.toLowerCase();
                 const isClaude = val.includes('claude');
-                const isReasoning = val.startsWith('o3') || val.startsWith('o4') || val.startsWith('gpt-5');
-                thinkingControl.style.display = (isClaude || isReasoning) ? '' : 'none';
+                const isLegacyHaiku = val.includes('claude-3-5-haiku');
+                const isChatLatest = val.endsWith('-chat-latest');
+                const isNonReasoningGpt = val.startsWith('gpt-4.1');
+                // GPT-5.4 family: Chat Completions disallows tools + reasoning_effort,
+                // so thinking control is cosmetic-only — hide it to avoid confusion.
+                const isGpt54 = val.startsWith('gpt-5.4');
+                const isReasoning = !isChatLatest && !isNonReasoningGpt && !isGpt54
+                    && (val.startsWith('o3') || val.startsWith('o4') || val.startsWith('gpt-5'));
+                const show = (isClaude && !isLegacyHaiku) || isReasoning;
+                thinkingControl.style.display = show ? '' : 'none';
+                if (thinkingWrapper) thinkingWrapper.style.display = show ? '' : 'none';
                 const label = thinkingControl.querySelector('.ai-thinking-control-label');
                 label.textContent = isClaude ? 'Thinking' : 'Reasoning';
             }
+            function applyModelToAgent(val, tries = 0) {
+                if (window.AIAgent?.setModel) {
+                    window.AIAgent.setModel(val);
+                } else if (tries < 100) {
+                    setTimeout(() => applyModelToAgent(val, tries + 1), 30);
+                }
+            }
             modelSelect.addEventListener('change', () => {
-                window.AIAgent?.setModel(modelSelect.value);
+                applyModelToAgent(modelSelect.value);
                 updateThinkingVisibility();
+                updateModelTrigger();
             });
             updateThinkingVisibility();
+
+            // ── Custom model picker modal ──
+            const modelTrigger = document.getElementById('aiModelTrigger');
+            const modelModal = document.getElementById('aiModelModal');
+            const modelModalClose = document.getElementById('aiModelModalClose');
+            const modelList = document.getElementById('aiModelList');
+            const modelSearch = document.getElementById('aiModelSearch');
+            const modelTriggerName = modelTrigger.querySelector('.ai-model-trigger-name');
+            const modelTriggerBadge = document.getElementById('aiModelTriggerBadge');
+            const modelThinkingHint = null;
+
+            const MODEL_META = {
+                'claude-opus-4-7':           { badge: 'New',   hint: 'Adaptive deep reasoning · latest Opus' },
+                'claude-opus-4-6':           { hint: 'Adaptive reasoning · high intelligence' },
+                'claude-opus-4-5-20251101':  { hint: 'Extended thinking · balanced Opus' },
+                'claude-opus-4-1-20250805':  { hint: 'Extended thinking' },
+                'claude-opus-4-20250514':    { hint: 'Original Opus 4' },
+                'claude-sonnet-4-6':         { badge: 'Default', hint: 'Interleaved thinking · everyday workhorse' },
+                'claude-sonnet-4-5-20250929':{ hint: 'Extended thinking' },
+                'claude-sonnet-4-20250514':  { hint: 'Extended thinking' },
+                'claude-haiku-4-5-20251001': { hint: 'Fast · supports thinking' },
+                'claude-3-5-haiku-20241022': { hint: 'Legacy · no thinking' },
+                'gpt-5.4':                   { badge: 'New',   hint: 'Frontier reasoning · 1M context' },
+                'gpt-5.4-pro':               { hint: 'Max depth via extra compute' },
+                'gpt-5.4-mini':              { hint: 'Faster GPT-5.4 for high-volume' },
+                'gpt-5.4-nano':              { hint: 'Cheapest/fastest GPT-5.4' },
+                'gpt-5.3-chat-latest':       { hint: 'Non-reasoning chat · instant replies' },
+                'gpt-5.2':                   { hint: 'Reasoning effort · tool use' },
+                'gpt-5.2-pro':               { hint: 'Pro variant of 5.2' },
+                'gpt-5.1':                   { hint: 'Reasoning effort' },
+                'gpt-5.1-codex-max':         { hint: 'Agentic coding optimized' },
+                'gpt-5':                     { hint: 'Reasoning effort' },
+                'gpt-5-mini':                { hint: 'Small & fast reasoning' },
+                'gpt-5-nano':                { hint: 'Ultralight reasoning' },
+                'o4-mini':                   { hint: 'Reasoning series' },
+                'o3':                        { hint: 'Reasoning series' },
+                'gpt-4.1':                   { hint: 'Chat · no reasoning' },
+                'gpt-4.1-mini':              { hint: 'Chat · no reasoning' },
+                'gpt-4.1-nano':              { hint: 'Chat · no reasoning' },
+            };
+
+            function providerFor(groupLabel) {
+                if (groupLabel.startsWith('Claude')) return 'Claude';
+                return 'OpenAI';
+            }
+
+            let activeProvider = 'Claude';
+            const modelTabsEl = document.getElementById('aiModelTabs');
+            const modelFooterValue = document.getElementById('aiModelModalFooterValue');
+            const modelDoneBtn = document.getElementById('aiModelModalDone');
+            const setDefaultBtn = document.getElementById('aiModelSetDefault');
+
+            function getDefaultModel() {
+                return localStorage.getItem(DEFAULT_MODEL_KEY) || FALLBACK_MODEL;
+            }
+
+            function refreshSetDefaultBtn() {
+                const isAlready = modelSelect.value === getDefaultModel();
+                setDefaultBtn.classList.toggle('is-default', isAlready);
+                const icon = setDefaultBtn.querySelector('i');
+                const label = setDefaultBtn.querySelector('span');
+                if (isAlready) {
+                    icon.className = 'fas fa-star';
+                    label.textContent = 'Default';
+                    setDefaultBtn.disabled = true;
+                } else {
+                    icon.className = 'far fa-star';
+                    label.textContent = 'Set as default';
+                    setDefaultBtn.disabled = false;
+                }
+            }
+
+            function setActiveProvider(provider) {
+                activeProvider = provider;
+                modelTabsEl.querySelectorAll('.ai-model-tab').forEach(t => {
+                    t.classList.toggle('active', t.dataset.provider === provider);
+                });
+                renderModelList(modelSearch.value);
+            }
+
+            function renderModelList(filter) {
+                const q = (filter || '').trim().toLowerCase();
+                modelList.innerHTML = '';
+                const items = [];
+                Array.from(modelSelect.children).forEach(group => {
+                    if (group.tagName !== 'OPTGROUP') return;
+                    const provider = providerFor(group.label);
+                    if (provider !== activeProvider) return;
+                    Array.from(group.children).forEach(opt => {
+                        if (q && !(opt.textContent.toLowerCase().includes(q) || opt.value.toLowerCase().includes(q))) return;
+                        items.push({ group: group.label, opt });
+                    });
+                });
+                const currentVal = modelSelect.value;
+                const defaultVal = getDefaultModel();
+                let lastGroup = null;
+                items.forEach(({ group, opt }) => {
+                    if (group !== lastGroup) {
+                        const sub = document.createElement('div');
+                        sub.className = 'ai-model-subgroup';
+                        sub.textContent = group;
+                        modelList.appendChild(sub);
+                        lastGroup = group;
+                    }
+                    const row = document.createElement('button');
+                    row.type = 'button';
+                    row.className = 'ai-model-item' + (opt.value === currentVal ? ' selected' : '');
+                    row.dataset.value = opt.value;
+                    const displayName = opt.textContent.replace(/^Claude\s+/i, '');
+                    const isDefault = opt.value === defaultVal;
+                    row.innerHTML = `
+                        <div class="ai-model-item-main">
+                            <span class="ai-model-item-name">${displayName}</span>
+                            ${isDefault ? '<i class="fas fa-star ai-model-item-default" title="Default model"></i>' : ''}
+                        </div>
+                        <i class="fas fa-check ai-model-item-check"></i>
+                    `;
+                    row.addEventListener('click', () => {
+                        modelSelect.value = opt.value;
+                        modelSelect.dispatchEvent(new Event('change'));
+                        // Update selected state without closing the modal
+                        modelList.querySelectorAll('.ai-model-item').forEach(el => {
+                            el.classList.toggle('selected', el.dataset.value === opt.value);
+                        });
+                    });
+                    modelList.appendChild(row);
+                });
+                if (!modelList.children.length) {
+                    modelList.innerHTML = '<div class="ai-model-empty">No models match.</div>';
+                }
+            }
+
+            modelTabsEl.addEventListener('click', (e) => {
+                const tab = e.target.closest('.ai-model-tab');
+                if (!tab) return;
+                setActiveProvider(tab.dataset.provider);
+            });
+            modelDoneBtn.addEventListener('click', closeModelModal);
+            setDefaultBtn.addEventListener('click', () => {
+                localStorage.setItem(DEFAULT_MODEL_KEY, modelSelect.value);
+                refreshSetDefaultBtn();
+                renderModelList(modelSearch.value);
+            });
+
+            function updateModelTrigger() {
+                const opt = modelSelect.options[modelSelect.selectedIndex];
+                const raw = opt ? opt.textContent : modelSelect.value;
+                const label = raw.replace(/^Claude\s+/i, '');
+                modelTriggerName.textContent = label;
+                if (modelTriggerBadge) modelTriggerBadge.style.display = 'none';
+                if (modelFooterValue) modelFooterValue.textContent = label;
+                refreshSetDefaultBtn();
+            }
+
+            function providerOfValue(val) {
+                for (const group of modelSelect.children) {
+                    if (group.tagName !== 'OPTGROUP') continue;
+                    for (const opt of group.children) {
+                        if (opt.value === val) return providerFor(group.label);
+                    }
+                }
+                return 'Claude';
+            }
+
+            function openModelModal() {
+                modelModal.classList.add('open');
+                modelSearch.value = '';
+                setActiveProvider(providerOfValue(modelSelect.value));
+                setTimeout(() => modelSearch.focus(), 30);
+                const selected = modelList.querySelector('.ai-model-item.selected');
+                if (selected) selected.scrollIntoView({ block: 'nearest' });
+            }
+            function closeModelModal() {
+                modelModal.classList.remove('open');
+            }
+
+            modelTrigger.addEventListener('click', openModelModal);
+            modelModalClose.addEventListener('click', closeModelModal);
+            modelModal.addEventListener('click', (e) => {
+                if (e.target === modelModal) closeModelModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modelModal.classList.contains('open')) closeModelModal();
+            });
+            modelSearch.addEventListener('input', () => renderModelList(modelSearch.value));
+
+            updateModelTrigger();
 
             // ── Thinking budget toggle ──
             const thinkingToggle = document.getElementById('aiThinkingToggle');
@@ -3666,6 +3934,8 @@
                 if (model.includes('claude-sonnet')) return 'Sonnet';
                 if (model.includes('claude-opus')) return 'Opus';
                 if (model.includes('claude-haiku')) return 'Haiku';
+                if (model.includes('gpt-5.4')) return 'GPT-5.4';
+                if (model.includes('gpt-5.3')) return 'GPT-5.3';
                 if (model.includes('gpt-5.2')) return 'GPT-5.2';
                 if (model.includes('gpt-5.1')) return 'GPT-5.1';
                 if (model.includes('gpt-5')) return 'GPT-5';
