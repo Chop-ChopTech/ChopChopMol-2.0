@@ -2472,10 +2472,43 @@
             const modelSelect = document.getElementById('aiModelSelect');
             const DEFAULT_MODEL_KEY = 'chopchop_default_model';
             const FALLBACK_MODEL = 'claude-sonnet-4-6';
+
+            // ═══════════════════════════════════════════════════════════════
+            // ▼▼▼  PROVIDER RESTRICTION — EDIT THIS LINE AND REDEPLOY  ▼▼▼
+            //   Set to 'claude' to mark all Claude models "Under Development"
+            //                      (users forced to GPT-5.4)
+            //   Set to 'openai' to mark all OpenAI models "Under Development"
+            //                      (users forced to Claude Sonnet 4.6)
+            //   Set to null     to enable both providers normally
+            // ═══════════════════════════════════════════════════════════════
+            const RESTRICTED_PROVIDER = 'claude';
+            // ═══════════════════════════════════════════════════════════════
+
+            const RESTRICTION_FALLBACK = {
+                claude: 'gpt-5.4',
+                openai: 'claude-sonnet-4-6',
+            };
+            const PROVIDER_RESTRICTION = {
+                provider: (RESTRICTED_PROVIDER === 'claude' || RESTRICTED_PROVIDER === 'openai') ? RESTRICTED_PROVIDER : null,
+                fallback: null,
+            };
+            PROVIDER_RESTRICTION.fallback = PROVIDER_RESTRICTION.provider
+                ? RESTRICTION_FALLBACK[PROVIDER_RESTRICTION.provider] : null;
+
+            function isRestrictedValue(val) {
+                if (!PROVIDER_RESTRICTION.provider) return false;
+                const isClaude = (val || '').toLowerCase().includes('claude');
+                return PROVIDER_RESTRICTION.provider === 'claude' ? isClaude : !isClaude;
+            }
+
             const savedDefaultModel = localStorage.getItem(DEFAULT_MODEL_KEY);
-            const initialModel = (savedDefaultModel && modelSelect.querySelector(`option[value="${savedDefaultModel}"]`))
+            let initialModel = (savedDefaultModel && modelSelect.querySelector(`option[value="${savedDefaultModel}"]`))
                 ? savedDefaultModel
                 : FALLBACK_MODEL;
+            // If the resolved initial belongs to the restricted provider, swap to fallback
+            if (isRestrictedValue(initialModel)) {
+                initialModel = PROVIDER_RESTRICTION.fallback;
+            }
             modelSelect.value = initialModel;
             // AIAgent is a deferred module — may not exist during parse.
             // Retry briefly until it's available so AI_CONFIG.model stays in sync.
@@ -2624,25 +2657,38 @@
                     }
                     const row = document.createElement('button');
                     row.type = 'button';
-                    row.className = 'ai-model-item' + (opt.value === currentVal ? ' selected' : '');
+                    const restricted = isRestrictedValue(opt.value);
+                    row.className = 'ai-model-item'
+                        + (opt.value === currentVal ? ' selected' : '')
+                        + (restricted ? ' restricted' : '');
                     row.dataset.value = opt.value;
+                    if (restricted) {
+                        row.disabled = true;
+                        row.setAttribute('aria-disabled', 'true');
+                        row.title = 'Under development';
+                        row.style.opacity = '0.45';
+                        row.style.cursor = 'not-allowed';
+                    }
                     const displayName = opt.textContent.replace(/^Claude\s+/i, '');
                     const isDefault = opt.value === defaultVal;
                     row.innerHTML = `
                         <div class="ai-model-item-main">
                             <span class="ai-model-item-name">${displayName}</span>
                             ${isDefault ? '<i class="fas fa-star ai-model-item-default" title="Default model"></i>' : ''}
+                            ${restricted ? '<span class="ai-model-item-status" style="margin-left:8px;font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.08);color:#aaa;letter-spacing:0.3px;text-transform:uppercase;">Under Development</span>' : ''}
                         </div>
                         <i class="fas fa-check ai-model-item-check"></i>
                     `;
-                    row.addEventListener('click', () => {
-                        modelSelect.value = opt.value;
-                        modelSelect.dispatchEvent(new Event('change'));
-                        // Update selected state without closing the modal
-                        modelList.querySelectorAll('.ai-model-item').forEach(el => {
-                            el.classList.toggle('selected', el.dataset.value === opt.value);
+                    if (!restricted) {
+                        row.addEventListener('click', () => {
+                            modelSelect.value = opt.value;
+                            modelSelect.dispatchEvent(new Event('change'));
+                            // Update selected state without closing the modal
+                            modelList.querySelectorAll('.ai-model-item').forEach(el => {
+                                el.classList.toggle('selected', el.dataset.value === opt.value);
+                            });
                         });
-                    });
+                    }
                     modelList.appendChild(row);
                 });
                 if (!modelList.children.length) {
@@ -2705,6 +2751,34 @@
             modelSearch.addEventListener('input', () => renderModelList(modelSearch.value));
 
             updateModelTrigger();
+
+            // ── Apply provider restriction from hardcoded RESTRICTED_PROVIDER ──
+            // Visually dims the restricted tab, switches the active tab if needed,
+            // and blocks clicks on the dimmed tab.
+            if (PROVIDER_RESTRICTION.provider) {
+                const restrictedProv = PROVIDER_RESTRICTION.provider;
+                modelTabsEl.querySelectorAll('.ai-model-tab').forEach(t => {
+                    const tabProvider = t.dataset.provider === 'Claude' ? 'claude' : 'openai';
+                    if (tabProvider === restrictedProv) {
+                        t.style.opacity = '0.45';
+                        t.style.cursor = 'not-allowed';
+                        t.title = 'Under development';
+                        t.dataset.restricted = '1';
+                    }
+                });
+                // Block clicks on the restricted tab before setActiveProvider runs
+                modelTabsEl.addEventListener('click', (e) => {
+                    const tab = e.target.closest('.ai-model-tab');
+                    if (tab && tab.dataset.restricted === '1') {
+                        e.stopImmediatePropagation();
+                        e.preventDefault();
+                    }
+                }, true);
+                // Ensure the allowed provider's tab is active
+                const allowedProvider = restrictedProv === 'claude' ? 'OpenAI' : 'Claude';
+                if (activeProvider !== allowedProvider) setActiveProvider(allowedProvider);
+                renderModelList(modelSearch.value);
+            }
 
             // ── Thinking budget toggle ──
             const thinkingToggle = document.getElementById('aiThinkingToggle');
