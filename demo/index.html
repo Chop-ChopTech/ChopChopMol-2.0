@@ -900,9 +900,11 @@
         }
     </script>
     <div id="buttons">
-        <input type="file" id="fileInput" accept=".pdb,.mol,.sdf,.xyz,.extxyz,.cif,.mmcif,.mol2,.pqr,.gro,.cml,.out,.cube,.cub,.molden,.mold"
+        <input type="file" id="fileInput"
+            accept=".pdb,.mol,.sdf,.xyz,.extxyz,.cif,.mmcif,.mol2,.pqr,.gro,.cml,.out,.cube,.cub,.molden,.mold"
             style="display: none;" />
-        <input id="compare" type="file" accept=".xyz,.extxyz,.mol,.sdf,.pdb,.cif,.mol2,.pqr,.gro,.cml,.out,.cube,.molden" style="display: none;">
+        <input id="compare" type="file"
+            accept=".xyz,.extxyz,.mol,.sdf,.pdb,.cif,.mol2,.pqr,.gro,.cml,.out,.cube,.molden" style="display: none;">
         <div id="toolbar-background">
             <!-- FILE group -->
             <div class="toolbar-group">
@@ -985,8 +987,8 @@
                     <span class="toolbar-label">Ribbon</span>
                 </button>
                 <button class="dropdown-icon dropdown"
-                    onclick="document.getElementById('stylePanel').classList.toggle('open'); window.mobilePanelCoordinator?.onFloatingPanelToggle('stylePanel')" style="border: none;"
-                    title="Visual style settings">
+                    onclick="document.getElementById('stylePanel').classList.toggle('open'); window.mobilePanelCoordinator?.onFloatingPanelToggle('stylePanel')"
+                    style="border: none;" title="Visual style settings">
                     <i class="fa-solid fa-sliders"></i>
                     <span class="toolbar-label">Style</span>
                 </button>
@@ -2305,7 +2307,8 @@
             <textarea id="aiChatInput" placeholder="Ask me anything" rows="3"></textarea>
 
             <div id="bottom-options">
-                <button type="button" id="aiModelTrigger" class="ai-model-trigger" title="Select AI model & thinking mode">
+                <button type="button" id="aiModelTrigger" class="ai-model-trigger"
+                    title="Select AI model & thinking mode">
                     <i class="fas fa-microchip"></i>
                     <span class="ai-model-trigger-name">Sonnet 4.6</span>
                     <span class="ai-model-trigger-badge" id="aiModelTriggerBadge" style="display:none;"></span>
@@ -2415,7 +2418,8 @@
             </div>
             <div id="aiModelList" class="ai-model-list"></div>
             <div class="ai-model-modal-footer">
-                <button type="button" id="aiModelSetDefault" class="ai-model-set-default" title="Use this model by default on page load">
+                <button type="button" id="aiModelSetDefault" class="ai-model-set-default"
+                    title="Use this model by default on page load">
                     <i class="far fa-star"></i><span>Set as default</span>
                 </button>
                 <span class="ai-model-modal-footer-value" id="aiModelModalFooterValue">—</span>
@@ -2485,7 +2489,7 @@
             // ═══════════════════════════════════════════════════════════════
 
             const RESTRICTION_FALLBACK = {
-                claude: 'gpt-5.4',
+                claude: 'gpt-5.4-mini',
                 openai: 'claude-sonnet-4-6',
             };
             const PROVIDER_RESTRICTION = {
@@ -2563,33 +2567,33 @@
             const modelThinkingHint = null;
 
             const MODEL_META = {
-                'claude-opus-4-7':           { badge: 'New',   hint: 'Adaptive deep reasoning · latest Opus' },
-                'claude-opus-4-6':           { hint: 'Adaptive reasoning · high intelligence' },
-                'claude-opus-4-5-20251101':  { hint: 'Extended thinking · balanced Opus' },
-                'claude-opus-4-1-20250805':  { hint: 'Extended thinking' },
-                'claude-opus-4-20250514':    { hint: 'Original Opus 4' },
-                'claude-sonnet-4-6':         { badge: 'Default', hint: 'Interleaved thinking · everyday workhorse' },
-                'claude-sonnet-4-5-20250929':{ hint: 'Extended thinking' },
-                'claude-sonnet-4-20250514':  { hint: 'Extended thinking' },
+                'claude-opus-4-7': { badge: 'New', hint: 'Adaptive deep reasoning · latest Opus' },
+                'claude-opus-4-6': { hint: 'Adaptive reasoning · high intelligence' },
+                'claude-opus-4-5-20251101': { hint: 'Extended thinking · balanced Opus' },
+                'claude-opus-4-1-20250805': { hint: 'Extended thinking' },
+                'claude-opus-4-20250514': { hint: 'Original Opus 4' },
+                'claude-sonnet-4-6': { badge: 'Default', hint: 'Interleaved thinking · everyday workhorse' },
+                'claude-sonnet-4-5-20250929': { hint: 'Extended thinking' },
+                'claude-sonnet-4-20250514': { hint: 'Extended thinking' },
                 'claude-haiku-4-5-20251001': { hint: 'Fast · supports thinking' },
                 'claude-3-5-haiku-20241022': { hint: 'Legacy · no thinking' },
-                'gpt-5.4':                   { badge: 'New',   hint: 'Frontier reasoning · 1M context' },
-                'gpt-5.4-pro':               { hint: 'Max depth via extra compute' },
-                'gpt-5.4-mini':              { hint: 'Faster GPT-5.4 for high-volume' },
-                'gpt-5.4-nano':              { hint: 'Cheapest/fastest GPT-5.4' },
-                'gpt-5.3-chat-latest':       { hint: 'Non-reasoning chat · instant replies' },
-                'gpt-5.2':                   { hint: 'Reasoning effort · tool use' },
-                'gpt-5.2-pro':               { hint: 'Pro variant of 5.2' },
-                'gpt-5.1':                   { hint: 'Reasoning effort' },
-                'gpt-5.1-codex-max':         { hint: 'Agentic coding optimized' },
-                'gpt-5':                     { hint: 'Reasoning effort' },
-                'gpt-5-mini':                { hint: 'Small & fast reasoning' },
-                'gpt-5-nano':                { hint: 'Ultralight reasoning' },
-                'o4-mini':                   { hint: 'Reasoning series' },
-                'o3':                        { hint: 'Reasoning series' },
-                'gpt-4.1':                   { hint: 'Chat · no reasoning' },
-                'gpt-4.1-mini':              { hint: 'Chat · no reasoning' },
-                'gpt-4.1-nano':              { hint: 'Chat · no reasoning' },
+                'gpt-5.4': { badge: 'New', hint: 'Frontier reasoning · 1M context' },
+                'gpt-5.4-pro': { hint: 'Max depth via extra compute' },
+                'gpt-5.4-mini': { hint: 'Faster GPT-5.4 for high-volume' },
+                'gpt-5.4-nano': { hint: 'Cheapest/fastest GPT-5.4' },
+                'gpt-5.3-chat-latest': { hint: 'Non-reasoning chat · instant replies' },
+                'gpt-5.2': { hint: 'Reasoning effort · tool use' },
+                'gpt-5.2-pro': { hint: 'Pro variant of 5.2' },
+                'gpt-5.1': { hint: 'Reasoning effort' },
+                'gpt-5.1-codex-max': { hint: 'Agentic coding optimized' },
+                'gpt-5': { hint: 'Reasoning effort' },
+                'gpt-5-mini': { hint: 'Small & fast reasoning' },
+                'gpt-5-nano': { hint: 'Ultralight reasoning' },
+                'o4-mini': { hint: 'Reasoning series' },
+                'o3': { hint: 'Reasoning series' },
+                'gpt-4.1': { hint: 'Chat · no reasoning' },
+                'gpt-4.1-mini': { hint: 'Chat · no reasoning' },
+                'gpt-4.1-nano': { hint: 'Chat · no reasoning' },
             };
 
             function providerFor(groupLabel) {
@@ -3876,8 +3880,8 @@
                                     name: child.dataset.tool || '',
                                     label: child.querySelector('.ai-tool-row-name')?.textContent?.trim() || '',
                                     status: child.classList.contains('completed') ? 'completed'
-                                         : child.classList.contains('active') ? 'interrupted'
-                                         : 'failed',
+                                        : child.classList.contains('active') ? 'interrupted'
+                                            : 'failed',
                                     params: child.querySelector('.ai-tool-row-params')?.textContent?.trim() || '',
                                     result: child.querySelector('.ai-tool-row-result')?.textContent?.trim() || ''
                                 });
@@ -4823,8 +4827,10 @@
                             }
                             return atom;
                         });
-                        return { atomData, numAtoms: atomData.length, energy: frame.energy_eV,
-                            comment: `step=${frame.step} T=${frame.temperature_K?.toFixed(1)}K E=${frame.total_eV?.toFixed(4)}eV` };
+                        return {
+                            atomData, numAtoms: atomData.length, energy: frame.energy_eV,
+                            comment: `step=${frame.step} T=${frame.temperature_K?.toFixed(1)}K E=${frame.total_eV?.toFixed(4)}eV`
+                        };
                     });
                     window.xyzFrames = parsedFrames;
                     window.frameEnergies = result.trajectory.map(f => f.energy_eV);
@@ -4848,8 +4854,10 @@
                             }
                             return atom;
                         });
-                        return { atomData, numAtoms: atomData.length, energy: frame.energy_eV,
-                            comment: `step=${idx} energy=${frame.energy_eV?.toFixed(4)}eV` };
+                        return {
+                            atomData, numAtoms: atomData.length, energy: frame.energy_eV,
+                            comment: `step=${idx} energy=${frame.energy_eV?.toFixed(4)}eV`
+                        };
                     });
                     window.xyzFrames = parsedFrames;
                     window.frameEnergies = result.trajectory.map(f => f.energy_eV);
