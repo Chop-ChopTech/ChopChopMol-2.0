@@ -39,6 +39,48 @@ const AI_CONFIG = {
 // Resolve backend URL asynchronously (updates AI_CONFIG when ready)
 getBackendUrl().then(url => { AI_CONFIG.backendUrl = url; });
 onBackendUrlOverride(url => { AI_CONFIG.backendUrl = url; });
+
+// ── Bring-Your-Own-Key (BYOK) ──
+// Keys are held in localStorage (origin-isolated) and attached to outbound
+// AI requests as per-request headers. Backend uses them for the lifetime of
+// the request only, never stores or logs them (app.py _read_user_key).
+const BYOK_STORAGE = {
+    anthropic: 'chopchop_byok_anthropic',
+    openai: 'chopchop_byok_openai'
+};
+const BYOK_PREFIX = {
+    anthropic: 'sk-ant-',
+    openai: 'sk-'
+};
+function byokGet(provider) {
+    try { return (localStorage.getItem(BYOK_STORAGE[provider]) || '').trim(); }
+    catch { return ''; }
+}
+function byokSet(provider, key) {
+    const slot = BYOK_STORAGE[provider];
+    if (!slot) return false;
+    const v = (key || '').trim();
+    try {
+        if (!v) localStorage.removeItem(slot);
+        else localStorage.setItem(slot, v);
+        return true;
+    } catch { return false; }
+}
+function byokValidFormat(provider, key) {
+    const v = (key || '').trim();
+    if (!v) return true;
+    if (v.length < 20 || v.length > 400) return false;
+    if (/\s/.test(v)) return false;
+    const pfx = BYOK_PREFIX[provider];
+    return pfx ? v.startsWith(pfx) : true;
+}
+function byokHasFor(provider) { return !!byokGet(provider); }
+export function getByokHeaders() {
+    const h = {};
+    const a = byokGet('anthropic'); if (a) h['X-User-Anthropic-Key'] = a;
+    const o = byokGet('openai');    if (o) h['X-User-OpenAI-Key'] = o;
+    return h;
+}
 // Save immediately if new
 if (!localStorage.getItem('chopchop_ai_session')) {
     localStorage.setItem('chopchop_ai_session', AI_CONFIG.sessionId);
@@ -2312,7 +2354,7 @@ const FUNCTIONS = {
             try {
                 const resp = await fetch(`${AI_CONFIG.backendUrl}/ai/knowledge/search`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getByokHeaders() },
                     body: JSON.stringify({
                         query: params.query,
                         search_depth: params.search_depth || 'basic',
@@ -2768,7 +2810,7 @@ async function sendToAI(userMessage, onChunk) {
 
             const response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat/stream`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...getByokHeaders() },
                 body: JSON.stringify(payload),
                 signal: _abortController.signal
             });
@@ -3104,7 +3146,15 @@ window.AIAgent = {
     hasApiKey: () => true, // Always true since backend handles it
     setModel: (m) => { AI_CONFIG.model = m; },
     getModel: () => AI_CONFIG.model,
-    getBackendUrl: () => AI_CONFIG.backendUrl
+    getBackendUrl: () => AI_CONFIG.backendUrl,
+    // BYOK — per-request user keys (never sent anywhere but the backend relay)
+    byok: {
+        get: byokGet,
+        set: byokSet,
+        hasFor: byokHasFor,
+        isValidFormat: byokValidFormat,
+        headers: getByokHeaders
+    }
 };
 
 // Warmup cache on page load to make first real request instant
@@ -3123,7 +3173,7 @@ async function warmupCache() {
         const warmupSessionId = '_warmup_' + crypto.randomUUID();
         const response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat/stream`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getByokHeaders() },
             body: JSON.stringify({
                 sessionId: warmupSessionId,
                 message: 'ping',

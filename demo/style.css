@@ -4388,6 +4388,172 @@ input[type="range"]:focus {
     background: rgba(255, 255, 255, 0.2);
 }
 
+/* BYOK key modal */
+.byok-content {
+    max-width: 440px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 28px 28px 24px;
+}
+
+.byok-content .ai-settings-note {
+    margin-bottom: 22px;
+    line-height: 1.5;
+}
+
+.byok-field {
+    margin-bottom: 18px;
+}
+
+.byok-field:last-of-type {
+    margin-bottom: 4px;
+}
+
+.byok-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.byok-label-name {
+    letter-spacing: 0.2px;
+}
+
+.byok-prefix-hint {
+    color: rgba(255, 255, 255, 0.32);
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.byok-get-link {
+    margin-left: auto;
+    color: #a5b4fc;
+    font-size: 11px;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.byok-get-link:hover {
+    color: #c7d2fe;
+    text-decoration: underline;
+}
+
+.byok-input-row {
+    position: relative;
+    display: block;
+}
+
+.byok-input {
+    width: 100%;
+    padding: 11px 40px 11px 13px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.32);
+    color: white;
+    font-size: 13px;
+    font-family: monospace;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+
+.byok-input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.byok-input:focus {
+    outline: none;
+    border-color: #818cf8;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.byok-eye {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    padding: 6px 8px;
+    font-size: 13px;
+    line-height: 1;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.byok-eye:hover {
+    color: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.byok-status {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+.byok-status-on {
+    color: #34d399;
+}
+
+.byok-status-off {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.byok-warn {
+    margin: 4px 0 0 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fecaca;
+    font-size: 12px;
+}
+
+.byok-buttons {
+    margin-top: 22px;
+    gap: 8px;
+}
+
+.byok-clear-btn {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fecaca;
+    border: 1px solid rgba(239, 68, 68, 0.22) !important;
+}
+
+.byok-clear-btn:hover {
+    background: rgba(239, 68, 68, 0.28);
+}
+
+.byok-privacy-link {
+    display: inline-block;
+    margin-left: 4px;
+    color: #a5b4fc;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.byok-privacy-link:hover {
+    color: #c7d2fe;
+    text-decoration: underline;
+}
+
+/* Account dropdown — privacy link styled as inline flex to match buttons */
+#settingsDropdown .privacy-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    justify-content: center;
+}
+
 /* Welcome Message */
 .ai-welcome {
     text-align: center;

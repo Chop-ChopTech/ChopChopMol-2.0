@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy · ChopChopMol</title>
+    <link rel="icon" href="/demo/molicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%);
+            color: #e5e7eb;
+            min-height: 100vh;
+            line-height: 1.65;
+        }
+
+        .wrap {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 48px 28px 80px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #a5b4fc;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 28px;
+            transition: color 0.15s;
+        }
+
+        .back-link:hover {
+            color: #c7d2fe;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin: 0 0 6px;
+            background: linear-gradient(135deg, #a5b4fc, #f0abfc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .updated {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 13px;
+            margin: 0 0 36px;
+        }
+
+        h2 {
+            font-size: 19px;
+            margin: 36px 0 10px;
+            color: #e0e7ff;
+            letter-spacing: -0.01em;
+        }
+
+        p,
+        li {
+            color: rgba(229, 231, 235, 0.82);
+            font-size: 15px;
+        }
+
+        ul {
+            padding-left: 22px;
+        }
+
+        li {
+            margin-bottom: 6px;
+        }
+
+        a {
+            color: #a5b4fc;
+        }
+
+        a:hover {
+            color: #c7d2fe;
+        }
+
+        strong {
+            color: #f5f3ff;
+            font-weight: 600;
+        }
+
+        code {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #fbcfe8;
+        }
+
+        .callout {
+            margin: 20px 0;
+            padding: 16px 18px;
+            border-radius: 12px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(129, 140, 248, 0.25);
+        }
+
+        .callout p {
+            margin: 0;
+            color: #e0e7ff;
+            font-size: 14px;
+        }
+
+        .footer {
+            margin-top: 56px;
+            padding-top: 22px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.35);
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <a class="back-link" href="/">
+            <i class="fas fa-arrow-left"></i> Back to ChopChopMol
+        </a>
+
+        <h1>Privacy Policy</h1>
+        <p class="updated">Last updated: April 21, 2026</p>
+
+        <p>
+            ChopChopMol is a browser-based 3D molecular visualization and AI-assisted editing tool. This page
+            describes what data we handle and how. If any of it doesn't match what you see in the app, the
+            app is authoritative — please email us and we'll fix this page.
+        </p>
+
+        <h2>1. What runs on your device</h2>
+        <p>
+            The 3D viewer, all molecular parsing, selection, editing, and file export run entirely in your
+            browser. Molecules you open from your local folders are not uploaded anywhere unless you
+            explicitly send them to the AI assistant or save them to the cloud.
+        </p>
+
+        <h2>2. AI chat</h2>
+        <p>
+            When you send a message to the AI assistant, the message text, a summary of the current molecule
+            state (atoms, elements, selected indices, frame info), and any files you attach are sent to our
+            backend, which relays them to the AI provider you selected (Anthropic or OpenAI). Conversation
+            history is kept in server memory for up to one hour per session so follow-up messages have
+            context, then discarded.
+        </p>
+
+        <h2>3. Bring Your Own API Key (BYOK)</h2>
+        <div class="callout">
+            <p>
+                <strong>Your API keys stay in your browser.</strong> They are never stored on our servers,
+                never written to logs, and never sent to anyone except the provider you chose.
+            </p>
+        </div>
+        <p>
+            If you paste an Anthropic or OpenAI key into the Settings modal in the chat panel, it is stored
+            only in your browser's <code>localStorage</code> on this device. On each AI request, the key is
+            attached as an HTTP header over HTTPS to our backend, which uses it for the lifetime of that one
+            request to call the provider on your behalf. Our backend does not log, persist, or otherwise
+            retain it.
+        </p>
+        <p>
+            You can remove your keys at any time by clicking the key icon in the chat header and pressing
+            <strong>Clear all</strong>, or by clearing your browser's site data for this domain.
+        </p>
+
+        <h2>4. Accounts and cloud saves</h2>
+        <p>
+            If you sign in with Google (via Firebase Authentication), we store your email address and a user
+            ID so that files and conversations you choose to save to the cloud can be associated with your
+            account. We use Google Firebase (Authentication and Firestore) as our auth and storage provider.
+            You can sign out at any time from the account menu.
+        </p>
+
+        <h2>5. Payments</h2>
+        <p>
+            Optional donations and paid features are processed by Stripe via a hosted checkout page. We do
+            not see or store your card details; only the outcome of the transaction.
+        </p>
+
+        <h2>6. Analytics and ads</h2>
+        <p>
+            The site uses Google Analytics (via Firebase) to understand aggregate usage, and Google AdSense
+            to show ads that help fund the project. These services may set cookies and collect information
+            as described in their own privacy policies.
+        </p>
+
+        <h2>7. What we do not do</h2>
+        <ul>
+            <li>We do not sell your data.</li>
+            <li>We do not log or store your BYOK API keys.</li>
+            <li>We do not read your local files unless you open them in the app.</li>
+            <li>We do not train any model on your chats or molecules.</li>
+        </ul>
+
+        <h2>8. Third parties</h2>
+        <p>
+            When you use the AI assistant, your messages are processed by the model provider you selected.
+            Their privacy terms apply to what they receive:
+        </p>
+        <ul>
+            <li>Anthropic: <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">anthropic.com/legal/privacy</a></li>
+            <li>OpenAI: <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">openai.com/policies/privacy-policy</a></li>
+            <li>Google Firebase: <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">firebase.google.com/support/privacy</a></li>
+            <li>Stripe: <a href="https://stripe.com/privacy" target="_blank" rel="noopener">stripe.com/privacy</a></li>
+        </ul>
+
+        <h2>9. Data retention and deletion</h2>
+        <p>
+            Conversation history on the server expires after one hour of inactivity. Cloud-saved files and
+            conversations stay in your Firebase account until you delete them. To delete your account and
+            all associated cloud data, sign in, open the account menu, and contact us at the email below.
+        </p>
+
+        <h2>10. Contact</h2>
+        <p>
+            Questions, corrections, or data deletion requests:
+            <a href="mailto:nguyenpham0806@gmail.com">nguyenpham0806@gmail.com</a>.
+        </p>
+
+        <div class="footer">
+            ChopChopMol · <a href="/">Return to app</a>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1071,6 +1071,9 @@
                             Out</button>
                         <button class="donate-btn fancy-button" onclick="openDonateModal()"><i class="fas fa-heart"></i>
                             Donation</button>
+                        <a class="fancy-button privacy-link" href="/privacy.html" target="_blank" rel="noopener">
+                            <i class="fas fa-shield-halved"></i> Privacy
+                        </a>
                     </div>
                 </div>
             </div>
@@ -2281,8 +2284,8 @@
                 <button id="aiClearBtn" class="ai-header-btn ai-clear-btn" title="New chat">
                     <i class="fas fa-plus"></i>
                 </button>
-                <button id="aiSettingsBtn" style="display: none;" class="ai-header-btn" title="API Settings">
-                    <i class="fas fa-cog"></i>
+                <button id="aiSettingsBtn" class="ai-header-btn" title="API keys (Bring your own key)">
+                    <i class="fas fa-key"></i>
                 </button>
                 <button id="aiCloseBtn" class="ai-header-btn" title="Close" style="display: none;">
                     <i class="fas fa-times"></i>
@@ -2428,15 +2431,55 @@
         </div>
     </div>
 
-    <!-- AI Settings Modal -->
+    <!-- AI Settings Modal — Bring Your Own API Key (BYOK) -->
     <div id="aiSettingsModal" class="ai-settings-modal">
-        <div class="ai-settings-content">
-            <h3><i class="fas fa-key"></i> OpenAI API Key</h3>
-            <p class="ai-settings-note">Your key is stored locally in your browser and never sent anywhere except
-                OpenAI.</p>
-            <div class="ai-settings-buttons">
-                <button id="aiSaveKeyBtn">Save Key</button>
-                <button id="aiCancelKeyBtn">Cancel</button>
+        <div class="ai-settings-content byok-content">
+            <h3><i class="fas fa-key"></i> Bring your own API key</h3>
+            <p class="ai-settings-note">
+                Paste your own Claude or OpenAI key to use their models with your own billing and quotas.
+                Keys are stored in <b>this browser only</b>, sent per request over HTTPS, and never logged
+                or persisted by our backend. Leave blank to use the hosted defaults.
+                <a href="/privacy.html" target="_blank" rel="noopener" class="byok-privacy-link">Privacy policy ↗</a>
+            </p>
+
+            <div class="byok-field">
+                <div class="byok-label">
+                    <span class="byok-label-name">Anthropic</span>
+                    <span class="byok-prefix-hint">sk-ant-…</span>
+                    <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" class="byok-get-link">Get key ↗</a>
+                </div>
+                <div class="byok-input-row">
+                    <input id="byokAnthropic" type="password" class="byok-input" autocomplete="off" spellcheck="false"
+                        placeholder="sk-ant-..." />
+                    <button type="button" class="byok-eye" data-target="byokAnthropic" aria-label="Show / hide key">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="byok-status" id="byokStatusAnthropic"></div>
+            </div>
+
+            <div class="byok-field">
+                <div class="byok-label">
+                    <span class="byok-label-name">OpenAI</span>
+                    <span class="byok-prefix-hint">sk-…</span>
+                    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="byok-get-link">Get key ↗</a>
+                </div>
+                <div class="byok-input-row">
+                    <input id="byokOpenai" type="password" class="byok-input" autocomplete="off" spellcheck="false"
+                        placeholder="sk-..." />
+                    <button type="button" class="byok-eye" data-target="byokOpenai" aria-label="Show / hide key">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="byok-status" id="byokStatusOpenai"></div>
+            </div>
+
+            <div class="byok-warn" id="byokWarn" style="display:none;"></div>
+
+            <div class="ai-settings-buttons byok-buttons">
+                <button id="aiClearKeysBtn" type="button" class="byok-clear-btn">Clear all</button>
+                <button id="aiCancelKeyBtn" type="button">Cancel</button>
+                <button id="aiSaveKeyBtn" type="button">Save</button>
             </div>
         </div>
     </div>
@@ -2451,7 +2494,6 @@
             const settingsModal = document.getElementById('aiSettingsModal');
             const saveKeyBtn = document.getElementById('aiSaveKeyBtn');
             const cancelKeyBtn = document.getElementById('aiCancelKeyBtn');
-            const apiKeyInput = null;
             const historyBtn = document.getElementById('aiHistoryBtn');
 
             // ── Conversation history state ──
@@ -2499,9 +2541,25 @@
             PROVIDER_RESTRICTION.fallback = PROVIDER_RESTRICTION.provider
                 ? RESTRICTION_FALLBACK[PROVIDER_RESTRICTION.provider] : null;
 
+            // Read BYOK state directly from localStorage so this works before
+            // the AIAgent ES module has finished loading (needed at page init).
+            const BYOK_KEYS_LS = {
+                anthropic: 'chopchop_byok_anthropic',
+                openai: 'chopchop_byok_openai'
+            };
+            function byokHasForLocal(provider) {
+                try {
+                    const k = (localStorage.getItem(BYOK_KEYS_LS[provider]) || '').trim();
+                    return k.length > 0;
+                } catch { return false; }
+            }
             function isRestrictedValue(val) {
                 if (!PROVIDER_RESTRICTION.provider) return false;
                 const isClaude = (val || '').toLowerCase().includes('claude');
+                const provider = isClaude ? 'anthropic' : 'openai';
+                // BYOK for the matching provider bypasses the restriction —
+                // the user is paying for it with their own key.
+                if (byokHasForLocal(provider)) return false;
                 return PROVIDER_RESTRICTION.provider === 'claude' ? isClaude : !isClaude;
             }
 
@@ -2758,19 +2816,35 @@
 
             // ── Apply provider restriction from hardcoded RESTRICTED_PROVIDER ──
             // Visually dims the restricted tab, switches the active tab if needed,
-            // and blocks clicks on the dimmed tab.
-            if (PROVIDER_RESTRICTION.provider) {
+            // and blocks clicks on the dimmed tab. Re-runnable so BYOK save/clear
+            // can undim a tab after the user brings their own key.
+            function refreshProviderRestrictionUI() {
+                if (!PROVIDER_RESTRICTION.provider) return;
                 const restrictedProv = PROVIDER_RESTRICTION.provider;
+                const byokProvider = restrictedProv === 'claude' ? 'anthropic' : 'openai';
+                const byokBypass = !!window.AIAgent?.byok?.hasFor?.(byokProvider);
                 modelTabsEl.querySelectorAll('.ai-model-tab').forEach(t => {
                     const tabProvider = t.dataset.provider === 'Claude' ? 'claude' : 'openai';
-                    if (tabProvider === restrictedProv) {
+                    if (tabProvider === restrictedProv && !byokBypass) {
                         t.style.opacity = '0.45';
                         t.style.cursor = 'not-allowed';
                         t.title = 'Under development';
                         t.dataset.restricted = '1';
+                    } else {
+                        t.style.opacity = '';
+                        t.style.cursor = '';
+                        t.title = '';
+                        delete t.dataset.restricted;
                     }
                 });
-                // Block clicks on the restricted tab before setActiveProvider runs
+                if (!byokBypass) {
+                    const allowedProvider = restrictedProv === 'claude' ? 'OpenAI' : 'Claude';
+                    if (activeProvider !== allowedProvider) setActiveProvider(allowedProvider);
+                }
+                renderModelList(modelSearch.value);
+            }
+            if (PROVIDER_RESTRICTION.provider) {
+                // Block clicks on the restricted tab (installed once)
                 modelTabsEl.addEventListener('click', (e) => {
                     const tab = e.target.closest('.ai-model-tab');
                     if (tab && tab.dataset.restricted === '1') {
@@ -2778,10 +2852,9 @@
                         e.preventDefault();
                     }
                 }, true);
-                // Ensure the allowed provider's tab is active
-                const allowedProvider = restrictedProv === 'claude' ? 'OpenAI' : 'Claude';
-                if (activeProvider !== allowedProvider) setActiveProvider(allowedProvider);
-                renderModelList(modelSearch.value);
+                refreshProviderRestrictionUI();
+                // Expose so the BYOK save/clear handlers can retrigger
+                window._refreshProviderRestrictionUI = refreshProviderRestrictionUI;
             }
 
             // ── Thinking budget toggle ──
@@ -2836,9 +2909,61 @@
                 window._loadedConversationContext = null;
             });
 
-            // Settings modal
+            // ── BYOK settings modal ──
+            const clearKeysBtn = document.getElementById('aiClearKeysBtn');
+            const BYOK_PROVIDERS = ['anthropic', 'openai'];
+            const byokInputs = {
+                anthropic: document.getElementById('byokAnthropic'),
+                openai: document.getElementById('byokOpenai')
+            };
+            const byokStatusEls = {
+                anthropic: document.getElementById('byokStatusAnthropic'),
+                openai: document.getElementById('byokStatusOpenai')
+            };
+            const byokWarn = document.getElementById('byokWarn');
+
+            function byokPopulateInputs() {
+                const api = window.AIAgent?.byok;
+                if (!api) return;
+                for (const provider of BYOK_PROVIDERS) {
+                    const key = api.get(provider);
+                    byokInputs[provider].value = key || '';
+                    const status = byokStatusEls[provider];
+                    if (key) {
+                        status.textContent = 'Using your key';
+                        status.className = 'byok-status byok-status-on';
+                    } else {
+                        status.textContent = 'Using hosted default';
+                        status.className = 'byok-status byok-status-off';
+                    }
+                }
+                byokWarn.style.display = 'none';
+            }
+
+            function byokSaveAll() {
+                const api = window.AIAgent?.byok;
+                if (!api) return;
+                const errors = [];
+                for (const provider of BYOK_PROVIDERS) {
+                    const v = byokInputs[provider].value.trim();
+                    if (!api.isValidFormat(provider, v)) {
+                        errors.push(`${provider}: invalid format`);
+                        continue;
+                    }
+                    api.set(provider, v);
+                }
+                if (errors.length) {
+                    byokWarn.style.display = 'block';
+                    byokWarn.textContent = 'Could not save: ' + errors.join(', ');
+                    return false;
+                }
+                byokWarn.style.display = 'none';
+                byokPopulateInputs();
+                return true;
+            }
+
             settingsBtn.addEventListener('click', () => {
-                apiKeyInput.value = window.AIAgent?.getApiKey() || '';
+                byokPopulateInputs();
                 settingsModal.classList.add('open');
             });
 
@@ -2847,12 +2972,38 @@
             });
 
             saveKeyBtn.addEventListener('click', () => {
-                const key = apiKeyInput.value.trim();
-                if (key) {
-                    window.AIAgent.setApiKey(key);
+                if (byokSaveAll()) {
                     settingsModal.classList.remove('open');
-                    addMessage('assistant', 'API key saved! You can now chat with me.');
+                    window._refreshProviderRestrictionUI?.();
+                    if (typeof addMessage === 'function') {
+                        const active = BYOK_PROVIDERS.filter(p => window.AIAgent.byok.hasFor(p));
+                        const msg = active.length
+                            ? `Saved. Using your key for: ${active.join(', ')}.`
+                            : 'Cleared. Using hosted keys.';
+                        addMessage('assistant', msg);
+                    }
                 }
+            });
+
+            clearKeysBtn.addEventListener('click', () => {
+                for (const provider of BYOK_PROVIDERS) {
+                    window.AIAgent?.byok?.set(provider, '');
+                    byokInputs[provider].value = '';
+                }
+                byokPopulateInputs();
+                window._refreshProviderRestrictionUI?.();
+            });
+
+            // Show/hide toggle per input
+            document.querySelectorAll('.byok-eye').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const input = document.getElementById(btn.dataset.target);
+                    if (!input) return;
+                    const show = input.type === 'password';
+                    input.type = show ? 'text' : 'password';
+                    const icon = btn.querySelector('i');
+                    if (icon) icon.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+                });
             });
 
             // Close modal on outside click
@@ -4999,6 +5150,7 @@
                     const transcribeUrl = await getBackendUrl();
                     const res = await fetch(`${transcribeUrl}/ai/transcribe`, {
                         method: 'POST',
+                        headers: window.AIAgent?.byok?.headers?.() || {},
                         body: formData
                     });
                     const data = await res.json();
