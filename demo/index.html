@@ -1742,7 +1742,7 @@
             1</span>
         <input type="range" id="frameSlider" min="0" max="0" value="0" style="
             width: 200px;
-            accent-color: #667eea;">
+            accent-color: #1D60FD;">
         <button id="playFrames" class="fancy-button" style="
             padding: 8px 16px;
             border-radius: 20px;
@@ -1891,7 +1891,7 @@
 
             const cd = window._activeInlineChatData || window._pendingChartData;
             const hc = cd?.highlightColor || '#f093fb';
-            const pc = cd?.pointColor || cd?.lineColor || '#667eea';
+            const pc = cd?.pointColor || cd?.lineColor || '#1D60FD';
             const ps = cd?.pointSize ?? 3;
             const frameIndex = parseInt(e.target.value);
             const dataset = chart.data.datasets[0];
@@ -3370,7 +3370,7 @@
                     if (data._rendered) return;
                     data._rendered = true;
 
-                    const lineColor = data.lineColor || '#667eea';
+                    const lineColor = data.lineColor || '#1D60FD';
                     const pointColor = data.pointColor || lineColor;
                     const highlightColor = data.highlightColor || '#f093fb';
                     const lineWidth = data.lineWidth ?? 2;
@@ -4536,7 +4536,7 @@
                                             // renderInlineChart requires contentEl in scope — call manually
                                             try {
                                                 const data = { ...seg.chartData, _rendered: false };
-                                                const lineColor = data.lineColor || '#667eea';
+                                                const lineColor = data.lineColor || '#1D60FD';
                                                 const pointColor = data.pointColor || lineColor;
                                                 const highlightColor = data.highlightColor || '#f093fb';
                                                 const lineWidth = data.lineWidth ?? 2;
@@ -5357,7 +5357,7 @@
                 return;
             }
 
-            const lc = chartData.lineColor || '#667eea';
+            const lc = chartData.lineColor || '#1D60FD';
             const pc = chartData.pointColor || lc;
             const hc = chartData.highlightColor || '#f093fb';
             const lw = chartData.lineWidth ?? 2;
@@ -5423,7 +5423,7 @@
             if (!energyChart) return;
             const cd = window._pendingChartData;
             const hc = cd?.highlightColor || '#f093fb';
-            const pc = cd?.pointColor || cd?.lineColor || '#667eea';
+            const pc = cd?.pointColor || cd?.lineColor || '#1D60FD';
             const ps = cd?.pointSize ?? 3;
             const idx = parseInt(document.getElementById('frameSlider').value) || 0;
             const ds = energyChart.data.datasets[0];

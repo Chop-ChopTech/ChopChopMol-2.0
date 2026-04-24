@@ -20,13 +20,48 @@ body {
     overflow: hidden;
     margin: 0;
     padding: 0;
-    background-color: black;
+    background: #050810;
+    background-image: var(--brand-grad-deep);
     display: flex;
     perspective: 1000px;
 }
 
 :root {
     --panel-width: 220px;
+
+    /* ── Brand gradient tokens ────────────────────────────────
+       Use `--brand-grad` (vibrant) for primary actions, brand text,
+       send/submit buttons, accents. Use `--brand-grad-dim` for
+       large surfaces where full saturation would distract. Use
+       `--brand-grad-bright` for hover / highlight states. */
+    --brand-purple: #833AB4;
+    --brand-blue: #1D60FD;
+    --brand-cyan: #42D6FF;
+    --brand-grad: linear-gradient(90deg,
+            rgba(131, 58, 180, 1) 0%,
+            rgba(29, 96, 253, 1) 50%,
+            rgba(66, 214, 255, 1) 100%);
+    --brand-grad-135: linear-gradient(135deg,
+            rgba(131, 58, 180, 1) 0%,
+            rgba(29, 96, 253, 1) 50%,
+            rgba(66, 214, 255, 1) 100%);
+    --brand-grad-bright: linear-gradient(90deg,
+            rgba(168, 85, 233, 1) 0%,
+            rgba(59, 130, 253, 1) 50%,
+            rgba(116, 236, 255, 1) 100%);
+    --brand-grad-dim: linear-gradient(135deg,
+            rgba(18, 8, 30, 0.98) 0%,
+            rgba(8, 16, 42, 0.98) 50%,
+            rgba(8, 24, 36, 0.98) 100%);
+    --brand-grad-deep: linear-gradient(180deg,
+            rgba(14, 6, 24, 0.98) 0%,
+            rgba(6, 12, 32, 0.98) 50%,
+            rgba(6, 18, 28, 0.98) 100%);
+    --brand-grad-soft: linear-gradient(135deg,
+            rgba(131, 58, 180, 0.18) 0%,
+            rgba(29, 96, 253, 0.18) 50%,
+            rgba(66, 214, 255, 0.18) 100%);
+    --brand-glow: 0 5px 20px rgba(29, 96, 253, 0.35);
 }
 
 #canvas {
@@ -84,7 +119,7 @@ body {
     outline: none;
     border-color: transparent;
     background: linear-gradient(white, white) padding-box,
-        linear-gradient(to right, #6366f1, #a855f7) border-box;
+        var(--brand-grad) border-box;
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
 
@@ -1293,7 +1328,7 @@ input[type="range"]:focus {
     transition: opacity 0.3s ease;
     background-repeat: no-repeat !important;
     perspective: 1000px;
-    background-color: rgba(20, 20, 22, 0.55);
+    background: var(--brand-grad-dim);
     border: 1px solid rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -1634,7 +1669,7 @@ input[type="range"]:focus {
 .dropdown-icon.signed-in:hover .user-initials {
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    background: var(--brand-grad-135);
     border-color: rgba(255, 255, 255, 0.5);
 }
 
@@ -1946,7 +1981,7 @@ input[type="range"]:focus {
 }
 
 .premium-modal-content {
-    background: linear-gradient(135deg, #1c2553, #21163e);
+    background: var(--brand-grad-dim);
     border-radius: 20px;
     padding: 40px;
     max-width: 500px;
@@ -2058,7 +2093,7 @@ input[type="range"]:focus {
 .subscribe-premium-btn {
     width: 100%;
     padding: 15px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: var(--brand-grad-135);
     color: white;
     border: none;
     border-radius: 10px;
@@ -2072,7 +2107,7 @@ input[type="range"]:focus {
 
 .subscribe-premium-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 10px 30px rgba(29, 96, 253, 0.4);
 }
 
 .subscribe-premium-btn:disabled {
@@ -2165,7 +2200,7 @@ input[type="range"]:focus {
 .premium-upgrade-btn.trial-active:hover {
     background: linear-gradient(135deg, #9333EA, #8B5CF6) !important;
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+    box-shadow: 0 10px 30px rgba(131, 58, 180, 0.4);
 }
 
 
@@ -2505,7 +2540,7 @@ input[type="range"]:focus {
 
 .ai-model-trigger:hover {
     background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(139, 92, 246, 0.35);
+    border-color: rgba(131, 58, 180, 0.35);
     color: #fff;
 }
 
@@ -2526,9 +2561,9 @@ input[type="range"]:focus {
 }
 
 .ai-model-trigger-badge.default {
-    background: rgba(139, 92, 246, 0.18);
+    background: rgba(131, 58, 180, 0.18);
     color: rgba(180, 160, 255, 0.95);
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    border: 1px solid rgba(131, 58, 180, 0.3);
 }
 
 /* Model picker modal */
@@ -2558,10 +2593,10 @@ input[type="range"]:focus {
     max-height: 82vh;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(145deg, #1a1d2e 0%, #221b3d 100%);
+    background: var(--brand-grad-dim);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(139, 92, 246, 0.08);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(131, 58, 180, 0.08);
     overflow: hidden;
     animation: aiModelPop 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
@@ -2613,7 +2648,7 @@ input[type="range"]:focus {
 .ai-model-modal-thinking {
     padding: 12px 18px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    background: rgba(139, 92, 246, 0.04);
+    background: rgba(131, 58, 180, 0.04);
 }
 
 .ai-model-modal-thinking .ai-thinking-control {
@@ -2656,10 +2691,10 @@ input[type="range"]:focus {
 }
 
 .ai-model-tab.active {
-    background: rgba(139, 92, 246, 0.18);
-    border-color: rgba(139, 92, 246, 0.45);
+    background: rgba(131, 58, 180, 0.18);
+    border-color: rgba(131, 58, 180, 0.45);
     color: #fff;
-    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.15), 0 4px 12px rgba(139, 92, 246, 0.12);
+    box-shadow: 0 0 0 1px rgba(131, 58, 180, 0.15), 0 4px 12px rgba(131, 58, 180, 0.12);
 }
 
 .ai-model-tab.active i {
@@ -2743,7 +2778,7 @@ input[type="range"]:focus {
 }
 
 .ai-model-modal-done {
-    background: linear-gradient(135deg, #8b5cf6, #667eea);
+    background: var(--brand-grad-135);
     border: none;
     color: #fff;
     font-family: 'Rubik', sans-serif;
@@ -2793,7 +2828,7 @@ input[type="range"]:focus {
 
 .ai-model-modal-search input:focus {
     outline: none;
-    border-color: rgba(139, 92, 246, 0.5);
+    border-color: rgba(131, 58, 180, 0.5);
 }
 
 .ai-model-list {
@@ -2838,8 +2873,8 @@ input[type="range"]:focus {
 }
 
 .ai-model-item.selected {
-    background: rgba(139, 92, 246, 0.12);
-    border-color: rgba(139, 92, 246, 0.35);
+    background: rgba(131, 58, 180, 0.12);
+    border-color: rgba(131, 58, 180, 0.35);
 }
 
 .ai-model-item-main {
@@ -2870,9 +2905,9 @@ input[type="range"]:focus {
 }
 
 .ai-model-item-badge.default {
-    background: rgba(139, 92, 246, 0.18);
+    background: rgba(131, 58, 180, 0.18);
     color: rgba(180, 160, 255, 0.95);
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    border: 1px solid rgba(131, 58, 180, 0.3);
 }
 
 .ai-model-item-check {
@@ -2936,7 +2971,7 @@ input[type="range"]:focus {
 
 .ai-model-select:focus {
     outline: none;
-    border-color: rgba(102, 126, 234, 0.3);
+    border-color: rgba(29, 96, 253, 0.3);
 }
 
 #bottom-options {
@@ -2952,7 +2987,7 @@ input[type="range"]:focus {
     top: 0;
     width: 280px;
     height: 100vh;
-    background: linear-gradient(180deg, rgba(12, 15, 28, 0.92) 0%, rgba(8, 10, 22, 0.95) 100%);
+    background: var(--brand-grad-deep);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-right: 1px solid rgba(255, 255, 255, 0.06);
@@ -3598,8 +3633,8 @@ input[type="range"]:focus {
 }
 
 .ai-tool-row.active {
-    border-color: rgba(139, 92, 246, 0.2);
-    background: rgba(139, 92, 246, 0.05);
+    border-color: rgba(131, 58, 180, 0.2);
+    background: rgba(131, 58, 180, 0.05);
 }
 
 .ai-tool-row.completed {
@@ -3629,7 +3664,7 @@ input[type="range"]:focus {
     font-size: 11px;
     width: 16px;
     text-align: center;
-    color: rgba(139, 92, 246, 0.6);
+    color: rgba(131, 58, 180, 0.6);
     flex-shrink: 0;
 }
 
@@ -3648,7 +3683,7 @@ input[type="range"]:focus {
 }
 
 .ai-tool-row.active .ai-tool-row-status {
-    color: rgba(139, 92, 246, 0.8);
+    color: rgba(131, 58, 180, 0.8);
 }
 
 .ai-tool-row.completed .ai-tool-row-status {
@@ -3781,9 +3816,9 @@ input[type="range"]:focus {
     inset: 0;
     background: linear-gradient(90deg,
         transparent 0%,
-        rgba(139, 92, 246, 0.18) 45%,
+        rgba(131, 58, 180, 0.18) 45%,
         rgba(255, 255, 255, 0.18) 50%,
-        rgba(139, 92, 246, 0.18) 55%,
+        rgba(131, 58, 180, 0.18) 55%,
         transparent 100%);
     background-size: 200% 100%;
     animation: ai-tool-progress-sheen 1.6s linear infinite;
@@ -3861,7 +3896,7 @@ input[type="range"]:focus {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(139, 92, 246, 0.04);
+    background: rgba(131, 58, 180, 0.04);
     animation: pyConfirmFadeIn 0.2s ease;
 }
 @keyframes pyConfirmFadeIn {
@@ -3903,7 +3938,7 @@ input[type="range"]:focus {
     padding: 3px 12px;
     border-radius: 5px;
     border: none;
-    background: rgba(139, 92, 246, 0.7);
+    background: rgba(131, 58, 180, 0.7);
     color: white;
     cursor: pointer;
     font-size: 11px;
@@ -3911,7 +3946,7 @@ input[type="range"]:focus {
     transition: all 0.15s;
 }
 .python-confirm-inline-allow:hover {
-    background: rgba(139, 92, 246, 0.9);
+    background: rgba(131, 58, 180, 0.9);
 }
 /* Waiting-for-permission state on the tool row */
 .ai-tool-row.awaiting-permission {
@@ -3958,7 +3993,7 @@ input[type="range"]:focus {
 }
 
 .ai-action-tag {
-    background: rgba(102, 126, 234, 0.2);
+    background: rgba(29, 96, 253, 0.2);
     color: rgba(165, 180, 252, 0.8);
     padding: 2px 7px;
     border-radius: 8px;
@@ -4064,7 +4099,7 @@ input[type="range"]:focus {
 }
 
 .ai-thinking-opt.active {
-    background: rgba(139, 92, 246, 0.2);
+    background: rgba(131, 58, 180, 0.2);
     color: rgba(180, 160, 255, 0.9);
 }
 
@@ -4112,8 +4147,8 @@ input[type="range"]:focus {
     color: rgba(255, 255, 255, 0.8);
 }
 .ai-attach-btn.has-files {
-    color: rgba(102, 126, 234, 0.8);
-    border-color: rgba(102, 126, 234, 0.2);
+    color: rgba(29, 96, 253, 0.8);
+    border-color: rgba(29, 96, 253, 0.2);
 }
 
 /* Attachment chips container */
@@ -4133,8 +4168,8 @@ input[type="range"]:focus {
     align-items: center;
     gap: 4px;
     padding: 3px 8px;
-    background: rgba(102, 126, 234, 0.12);
-    border: 1px solid rgba(102, 126, 234, 0.2);
+    background: rgba(29, 96, 253, 0.12);
+    border: 1px solid rgba(29, 96, 253, 0.2);
     border-radius: 12px;
     color: rgba(180, 195, 255, 0.9);
     font-size: 11px;
@@ -4168,8 +4203,8 @@ input[type="range"]:focus {
     display: none;
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(102, 126, 234, 0.08);
-    border: 2px dashed rgba(102, 126, 234, 0.4);
+    background: rgba(29, 96, 253, 0.08);
+    border: 2px dashed rgba(29, 96, 253, 0.4);
     border-radius: 10px;
     z-index: 10;
     flex-direction: column;
@@ -4182,7 +4217,7 @@ input[type="range"]:focus {
 }
 .ai-drop-overlay i {
     font-size: 20px;
-    color: rgba(102, 126, 234, 0.6);
+    color: rgba(29, 96, 253, 0.6);
 }
 .ai-chat-input-area.drag-active .ai-drop-overlay {
     display: flex;
@@ -4254,17 +4289,17 @@ input[type="range"]:focus {
 }
 
 #aiChatInput:focus {
-    border-color: rgba(102, 126, 234, 0.25);
+    border-color: rgba(29, 96, 253, 0.25);
     background: rgba(255, 255, 255, 0.06);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.06);
+    box-shadow: 0 0 0 3px rgba(29, 96, 253, 0.06);
 }
 
 #aiSendBtn {
     width: 32px;
     height: 32px;
-    border: 1px solid rgba(102, 126, 234, 0.2);
+    border: 1px solid rgba(29, 96, 253, 0.2);
     border-radius: 10px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(139, 92, 246, 0.15));
+    background: linear-gradient(135deg, rgba(29, 96, 253, 0.2), rgba(131, 58, 180, 0.15));
     color: rgba(180, 195, 255, 0.9);
     cursor: pointer;
     display: flex;
@@ -4277,9 +4312,9 @@ input[type="range"]:focus {
 
 #aiSendBtn:hover {
     transform: scale(1.06);
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.35), rgba(139, 92, 246, 0.25));
-    border-color: rgba(102, 126, 234, 0.35);
-    box-shadow: 0 0 14px rgba(102, 126, 234, 0.2);
+    background: linear-gradient(135deg, rgba(29, 96, 253, 0.35), rgba(131, 58, 180, 0.25));
+    border-color: rgba(29, 96, 253, 0.35);
+    box-shadow: 0 0 14px rgba(29, 96, 253, 0.2);
 }
 
 #aiSendBtn:disabled {
@@ -4308,7 +4343,7 @@ input[type="range"]:focus {
 }
 
 .ai-settings-content {
-    background: linear-gradient(135deg, #1e293b, #312e81);
+    background: var(--brand-grad-dim);
     padding: 30px;
     border-radius: 20px;
     width: 90%;
@@ -4345,7 +4380,7 @@ input[type="range"]:focus {
 
 #aiApiKeyInput:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--brand-blue);
 }
 
 .ai-settings-note {
@@ -4371,12 +4406,12 @@ input[type="range"]:focus {
 }
 
 #aiSaveKeyBtn {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: var(--brand-grad-135);
     color: white;
 }
 
 #aiSaveKeyBtn:hover {
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 5px 20px rgba(29, 96, 253, 0.4);
 }
 
 #aiCancelKeyBtn {
@@ -4568,8 +4603,8 @@ input[type="range"]:focus {
     height: 40px;
     margin: 0 auto 14px;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.15));
-    border: 1px solid rgba(102, 126, 234, 0.12);
+    background: linear-gradient(135deg, rgba(29, 96, 253, 0.15), rgba(131, 58, 180, 0.15));
+    border: 1px solid rgba(29, 96, 253, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4629,7 +4664,7 @@ input[type="range"]:focus {
     gap: 6px;
     margin-top: 8px;
     padding: 6px 10px;
-    background: rgba(102, 126, 234, 0.1);
+    background: rgba(29, 96, 253, 0.1);
     border-radius: 8px;
     color: rgba(165, 180, 252, 0.7);
     font-size: 11px;
@@ -4661,7 +4696,7 @@ input[type="range"]:focus {
     top: 0;
     width: 244px;
     height: 100vh;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(10, 15, 30, 0.98) 100%);
+    background: var(--brand-grad-deep);
     border-left: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 10000;
     display: flex;
@@ -4864,7 +4899,7 @@ input[type="range"]:focus {
 
 .panel-resizer:hover,
 .panel-resizer.active {
-    background: rgba(102, 126, 234, 0.5);
+    background: rgba(29, 96, 253, 0.5);
 }
 
 .panel-resizer-horizontal {
@@ -4901,7 +4936,7 @@ input[type="range"]:focus {
 
 .explorer-divider-resizer:hover,
 .explorer-divider-resizer.active {
-    background: rgba(102, 126, 234, 0.3);
+    background: rgba(29, 96, 253, 0.3);
 }
 
 .explorer-divider-resizer::after {
@@ -4917,7 +4952,7 @@ input[type="range"]:focus {
 }
 
 .explorer-divider-resizer:hover::after {
-    background: rgba(102, 126, 234, 0.6);
+    background: rgba(29, 96, 253, 0.6);
 }
 
 .folder-contents {
@@ -5100,7 +5135,7 @@ input[type="range"]:focus {
 }
 
 .local-save-dialog {
-    background: linear-gradient(135deg, #1a1a2e, #252545);
+    background: var(--brand-grad-dim);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 16px;
     padding: 24px 28px;
@@ -6034,7 +6069,7 @@ input[type="range"]:focus {
 }
 
 .panel-collapse-toggle:hover {
-    background: rgba(102, 126, 234, 0.3);
+    background: rgba(29, 96, 253, 0.3);
     color: #fff;
 }
 
@@ -6242,7 +6277,7 @@ input[type="range"]:focus {
     width: 367px;
     max-height: calc(100vh - 90px);
     z-index: 9999;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
+    background: var(--brand-grad-deep);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     backdrop-filter: blur(10px);
@@ -6371,7 +6406,7 @@ input[type="range"]:focus {
     transform: translateX(-50%);
     width: 250px;
     z-index: 9998;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
+    background: var(--brand-grad-deep);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     backdrop-filter: blur(10px);
@@ -6477,7 +6512,7 @@ input[type="range"]:focus {
     width: 200px;
     max-height: calc(100vh - 20px);
     z-index: 9999;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
+    background: var(--brand-grad-deep);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     backdrop-filter: blur(10px);
@@ -7032,7 +7067,7 @@ input[type="color"]::-moz-color-swatch {
 
 .tutorial-tooltip {
     position: absolute;
-    background: linear-gradient(165deg, #1e1e32 0%, #12121f 100%);
+    background: var(--brand-grad-dim);
     border: 2px solid #ff6b35;
     border-radius: 20px;
     padding: 0;
@@ -7292,7 +7327,7 @@ input[type="color"]::-moz-color-swatch {
     position: absolute;
     width: 18px;
     height: 18px;
-    background: linear-gradient(145deg, #1e1e32, #12121f);
+    background: var(--brand-grad-dim);
     border: 2px solid #ff6b35;
     transform: rotate(45deg);
     z-index: -1;
@@ -7405,7 +7440,7 @@ input[type="color"]::-moz-color-swatch {
 
 /* Modal Container */
 .remote-modal {
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(10, 15, 30, 0.98) 100%);
+    background: var(--brand-grad-deep);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     width: 400px;
@@ -8350,9 +8385,33 @@ input[type="color"]::-moz-color-swatch {
         display: none !important;
     }
 
-    /* Hide the full header bar on mobile — save space */
+    /* Compact header on mobile — keep BYOK/history/new-chat buttons reachable,
+       hide the title and close (panel is always visible on mobile). */
     .ai-chat-header {
+        display: flex !important;
+        padding: 4px 8px !important;
+        min-height: 32px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .ai-chat-header .ai-chat-header-title {
         display: none !important;
+    }
+
+    .ai-chat-header .ai-header-btn {
+        padding: 6px 9px !important;
+        font-size: 13px !important;
+    }
+
+    .ai-chat-header #aiCloseBtn {
+        display: none !important;
+    }
+
+    /* BYOK modal — tighten padding on small screens */
+    .byok-content {
+        padding: 22px 20px 20px !important;
     }
 
     /* Messages area fills available space */

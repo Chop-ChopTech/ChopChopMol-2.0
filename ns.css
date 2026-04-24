@@ -10,9 +10,22 @@
     --text: #eeeef2;
     --muted: #9ca3af;
     --dim: #6b7280;
-    --accent: #f59e0b;
-    --accent2: #3b82f6;
-    --glow: rgba(245, 158, 11, .15);
+    --accent: #1D60FD;
+    --accent2: #833AB4;
+    --accent3: #42D6FF;
+    --glow: rgba(29, 96, 253, .18);
+    --brand-grad: linear-gradient(90deg,
+            rgba(131, 58, 180, 1) 0%,
+            rgba(29, 96, 253, 1) 50%,
+            rgba(66, 214, 255, 1) 100%);
+    --brand-grad-135: linear-gradient(135deg,
+            rgba(131, 58, 180, 1) 0%,
+            rgba(29, 96, 253, 1) 50%,
+            rgba(66, 214, 255, 1) 100%);
+    --brand-grad-dim: linear-gradient(135deg,
+            rgba(60, 24, 85, 0.95) 0%,
+            rgba(14, 44, 115, 0.95) 50%,
+            rgba(25, 88, 112, 0.95) 100%);
     --radius: 16px;
     --radius-sm: 10px;
     --shadow: 0 2px 8px rgba(0, 0, 0, .25);
@@ -137,8 +150,8 @@ a:hover {
     padding: 14px 28px;
     font: 600 1rem var(--font);
     border-radius: var(--radius-sm);
-    background: var(--accent);
-    color: #000;
+    background: var(--brand-grad);
+    color: #fff;
     border: none;
     cursor: pointer;
     transition: transform .15s, box-shadow .2s;
@@ -146,7 +159,7 @@ a:hover {
 
 .btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 20px var(--glow);
+    box-shadow: 0 6px 24px rgba(29, 96, 253, .35);
     text-decoration: none;
 }
 
@@ -196,7 +209,11 @@ a:hover {
 }
 
 .hero__accent {
-    color: var(--accent);
+    background: var(--brand-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
 }
 
 .hero__lead {
