@@ -192,6 +192,26 @@
                             act('reject', r.id, x, { reason });
                         };
                         actions.append(a, x);
+                    } else if (r.status === 'approved' && r.uid) {
+                        const v = document.createElement('button'); v.className = 'reject'; v.textContent = 'Revoke';
+                        v.title = 'Remove access; user will need to request again';
+                        v.onclick = async () => {
+                            if (!confirm(`Revoke access for ${r.email}? They'll need to request again.`)) return;
+                            v.disabled = true; v.textContent = '…';
+                            try {
+                                const res = await authedFetch('/access/revoke', {
+                                    method: 'POST',
+                                    body: JSON.stringify({ uid: r.uid, email: r.email }),
+                                });
+                                const data = await res.json().catch(() => ({}));
+                                if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                                await load();
+                            } catch (e) {
+                                alert(e.message);
+                                v.disabled = false; v.textContent = 'Revoke';
+                            }
+                        };
+                        actions.append(v);
                     }
                     list.appendChild(el);
                 }

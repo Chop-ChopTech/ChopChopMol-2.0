@@ -271,6 +271,19 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.active) { gateHide(); return; }
+                    // Not active. If the user has no pending request, queue one
+                    // automatically (Google sign-in path: same outcome as the
+                    // form, founder reviews in admin).
+                    if (!data.requestPending) {
+                        try {
+                            await fetch(`${url}/access/request-self`, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${token}` },
+                            });
+                        } catch (e) {
+                            console.warn('auto-request failed', e);
+                        }
+                    }
                     gateShow('pending');
                     return;
                 }
