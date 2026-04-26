@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Queue · ChopChopMol Admin</title>
+    <link rel="icon" href="/demo/molicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
+        rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #07080f;
+            color: #d4d8e0;
+            min-height: 100vh;
+        }
+        .wrap { max-width: 980px; margin: 0 auto; padding: 32px 24px 80px; }
+        h1 { font-size: 20px; margin: 0 0 4px; color: #e8eaf0; font-weight: 600; }
+        .sub { font-size: 13px; color: #6b7280; margin: 0 0 24px; }
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .toolbar button, select {
+            padding: 7px 13px;
+            font: inherit;
+            font-size: 13px;
+            color: #d4d8e0;
+            background: #11131c;
+            border: 1px solid #232735;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .toolbar button:hover { background: #161927; }
+        .gate {
+            background: #0f1119;
+            border: 1px solid #1c2030;
+            border-radius: 10px;
+            padding: 32px;
+            text-align: center;
+        }
+        .gate button { padding: 10px 20px; font-size: 14px; background: #1d60fd; border: none; border-radius: 5px; color: #fff; cursor: pointer; margin-top: 12px; }
+        .row {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr 1fr 1fr auto;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #0f1119;
+            border: 1px solid #1c2030;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            align-items: center;
+            font-size: 13px;
+        }
+        .row .uc { grid-column: 1 / -1; color: #aab1bf; font-size: 13px; padding-top: 8px; border-top: 1px solid #1c2030; margin-top: 6px; white-space: pre-wrap; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+        .badge.pending  { background: #2a2014; color: #d6a23e; }
+        .badge.approved { background: #14241a; color: #6cb888; }
+        .badge.rejected { background: #2a1416; color: #d68080; }
+        .actions { display: flex; gap: 6px; }
+        .actions button { padding: 5px 10px; font-size: 12px; border: none; border-radius: 4px; cursor: pointer; color: #fff; }
+        .approve { background: #2d6b3f; }
+        .approve:hover { background: #245532; }
+        .reject  { background: #8a2e2e; }
+        .reject:hover { background: #6e2424; }
+        .empty { color: #6b7280; padding: 28px; text-align: center; }
+        .err { background: #2a1416; border: 1px solid #5a2326; color: #e89090; padding: 10px 14px; border-radius: 5px; margin-bottom: 12px; font-size: 13px; }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h1>Access Queue</h1>
+        <p class="sub">Approve or decline early-access requests.</p>
+
+        <div id="gate" class="gate" style="display:none">
+            <p>Sign in with a founder account to view the queue.</p>
+            <button id="signInBtn">Sign in with Google</button>
+        </div>
+
+        <div id="app" style="display:none">
+            <div class="toolbar">
+                <select id="filter">
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="all">All</option>
+                </select>
+                <button id="refresh">Refresh</button>
+                <span id="who" style="margin-left:auto; font-size:12px; color:#94a3b8"></span>
+                <button id="signOutBtn">Sign out</button>
+            </div>
+            <div id="error" class="err" style="display:none"></div>
+            <div id="list"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import {
+            getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+        } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getBackendUrl } from '/demo/utils/apiUtils.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAAlbmJmNxVGJ3wv1KiyoFWJ86Ik31jY-w",
+            authDomain: "chopchopmol-2.firebaseapp.com",
+            projectId: "chopchopmol-2",
+            storageBucket: "chopchopmol-2.firebasestorage.app",
+            messagingSenderId: "911400525967",
+            appId: "1:911400525967:web:1e3e6bfefdcb8edc8ad0fa",
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const gate = document.getElementById('gate');
+        const appDiv = document.getElementById('app');
+        const signInBtn = document.getElementById('signInBtn');
+        const signOutBtn = document.getElementById('signOutBtn');
+        const refresh = document.getElementById('refresh');
+        const filterSel = document.getElementById('filter');
+        const list = document.getElementById('list');
+        const who = document.getElementById('who');
+        const errEl = document.getElementById('error');
+
+        signInBtn.addEventListener('click', () => signInWithPopup(auth, new GoogleAuthProvider()));
+        signOutBtn.addEventListener('click', () => signOut(auth));
+        refresh.addEventListener('click', load);
+        filterSel.addEventListener('change', load);
+
+        function showError(m) { errEl.textContent = m; errEl.style.display = 'block'; }
+        function clearError() { errEl.style.display = 'none'; }
+
+        async function authedFetch(path, opts = {}) {
+            const user = auth.currentUser;
+            if (!user) throw new Error('Not signed in');
+            const token = await user.getIdToken();
+            const url = await getBackendUrl();
+            return fetch(`${url}${path}`, {
+                ...opts,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    ...(opts.headers || {}),
+                },
+            });
+        }
+
+        async function load() {
+            clearError();
+            list.innerHTML = '<div class="empty">Loading…</div>';
+            try {
+                const res = await authedFetch(`/access/list?status=${encodeURIComponent(filterSel.value)}`);
+                if (res.status === 403) {
+                    showError("This account isn't an admin. Add your uid to admins/{uid} in Firestore.");
+                    list.innerHTML = '';
+                    return;
+                }
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const { requests } = await res.json();
+                if (!requests || !requests.length) {
+                    list.innerHTML = '<div class="empty">Nothing here.</div>';
+                    return;
+                }
+                list.innerHTML = '';
+                for (const r of requests) {
+                    const el = document.createElement('div');
+                    el.className = 'row';
+                    el.innerHTML = `
+                        <div><b>${escape(r.name || '(no name)')}</b><br><span style="color:#94a3b8">${escape(r.email)}</span></div>
+                        <div>${escape(r.org || '—')}</div>
+                        <div>${escape(r.createdAt || '')}</div>
+                        <div><span class="badge ${escape(r.status)}">${escape(r.status)}</span></div>
+                        <div class="actions"></div>
+                        <div class="uc">${escape(r.useCase || '')}</div>
+                    `;
+                    const actions = el.querySelector('.actions');
+                    if (r.status === 'pending') {
+                        const a = document.createElement('button'); a.className = 'approve'; a.textContent = 'Approve';
+                        a.onclick = () => act('approve', r.id, a);
+                        const x = document.createElement('button'); x.className = 'reject'; x.textContent = 'Reject';
+                        x.onclick = () => {
+                            const reason = prompt('Optional reason for the internal log:') || '';
+                            act('reject', r.id, x, { reason });
+                        };
+                        actions.append(a, x);
+                    }
+                    list.appendChild(el);
+                }
+            } catch (e) {
+                showError(e.message);
+                list.innerHTML = '';
+            }
+        }
+
+        async function act(kind, id, btn, extra = {}) {
+            btn.disabled = true; btn.textContent = '…';
+            try {
+                const res = await authedFetch(`/access/${kind}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ id, ...extra }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                if (kind === 'approve' && data.link && !data.emailSent) {
+                    prompt('Email send failed. Copy this setup link to send manually:', data.link);
+                }
+                await load();
+            } catch (e) {
+                alert(e.message);
+                btn.disabled = false; btn.textContent = kind === 'approve' ? 'Approve' : 'Reject';
+            }
+        }
+
+        function escape(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                gate.style.display = 'none';
+                appDiv.style.display = 'block';
+                who.textContent = user.email || user.displayName || '';
+                load();
+            } else {
+                gate.style.display = 'block';
+                appDiv.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

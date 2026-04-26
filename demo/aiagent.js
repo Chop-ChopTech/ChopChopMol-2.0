@@ -79,6 +79,10 @@ export function getByokHeaders() {
     const h = {};
     const a = byokGet('anthropic'); if (a) h['X-User-Anthropic-Key'] = a;
     const o = byokGet('openai');    if (o) h['X-User-OpenAI-Key'] = o;
+    // Token cached by onIdTokenChanged in index.html. When REQUIRE_AUTH=true
+    // on the backend, requests without this header get 401.
+    const t = window._firebaseIdToken;
+    if (t) h['Authorization'] = `Bearer ${t}`;
     return h;
 }
 // Save immediately if new

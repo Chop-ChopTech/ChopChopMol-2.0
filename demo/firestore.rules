@@ -1,18 +1,38 @@
-rules_version='2'
+rules_version = '2';
+
+// ChopChopMol Firestore rules.
+//
+// - users/{uid}/**: only the owner. status='active' is gate-relevant but not
+//   enforced here (the backend enforces it on /ai/* + /api/*).
+// - admins/{uid}: any signed-in user can check whether THEIR uid is an admin
+//   doc (admin.html relies on this for UI), but no one writes from the client.
+// - accessRequests/**: server-only. Backend writes via firebase-admin, which
+//   bypasses these rules. Clients post via the public /access/request endpoint,
+//   never directly to Firestore.
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      match /{sub=**} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /accessRequests/{anyId} {
+      allow read, write: if false;
+    }
+
+    // Default deny everything else.
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 8, 23);
+      allow read, write: if false;
     }
   }
 }

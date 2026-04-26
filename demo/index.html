@@ -43,6 +43,97 @@
         };
     </script>
 
+    <!-- Early-access gate. Shown until Firebase reports a signed-in, provisioned user. -->
+    <style>
+        #access-gate {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: #07080f;
+            font-family: 'Rubik', -apple-system, sans-serif;
+            color: #d4d8e0;
+        }
+        #access-gate .ag-card {
+            max-width: 400px;
+            width: 100%;
+            background: #0f1119;
+            border: 1px solid #1c2030;
+            border-radius: 10px;
+            padding: 36px 32px;
+            text-align: center;
+        }
+        #access-gate h1 {
+            font-size: 22px;
+            margin: 0 0 6px;
+            color: #e8eaf0;
+            font-weight: 600;
+        }
+        #access-gate p.ag-lede { color: #8b93a3; margin: 0 0 20px; font-size: 13px; }
+        #access-gate button {
+            width: 100%;
+            padding: 11px 16px;
+            font: inherit;
+            font-size: 14px;
+            color: #d4d8e0;
+            background: #11131c;
+            border: 1px solid #232735;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 8px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        #access-gate button:hover { background: #161927; border-color: #2c3142; }
+        #access-gate button.ag-primary {
+            background: #6b3fa0;
+            border-color: transparent;
+            color: #fff;
+        }
+        #access-gate button.ag-primary:hover { background: #5a3486; }
+        #access-gate input {
+            width: 100%; padding: 10px 12px; font: inherit; font-size: 14px;
+            color: #d4d8e0; background: #11131c;
+            border: 1px solid #232735; border-radius: 6px;
+            outline: none; margin-top: 8px;
+        }
+        #access-gate input:focus { border-color: #6b3fa0; }
+        #access-gate details { margin-top: 14px; text-align: left; }
+        #access-gate summary { cursor: pointer; font-size: 13px; color: #8e7cb8; padding: 6px 0; }
+        #access-gate .ag-link { display: block; margin-top: 16px; font-size: 13px; color: #8e7cb8; text-decoration: none; }
+        #access-gate .ag-link:hover { color: #a594c9; }
+        #access-gate .ag-msg { margin-top: 12px; font-size: 13px; color: #d68080; min-height: 18px; }
+        #access-gate .ag-pending { font-size: 14px; color: #d6a23e; margin: 12px 0; }
+    </style>
+    <div id="access-gate" style="display:none">
+        <div class="ag-card">
+            <h1>ChopChopMol</h1>
+            <p class="ag-lede" id="ag-lede">Private beta — sign in or request access.</p>
+
+            <div id="ag-signed-out">
+                <button id="ag-google" class="ag-primary"><i class="fab fa-google"></i> Continue with Google</button>
+                <details id="ag-email-wrap">
+                    <summary>Sign in with email &amp; password</summary>
+                    <input id="ag-email" type="email" placeholder="you@example.com" autocomplete="email">
+                    <input id="ag-pw" type="password" placeholder="Password" autocomplete="current-password">
+                    <button id="ag-email-btn">Sign in</button>
+                </details>
+                <a class="ag-link" href="/demo/early-access.html">Don't have an account? Request access &rarr;</a>
+            </div>
+
+            <div id="ag-pending" style="display:none">
+                <p class="ag-pending">Your account is signed in but not yet provisioned.</p>
+                <p style="font-size:13px;color:#94a3b8">If you submitted an early-access request, we'll email you when it's approved.</p>
+                <button id="ag-signout">Sign out</button>
+            </div>
+
+            <div class="ag-msg" id="ag-msg"></div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/undo-manager@1.0.5/lib/undomanager.js"></script>
     <script src="/demo/utils/undo.js"></script>
     <script type="module">
@@ -50,7 +141,7 @@
         import { getBackendUrl } from '/demo/utils/apiUtils.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
-        import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy, serverTimestamp, where, writeBatch, deleteField, limit } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -80,6 +171,90 @@
         window.serverTimestamp = serverTimestamp;
         window.auth = auth;
         window.onAuthStateChanged = onAuthStateChanged;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+
+        // Cache the Firebase ID token so synchronous helpers (e.g. getByokHeaders)
+        // can attach Authorization: Bearer <token> on outbound backend requests.
+        // onIdTokenChanged fires on sign-in, sign-out, and ~hourly token refresh.
+        window._firebaseIdToken = null;
+        onIdTokenChanged(auth, async (user) => {
+            try {
+                window._firebaseIdToken = user ? await user.getIdToken() : null;
+            } catch (e) {
+                window._firebaseIdToken = null;
+            }
+            window.dispatchEvent(new CustomEvent('firebaseTokenChanged', { detail: { hasToken: !!window._firebaseIdToken } }));
+            // Drive the access gate off the same token state.
+            evaluateAccessGate(user);
+        });
+
+        // -------- Early-access gate --------
+        // Soft full-screen overlay shown until the signed-in user is provisioned
+        // (active=true on /access/me). Backend enforces independently when
+        // REQUIRE_AUTH=true; this is the UX side of the same gate.
+        const gateEl = document.getElementById('access-gate');
+        const gateSignedOut = document.getElementById('ag-signed-out');
+        const gatePending = document.getElementById('ag-pending');
+        const gateMsg = document.getElementById('ag-msg');
+        gateEl.style.display = 'flex';   // show by default until we confirm provisioning
+
+        function gateShow(mode, message = '') {
+            gateEl.style.display = 'flex';
+            gateSignedOut.style.display = mode === 'signedOut' ? 'block' : 'none';
+            gatePending.style.display = mode === 'pending' ? 'block' : 'none';
+            gateMsg.textContent = message;
+        }
+        function gateHide() {
+            gateEl.style.display = 'none';
+            gateMsg.textContent = '';
+        }
+
+        async function evaluateAccessGate(user) {
+            if (!user) { gateShow('signedOut'); return; }
+            try {
+                const url = await getBackendUrl();
+                const token = await user.getIdToken();
+                const res = await fetch(`${url}/access/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.active) { gateHide(); return; }
+                    gateShow('pending');
+                    return;
+                }
+                if (res.status === 403) { gateShow('pending'); return; }
+                if (res.status === 401) { gateShow('signedOut', 'Session expired. Please sign in again.'); return; }
+                // Any other status: backend may not have firebase-admin set up yet.
+                // Don't lock the user out — log and let them through.
+                console.warn(`/access/me returned ${res.status}; gate suppressed`);
+                gateHide();
+            } catch (e) {
+                console.warn('Gate check failed; suppressing gate:', e);
+                gateHide();
+            }
+        }
+
+        document.getElementById('ag-google').addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch(err => {
+                if (err.code !== 'auth/popup-closed-by-user') signInWithRedirect(auth, provider);
+            });
+        });
+        document.getElementById('ag-email-btn').addEventListener('click', async () => {
+            const email = document.getElementById('ag-email').value.trim();
+            const pw = document.getElementById('ag-pw').value;
+            if (!email || !pw) { gateMsg.textContent = 'Email and password required.'; return; }
+            try {
+                gateMsg.textContent = 'Signing in…';
+                await signInWithEmailAndPassword(auth, email, pw);
+                gateMsg.textContent = '';
+            } catch (err) {
+                gateMsg.textContent = err.message || 'Sign-in failed.';
+            }
+        });
+        document.getElementById('ag-signout').addEventListener('click', () => {
+            signOut(auth);
+        });
 
         // Get UI elements
         const signInButton = document.getElementById('signInButton');
