@@ -2655,7 +2655,20 @@
                     </div>
                 </div>
             </div>
-            <div class="ai-model-modal-tabs" id="aiModelTabs" style="display:none">
+            <div class="ai-model-auto-toggle" id="aiAutoToggleRow">
+                <div class="ai-model-auto-info">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                    <div>
+                        <div class="ai-model-auto-title">Auto</div>
+                        <div class="ai-model-auto-desc">Pick the best model for each request</div>
+                    </div>
+                </div>
+                <label class="ai-model-auto-switch" title="Toggle auto model selection">
+                    <input type="checkbox" id="aiAutoToggle">
+                    <span class="ai-model-auto-slider"></span>
+                </label>
+            </div>
+            <div class="ai-model-modal-tabs" id="aiModelTabs">
                 <button type="button" class="ai-model-tab active" data-provider="Claude">
                     <i class="fas fa-atom"></i><span>Claude</span>
                 </button>
@@ -2949,29 +2962,34 @@
             function renderModelList(filter) {
                 const q = (filter || '').trim().toLowerCase();
                 modelList.innerHTML = '';
-                const currentVal = modelSelect.value;
-                const defaultVal = getDefaultModel();
-
-                // Cursor-style flat list: gather everything, group by optgroup,
-                // pin Auto at top.
-                const groups = [];
+                const items = [];
                 Array.from(modelSelect.children).forEach(group => {
                     if (group.tagName !== 'OPTGROUP') return;
-                    const opts = Array.from(group.children).filter(opt => {
-                        if (!q) return true;
-                        return opt.textContent.toLowerCase().includes(q) || opt.value.toLowerCase().includes(q);
+                    if (group.label === 'Auto') return; // Auto is handled by the toggle row
+                    const provider = providerFor(group.label);
+                    if (provider !== activeProvider) return;
+                    Array.from(group.children).forEach(opt => {
+                        if (q && !(opt.textContent.toLowerCase().includes(q) || opt.value.toLowerCase().includes(q))) return;
+                        items.push({ group: group.label, opt });
                     });
-                    if (opts.length) groups.push({ label: group.label, opts });
                 });
-
-                const buildRow = (opt) => {
+                const currentVal = modelSelect.value;
+                const defaultVal = getDefaultModel();
+                let lastGroup = null;
+                items.forEach(({ group, opt }) => {
+                    if (group !== lastGroup) {
+                        const sub = document.createElement('div');
+                        sub.className = 'ai-model-subgroup';
+                        sub.textContent = group;
+                        modelList.appendChild(sub);
+                        lastGroup = group;
+                    }
                     const row = document.createElement('button');
                     row.type = 'button';
                     const restricted = isRestrictedValue(opt.value);
                     row.className = 'ai-model-item'
                         + (opt.value === currentVal ? ' selected' : '')
-                        + (restricted ? ' restricted' : '')
-                        + (opt.value === 'auto' ? ' auto-row' : '');
+                        + (restricted ? ' restricted' : '');
                     row.dataset.value = opt.value;
                     if (restricted) {
                         row.disabled = true;
@@ -2982,20 +3000,11 @@
                     }
                     const displayName = opt.textContent.replace(/^Claude\s+/i, '');
                     const isDefault = opt.value === defaultVal;
-                    const meta = MODEL_META[opt.value] || {};
-                    const hint = meta.hint ? `<span class="ai-model-item-hint">${meta.hint}</span>` : '';
-                    const badge = meta.badge ? `<span class="ai-model-item-badge">${meta.badge}</span>` : '';
-                    const autoIcon = opt.value === 'auto' ? '<i class="fas fa-wand-magic-sparkles ai-model-item-icon"></i>' : '';
                     row.innerHTML = `
-                        ${autoIcon}
                         <div class="ai-model-item-main">
-                            <div class="ai-model-item-row">
-                                <span class="ai-model-item-name">${displayName}</span>
-                                ${badge}
-                                ${isDefault ? '<i class="fas fa-star ai-model-item-default" title="Default model"></i>' : ''}
-                                ${restricted ? '<span class="ai-model-item-status">Under Development</span>' : ''}
-                            </div>
-                            ${hint}
+                            <span class="ai-model-item-name">${displayName}</span>
+                            ${isDefault ? '<i class="fas fa-star ai-model-item-default" title="Default model"></i>' : ''}
+                            ${restricted ? '<span class="ai-model-item-status" style="margin-left:8px;font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.08);color:#aaa;letter-spacing:0.3px;text-transform:uppercase;">Under Development</span>' : ''}
                         </div>
                         <i class="fas fa-check ai-model-item-check"></i>
                     `;
@@ -3003,33 +3012,14 @@
                         row.addEventListener('click', () => {
                             modelSelect.value = opt.value;
                             modelSelect.dispatchEvent(new Event('change'));
+                            // Update selected state without closing the modal
                             modelList.querySelectorAll('.ai-model-item').forEach(el => {
                                 el.classList.toggle('selected', el.dataset.value === opt.value);
                             });
                         });
                     }
-                    return row;
-                };
-
-                // Auto row first (always, regardless of filter? — hide if filter excludes it)
-                const autoGroup = groups.find(g => g.label === 'Auto');
-                if (autoGroup) {
-                    autoGroup.opts.forEach(opt => modelList.appendChild(buildRow(opt)));
-                    const sep = document.createElement('div');
-                    sep.className = 'ai-model-separator';
-                    modelList.appendChild(sep);
-                }
-
-                // Other groups
-                groups.forEach(group => {
-                    if (group.label === 'Auto') return;
-                    const sub = document.createElement('div');
-                    sub.className = 'ai-model-subgroup';
-                    sub.textContent = group.label;
-                    modelList.appendChild(sub);
-                    group.opts.forEach(opt => modelList.appendChild(buildRow(opt)));
+                    modelList.appendChild(row);
                 });
-
                 if (!modelList.children.length) {
                     modelList.innerHTML = '<div class="ai-model-empty">No models match.</div>';
                 }
@@ -3040,6 +3030,42 @@
                 if (!tab) return;
                 setActiveProvider(tab.dataset.provider);
             });
+
+            // ── Auto toggle ──
+            const AUTO_KEY = 'chopchop_auto_mode';
+            const LAST_MANUAL_KEY = 'chopchop_last_manual_model';
+            const autoToggle = document.getElementById('aiAutoToggle');
+            const modelSearchWrap = document.querySelector('.ai-model-modal-search');
+
+            function applyAutoMode(isOn, opts = {}) {
+                const skipSync = !!opts.skipSync;
+                modelTabsEl.style.display = isOn ? 'none' : '';
+                modelSearchWrap.style.display = isOn ? 'none' : '';
+                modelList.style.display = isOn ? 'none' : '';
+                if (isOn) {
+                    if (modelSelect.value !== 'auto') {
+                        localStorage.setItem(LAST_MANUAL_KEY, modelSelect.value);
+                    }
+                    modelSelect.value = 'auto';
+                } else if (!skipSync) {
+                    const restore = localStorage.getItem(LAST_MANUAL_KEY) || FALLBACK_MODEL;
+                    if (modelSelect.querySelector(`option[value="${restore}"]`)) {
+                        modelSelect.value = restore;
+                    } else {
+                        modelSelect.value = FALLBACK_MODEL;
+                    }
+                }
+                if (!skipSync) modelSelect.dispatchEvent(new Event('change'));
+                localStorage.setItem(AUTO_KEY, isOn ? '1' : '0');
+            }
+
+            autoToggle.addEventListener('change', () => applyAutoMode(autoToggle.checked));
+
+            // Initialize from localStorage. Also catch the case where the saved
+            // default is 'auto' but the auto-mode flag fell out of sync.
+            const wasAuto = localStorage.getItem(AUTO_KEY) === '1' || modelSelect.value === 'auto';
+            autoToggle.checked = wasAuto;
+            applyAutoMode(wasAuto);
             modelDoneBtn.addEventListener('click', closeModelModal);
             setDefaultBtn.addEventListener('click', () => {
                 localStorage.setItem(DEFAULT_MODEL_KEY, modelSelect.value);
