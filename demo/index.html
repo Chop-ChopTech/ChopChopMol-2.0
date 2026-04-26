@@ -53,9 +53,9 @@
             align-items: center;
             justify-content: center;
             padding: 24px;
-            background: #0a0b12;
+            background: #0c0907;
             font-family: 'Rubik', -apple-system, sans-serif;
-            color: #d6d9e1;
+            color: #e0d7cd;
         }
         #access-gate .ag-card {
             max-width: 360px;
@@ -68,80 +68,82 @@
             height: 40px;
             margin: 0 auto 18px;
             display: block;
-            opacity: 0.92;
+            opacity: 0.95;
+            filter: drop-shadow(0 0 14px rgba(234, 88, 12, 0.25));
         }
         #access-gate h1 {
             font-size: 19px;
             margin: 0 0 6px;
-            color: #ecedf2;
+            color: #f5ede3;
             font-weight: 500;
             letter-spacing: -0.01em;
         }
-        #access-gate p.ag-lede { color: #7e8494; margin: 0 0 24px; font-size: 13.5px; }
+        #access-gate p.ag-lede { color: #8a7a6a; margin: 0 0 24px; font-size: 13.5px; }
 
         #access-gate .ag-form { text-align: left; }
         #access-gate .ag-field { margin-bottom: 10px; }
         #access-gate input {
             width: 100%; padding: 10px 12px; font: inherit; font-size: 13.5px;
-            color: #e3e5ec; background: #15171f;
-            border: 1px solid #262a36; border-radius: 6px;
+            color: #ebe2d6; background: #181210;
+            border: 1px solid #2c2118; border-radius: 6px;
             outline: none;
             box-sizing: border-box;
             transition: border-color 0.12s;
         }
-        #access-gate input::placeholder { color: #5b6273; }
-        #access-gate input:focus { border-color: #3d3a5e; }
+        #access-gate input::placeholder { color: #6b5a4a; }
+        #access-gate input:focus { border-color: #5a3a1f; }
 
         #access-gate button {
             width: 100%;
             padding: 10px 14px;
             font: inherit;
             font-size: 13.5px;
-            color: #d6d9e1;
-            background: #15171f;
-            border: 1px solid #262a36;
+            color: #e0d7cd;
+            background: #181210;
+            border: 1px solid #2c2118;
             border-radius: 6px;
             cursor: pointer;
             display: flex; align-items: center; justify-content: center; gap: 9px;
             transition: background 0.12s, border-color 0.12s;
         }
-        #access-gate button:hover { background: #1a1d27; border-color: #323645; }
+        #access-gate button:hover { background: #1f1814; border-color: #3d2c1c; }
         #access-gate button:focus { outline: none; }
-        #access-gate button:focus-visible { outline: 1px solid #4a4870; outline-offset: 1px; }
+        #access-gate button:focus-visible { outline: 1px solid #7a4520; outline-offset: 1px; }
         #access-gate button.ag-primary {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: #ea580c;
+            border-color: #ea580c;
             color: #fff;
             font-weight: 500;
             margin-top: 4px;
+            box-shadow: 0 0 18px rgba(234, 88, 12, 0.18);
         }
-        #access-gate button.ag-primary:hover { background: #4338ca; border-color: #4338ca; }
-        #access-gate button.ag-google i { color: #d6d9e1; font-size: 13px; }
+        #access-gate button.ag-primary:hover { background: #c2410c; border-color: #c2410c; }
+        #access-gate button.ag-google i { color: #e0d7cd; font-size: 13px; }
 
         #access-gate .ag-divider {
             display: flex; align-items: center; gap: 12px;
-            margin: 18px 0 14px; color: #4a4f5e; font-size: 11px;
+            margin: 18px 0 14px; color: #5a4a3a; font-size: 11px;
             text-transform: uppercase; letter-spacing: 0.08em;
         }
         #access-gate .ag-divider::before,
         #access-gate .ag-divider::after {
-            content: ''; flex: 1; height: 1px; background: #1c1f2a;
+            content: ''; flex: 1; height: 1px; background: #221912;
         }
 
         #access-gate .ag-foot {
             margin-top: 22px;
             font-size: 12.5px;
-            color: #6b7280;
+            color: #7a6a58;
         }
         #access-gate .ag-foot a {
-            color: #a8a3eb;
+            color: #fb923c;
             text-decoration: none;
         }
-        #access-gate .ag-foot a:hover { color: #c4bff7; }
+        #access-gate .ag-foot a:hover { color: #fdba74; }
 
-        #access-gate .ag-msg { margin-top: 10px; font-size: 12.5px; color: #d68080; min-height: 16px; text-align: center; }
+        #access-gate .ag-msg { margin-top: 10px; font-size: 12.5px; color: #f0a06b; min-height: 16px; text-align: center; }
         #access-gate .ag-pending {
-            font-size: 14px; color: #ecedf2; margin: 10px 0 6px; font-weight: 500;
+            font-size: 14px; color: #fdba74; margin: 10px 0 6px; font-weight: 500;
         }
     </style>
     <div id="access-gate" style="display:none">
