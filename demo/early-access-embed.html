@@ -1,0 +1,96 @@
+<!--
+  Embeddable Early-Access form for guavion.com.
+  Paste the contents of <style> through </script> into a Squarespace Code Block.
+  No external dependencies — no Firebase SDK, no module imports.
+-->
+<style>
+  .gv-form { max-width: 460px; margin: 0 auto; font-family: inherit; color: #1a1c24; }
+  .gv-form label { display: block; font-size: 13px; font-weight: 500; margin: 14px 0 6px; }
+  .gv-form input, .gv-form textarea {
+    width: 100%; padding: 11px 14px; font: inherit; font-size: 14px;
+    color: #1a1c24; background: #fff; border: 1px solid #d4d8e0;
+    border-radius: 6px; outline: none; box-sizing: border-box;
+    transition: border-color 0.15s;
+  }
+  .gv-form input:focus, .gv-form textarea:focus { border-color: #4f46e5; }
+  .gv-form textarea { resize: vertical; min-height: 96px; }
+  .gv-form button {
+    margin-top: 22px; width: 100%; padding: 12px 20px;
+    font: inherit; font-size: 14px; font-weight: 500;
+    color: #fff; background: #4f46e5; border: none; border-radius: 6px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .gv-form button:hover { background: #4338ca; }
+  .gv-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .gv-msg { margin-top: 16px; padding: 12px 14px; border-radius: 6px; font-size: 14px; display: none; }
+  .gv-msg.gv-ok  { background: #dcfce7; border: 1px solid #86efac; color: #166534; display: block; }
+  .gv-msg.gv-err { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; display: block; }
+</style>
+
+<form class="gv-form" id="gvForm">
+  <label for="gvEmail">Email *</label>
+  <input id="gvEmail" name="email" type="email" required autocomplete="email">
+
+  <label for="gvName">Name *</label>
+  <input id="gvName" name="name" type="text" required autocomplete="name">
+
+  <label for="gvOrg">Organization</label>
+  <input id="gvOrg" name="org" type="text" autocomplete="organization">
+
+  <label for="gvUseCase">What do you want to use ChopChopMol for? *</label>
+  <textarea id="gvUseCase" name="useCase" required></textarea>
+
+  <button type="submit" id="gvSubmit">Request access</button>
+</form>
+<div id="gvMessage" class="gv-msg"></div>
+
+<script>
+  (function () {
+    var BACKEND = 'https://chopchopmol-ai-backend.onrender.com';
+    var form = document.getElementById('gvForm');
+    var btn = document.getElementById('gvSubmit');
+    var msg = document.getElementById('gvMessage');
+
+    function show(kind, text) {
+      msg.className = 'gv-msg gv-' + kind;
+      msg.textContent = text;
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      msg.className = 'gv-msg';
+      msg.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+
+      var payload = {
+        email: form.email.value.trim(),
+        name: form.name.value.trim(),
+        org: form.org.value.trim(),
+        useCase: form.useCase.value.trim(),
+      };
+
+      fetch(BACKEND + '/access/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      .then(function (res) { return res.json().then(function (data) { return { res: res, data: data }; }); })
+      .then(function (r) {
+        if (!r.res.ok) {
+          show('err', r.data.error || ('Submit failed (' + r.res.status + ')'));
+        } else {
+          form.style.display = 'none';
+          show('ok', "Thanks — your request is in. We'll email you when it's reviewed.");
+        }
+      })
+      .catch(function (err) {
+        show('err', err.message || 'Network error');
+      })
+      .finally(function () {
+        btn.disabled = false;
+        btn.textContent = 'Request access';
+      });
+    });
+  })();
+</script>
