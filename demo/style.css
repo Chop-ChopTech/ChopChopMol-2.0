@@ -62,6 +62,60 @@ body {
             rgba(29, 96, 253, 0.18) 50%,
             rgba(66, 214, 255, 0.18) 100%);
     --brand-glow: 0 5px 20px rgba(29, 96, 253, 0.35);
+
+    /* ── Spacing scale (4px grid) ─────────────────────────── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* ── Radii ────────────────────────────────────────────── */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 20px;
+    --radius-pill: 999px;
+
+    /* ── Shadows ──────────────────────────────────────────── */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+
+    /* ── Semantic neutrals ────────────────────────────────── */
+    --surface-0: rgba(8, 12, 24, 0.95);
+    --surface-1: rgba(255, 255, 255, 0.04);
+    --surface-2: rgba(255, 255, 255, 0.07);
+    --surface-3: rgba(255, 255, 255, 0.12);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-default: rgba(255, 255, 255, 0.14);
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.72);
+    --text-muted: rgba(255, 255, 255, 0.5);
+
+    /* ── Semantic state colors ────────────────────────────── */
+    --color-success: #4ade80;
+    --color-warn: #fbbf24;
+    --color-danger: #ef4444;
+    --color-info: var(--brand-blue);
+
+    /* ── Z-index scale ────────────────────────────────────── */
+    --z-base: 1;
+    --z-raised: 10;
+    --z-sticky: 100;
+    --z-dropdown: 500;
+    --z-panel: 1000;
+    --z-overlay: 2000;
+    --z-modal-backdrop: 3000;
+    --z-modal: 3100;
+    --z-toast: 4000;
+    --z-tooltip: 5000;
+    --z-max: 9999;
+
+    /* ── Touch / hit target ───────────────────────────────── */
+    --tap-min: 40px;
 }
 
 #canvas {
@@ -453,7 +507,7 @@ body {
     margin: 10px;
     bottom: 10px;
     right: 10px;
-    z-index: 10000000;
+    z-index: var(--z-sticky);
     width: 106px;
 }
 
@@ -540,7 +594,7 @@ body {
     width: calc(100vw - 80px);
     height: 610px;
     overflow-y: scroll;
-    z-index: 9999999999999999;
+    z-index: var(--z-modal);
     position: absolute;
     top: calc(50% + 20px);
     left: 50%;
@@ -569,7 +623,7 @@ body {
 }
 
 #analysisHeader {
-    z-index: 99999999999999;
+    z-index: var(--z-modal);
     background-color: #0088dd;
     padding: 10px;
     border-radius: 10px;
@@ -1185,7 +1239,7 @@ input[type="range"]:focus {
 
 #dragFile.dragover {
     opacity: 0.4;
-    z-index: 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999;
+    z-index: var(--z-overlay);
     cursor: pointer;
 }
 
@@ -1322,7 +1376,7 @@ input[type="range"]:focus {
     top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: -999999999999999;
+    z-index: -1;
     border-radius: 25px;
     padding: 5px 12px;
     transition: opacity 0.3s ease;
@@ -1743,7 +1797,7 @@ input[type="range"]:focus {
     left: 50%;
     transform: translateX(-50%) translateY(10px);
     min-width: 160px;
-    z-index: 1;
+    z-index: var(--z-dropdown);
     border-radius: 20px;
     padding: 10px;
     opacity: 0;
@@ -3427,7 +3481,7 @@ input[type="range"]:focus {
 
 
 .ai-chat-messages::-webkit-scrollbar {
-    width: 3px;
+    width: 4px;
 }
 
 .ai-chat-messages::-webkit-scrollbar-track {
@@ -3649,11 +3703,12 @@ input[type="range"]:focus {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 5px 8px;
+    padding: 7px 10px;
     cursor: pointer;
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-secondary);
     transition: background 0.15s;
+    min-height: 32px;
 }
 
 .ai-tool-row-header:hover {
@@ -3896,6 +3951,7 @@ input[type="range"]:focus {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
     background: rgba(131, 58, 180, 0.04);
     animation: pyConfirmFadeIn 0.2s ease;
 }
@@ -3921,13 +3977,14 @@ input[type="range"]:focus {
     flex-shrink: 0;
 }
 .python-confirm-inline-deny {
-    padding: 3px 12px;
-    border-radius: 5px;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: transparent;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.65);
     cursor: pointer;
     font-size: 11px;
+    min-height: 28px;
     transition: all 0.15s;
 }
 .python-confirm-inline-deny:hover {
@@ -3935,14 +3992,15 @@ input[type="range"]:focus {
     color: rgba(255, 255, 255, 0.8);
 }
 .python-confirm-inline-allow {
-    padding: 3px 12px;
-    border-radius: 5px;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
     border: none;
     background: rgba(131, 58, 180, 0.7);
     color: white;
     cursor: pointer;
     font-size: 11px;
     font-weight: 600;
+    min-height: 28px;
     transition: all 0.15s;
 }
 .python-confirm-inline-allow:hover {
@@ -4170,10 +4228,11 @@ input[type="range"]:focus {
     padding: 3px 8px;
     background: rgba(29, 96, 253, 0.12);
     border: 1px solid rgba(29, 96, 253, 0.2);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     color: rgba(180, 195, 255, 0.9);
     font-size: 11px;
-    max-width: 200px;
+    max-width: 100%;
+    min-width: 0;
 }
 .ai-attachment-chip .chip-name {
     overflow: hidden;
@@ -4203,21 +4262,23 @@ input[type="range"]:focus {
     display: none;
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(29, 96, 253, 0.08);
-    border: 2px dashed rgba(29, 96, 253, 0.4);
-    border-radius: 10px;
-    z-index: 10;
+    background: rgba(29, 96, 253, 0.18);
+    border: 2px dashed rgba(29, 96, 253, 0.6);
+    border-radius: var(--radius-md);
+    z-index: var(--z-raised);
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    color: rgba(180, 195, 255, 0.8);
-    font-size: 12px;
+    gap: 8px;
+    color: rgba(220, 230, 255, 0.95);
+    font-size: 13px;
+    font-weight: 500;
     pointer-events: none;
+    backdrop-filter: blur(2px);
 }
 .ai-drop-overlay i {
-    font-size: 20px;
-    color: rgba(29, 96, 253, 0.6);
+    font-size: 24px;
+    color: rgba(116, 180, 255, 0.95);
 }
 .ai-chat-input-area.drag-active .ai-drop-overlay {
     display: flex;
@@ -4979,12 +5040,17 @@ input[type="range"]:focus {
     position: fixed;
     top: 0;
     bottom: 0;
-    background: rgba(15, 23, 42, 1);
-    z-index: 500;
+    left: 0;
+    right: 0;
+    background: var(--surface-0);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: var(--z-modal);
     display: none;
     flex-direction: column;
     opacity: 0;
     transition: opacity 0.2s;
+    box-shadow: var(--shadow-lg);
 }
 
 .text-editor-modal.open {
@@ -8293,66 +8359,34 @@ input[type="color"]::-moz-color-swatch {
         perspective: none !important;
     }
 
-    /* ── TOOLBAR: compact icon-only row, fixed at top ── */
+    /* ── TOOLBAR: bar spans full width, icons stay centered with breathing room ── */
     #toolbar-background {
         position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
+        top: 8px !important;
+        left: 8px !important;
+        right: 8px !important;
+        width: auto !important;
+        max-width: none !important;
         transform: none !important;
-        padding: 6px 10px !important;
-        flex-wrap: nowrap !important;
-        gap: 2px;
         z-index: 10000 !important;
-        border-radius: 0 !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        box-sizing: border-box;
-        justify-content: center;
+        justify-content: center !important;
+        gap: 18px !important;
+    }
+    #toolbar-background .toolbar-group {
+        gap: 18px;
     }
 
-    /* Hide all text labels — icon only */
-    .toolbar-label {
+    /* Mobile toolbar: keep only Search, Reset Camera, Fullscreen, Account/Sign-In */
+    #aiToggleBtn,
+    #startTutorialBtn,
+    .toolbar-group button[onclick*="stylePanel"],
+    .toolbar-group button[onclick*="propertiesPanel"],
+    .toolbar-group button[onclick*="fragmentListContainer"],
+    .toolbar-divider,
+    /* Hide the now-empty ANALYZE (5th child) and AI (7th child) groups */
+    #toolbar-background > .toolbar-group:nth-child(5),
+    #toolbar-background > .toolbar-group:nth-child(7) {
         display: none !important;
-    }
-
-    .toolbar-divider {
-        display: none !important;
-    }
-
-    .toolbar-group {
-        gap: 2px;
-    }
-
-    /* Show mobile overflow button */
-    .mobile-only {
-        display: flex !important;
-    }
-
-    /* Hide non-essential toolbar items on mobile */
-    #reset-camera { display: none !important; }
-    #toggle-ribbon { display: none !important; }
-    .toolbar-group button[onclick*="propertiesPanel"] { display: none !important; }
-    .toolbar-group button[onclick*="fragmentListContainer"] { display: none !important; }
-    #energyChartDropdown { display: none !important; }
-    #showAllBondLengths { display: none !important; }
-    #switchMode { display: none !important; }
-    .toolbar-group button[onclick*="toggleFullscreen"] { display: none !important; }
-    #startTutorialBtn { display: none !important; }
-    #settingsGear { display: none !important; }
-    /* Hide AI toggle button — panel is always visible on mobile */
-    #aiToggleBtn { display: none !important; }
-
-    .fancy-button {
-        width: auto;
-        min-width: unset;
-        padding: 6px 10px;
-        font-size: 11px;
-    }
-
-    .dropdown-icon {
-        padding: 6px 10px;
-        font-size: 15px;
     }
 
     /* ── AI CHAT PANEL: always-visible bottom section ── */
@@ -8562,9 +8596,9 @@ input[type="color"]::-moz-color-swatch {
     }
 
     #undoBtn, #redoBtn {
-        width: 30px !important;
-        height: 30px !important;
-        font-size: 14px !important;
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 15px !important;
     }
 
     /* ── MODALS: full-width ── */
@@ -8607,6 +8641,18 @@ input[type="color"]::-moz-color-swatch {
         font-size: 20px !important;
         margin-bottom: 4px !important;
     }
+
+    /* ── Thinking block: shrink to fit reduced chat height ── */
+    .ai-thinking-block:not(.done) .ai-thinking-content,
+    .ai-thinking-block.expanded .ai-thinking-content {
+        max-height: 25vh;
+    }
+
+    /* ── Header buttons: bigger tap area ── */
+    .ai-chat-header .ai-header-btn {
+        min-width: 36px;
+        min-height: 36px;
+    }
 }
 
 
@@ -8615,15 +8661,6 @@ input[type="color"]::-moz-color-swatch {
    ============================================================================ */
 
 @media (max-width: 480px) {
-    #toolbar-background {
-        padding: 4px 8px !important;
-    }
-
-    .dropdown-icon {
-        padding: 5px 8px;
-        font-size: 13px;
-    }
-
     .fancy-button {
         padding: 5px 8px;
         font-size: 10px;
@@ -8638,9 +8675,9 @@ input[type="color"]::-moz-color-swatch {
     .ai-attach-btn,
     #aiSendBtn,
     .ai-mic-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
+        width: 36px;
+        height: 36px;
+        font-size: 13px;
     }
 
     #signInButton {
@@ -8650,6 +8687,20 @@ input[type="color"]::-moz-color-swatch {
 
     .ai-chat-messages {
         padding: 6px !important;
+    }
+
+    /* ── Modals: full-screen on small phones ── */
+    .chart-modal-content,
+    .figure-modal-content {
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: 100vw !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+    }
+    .figure-modal-body {
+        max-height: calc(100vh - 60px) !important;
+        padding: 0 12px 12px !important;
     }
 }
 
@@ -8672,5 +8723,11 @@ input[type="color"]::-moz-color-swatch {
 
     #frameSliderContainer {
         bottom: calc(35vh + 8px) !important;
+    }
+
+    /* Toolbar tightening in landscape */
+    #toolbar-background {
+        padding: 4px 8px !important;
+        gap: 4px !important;
     }
 }
