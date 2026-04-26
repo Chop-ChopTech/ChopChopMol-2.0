@@ -95,7 +95,10 @@
                     <option value="all">All</option>
                 </select>
                 <button id="refresh">Refresh</button>
-                <span id="who" style="margin-left:auto; font-size:12px; color:#94a3b8"></span>
+                <input id="revokeEmail" type="email" placeholder="Revoke by email…"
+                       style="padding:6px 10px;font:inherit;font-size:13px;color:#d4d8e0;background:#11131c;border:1px solid #232735;border-radius:5px;min-width:220px">
+                <button id="revokeBtn" class="reject" style="background:#8a2e2e">Revoke</button>
+                <span id="who" style="margin-left:auto; font-size:12px; color:#6b7280"></span>
                 <button id="signOutBtn">Sign out</button>
             </div>
             <div id="error" class="err" style="display:none"></div>
@@ -135,6 +138,37 @@
         signOutBtn.addEventListener('click', () => signOut(auth));
         refresh.addEventListener('click', load);
         filterSel.addEventListener('change', load);
+
+        document.getElementById('revokeBtn').addEventListener('click', async () => {
+            const input = document.getElementById('revokeEmail');
+            const email = input.value.trim().toLowerCase();
+            if (!email) { alert('Enter an email to revoke.'); return; }
+            const own = (auth.currentUser?.email || '').toLowerCase();
+            const isSelf = email === own;
+            const msg = isSelf
+                ? `Revoke YOUR OWN access (${email})? You'll be signed out and have to request access again.`
+                : `Revoke access for ${email}?`;
+            if (!confirm(msg)) return;
+            try {
+                const res = await authedFetch('/access/revoke', {
+                    method: 'POST',
+                    body: JSON.stringify({ email }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                input.value = '';
+                if (isSelf) {
+                    alert("You've been revoked. Signing out.");
+                    await signOut(auth);
+                    location.href = '/demo/index.html';
+                    return;
+                }
+                alert(`Revoked ${data.email}. ${data.requestsCleared} prior request(s) cleared.`);
+                await load();
+            } catch (e) {
+                alert(e.message);
+            }
+        });
 
         function showError(m) { errEl.textContent = m; errEl.style.display = 'block'; }
         function clearError() { errEl.style.display = 'none'; }
