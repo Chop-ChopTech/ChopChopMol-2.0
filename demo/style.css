@@ -8419,19 +8419,25 @@ input[type="color"]::-moz-color-swatch {
         display: none !important;
     }
 
-    /* Compact header on mobile — keep BYOK/history/new-chat buttons reachable,
-       hide the title and close (panel is always visible on mobile). */
+    /* Compact header on mobile — show brand title on left, action buttons on right */
     .ai-chat-header {
         display: flex !important;
-        padding: 4px 8px !important;
-        min-height: 32px;
+        padding: 6px 12px !important;
+        min-height: 36px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         align-items: center;
-        justify-content: flex-end;
+        justify-content: space-between !important;
+        background: rgba(0, 0, 0, 0.25) !important;
     }
 
     .ai-chat-header .ai-chat-header-title {
-        display: none !important;
+        display: flex !important;
+        font-size: 12px !important;
+        color: rgba(255, 255, 255, 0.65) !important;
+    }
+
+    .ai-chat-header .ai-chat-header-title i {
+        font-size: 11px !important;
     }
 
     .ai-chat-header .ai-header-btn {
@@ -8473,14 +8479,16 @@ input[type="color"]::-moz-color-swatch {
     /* Bottom options: single compact row */
     #bottom-options {
         flex-wrap: nowrap;
-        gap: 4px;
+        gap: 6px;
+        width: 100%;
     }
 
     .ai-model-select {
         min-width: 0;
-        max-width: 100px;
-        flex: 0 1 auto;
-        font-size: 10px;
+        flex: 1 1 auto;
+        font-size: 11px;
+        text-align: left;
+        padding-left: 28px !important;
     }
 
     /* Thinking control: compact */
@@ -8626,7 +8634,13 @@ input[type="color"]::-moz-color-swatch {
         max-width: 100% !important;
     }
 
-    /* ── Welcome message: compact ── */
+    /* ── Welcome message: compact, no wasted vertical space ── */
+    .ai-welcome {
+        padding: 14px 16px !important;
+        margin-top: auto !important;
+        margin-bottom: auto !important;
+    }
+
     .ai-welcome h4 {
         font-size: 14px;
         margin: 4px 0;
@@ -8635,11 +8649,17 @@ input[type="color"]::-moz-color-swatch {
     .ai-welcome p {
         font-size: 11px;
         margin: 0;
+        line-height: 1.5;
     }
 
     .ai-welcome-icon {
-        font-size: 20px !important;
-        margin-bottom: 4px !important;
+        width: 32px !important;
+        height: 32px !important;
+        margin: 0 auto 8px !important;
+    }
+
+    .ai-welcome-icon i {
+        font-size: 14px !important;
     }
 
     /* ── Thinking block: shrink to fit reduced chat height ── */
