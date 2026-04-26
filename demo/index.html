@@ -2557,6 +2557,13 @@
                     <i class="fas fa-chevron-down ai-model-trigger-caret"></i>
                 </button>
                 <select id="aiModelSelect" class="ai-model-select" title="Select AI Model" style="display:none;">
+                    <optgroup label="Auto">
+                        <option value="auto">Auto</option>
+                    </optgroup>
+                    <optgroup label="GPT-5.5">
+                        <option value="gpt-5.5">GPT-5.5</option>
+                        <option value="gpt-5.5-pro">GPT-5.5 Pro</option>
+                    </optgroup>
                     <optgroup label="GPT-5.4">
                         <option value="gpt-5.4">GPT-5.4</option>
                         <option value="gpt-5.4-pro">GPT-5.4 Pro</option>
@@ -2646,7 +2653,7 @@
                     </div>
                 </div>
             </div>
-            <div class="ai-model-modal-tabs" id="aiModelTabs">
+            <div class="ai-model-modal-tabs" id="aiModelTabs" style="display:none">
                 <button type="button" class="ai-model-tab active" data-provider="Claude">
                     <i class="fas fa-atom"></i><span>Claude</span>
                 </button>
@@ -2824,6 +2831,7 @@
             const thinkingWrapper = document.querySelector('.ai-model-modal-thinking');
             function updateThinkingVisibility() {
                 const val = modelSelect.value.toLowerCase();
+                const isAuto = val === 'auto';
                 const isClaude = val.includes('claude');
                 const isLegacyHaiku = val.includes('claude-3-5-haiku');
                 const isChatLatest = val.endsWith('-chat-latest');
@@ -2833,11 +2841,12 @@
                 const isGpt54 = val.startsWith('gpt-5.4');
                 const isReasoning = !isChatLatest && !isNonReasoningGpt && !isGpt54
                     && (val.startsWith('o3') || val.startsWith('o4') || val.startsWith('gpt-5'));
-                const show = (isClaude && !isLegacyHaiku) || isReasoning;
+                // Auto resolves server-side to a reasoning-capable model — show the control.
+                const show = isAuto || (isClaude && !isLegacyHaiku) || isReasoning;
                 thinkingControl.style.display = show ? '' : 'none';
                 if (thinkingWrapper) thinkingWrapper.style.display = show ? '' : 'none';
                 const label = thinkingControl.querySelector('.ai-thinking-control-label');
-                label.textContent = isClaude ? 'Thinking' : 'Reasoning';
+                label.textContent = (isClaude || isAuto) ? 'Thinking' : 'Reasoning';
             }
             function applyModelToAgent(val, tries = 0) {
                 if (window.AIAgent?.setModel) {
@@ -2864,6 +2873,9 @@
             const modelThinkingHint = null;
 
             const MODEL_META = {
+                'auto': { badge: 'Auto', hint: 'Pick the best available model for each request' },
+                'gpt-5.5': { badge: 'New', hint: 'Frontier · 1M context · best for code & analysis' },
+                'gpt-5.5-pro': { hint: 'Max depth GPT-5.5 with extra compute' },
                 'claude-opus-4-7': { badge: 'New', hint: 'Adaptive deep reasoning · latest Opus' },
                 'claude-opus-4-6': { hint: 'Adaptive reasoning · high intelligence' },
                 'claude-opus-4-5-20251101': { hint: 'Extended thinking · balanced Opus' },
@@ -2874,7 +2886,7 @@
                 'claude-sonnet-4-20250514': { hint: 'Extended thinking' },
                 'claude-haiku-4-5-20251001': { hint: 'Fast · supports thinking' },
                 'claude-3-5-haiku-20241022': { hint: 'Legacy · no thinking' },
-                'gpt-5.4': { badge: 'New', hint: 'Frontier reasoning · 1M context' },
+                'gpt-5.4': { hint: 'Frontier reasoning · 1M context' },
                 'gpt-5.4-pro': { hint: 'Max depth via extra compute' },
                 'gpt-5.4-mini': { hint: 'Faster GPT-5.4 for high-volume' },
                 'gpt-5.4-nano': { hint: 'Cheapest/fastest GPT-5.4' },
@@ -2935,33 +2947,29 @@
             function renderModelList(filter) {
                 const q = (filter || '').trim().toLowerCase();
                 modelList.innerHTML = '';
-                const items = [];
-                Array.from(modelSelect.children).forEach(group => {
-                    if (group.tagName !== 'OPTGROUP') return;
-                    const provider = providerFor(group.label);
-                    if (provider !== activeProvider) return;
-                    Array.from(group.children).forEach(opt => {
-                        if (q && !(opt.textContent.toLowerCase().includes(q) || opt.value.toLowerCase().includes(q))) return;
-                        items.push({ group: group.label, opt });
-                    });
-                });
                 const currentVal = modelSelect.value;
                 const defaultVal = getDefaultModel();
-                let lastGroup = null;
-                items.forEach(({ group, opt }) => {
-                    if (group !== lastGroup) {
-                        const sub = document.createElement('div');
-                        sub.className = 'ai-model-subgroup';
-                        sub.textContent = group;
-                        modelList.appendChild(sub);
-                        lastGroup = group;
-                    }
+
+                // Cursor-style flat list: gather everything, group by optgroup,
+                // pin Auto at top.
+                const groups = [];
+                Array.from(modelSelect.children).forEach(group => {
+                    if (group.tagName !== 'OPTGROUP') return;
+                    const opts = Array.from(group.children).filter(opt => {
+                        if (!q) return true;
+                        return opt.textContent.toLowerCase().includes(q) || opt.value.toLowerCase().includes(q);
+                    });
+                    if (opts.length) groups.push({ label: group.label, opts });
+                });
+
+                const buildRow = (opt) => {
                     const row = document.createElement('button');
                     row.type = 'button';
                     const restricted = isRestrictedValue(opt.value);
                     row.className = 'ai-model-item'
                         + (opt.value === currentVal ? ' selected' : '')
-                        + (restricted ? ' restricted' : '');
+                        + (restricted ? ' restricted' : '')
+                        + (opt.value === 'auto' ? ' auto-row' : '');
                     row.dataset.value = opt.value;
                     if (restricted) {
                         row.disabled = true;
@@ -2972,11 +2980,20 @@
                     }
                     const displayName = opt.textContent.replace(/^Claude\s+/i, '');
                     const isDefault = opt.value === defaultVal;
+                    const meta = MODEL_META[opt.value] || {};
+                    const hint = meta.hint ? `<span class="ai-model-item-hint">${meta.hint}</span>` : '';
+                    const badge = meta.badge ? `<span class="ai-model-item-badge">${meta.badge}</span>` : '';
+                    const autoIcon = opt.value === 'auto' ? '<i class="fas fa-wand-magic-sparkles ai-model-item-icon"></i>' : '';
                     row.innerHTML = `
+                        ${autoIcon}
                         <div class="ai-model-item-main">
-                            <span class="ai-model-item-name">${displayName}</span>
-                            ${isDefault ? '<i class="fas fa-star ai-model-item-default" title="Default model"></i>' : ''}
-                            ${restricted ? '<span class="ai-model-item-status" style="margin-left:8px;font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.08);color:#aaa;letter-spacing:0.3px;text-transform:uppercase;">Under Development</span>' : ''}
+                            <div class="ai-model-item-row">
+                                <span class="ai-model-item-name">${displayName}</span>
+                                ${badge}
+                                ${isDefault ? '<i class="fas fa-star ai-model-item-default" title="Default model"></i>' : ''}
+                                ${restricted ? '<span class="ai-model-item-status">Under Development</span>' : ''}
+                            </div>
+                            ${hint}
                         </div>
                         <i class="fas fa-check ai-model-item-check"></i>
                     `;
@@ -2984,14 +3001,33 @@
                         row.addEventListener('click', () => {
                             modelSelect.value = opt.value;
                             modelSelect.dispatchEvent(new Event('change'));
-                            // Update selected state without closing the modal
                             modelList.querySelectorAll('.ai-model-item').forEach(el => {
                                 el.classList.toggle('selected', el.dataset.value === opt.value);
                             });
                         });
                     }
-                    modelList.appendChild(row);
+                    return row;
+                };
+
+                // Auto row first (always, regardless of filter? — hide if filter excludes it)
+                const autoGroup = groups.find(g => g.label === 'Auto');
+                if (autoGroup) {
+                    autoGroup.opts.forEach(opt => modelList.appendChild(buildRow(opt)));
+                    const sep = document.createElement('div');
+                    sep.className = 'ai-model-separator';
+                    modelList.appendChild(sep);
+                }
+
+                // Other groups
+                groups.forEach(group => {
+                    if (group.label === 'Auto') return;
+                    const sub = document.createElement('div');
+                    sub.className = 'ai-model-subgroup';
+                    sub.textContent = group.label;
+                    modelList.appendChild(sub);
+                    group.opts.forEach(opt => modelList.appendChild(buildRow(opt)));
                 });
+
                 if (!modelList.children.length) {
                     modelList.innerHTML = '<div class="ai-model-empty">No models match.</div>';
                 }
@@ -3020,6 +3056,7 @@
             }
 
             function providerOfValue(val) {
+                if (val === 'auto') return 'Claude';
                 for (const group of modelSelect.children) {
                     if (group.tagName !== 'OPTGROUP') continue;
                     for (const opt of group.children) {
