@@ -12,6 +12,70 @@
         rel="stylesheet">
     <link rel="stylesheet" href="ns.css">
     <style>
+        /* Orange (Guavion-style) theme override */
+        :root {
+            --bg: #0a0d14;
+            --surface: #11151f;
+            --card: #161b27;
+            --border: #232836;
+            --accent: #f59e0b;
+            --accent2: #fbbf24;
+            --accent3: #fcd34d;
+            --glow: rgba(245, 158, 11, .14);
+            --brand-grad: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+            --brand-grad-135: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+        }
+
+        /* Solid orange accent text (no gradient) */
+        .hero__accent {
+            background: none;
+            -webkit-text-fill-color: currentColor;
+            color: var(--accent);
+        }
+
+        /* Pill buttons, solid orange primary */
+        .btn {
+            background: var(--accent);
+            color: #1a1206;
+            border-radius: 999px;
+            padding: 13px 26px;
+            font-weight: 600;
+            box-shadow: 0 4px 18px rgba(245, 158, 11, .25);
+        }
+
+        .btn:hover {
+            background: var(--accent2);
+            box-shadow: 0 6px 24px rgba(245, 158, 11, .4);
+        }
+
+        .btn--sm {
+            padding: 9px 18px;
+            font-size: .9rem;
+        }
+
+        .btn--outline {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+            box-shadow: none;
+        }
+
+        .btn--outline:hover {
+            background: rgba(255, 255, 255, .04);
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: none;
+        }
+
+        /* Badge: outlined pill with orange border + uppercase mono */
+        .badge {
+            background: transparent;
+            border: 1px solid rgba(245, 158, 11, .35);
+            color: var(--accent);
+            letter-spacing: .12em;
+            font-size: .72rem;
+        }
+
         /* Hero 3D molecule */
         .hero__mol {
             max-width: 480px;
@@ -274,7 +338,8 @@
     <!-- HERO -->
     <section class="hero">
         <div class="wrap">
-            <h1 class="hero__title"><span class="hero__accent">AI-Powered</span> Platform for Molecular Simulations</h1>
+            <span class="badge">The AI-Native Platform for Molecular Simulation</span>
+            <h1 class="hero__title">AI-Powered Platform for <span class="hero__accent">Molecular Simulations</span></h1>
             <p class="hero__lead">Edit, simulate, and analyze molecular structures using natural language. Powered by
                 machine learning potentials and AI, accessible entirely from your browser.</p>
             <div class="hero__cta">
