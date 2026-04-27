@@ -83,6 +83,11 @@ export function getByokHeaders() {
     // on the backend, requests without this header get 401.
     const t = window._firebaseIdToken;
     if (t) h['Authorization'] = `Bearer ${t}`;
+    // Guest bypass: matching code in backend lets the request through as a
+    // synthetic guest. Set when the user enters the gate's guest code.
+    let guestCode = '';
+    try { if (sessionStorage.getItem('guestBypass') === '1') guestCode = '0987'; } catch { }
+    if (guestCode) h['X-Guest-Code'] = guestCode;
     return h;
 }
 // Save immediately if new
