@@ -170,6 +170,16 @@
                 <div class="ag-foot">
                     Don't have an account? <a href="/demo/early-access.html">Request access</a>
                 </div>
+
+                <div class="ag-divider">or</div>
+
+                <div class="ag-form">
+                    <div class="ag-field">
+                        <input id="ag-guest-code" type="text" inputmode="numeric" autocomplete="off"
+                            placeholder="Guest code" maxlength="16">
+                    </div>
+                    <button id="ag-guest-btn" type="button">Continue as guest</button>
+                </div>
             </div>
 
             <div id="ag-pending" style="display:none">
@@ -262,6 +272,17 @@
             gateMsg.textContent = '';
         }
 
+        // Guest bypass: typing this code in the gate's "Continue as guest" field
+        // suppresses the gate for the rest of the tab session. No backend auth —
+        // /ai/* and /api/* calls will still 401 if REQUIRE_AUTH=true, so guests
+        // see the UI but can't use authenticated features.
+        const GUEST_BYPASS_CODE = '0987';
+        function isGuestBypassed() {
+            try { return sessionStorage.getItem('guestBypass') === '1'; }
+            catch { return false; }
+        }
+        window.isGuest = isGuestBypassed();
+
         async function _accessMe(url, user, forceRefresh) {
             const token = await user.getIdToken(forceRefresh);
             return fetch(`${url}/access/me`, {
@@ -270,6 +291,7 @@
         }
 
         async function evaluateAccessGate(user) {
+            if (isGuestBypassed()) { window.isGuest = true; gateHide(); return; }
             if (!user) { gateShow('signedOut'); return; }
             try {
                 const url = await getBackendUrl();
@@ -335,6 +357,24 @@
         });
         document.getElementById('ag-signout').addEventListener('click', () => {
             signOut(auth);
+        });
+
+        function tryGuestBypass() {
+            const input = document.getElementById('ag-guest-code');
+            const code = (input?.value || '').trim();
+            if (code !== GUEST_BYPASS_CODE) {
+                gateMsg.textContent = 'Invalid guest code.';
+                input?.focus();
+                return;
+            }
+            try { sessionStorage.setItem('guestBypass', '1'); } catch { }
+            window.isGuest = true;
+            gateMsg.textContent = '';
+            gateHide();
+        }
+        document.getElementById('ag-guest-btn').addEventListener('click', tryGuestBypass);
+        document.getElementById('ag-guest-code').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); tryGuestBypass(); }
         });
 
         // Get UI elements
