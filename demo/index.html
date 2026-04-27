@@ -262,25 +262,38 @@
             gateMsg.textContent = '';
         }
 
+        async function _accessMe(url, user, forceRefresh) {
+            const token = await user.getIdToken(forceRefresh);
+            return fetch(`${url}/access/me`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+        }
+
         async function evaluateAccessGate(user) {
             if (!user) { gateShow('signedOut'); return; }
             try {
                 const url = await getBackendUrl();
-                const token = await user.getIdToken();
-                const res = await fetch(`${url}/access/me`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                });
+                let res = await _accessMe(url, user, false);
+                // Stale cached token can produce a spurious 401 immediately after
+                // sign-in. Retry once with a force-refreshed token before treating
+                // 401 as fatal.
+                if (res.status === 401) {
+                    try { res = await _accessMe(url, user, true); }
+                    catch (e) { console.warn('Forced token refresh failed:', e); }
+                }
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.active) { gateHide(); return; }
+                    // Admins bypass the provisioning check.
+                    if (data.active || data.admin) { gateHide(); return; }
                     // Not active. If the user has no pending request, queue one
                     // automatically (Google sign-in path: same outcome as the
                     // form, founder reviews in admin).
                     if (!data.requestPending) {
                         try {
+                            const t = await user.getIdToken();
                             await fetch(`${url}/access/request-self`, {
                                 method: 'POST',
-                                headers: { 'Authorization': `Bearer ${token}` },
+                                headers: { 'Authorization': `Bearer ${t}` },
                             });
                         } catch (e) {
                             console.warn('auto-request failed', e);
@@ -290,9 +303,11 @@
                     return;
                 }
                 if (res.status === 403) { gateShow('pending'); return; }
-                if (res.status === 401) { gateShow('signedOut', 'Session expired. Please sign in again.'); return; }
-                // Any other status: backend may not have firebase-admin set up yet.
-                // Don't lock the user out — log and let them through.
+                // Any other status (including a persistent 401) is treated as a
+                // backend issue rather than a user issue — Firebase already
+                // confirmed the user is signed in, so don't lock them out behind
+                // a gate the backend can't evaluate. Real /ai/* and /api/* calls
+                // are independently auth-checked server-side, so this is safe.
                 console.warn(`/access/me returned ${res.status}; gate suppressed`);
                 gateHide();
             } catch (e) {
