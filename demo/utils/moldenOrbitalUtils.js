@@ -1,4 +1,4 @@
-import { getBackendUrl, getBackendUrlSync, onBackendUrlOverride } from './apiUtils.js';
+import { getBackendUrl, getBackendUrlSync, onBackendUrlOverride, getAuthHeaders } from './apiUtils.js';
 
 let BACKEND_URL = getBackendUrlSync();
 getBackendUrl().then(url => { BACKEND_URL = url; });
@@ -208,7 +208,7 @@ export async function preloadAllOrbitals(moldenContent, gridSize = 50, padding =
 
         const response = await fetch(`${BACKEND_URL}/ai/molden/orbital-batch`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify(requestBody),
             signal: state.abortController.signal
         });
@@ -337,7 +337,7 @@ export async function generateMoldenOrbitalGridFromBackend(moldenContent, orbita
 
         const response = await fetch(`${BACKEND_URL}/ai/molden/orbital`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify({
                 moldenContent,
                 orbitalIndex,
@@ -410,7 +410,7 @@ export async function getMoldenOrbitalInfo(moldenContent) {
 
         const response = await fetch(`${BACKEND_URL}/ai/molden/info`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify({ moldenContent })
         });
 

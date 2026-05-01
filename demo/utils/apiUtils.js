@@ -146,6 +146,7 @@ export async function safeFetch(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_M
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
+    let gotResponse = false;
     try {
         const response = await fetch(url, {
             ...options,
@@ -153,6 +154,7 @@ export async function safeFetch(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_M
         });
 
         clearTimeout(timeout);
+        gotResponse = true;
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -162,8 +164,10 @@ export async function safeFetch(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_M
     } catch (error) {
         clearTimeout(timeout);
 
-        // Backend might be down — trigger re-detection on next request
-        invalidateBackendUrl();
+        // Only invalidate the cached backend URL on a real network failure
+        // (timeout, DNS, connection refused). HTTP-level errors like 401/403
+        // mean the server is reachable, so don't waste time re-detecting.
+        if (!gotResponse) invalidateBackendUrl();
 
         if (error.name === 'AbortError') {
             throw new Error(`Request timeout after ${timeoutMs}ms: ${url}`);

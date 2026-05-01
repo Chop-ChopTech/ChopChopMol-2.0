@@ -3,7 +3,7 @@
  * Creates a separate REMOTE section in the file explorer (alongside LOCAL)
  */
 
-import { safeFetch, getBackendUrl, getBackendUrlSync, onBackendUrlOverride } from './utils/apiUtils.js';
+import { safeFetch, getBackendUrl, getBackendUrlSync, onBackendUrlOverride, getAuthHeaders } from './utils/apiUtils.js';
 
 const MOLECULE_EXTENSIONS = ['xyz', 'pdb', 'mol', 'sdf', 'cif', 'mol2', 'pqr', 'gro', 'cml', 'extxyz', 'out'];
 
@@ -349,7 +349,7 @@ export class RemoteFileManager {
                 `${this.backendUrl}/api/remote/connect`,
                 {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify({
                         sessionId: this.sessionId,
                         host,
@@ -396,7 +396,7 @@ export class RemoteFileManager {
                 `${this.backendUrl}/api/remote/disconnect`,
                 {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify({ sessionId: this.sessionId })
                 },
                 10000
@@ -468,7 +468,7 @@ export class RemoteFileManager {
                 `${this.backendUrl}/api/remote/list`,
                 {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify({
                         sessionId: this.sessionId,
                         path: path
@@ -580,7 +580,7 @@ export class RemoteFileManager {
                 `${this.backendUrl}/api/remote/read`,
                 {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify({
                         sessionId: this.sessionId,
                         path: path
