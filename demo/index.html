@@ -5216,7 +5216,7 @@
 
                 const poll = async () => {
                     try {
-                        const res = await fetch(`${backendUrl}/ai/jobs/${job.jobId}`);
+                        const res = await fetch(`${backendUrl}/ai/jobs/${job.jobId}`, { headers: window.AIAgent?.byok?.headers?.() || {} });
                         const data = await res.json();
                         console.log('Job poll result:', job.jobId, data.status);
 
@@ -5226,7 +5226,7 @@
                             updateToolRowStatus(job.toolName, 'completed',
                                 formatJobResult(job.toolName, data.result));
                             // Clean up
-                            fetch(`${backendUrl}/ai/jobs/${job.jobId}`, { method: 'DELETE' });
+                            fetch(`${backendUrl}/ai/jobs/${job.jobId}`, { method: 'DELETE', headers: window.AIAgent?.byok?.headers?.() || {} });
                             pendingJobs = pendingJobs.filter(j => j.jobId !== job.jobId);
                             if (currentConversationId) {
                                 window.saveConversation(currentConversationId, { pendingJobs });

@@ -118,6 +118,23 @@ window.addEventListener('keydown', (e) => {
 });
 
 /**
+ * Auth headers for backend `/ai/*` and `/api/*` requests. The backend's
+ * `before_request` gate requires either a Firebase ID token (`Authorization:
+ * Bearer ...`) or the guest bypass code (`X-Guest-Code`). Both are sourced
+ * from globals set elsewhere (window._firebaseIdToken via onIdTokenChanged,
+ * sessionStorage.guestBypass via the gate's guest entry).
+ */
+export function getAuthHeaders() {
+    const h = {};
+    const t = (typeof window !== 'undefined') ? window._firebaseIdToken : null;
+    if (t) h['Authorization'] = `Bearer ${t}`;
+    try {
+        if (sessionStorage.getItem('guestBypass') === '1') h['X-Guest-Code'] = '0987';
+    } catch { }
+    return h;
+}
+
+/**
  * Safe fetch wrapper with timeout and comprehensive error handling.
  * @param {string} url - The URL to fetch
  * @param {RequestInit} options - Fetch options
@@ -206,6 +223,7 @@ export async function postJson(url, body, options = {}, timeoutMs = DEFAULT_TIME
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            ...getAuthHeaders(),
             ...options.headers
         },
         body: JSON.stringify(body),
@@ -258,7 +276,7 @@ export async function retryFetch(fetchFn, maxRetries = 3, baseDelayMs = 1000) {
 export async function streamSSE(url, body, { onEvent, signal, headers } = {}) {
     const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(headers || {}) },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders(), ...(headers || {}) },
         body: JSON.stringify(body),
         signal,
     });

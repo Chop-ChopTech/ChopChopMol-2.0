@@ -2157,7 +2157,7 @@ const FUNCTIONS = {
                 try {
                     const res = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/energy`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...getByokHeaders() },
                         body: JSON.stringify({ atoms, model: params.model || AI_CONFIG.maceModel || 'mace-mp-0a', includeForces })
                     });
                     const result = await res.json();
@@ -2568,7 +2568,7 @@ const FUNCTIONS = {
             try {
                 const resp = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/finetune`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getByokHeaders() },
                     body: JSON.stringify(body),
                     signal: _abortController?.signal
                 });
@@ -2704,7 +2704,7 @@ const FUNCTIONS = {
     list_finetuned_models: {
         execute: async () => {
             try {
-                const resp = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/finetune/models`);
+                const resp = await fetch(`${AI_CONFIG.backendUrl}/ai/mace/finetune/models`, { headers: getByokHeaders() });
                 const data = await resp.json();
                 const local = window.finetunedModels || {};
                 const merged = { ...data.models, ...local };
@@ -3139,7 +3139,7 @@ window.AIAgent = {
         if (AI_CONFIG.sessionId) {
             await fetch(`${AI_CONFIG.backendUrl}/ai/clear`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...getByokHeaders() },
                 body: JSON.stringify({ sessionId: AI_CONFIG.sessionId })
             });
         }
