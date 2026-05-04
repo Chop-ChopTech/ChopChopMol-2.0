@@ -11,10 +11,29 @@ const RUNPOD_URL = 'https://chopchopmol-ai-backend.onrender.com';
 const RENDER_URL = 'https://chopchopmol-ai-backend.onrender.com';
 const LOCAL_URL = 'http://127.0.0.1:10000';
 
+// Map of stable keys → URLs. Keep names lowercase for the localStorage value.
+const BACKEND_URLS = { runpod: RUNPOD_URL, render: RENDER_URL, local: LOCAL_URL };
+const BACKEND_OVERRIDE_KEY = 'chopchop_backend_override';
+
+/** Read sticky override saved by the settings UI. Returns null if unset/invalid. */
+function _readSavedOverride() {
+    try {
+        const k = (localStorage.getItem(BACKEND_OVERRIDE_KEY) || '').trim().toLowerCase();
+        return BACKEND_URLS[k] ? k : null;
+    } catch { return null; }
+}
 
 let _resolvedBackendUrl = null;
 let _resolvePromise = null;
 const _overrideListeners = [];
+// Honor a saved override before any auto-detect runs so all callers see the same URL.
+{
+    const saved = _readSavedOverride();
+    if (saved) {
+        _resolvedBackendUrl = BACKEND_URLS[saved];
+        console.log(`Backend: ${saved} (saved override)`);
+    }
+}
 
 /**
  * Returns the backend URL. Local dev uses localhost, production tries RunPod first then Render.
@@ -55,6 +74,51 @@ export async function getBackendUrl() {
 }
 
 /**
+ * Returns the stable key ('runpod' | 'render' | 'local') of the active backend,
+ * or 'auto' if no override is set and detection is in progress.
+ */
+export function getBackendKey() {
+    const url = _resolvedBackendUrl;
+    if (!url) return 'auto';
+    for (const [k, v] of Object.entries(BACKEND_URLS)) if (v === url) return k;
+    return 'auto';
+}
+
+/** Returns the saved override key, or null if none. */
+export function getSavedBackendOverride() {
+    return _readSavedOverride();
+}
+
+/**
+ * Switch the active backend. Persists the choice in localStorage so it survives
+ * reload, updates the in-memory cache, and notifies all listeners.
+ * @param {'runpod'|'render'|'local'|'auto'} key
+ */
+export function setBackendOverride(key) {
+    const k = (key || '').toLowerCase();
+    if (k === 'auto') {
+        try { localStorage.removeItem(BACKEND_OVERRIDE_KEY); } catch { }
+        _resolvedBackendUrl = null;
+        _resolvePromise = null;
+        getBackendUrl().then(url => {
+            console.log(`Backend: auto → ${url}`);
+            _overrideListeners.forEach(fn => { try { fn(url); } catch { } });
+        });
+        return;
+    }
+    const url = BACKEND_URLS[k];
+    if (!url) {
+        console.warn(`Unknown backend key: ${key}`);
+        return;
+    }
+    try { localStorage.setItem(BACKEND_OVERRIDE_KEY, k); } catch { }
+    _resolvedBackendUrl = url;
+    _resolvePromise = null;
+    console.log(`Backend switched to: ${k} (${url})`);
+    _overrideListeners.forEach(fn => { try { fn(url); } catch { } });
+}
+
+/**
  * Synchronous getter — returns the resolved URL or the Render fallback if not yet resolved.
  * Prefer getBackendUrl() when possible.
  */
@@ -87,6 +151,7 @@ export function onBackendUrlOverride(fn) {
 export function invalidateBackendUrl() {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocal) return; // Never invalidate localhost
+    if (_readSavedOverride()) return; // User explicitly chose this backend — don't auto-fallback
     if (_resolvedBackendUrl === RENDER_URL) return; // Already on fallback
     console.warn(`⚠️ Invalidating backend URL (was: ${_resolvedBackendUrl}), will re-detect on next request`);
     _resolvedBackendUrl = null;
@@ -103,14 +168,9 @@ window.addEventListener('keydown', (e) => {
         _backslashTimer = setTimeout(() => { _backslashCount = 0; }, 1500);
         if (_backslashCount >= 5) {
             _backslashCount = 0;
-            const choice = prompt('Switch backend:\n1: RunPod\n2: Render\n3: Local');
-            const urls = { '1': RUNPOD_URL, '2': RENDER_URL, '3': LOCAL_URL };
-            const names = { '1': 'RunPod', '2': 'Render', '3': 'Local' };
-            if (urls[choice]) {
-                _resolvedBackendUrl = urls[choice];
-                console.log(`Backend switched to: ${names[choice]} (${_resolvedBackendUrl})`);
-                _overrideListeners.forEach(fn => fn(_resolvedBackendUrl));
-            }
+            const choice = prompt('Switch backend:\n1: RunPod\n2: Render\n3: Local\n4: Auto-detect');
+            const keys = { '1': 'runpod', '2': 'render', '3': 'local', '4': 'auto' };
+            if (keys[choice]) setBackendOverride(keys[choice]);
         }
     } else {
         _backslashCount = 0;

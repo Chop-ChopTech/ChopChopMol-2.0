@@ -100,7 +100,8 @@
             <input id="org" name="org" type="text" autocomplete="organization">
 
             <label for="useCase">What do you want to use ChopChopMol for? *</label>
-            <textarea id="useCase" name="useCase" required></textarea>
+            <textarea id="useCase" name="useCase" required minlength="10"
+                placeholder="What molecules / problems do you want to work on? (at least 10 characters)"></textarea>
 
             <button type="submit" id="submitBtn">Request access</button>
         </form>

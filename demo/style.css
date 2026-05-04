@@ -1833,6 +1833,80 @@ input[type="range"]:focus {
     background-color: #0056b3;
 }
 
+/* ── Backend switcher (Settings → Account dropdown) ── */
+.backend-switcher {
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+}
+
+.backend-switcher-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.65);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.backend-switcher-label i {
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.backend-switcher-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+}
+
+.backend-pill {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-transform: none;
+    letter-spacing: 0.3px;
+    margin: 0 !important;
+    /* Override .dropdown-content button { margin: 5px 0 } */
+    width: auto;
+    /* Override .fancy-button { width: 140px } if class collisions occur */
+}
+
+.backend-pill:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+
+.backend-pill.active {
+    background: linear-gradient(135deg, #1962ff, #6e3aff);
+    border-color: rgba(110, 58, 255, 0.6);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(110, 58, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.backend-pill.active i {
+    color: #fff;
+}
+
 
 
 @keyframes slideIn {

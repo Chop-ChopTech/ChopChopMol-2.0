@@ -182,13 +182,29 @@
                 </div>
             </div>
 
+            <div id="ag-needusecase" style="display:none">
+                <p class="ag-pending">Tell us how you'll use ChopChopMol</p>
+                <p style="font-size:12.5px;color:#8a7a6a;line-height:1.55;margin:6px 0 14px">
+                    Required to finish your access request. Founder reads every reply.
+                </p>
+                <div class="ag-form">
+                    <div class="ag-field">
+                        <textarea id="ag-usecase" rows="4" maxlength="2000"
+                            placeholder="What molecules / problems do you want to work on? (min 10 characters)"
+                            style="width:100%;padding:10px 12px;font:inherit;font-size:13.5px;color:#ebe2d6;background:#181210;border:1px solid #2c2118;border-radius:6px;outline:none;box-sizing:border-box;resize:vertical;min-height:90px"></textarea>
+                    </div>
+                    <button id="ag-usecase-submit" class="ag-primary" type="button">Submit request</button>
+                    <button id="ag-usecase-signout" type="button" style="margin-top:8px">Sign out</button>
+                </div>
+            </div>
+
             <div id="ag-pending" style="display:none">
                 <p class="ag-pending">Account not provisioned</p>
                 <p style="font-size:12.5px;color:#6b7280;line-height:1.55;margin:6px 0 16px">
-                    If you submitted an early-access request, we'll email you once it's reviewed. Otherwise:
+                    Your request is in the queue — we'll email you once it's reviewed. Otherwise:
                 </p>
                 <a href="/demo/early-access.html" style="display:block;text-decoration:none;margin-bottom:8px">
-                    <button class="ag-primary" type="button">Request access</button>
+                    <button class="ag-primary" type="button">Edit request</button>
                 </a>
                 <button id="ag-signout">Sign out</button>
             </div>
@@ -201,7 +217,7 @@
     <script src="/demo/utils/undo.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
-        import { getBackendUrl } from '/demo/utils/apiUtils.js';
+        import { getBackendUrl, getBackendKey, getSavedBackendOverride, setBackendOverride, onBackendUrlOverride } from '/demo/utils/apiUtils.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
@@ -258,6 +274,7 @@
         const gateEl = document.getElementById('access-gate');
         const gateSignedOut = document.getElementById('ag-signed-out');
         const gatePending = document.getElementById('ag-pending');
+        const gateNeedUseCase = document.getElementById('ag-needusecase');
         const gateMsg = document.getElementById('ag-msg');
         gateEl.style.display = 'flex';   // show by default until we confirm provisioning
 
@@ -265,6 +282,7 @@
             gateEl.style.display = 'flex';
             gateSignedOut.style.display = mode === 'signedOut' ? 'block' : 'none';
             gatePending.style.display = mode === 'pending' ? 'block' : 'none';
+            gateNeedUseCase.style.display = mode === 'needUseCase' ? 'block' : 'none';
             gateMsg.textContent = message;
         }
         function gateHide() {
@@ -307,19 +325,14 @@
                     const data = await res.json();
                     // Admins bypass the provisioning check.
                     if (data.active || data.admin) { gateHide(); return; }
-                    // Not active. If the user has no pending request, queue one
-                    // automatically (Google sign-in path: same outcome as the
-                    // form, founder reviews in admin).
+                    // Not active. If the user has no pending request, prompt them
+                    // for a use case before submitting — founder reads every one,
+                    // so silent placeholder requests aren't useful. The submit
+                    // handler (ag-usecase-submit) posts /access/request-self and
+                    // then flips the gate to 'pending'.
                     if (!data.requestPending) {
-                        try {
-                            const t = await user.getIdToken();
-                            await fetch(`${url}/access/request-self`, {
-                                method: 'POST',
-                                headers: { 'Authorization': `Bearer ${t}` },
-                            });
-                        } catch (e) {
-                            console.warn('auto-request failed', e);
-                        }
+                        gateShow('needUseCase');
+                        return;
                     }
                     gateShow('pending');
                     return;
@@ -357,6 +370,47 @@
         });
         document.getElementById('ag-signout').addEventListener('click', () => {
             signOut(auth);
+        });
+
+        // Use-case form (Google sign-in path): user must describe how they'll
+        // use the tool before /access/request-self will accept the request.
+        document.getElementById('ag-usecase-signout').addEventListener('click', () => {
+            signOut(auth);
+        });
+        document.getElementById('ag-usecase-submit').addEventListener('click', async () => {
+            const ta = document.getElementById('ag-usecase');
+            const useCase = (ta?.value || '').trim();
+            if (useCase.length < 10) {
+                gateMsg.textContent = 'Please describe your use case (at least 10 characters).';
+                ta?.focus();
+                return;
+            }
+            const btn = document.getElementById('ag-usecase-submit');
+            const origLabel = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Submitting…';
+            gateMsg.textContent = '';
+            try {
+                const url = await getBackendUrl();
+                const user = auth.currentUser;
+                if (!user) throw new Error('Not signed in.');
+                const t = await user.getIdToken();
+                const res = await fetch(`${url}/access/request-self`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ useCase }),
+                });
+                if (!res.ok) {
+                    const msg = await res.text().catch(() => '');
+                    throw new Error(msg || `HTTP ${res.status}`);
+                }
+                gateShow('pending');
+            } catch (err) {
+                console.error('useCase submit failed', err);
+                gateMsg.textContent = err.message || 'Submission failed. Try again.';
+                btn.disabled = false;
+                btn.textContent = origLabel;
+            }
         });
 
         function tryGuestBypass() {
@@ -1080,6 +1134,38 @@
                 console.log('User signed out');
             }
         });
+
+        // ─── Backend switcher (Settings → Account dropdown) ─────────────────
+        // Highlights the active backend pill, persists the choice via apiUtils,
+        // and reflects auto-detect / override changes back into the UI.
+        (function initBackendSwitcher() {
+            const root = document.getElementById('backendSwitcher');
+            if (!root) return;
+            const pills = Array.from(root.querySelectorAll('.backend-pill'));
+
+            function refreshActive() {
+                const saved = getSavedBackendOverride();
+                const activeKey = saved || (getBackendKey() === 'auto' ? 'auto' : getBackendKey());
+                pills.forEach(p => {
+                    p.classList.toggle('active', p.dataset.backend === activeKey);
+                });
+            }
+
+            pills.forEach(p => {
+                p.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setBackendOverride(p.dataset.backend);
+                    refreshActive();
+                });
+            });
+
+            // Listen for external switches (e.g. \\\\\\ keyboard shortcut)
+            onBackendUrlOverride(() => refreshActive());
+
+            // Initial paint — and again once auto-detect resolves
+            refreshActive();
+            getBackendUrl().then(refreshActive).catch(() => { });
+        })();
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -1370,6 +1456,29 @@
                         <a class="fancy-button privacy-link" href="/privacy.html" target="_blank" rel="noopener">
                             <i class="fas fa-shield-halved"></i> Privacy
                         </a>
+                        <div class="backend-switcher" id="backendSwitcher">
+                            <div class="backend-switcher-label">
+                                <i class="fa-solid fa-server"></i> Backend
+                            </div>
+                            <div class="backend-switcher-row">
+                                <button type="button" class="backend-pill" data-backend="runpod"
+                                    title="RunPod GPU (CUDA)">
+                                    <i class="fa-solid fa-bolt"></i> RunPod
+                                </button>
+                                <button type="button" class="backend-pill" data-backend="render"
+                                    title="Render.com (CPU fallback)">
+                                    <i class="fa-solid fa-cloud"></i> Render
+                                </button>
+                                <button type="button" class="backend-pill" data-backend="local"
+                                    title="Local dev server (127.0.0.1:10000)">
+                                    <i class="fa-solid fa-house-laptop"></i> Local
+                                </button>
+                                <button type="button" class="backend-pill" data-backend="auto"
+                                    title="Auto-detect (RunPod first, fall back to Render)">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Auto
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
