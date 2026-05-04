@@ -57,12 +57,14 @@
             font-family: 'Rubik', -apple-system, sans-serif;
             color: #e0d7cd;
         }
+
         #access-gate .ag-card {
             max-width: 360px;
             width: 100%;
             padding: 8px 4px 0;
             text-align: center;
         }
+
         #access-gate .ag-logo {
             width: 40px;
             height: 40px;
@@ -71,6 +73,7 @@
             opacity: 0.95;
             filter: drop-shadow(0 0 14px rgba(234, 88, 12, 0.25));
         }
+
         #access-gate h1 {
             font-size: 19px;
             margin: 0 0 6px;
@@ -78,20 +81,42 @@
             font-weight: 500;
             letter-spacing: -0.01em;
         }
-        #access-gate p.ag-lede { color: #8a7a6a; margin: 0 0 24px; font-size: 13.5px; }
 
-        #access-gate .ag-form { text-align: left; }
-        #access-gate .ag-field { margin-bottom: 10px; }
+        #access-gate p.ag-lede {
+            color: #8a7a6a;
+            margin: 0 0 24px;
+            font-size: 13.5px;
+        }
+
+        #access-gate .ag-form {
+            text-align: left;
+        }
+
+        #access-gate .ag-field {
+            margin-bottom: 10px;
+        }
+
         #access-gate input {
-            width: 100%; padding: 10px 12px; font: inherit; font-size: 13.5px;
-            color: #ebe2d6; background: #181210;
-            border: 1px solid #2c2118; border-radius: 6px;
+            width: 100%;
+            padding: 10px 12px;
+            font: inherit;
+            font-size: 13.5px;
+            color: #ebe2d6;
+            background: #181210;
+            border: 1px solid #2c2118;
+            border-radius: 6px;
             outline: none;
             box-sizing: border-box;
             transition: border-color 0.12s;
         }
-        #access-gate input::placeholder { color: #6b5a4a; }
-        #access-gate input:focus { border-color: #5a3a1f; }
+
+        #access-gate input::placeholder {
+            color: #6b5a4a;
+        }
+
+        #access-gate input:focus {
+            border-color: #5a3a1f;
+        }
 
         #access-gate button {
             width: 100%;
@@ -103,12 +128,27 @@
             border: 1px solid #2c2118;
             border-radius: 6px;
             cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
             transition: background 0.12s, border-color 0.12s;
         }
-        #access-gate button:hover { background: #1f1814; border-color: #3d2c1c; }
-        #access-gate button:focus { outline: none; }
-        #access-gate button:focus-visible { outline: 1px solid #7a4520; outline-offset: 1px; }
+
+        #access-gate button:hover {
+            background: #1f1814;
+            border-color: #3d2c1c;
+        }
+
+        #access-gate button:focus {
+            outline: none;
+        }
+
+        #access-gate button:focus-visible {
+            outline: 1px solid #7a4520;
+            outline-offset: 1px;
+        }
+
         #access-gate button.ag-primary {
             background: #ea580c;
             border-color: #ea580c;
@@ -117,17 +157,34 @@
             margin-top: 4px;
             box-shadow: 0 0 18px rgba(234, 88, 12, 0.18);
         }
-        #access-gate button.ag-primary:hover { background: #c2410c; border-color: #c2410c; }
-        #access-gate button.ag-google i { color: #e0d7cd; font-size: 13px; }
+
+        #access-gate button.ag-primary:hover {
+            background: #c2410c;
+            border-color: #c2410c;
+        }
+
+        #access-gate button.ag-google i {
+            color: #e0d7cd;
+            font-size: 13px;
+        }
 
         #access-gate .ag-divider {
-            display: flex; align-items: center; gap: 12px;
-            margin: 18px 0 14px; color: #5a4a3a; font-size: 11px;
-            text-transform: uppercase; letter-spacing: 0.08em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 18px 0 14px;
+            color: #5a4a3a;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
+
         #access-gate .ag-divider::before,
         #access-gate .ag-divider::after {
-            content: ''; flex: 1; height: 1px; background: #221912;
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #221912;
         }
 
         #access-gate .ag-foot {
@@ -135,15 +192,29 @@
             font-size: 12.5px;
             color: #7a6a58;
         }
+
         #access-gate .ag-foot a {
             color: #fb923c;
             text-decoration: none;
         }
-        #access-gate .ag-foot a:hover { color: #fdba74; }
 
-        #access-gate .ag-msg { margin-top: 10px; font-size: 12.5px; color: #f0a06b; min-height: 16px; text-align: center; }
+        #access-gate .ag-foot a:hover {
+            color: #fdba74;
+        }
+
+        #access-gate .ag-msg {
+            margin-top: 10px;
+            font-size: 12.5px;
+            color: #f0a06b;
+            min-height: 16px;
+            text-align: center;
+        }
+
         #access-gate .ag-pending {
-            font-size: 14px; color: #fdba74; margin: 10px 0 6px; font-weight: 500;
+            font-size: 14px;
+            color: #fdba74;
+            margin: 10px 0 6px;
+            font-weight: 500;
         }
     </style>
     <div id="access-gate" style="display:none">
@@ -2871,7 +2942,8 @@
                 <div class="byok-label">
                     <span class="byok-label-name">Anthropic</span>
                     <span class="byok-prefix-hint">sk-ant-…</span>
-                    <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" class="byok-get-link">Get key ↗</a>
+                    <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener"
+                        class="byok-get-link">Get key ↗</a>
                 </div>
                 <div class="byok-input-row">
                     <input id="byokAnthropic" type="password" class="byok-input" autocomplete="off" spellcheck="false"
@@ -2887,7 +2959,8 @@
                 <div class="byok-label">
                     <span class="byok-label-name">OpenAI</span>
                     <span class="byok-prefix-hint">sk-…</span>
-                    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="byok-get-link">Get key ↗</a>
+                    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener"
+                        class="byok-get-link">Get key ↗</a>
                 </div>
                 <div class="byok-input-row">
                     <input id="byokOpenai" type="password" class="byok-input" autocomplete="off" spellcheck="false"
