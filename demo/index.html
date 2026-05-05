@@ -1240,65 +1240,8 @@
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <div class="donate-backdrop" onclick="closeDonateModal()"></div>
-    <div class="donate-modal">
-        <button class="donate-close" onclick="closeDonateModal()">&times;</button>
-        <h3>Support ChopChopMol</h3>
-        <p style="color: rgba(255,255,255,0.7); text-align: center; margin-bottom: 20px; font-size: 14px;">
-            Your support helps keep this project alive!
-        </p>
-        <div class="donate-amounts">
-            <button class="amount-btn" onclick="selectAmount(this, 1)">$1</button>
-            <button class="amount-btn selected" onclick="selectAmount(this, 5)">$5</button>
-            <button class="amount-btn" onclick="selectAmount(this, 10)">$10</button>
-            <button class="amount-btn" onclick="selectAmount(this, 25)">$25</button>
-            <button class="amount-btn" onclick="selectAmount(this, 50)">$50</button>
-            <button class="amount-btn" onclick="selectAmount(this, 'custom')">Custom</button>
-        </div>
-        <button class="donate-proceed" onclick="proceedToDonate()">
-            Donate with Stripe
-        </button>
-    </div>
 
     <script>
-        // Minimal donation functionality
-        let selectedAmount = 10;
-
-        function openDonateModal() {
-            document.querySelector('.donate-modal').classList.add('show');
-            document.querySelector('.donate-backdrop').classList.add('show');
-        }
-
-        function closeDonateModal() {
-            document.querySelector('.donate-modal').classList.remove('show');
-            document.querySelector('.donate-backdrop').classList.remove('show');
-        }
-
-        function selectAmount(btn, amount) {
-            document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-
-
-            selectedAmount = amount;
-
-        }
-
-        function proceedToDonate() {
-            const links = {
-                1: 'https://checkout.chopchopmol.com/b/cNi7sM2n6a2U722drC7Re00',
-                5: 'https://checkout.chopchopmol.com/b/14AfZi5zi6QI9aaevG7Re02',
-                10: 'https://checkout.chopchopmol.com/b/5kQ6oI5zidf61HI4V67Re03',
-                25: 'https://checkout.chopchopmol.com/b/14A3cw6Dmb6Y3PQdrC7Re04',
-                50: 'https://checkout.chopchopmol.com/b/9B6aEY4ve6QI3PQ2MY7Re05',
-            };
-
-            if (links[selectedAmount]) {
-                window.open(links[selectedAmount], '_blank');
-            } else {
-                window.open('https://checkout.chopchopmol.com/b/fZu00k2n6eja9aa4V67Re06', '_blank');
-            }
-        }
-
         function toggleSubmenu(submenuId) {
             const submenu = document.getElementById(submenuId);
             const parent = submenu.closest('.settings-submenu');
@@ -1522,8 +1465,6 @@
                         <button class="fancy-button" id="signOutButton" style="display: none;"><i
                                 class="fas fa-sign-out-alt"></i> Sign
                             Out</button>
-                        <button class="donate-btn fancy-button" onclick="openDonateModal()"><i class="fas fa-heart"></i>
-                            Donation</button>
                         <a class="fancy-button privacy-link" href="/privacy.html" target="_blank" rel="noopener">
                             <i class="fas fa-shield-halved"></i> Privacy
                         </a>
@@ -3015,7 +2956,7 @@
             const messagesContainer = document.getElementById('aiChatMessages');
             const modelSelect = document.getElementById('aiModelSelect');
             const DEFAULT_MODEL_KEY = 'chopchop_default_model';
-            const FALLBACK_MODEL = 'auto';
+            const FALLBACK_MODEL = 'claude-opus-4-7';
 
             // ═══════════════════════════════════════════════════════════════
             // ▼▼▼  PROVIDER RESTRICTION — EDIT THIS LINE AND REDEPLOY  ▼▼▼

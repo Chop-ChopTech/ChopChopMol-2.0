@@ -33,7 +33,7 @@ import { getBackendUrl, getBackendUrlSync, onBackendUrlOverride, invalidateBacke
 const AI_CONFIG = {
     backendUrl: getBackendUrlSync(),
     sessionId: crypto.randomUUID(),
-    model: localStorage.getItem('chopchop_default_model') || 'claude-sonnet-4-6',
+    model: localStorage.getItem('chopchop_default_model') || 'claude-opus-4-7',
     maceModel: localStorage.getItem('chopchop_mace_model') || null
 };
 // Resolve backend URL asynchronously (updates AI_CONFIG when ready)
