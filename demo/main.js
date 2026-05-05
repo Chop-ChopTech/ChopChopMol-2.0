@@ -692,6 +692,28 @@ function applyBackgroundColorToUI(hex) {
     } catch { }
 })();
 
+// ── Text size slider (Style panel → "Text size") ───────────────────────────
+// Drives the --ui-text-scale CSS var, which scales font-size on chat
+// messages, chat input, file-explorer rows, and section headers via calc().
+// Value persists in localStorage so size choice survives reloads.
+const textSizeSlider = document.getElementById('textSizeSlider');
+function applyTextScale(scale) {
+    const s = Math.max(0.85, Math.min(1.4, Number(scale) || 1));
+    document.documentElement.style.setProperty('--ui-text-scale', s.toFixed(3));
+    try { localStorage.setItem('chopchop_text_scale', String(s)); } catch { }
+}
+if (textSizeSlider) {
+    textSizeSlider.addEventListener('input', () => applyTextScale(textSizeSlider.value));
+    // Restore saved scale on boot.
+    try {
+        const saved = parseFloat(localStorage.getItem('chopchop_text_scale') || '');
+        if (!Number.isNaN(saved) && saved >= 0.85 && saved <= 1.4) {
+            textSizeSlider.value = saved;
+            applyTextScale(saved);
+        }
+    } catch { }
+}
+
 
 function updateStyles() {
     const previousSelection = [...atomsSelected];

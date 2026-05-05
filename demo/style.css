@@ -90,6 +90,12 @@ body {
     --shadow-md: 0 4px 12px rgb(var(--ui-shadow-rgb) / 0.4);
     --shadow-lg: 0 12px 32px rgb(var(--ui-shadow-rgb) / 0.55);
 
+    /* User-controlled text scale — driven by #textSizeSlider in the Style
+       panel. Applied via calc() to the highest-traffic text elements (chat
+       message content, chat input, file explorer rows, section headers).
+       1.0 = current default; range 0.85 → 1.4 covers comfortable to large. */
+    --ui-text-scale: 1;
+
     /* ── Semantic neutrals ────────────────────────────────── */
     --surface-0: rgba(8, 12, 24, 0.95);
     --surface-1: rgba(255, 255, 255, 0.04);
@@ -3591,7 +3597,7 @@ input[type="range"]:focus {
 }
 
 .ai-message-content {
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-text-scale, 1));
     line-height: 1.5;
     word-wrap: break-word;
     pointer-events: all !important;
@@ -4378,7 +4384,7 @@ input[type="range"]:focus {
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.04);
     color: white;
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-text-scale, 1));
     font-family: 'Rubik', sans-serif;
     outline: none;
     transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
@@ -4962,10 +4968,9 @@ input[type="range"]:focus {
     padding: 3px 16px;
     cursor: pointer;
     color: rgba(255, 255, 255, 0.8);
-    font-size: 13px;
     transition: background 0.15s;
     user-select: none;
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-text-scale, 1));
 }
 
 .file-item:hover,
@@ -5438,7 +5443,7 @@ input[type="range"]:focus {
     letter-spacing: 0.6px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.18);
     background: rgba(0, 0, 0, 0.42);
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-text-scale, 1));
     /* Top highlight gives section headers a distinct edge against the panel
        background — they used to blend into the gradient. */
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -5876,7 +5881,7 @@ input[type="range"]:focus {
     padding: 1px 16px;
     cursor: pointer;
     color: rgba(255, 255, 255, 0.8);
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-text-scale, 1));
     transition: background 0.15s;
     user-select: none;
 }
