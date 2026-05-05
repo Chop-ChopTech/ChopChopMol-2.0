@@ -2735,9 +2735,6 @@
                     <i class="fas fa-chevron-down ai-model-trigger-caret"></i>
                 </button>
                 <select id="aiModelSelect" class="ai-model-select" title="Select AI Model" style="display:none;">
-                    <optgroup label="Auto">
-                        <option value="auto">Auto</option>
-                    </optgroup>
                     <optgroup label="GPT-5.5">
                         <option value="gpt-5.5">GPT-5.5</option>
                         <option value="gpt-5.5-pro">GPT-5.5 Pro</option>
@@ -2830,19 +2827,6 @@
                             title="Deep thinking (~32K tokens)">High</button>
                     </div>
                 </div>
-            </div>
-            <div class="ai-model-auto-toggle" id="aiAutoToggleRow">
-                <div class="ai-model-auto-info">
-                    <i class="fas fa-wand-magic-sparkles"></i>
-                    <div>
-                        <div class="ai-model-auto-title">Auto</div>
-                        <div class="ai-model-auto-desc">Routes to GPT-5.5</div>
-                    </div>
-                </div>
-                <label class="ai-model-auto-switch" title="Toggle auto model selection">
-                    <input type="checkbox" id="aiAutoToggle">
-                    <span class="ai-model-auto-slider"></span>
-                </label>
             </div>
             <div class="ai-model-modal-tabs" id="aiModelTabs">
                 <button type="button" class="ai-model-tab active" data-provider="Claude">
@@ -3209,41 +3193,21 @@
                 setActiveProvider(tab.dataset.provider);
             });
 
-            // ── Auto toggle ──
-            const AUTO_KEY = 'chopchop_auto_mode';
-            const LAST_MANUAL_KEY = 'chopchop_last_manual_model';
-            const autoToggle = document.getElementById('aiAutoToggle');
-            const modelSearchWrap = document.querySelector('.ai-model-modal-search');
-
-            function applyAutoMode(isOn, opts = {}) {
-                const skipSync = !!opts.skipSync;
-                modelTabsEl.style.display = isOn ? 'none' : '';
-                modelSearchWrap.style.display = isOn ? 'none' : '';
-                modelList.style.display = isOn ? 'none' : '';
-                if (isOn) {
-                    if (modelSelect.value !== 'auto') {
-                        localStorage.setItem(LAST_MANUAL_KEY, modelSelect.value);
-                    }
-                    modelSelect.value = 'auto';
-                } else if (!skipSync) {
-                    const restore = localStorage.getItem(LAST_MANUAL_KEY) || FALLBACK_MODEL;
-                    if (modelSelect.querySelector(`option[value="${restore}"]`)) {
-                        modelSelect.value = restore;
-                    } else {
-                        modelSelect.value = FALLBACK_MODEL;
-                    }
+            // ── Migrate users off the old 'auto' default ──
+            // Auto mode was removed; any user with `chopchop_default_model = 'auto'`
+            // or the old `chopchop_auto_mode = '1'` flag in localStorage gets bumped
+            // to the new opus-4.7 default on next load. Idempotent.
+            try {
+                if (localStorage.getItem(DEFAULT_MODEL_KEY) === 'auto') {
+                    localStorage.setItem(DEFAULT_MODEL_KEY, FALLBACK_MODEL);
                 }
-                if (!skipSync) modelSelect.dispatchEvent(new Event('change'));
-                localStorage.setItem(AUTO_KEY, isOn ? '1' : '0');
-            }
-
-            autoToggle.addEventListener('change', () => applyAutoMode(autoToggle.checked));
-
-            // Initialize from localStorage. Also catch the case where the saved
-            // default is 'auto' but the auto-mode flag fell out of sync.
-            const wasAuto = localStorage.getItem(AUTO_KEY) === '1' || modelSelect.value === 'auto';
-            autoToggle.checked = wasAuto;
-            applyAutoMode(wasAuto);
+                localStorage.removeItem('chopchop_auto_mode');
+                localStorage.removeItem('chopchop_last_manual_model');
+                if (modelSelect.value === 'auto' || !modelSelect.value) {
+                    modelSelect.value = FALLBACK_MODEL;
+                    modelSelect.dispatchEvent(new Event('change'));
+                }
+            } catch { }
             modelDoneBtn.addEventListener('click', closeModelModal);
             setDefaultBtn.addEventListener('click', () => {
                 localStorage.setItem(DEFAULT_MODEL_KEY, modelSelect.value);
