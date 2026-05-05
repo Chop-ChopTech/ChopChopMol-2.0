@@ -3051,18 +3051,22 @@ input[type="range"]:focus {
     top: 0;
     width: 280px;
     height: 100vh;
-    background: var(--brand-grad-deep);
+    /* Layered background: subtle white wash (~3%) ON TOP of the brand gradient
+       lifts the panel ~3-4 luminance steps above the viewport, making the
+       panel boundary visible without changing the global gradient token. */
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)),
+        var(--brand-grad-deep);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(255, 255, 255, 0.14);
+    border-right: 1px solid rgba(255, 255, 255, 0.16);
     display: flex;
     flex-direction: column;
     z-index: 10001;
     font-family: 'Rubik', sans-serif;
-    /* Subtle elevation: stronger drop shadow + 1px inner top highlight gives
-       the panel visible separation from the viewport without lightening the
-       background itself. */
-    box-shadow: 6px 0 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    /* Stronger drop shadow + 1px inner top highlight gives the panel visible
+       separation and elevation against the viewport. */
+    box-shadow: 6px 0 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
     transform: translateX(-100%);
     transition: transform 0.3s ease !important;
 }
@@ -4029,18 +4033,40 @@ input[type="range"]:focus {
     color: rgba(245, 158, 11, 0.8);
 }
 
-/* Python Inline Figures */
+/* Python Inline Figures — match the Stripe/Linear chart-card aesthetic.
+   The matplotlib figure is generated with #1a1a2e background to seamlessly
+   continue into this card; the card itself adds the rounded edges, subtle
+   border, and elevation shadow that matplotlib can't render natively. */
 .python-figure-wrapper {
-    margin-top: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 10px;
+    margin-top: 12px;
+    margin-bottom: 4px;
+    background: #1a1a2e;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 14px;
     overflow: hidden;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.04) inset,
+        0 8px 24px -8px rgba(0, 0, 0, 0.6),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.python-figure-wrapper:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+    transform: translateY(-1px);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.06) inset,
+        0 12px 32px -8px rgba(0, 0, 0, 0.65),
+        0 4px 10px rgba(0, 0, 0, 0.3);
 }
 .python-figure {
-    width: 100%; display: block; cursor: pointer;
-    transition: opacity 0.15s;
+    width: 100%;
+    display: block;
+    cursor: zoom-in;
+    /* Default browser bilinear is right for downscaling our 140-dpi PNG to
+       the chat column width — `crisp-edges` would re-introduce aliasing. */
+    transition: opacity 0.15s ease;
 }
-.python-figure:hover { opacity: 0.88; }
+.python-figure:hover { opacity: 0.92; }
 
 /* Stop Button Mode */
 #aiSendBtn.ai-stop-mode {
@@ -4771,8 +4797,10 @@ input[type="range"]:focus {
     top: 0;
     width: 244px;
     height: 100vh;
-    background: var(--brand-grad-deep);
-    border-left: 1px solid rgba(255, 255, 255, 0.14);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)),
+        var(--brand-grad-deep);
+    border-left: 1px solid rgba(255, 255, 255, 0.16);
     z-index: 10000;
     display: flex;
     flex-direction: column;
@@ -4781,7 +4809,7 @@ input[type="range"]:focus {
     backdrop-filter: blur(10px);
     /* Mirror of .ai-chat-panel — same elevation cues so left + right panels
        read as a balanced pair against the viewport. */
-    box-shadow: -6px 0 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    box-shadow: -6px 0 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .file-explorer-panel.open {
@@ -5806,6 +5834,13 @@ input[type="range"]:focus {
     display: block;
     max-width: 100%;
     height: auto;
+    border-radius: 12px;
+    /* Lift the image with the same shadow language as the inline figure card
+       so the modal feels like a zoomed-in version of the same chart, not a
+       different component. */
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.05) inset,
+        0 8px 24px -6px rgba(0, 0, 0, 0.55);
 }
 
 /* Cloud folder styles - reuse local folder styles */
