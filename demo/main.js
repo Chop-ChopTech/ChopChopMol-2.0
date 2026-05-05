@@ -578,8 +578,70 @@ backgroundColorSelector.addEventListener('input', () => {
         savedBackgroundColor = new THREE.Color(color);
     }
     document.body.style.backgroundColor = color;
+    applyBackgroundColorToUI(color);
     render();
 });
+
+// Build a 3-stop dark-leaning gradient from a single hex so panels still feel
+// dimensional after the user picks a flat background. We perturb HSL lightness
+// by ±2 steps to create the same "deep gradient" feel as the brand default,
+// keyed off the user's color so panels and viewport stay visually unified.
+function _hexToHsl(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    let r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+    if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+        else if (max === g) h = ((b - r) / d + 2) * 60;
+        else h = ((r - g) / d + 4) * 60;
+    }
+    return { h, s: s * 100, l: l * 100 };
+}
+
+function applyBackgroundColorToUI(hex) {
+    const hsl = _hexToHsl(hex);
+    if (!hsl) return;
+    // Persist the choice so reloads don't snap back to brand default.
+    try { localStorage.setItem('chopchop_panel_color', hex); } catch { }
+    const root = document.documentElement.style;
+    // Build a 3-stop gradient using the picked hue + slight luminance variation.
+    // Clamp to [2, 30] so very-light picks still feel "dark mode" and very-dark
+    // picks don't go pure black (panels need a touch of color to read as cards).
+    const lo = Math.max(2, Math.min(30, hsl.l - 1.5));
+    const mid = Math.max(2, Math.min(30, hsl.l));
+    const hi = Math.max(2, Math.min(30, hsl.l + 1.5));
+    const grad = `linear-gradient(180deg,` +
+        ` hsla(${hsl.h.toFixed(0)}, ${hsl.s.toFixed(0)}%, ${lo.toFixed(1)}%, 0.98) 0%,` +
+        ` hsla(${hsl.h.toFixed(0)}, ${hsl.s.toFixed(0)}%, ${mid.toFixed(1)}%, 0.98) 50%,` +
+        ` hsla(${hsl.h.toFixed(0)}, ${hsl.s.toFixed(0)}%, ${hi.toFixed(1)}%, 0.98) 100%)`;
+    // Diagonal variant for surfaces that previously used --brand-grad-dim.
+    const gradDim = grad.replace('180deg', '135deg');
+    root.setProperty('--brand-grad-deep', grad);
+    root.setProperty('--brand-grad-dim', gradDim);
+    // Inform Three.js / canvas-based features that the background changed.
+    window.dispatchEvent(new CustomEvent('chopchopBgColorChanged', { detail: { color: hex } }));
+}
+
+// On first load, replay the saved color so the UI is consistent across reloads.
+(function _restoreSavedPanelColor() {
+    try {
+        const saved = localStorage.getItem('chopchop_panel_color');
+        if (saved && /^#[0-9a-f]{6}$/i.test(saved)) {
+            backgroundColorSelector.value = saved;
+            applyBackgroundColorToUI(saved);
+            // Also seed the scene background so the 3D viewport matches.
+            if (typeof scene !== 'undefined' && !window.envMapEnabled) {
+                scene.background = new THREE.Color(saved);
+            }
+            document.body.style.backgroundColor = saved;
+        }
+    } catch { }
+})();
 
 
 function updateStyles() {
