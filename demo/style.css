@@ -80,9 +80,15 @@ body {
     --radius-pill: 999px;
 
     /* ── Shadows ──────────────────────────────────────────── */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
-    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+    /* Shadow RGB is dynamically rewritten by main.js when the user picks a
+       background color (applyBackgroundColorToUI). All UI shadows reference
+       this token so the entire chrome — panels, cards, modals, toolbar —
+       casts shadows tinted by the active background hue, keeping the look
+       color-coherent. Default is straight black for stock dark mode. */
+    --ui-shadow-rgb: 0 0 0;
+    --shadow-sm: 0 1px 2px rgb(var(--ui-shadow-rgb) / 0.28);
+    --shadow-md: 0 4px 12px rgb(var(--ui-shadow-rgb) / 0.4);
+    --shadow-lg: 0 12px 32px rgb(var(--ui-shadow-rgb) / 0.55);
 
     /* ── Semantic neutrals ────────────────────────────────── */
     --surface-0: rgba(8, 12, 24, 0.95);
@@ -1390,7 +1396,8 @@ input[type="range"]:focus {
     align-items: center;
     /* Stronger drop + 1px inner highlight makes the toolbar read as a floating
        chip against the dark viewport instead of blending into it. */
-    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.25),
+    box-shadow: 0 6px 28px rgb(var(--ui-shadow-rgb) / 0.5),
+        0 1px 3px rgb(var(--ui-shadow-rgb) / 0.28),
         inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -3051,12 +3058,15 @@ input[type="range"]:focus {
     top: 0;
     width: 280px;
     height: 100vh;
-    /* Layered background: subtle white wash (~3%) ON TOP of the brand gradient
-       lifts the panel ~3-4 luminance steps above the viewport, making the
-       panel boundary visible without changing the global gradient token. */
+    /* Layered background. --panel-bg is set by applyBackgroundColorToUI when
+       the user picks a background color — it's clamped to a low-luminance
+       range so the panel always reads darker than the viewport regardless
+       of how vibrant the picked color is. Falls back to --brand-grad-deep
+       for the initial state before any pick has happened. The white wash
+       on top adds the subtle glassy lift. */
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)),
-        var(--brand-grad-deep);
+        var(--panel-bg, var(--brand-grad-deep));
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-right: 1px solid rgba(255, 255, 255, 0.16);
@@ -3066,7 +3076,19 @@ input[type="range"]:focus {
     font-family: 'Rubik', sans-serif;
     /* Stronger drop shadow + 1px inner top highlight gives the panel visible
        separation and elevation against the viewport. */
-    box-shadow: 6px 0 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    /* Layered shadow — modern dashboard pattern. Three drop shadows stacked:
+         · Close 8px blur with low Y offset    → defined edge, sharp seam
+         · Medium 24px blur with moderate Y    → near-field depth
+         · Wide 48px blur with strong Y        → ambient halo on the viewport
+       Light is imagined from top-left, so the right-side panel mirrors X.
+       Inset top highlight catches the same light at the very top of the
+       panel "wall." Multi-layer stacking creates a much softer, more
+       believable shadow than a single huge blur at high alpha. */
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        2px 2px 8px rgb(var(--ui-shadow-rgb) / 0.45),
+        8px 8px 24px rgb(var(--ui-shadow-rgb) / 0.36),
+        20px 16px 56px rgb(var(--ui-shadow-rgb) / 0.26);
     transform: translateX(-100%);
     transition: transform 0.3s ease !important;
 }
@@ -4046,8 +4068,8 @@ input[type="range"]:focus {
     overflow: hidden;
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.04) inset,
-        0 8px 24px -8px rgba(0, 0, 0, 0.6),
-        0 2px 6px rgba(0, 0, 0, 0.25);
+        0 8px 24px -8px rgb(var(--ui-shadow-rgb) / 0.6),
+        0 2px 6px rgb(var(--ui-shadow-rgb) / 0.28);
     transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 .python-figure-wrapper:hover {
@@ -4055,8 +4077,8 @@ input[type="range"]:focus {
     transform: translateY(-1px);
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.06) inset,
-        0 12px 32px -8px rgba(0, 0, 0, 0.65),
-        0 4px 10px rgba(0, 0, 0, 0.3);
+        0 12px 32px -8px rgb(var(--ui-shadow-rgb) / 0.65),
+        0 4px 10px rgb(var(--ui-shadow-rgb) / 0.34);
 }
 .python-figure {
     width: 100%;
@@ -4799,7 +4821,7 @@ input[type="range"]:focus {
     height: 100vh;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)),
-        var(--brand-grad-deep);
+        var(--panel-bg, var(--brand-grad-deep));
     border-left: 1px solid rgba(255, 255, 255, 0.16);
     z-index: 10000;
     display: flex;
@@ -4807,9 +4829,13 @@ input[type="range"]:focus {
     transform: translateX(100%);
     transition: transform 0.3s ease;
     backdrop-filter: blur(10px);
-    /* Mirror of .ai-chat-panel — same elevation cues so left + right panels
-       read as a balanced pair against the viewport. */
-    box-shadow: -6px 0 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    /* Mirror of .ai-chat-panel — same layered shadow language but flipped
+       on X since this panel sits on the right edge of the viewport. */
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        -2px 2px 8px rgb(var(--ui-shadow-rgb) / 0.45),
+        -8px 8px 24px rgb(var(--ui-shadow-rgb) / 0.36),
+        -20px 16px 56px rgb(var(--ui-shadow-rgb) / 0.26);
 }
 
 .file-explorer-panel.open {
@@ -5840,7 +5866,7 @@ input[type="range"]:focus {
        different component. */
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.05) inset,
-        0 8px 24px -6px rgba(0, 0, 0, 0.55);
+        0 8px 24px -6px rgb(var(--ui-shadow-rgb) / 0.55);
 }
 
 /* Cloud folder styles - reuse local folder styles */

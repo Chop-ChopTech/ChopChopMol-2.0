@@ -603,26 +603,75 @@ function _hexToHsl(hex) {
     return { h, s: s * 100, l: l * 100 };
 }
 
+// Convert an HSL color back to RGB triplet (0-255) — needed for shadows so we
+// can write space-separated R G B into a CSS variable used inside rgb(... / α)
+// syntax. Returns null if HSL is invalid.
+function _hslToRgb(h, s, l) {
+    s /= 100; l /= 100;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    return [
+        Math.round(255 * f(0)),
+        Math.round(255 * f(8)),
+        Math.round(255 * f(4)),
+    ];
+}
+
 function applyBackgroundColorToUI(hex) {
     const hsl = _hexToHsl(hex);
     if (!hsl) return;
     // Persist the choice so reloads don't snap back to brand default.
     try { localStorage.setItem('chopchop_panel_color', hex); } catch { }
     const root = document.documentElement.style;
-    // Build a 3-stop gradient using the picked hue + slight luminance variation.
-    // Clamp to [2, 30] so very-light picks still feel "dark mode" and very-dark
-    // picks don't go pure black (panels need a touch of color to read as cards).
-    const lo = Math.max(2, Math.min(30, hsl.l - 1.5));
-    const mid = Math.max(2, Math.min(30, hsl.l));
-    const hi = Math.max(2, Math.min(30, hsl.l + 1.5));
+
+    // ── Panel background ────────────────────────────────────────────────
+    // Panels MUST stay much darker than the viewport so they read as
+    // floating chrome. Even if the user picks bright red, panels should
+    // be a deep, muted version of red. We clamp to L = [3, 11] always —
+    // independent of input lightness — and cut saturation modestly so
+    // panels feel like UI surfaces, not solid swatches of pure hue.
+    const panelL = 7;
+    const panelS = Math.min(hsl.s, 55);
+    const pLo = Math.max(3, panelL - 2);
+    const pMid = panelL;
+    const pHi = Math.min(11, panelL + 2);
+    const panelGrad = `linear-gradient(180deg,` +
+        ` hsla(${hsl.h.toFixed(0)}, ${panelS.toFixed(0)}%, ${pLo.toFixed(1)}%, 0.98) 0%,` +
+        ` hsla(${hsl.h.toFixed(0)}, ${panelS.toFixed(0)}%, ${pMid.toFixed(1)}%, 0.98) 50%,` +
+        ` hsla(${hsl.h.toFixed(0)}, ${panelS.toFixed(0)}%, ${pHi.toFixed(1)}%, 0.98) 100%)`;
+    const panelGradDim = panelGrad.replace('180deg', '135deg');
+    root.setProperty('--panel-bg', panelGrad);
+    root.setProperty('--panel-bg-dim', panelGradDim);
+
+    // ── Viewport / modal background ─────────────────────────────────────
+    // For non-panel surfaces (modals, toolbar bg, body) we let the picked
+    // color show through more — clamp [4, 30] so the user sees their pick
+    // but it stays dark-mode legible.
+    const lo = Math.max(4, Math.min(30, hsl.l - 1.5));
+    const mid = Math.max(4, Math.min(30, hsl.l));
+    const hi = Math.max(4, Math.min(30, hsl.l + 1.5));
     const grad = `linear-gradient(180deg,` +
         ` hsla(${hsl.h.toFixed(0)}, ${hsl.s.toFixed(0)}%, ${lo.toFixed(1)}%, 0.98) 0%,` +
         ` hsla(${hsl.h.toFixed(0)}, ${hsl.s.toFixed(0)}%, ${mid.toFixed(1)}%, 0.98) 50%,` +
         ` hsla(${hsl.h.toFixed(0)}, ${hsl.s.toFixed(0)}%, ${hi.toFixed(1)}%, 0.98) 100%)`;
-    // Diagonal variant for surfaces that previously used --brand-grad-dim.
     const gradDim = grad.replace('180deg', '135deg');
     root.setProperty('--brand-grad-deep', grad);
     root.setProperty('--brand-grad-dim', gradDim);
+
+    // ── Shadow color ────────────────────────────────────────────────────
+    // Derive shadow from the PANEL color, not the viewport color. Shadow is
+    // the panel's natural "underside" — a slightly darker, slightly more
+    // saturated version of the panel hue. At L=4 with the panel's hue + sat
+    // intact, the shadow reads as a deep tinted color (e.g. deep wine-red
+    // for a red theme, near-black navy for a blue theme), not pure black.
+    // This makes shadows blend smoothly with the panel/viewport colorway
+    // instead of looking like an unrelated black blob hovering on top.
+    const shadowL = 4;            // ~half of panel L (7) — natural underside
+    const shadowS = Math.min(panelS + 10, 70);  // slightly more saturated than panel
+    const [sr, sg, sb] = _hslToRgb(hsl.h, shadowS, shadowL);
+    root.setProperty('--ui-shadow-rgb', `${sr} ${sg} ${sb}`);
+
     // Inform Three.js / canvas-based features that the background changed.
     window.dispatchEvent(new CustomEvent('chopchopBgColorChanged', { detail: { color: hex } }));
 }
