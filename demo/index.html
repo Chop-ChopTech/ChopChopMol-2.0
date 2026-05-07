@@ -232,6 +232,9 @@
                         <input id="ag-pw" type="password" placeholder="Password" autocomplete="current-password">
                     </div>
                     <button id="ag-email-btn" class="ag-primary">Sign in</button>
+                    <div style="text-align:right;margin:8px 2px 0">
+                        <a id="ag-forgot" href="#" style="font-size:11.5px;color:#7a6a58;text-decoration:none">Forgot password?</a>
+                    </div>
                 </div>
 
                 <div class="ag-divider">or</div>
@@ -291,7 +294,7 @@
         import { getBackendUrl, getBackendKey, getSavedBackendOverride, setBackendOverride, onBackendUrlOverride } from '/demo/utils/apiUtils.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
-        import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy, serverTimestamp, where, writeBatch, deleteField, limit } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -438,6 +441,29 @@
             } catch (err) {
                 gateMsg.textContent = err.message || 'Sign-in failed.';
             }
+        });
+        // Self-service password recovery for approved users whose original
+        // setup link expired. Approval status itself never expires; this just
+        // mints a fresh sign-in path so they're never locked out.
+        document.getElementById('ag-forgot').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('ag-email').value.trim();
+            if (!email) {
+                gateMsg.textContent = 'Enter your email above first.';
+                document.getElementById('ag-email').focus();
+                return;
+            }
+            try {
+                gateMsg.textContent = 'Sending reset link…';
+                await sendPasswordResetEmail(auth, email, {
+                    url: `${location.origin}/demo/set-password.html`,
+                    handleCodeInApp: false,
+                });
+            } catch (err) {
+                console.warn('sendPasswordResetEmail:', err);
+            }
+            // Same message either way — don't leak whether the email exists.
+            gateMsg.textContent = `If ${email} is registered, a reset link is on its way.`;
         });
         document.getElementById('ag-signout').addEventListener('click', () => {
             signOut(auth);
