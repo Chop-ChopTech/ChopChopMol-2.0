@@ -93,11 +93,14 @@
             <label for="email">Email *</label>
             <input id="email" name="email" type="email" required autocomplete="email">
 
-            <label for="name">Name *</label>
-            <input id="name" name="name" type="text" required autocomplete="name">
+            <label for="firstName">First name *</label>
+            <input id="firstName" name="firstName" type="text" required autocomplete="given-name">
 
-            <label for="org">Organization</label>
-            <input id="org" name="org" type="text" autocomplete="organization">
+            <label for="lastName">Last name *</label>
+            <input id="lastName" name="lastName" type="text" required autocomplete="family-name">
+
+            <label for="org">Organization *</label>
+            <input id="org" name="org" type="text" required autocomplete="organization">
 
             <label for="useCase">What do you want to use ChopChopMol for? *</label>
             <textarea id="useCase" name="useCase" required minlength="10"
@@ -130,10 +133,21 @@
             btn.disabled = true;
             btn.textContent = 'Sending…';
 
+            const firstName = form.firstName.value.trim();
+            const lastName = form.lastName.value.trim();
+            const org = form.org.value.trim();
+            if (!firstName || !lastName || !org) {
+                show('err', 'First name, last name, and organization are required.');
+                btn.disabled = false;
+                btn.textContent = 'Request access';
+                return;
+            }
             const payload = {
                 email: form.email.value.trim(),
-                name: form.name.value.trim(),
-                org: form.org.value.trim(),
+                firstName,
+                lastName,
+                name: `${firstName} ${lastName}`,
+                org,
                 useCase: form.useCase.value.trim(),
             };
 
