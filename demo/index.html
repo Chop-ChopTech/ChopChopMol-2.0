@@ -2801,6 +2801,13 @@
                         <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
                         <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
                     </optgroup>
+                    <optgroup label="Groq (Llama)">
+                        <option value="llama-3.3-70b-versatile">Llama 3.3 70B ✓</option>
+                        <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B</option>
+                        <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick 17B</option>
+                        <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant</option>
+                        <option value="gemma2-9b-it">Gemma 2 9B</option>
+                    </optgroup>
                     <optgroup label="Claude Opus">
                         <option value="claude-opus-4-7">Claude Opus 4.7</option>
                         <option value="claude-opus-4-6">Claude Opus 4.6</option>
@@ -3111,6 +3118,11 @@
                 'gpt-4.1': { hint: 'Chat · no reasoning' },
                 'gpt-4.1-mini': { hint: 'Chat · no reasoning' },
                 'gpt-4.1-nano': { hint: 'Chat · no reasoning' },
+                'llama-3.3-70b-versatile': { badge: 'Groq', hint: 'Llama 3.3 70B via Groq · 12k TPM · recommended for tool use' },
+                'meta-llama/llama-4-scout-17b-16e-instruct': { badge: 'Groq', hint: 'Llama 4 Scout 17B via Groq · fast & capable' },
+                'meta-llama/llama-4-maverick-17b-128e-instruct': { badge: 'Groq', hint: 'Llama 4 Maverick 17B via Groq · high quality' },
+                'llama-3.1-8b-instant': { hint: 'Llama 3.1 8B via Groq · 6k TPM · may hit limits with tools' },
+                'gemma2-9b-it': { hint: 'Gemma 2 9B via Groq · 15k TPM free' },
             };
 
             function providerFor(groupLabel) {
