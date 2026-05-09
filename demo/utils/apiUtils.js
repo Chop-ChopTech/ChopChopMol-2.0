@@ -74,15 +74,14 @@ export async function getBackendUrl() {
 }
 
 /**
- * Returns the Render backend URL (or LOCAL in localhost dev). Use this for
- * non-AI-chat traffic — admin pages, access form, /access/* gate checks.
- * RunPod hosts the GPU compute path; everything else should hit Render so
- * admin/auth doesn't go down with the GPU pod.
+ * Always returns the Render backend URL. Use this for non-AI-chat traffic —
+ * admin pages, access form, /access/* gate checks. Render holds the source of
+ * truth for users/access requests, so even local dev should hit Render here
+ * (otherwise approvals would go to a localhost backend with empty Firestore).
  * @returns {Promise<string>}
  */
 export async function getRenderBackendUrl() {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isLocal ? LOCAL_URL : RENDER_URL;
+    return RENDER_URL;
 }
 
 /**
