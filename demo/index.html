@@ -257,11 +257,20 @@
             </div>
 
             <div id="ag-needusecase" style="display:none">
-                <p class="ag-pending">Tell us how you'll use ChopChopMol</p>
+                <p class="ag-pending">Request access to ChopChopMol</p>
                 <p style="font-size:12.5px;color:#8a7a6a;line-height:1.55;margin:6px 0 14px">
-                    Required to finish your access request. Founder reads every reply.
+                    A few quick details — founder reads every request.
                 </p>
                 <div class="ag-form">
+                    <div class="ag-field">
+                        <input id="ag-firstname" type="text" placeholder="First name" autocomplete="given-name" maxlength="100">
+                    </div>
+                    <div class="ag-field">
+                        <input id="ag-lastname" type="text" placeholder="Last name" autocomplete="family-name" maxlength="100">
+                    </div>
+                    <div class="ag-field">
+                        <input id="ag-org" type="text" placeholder="Organization" autocomplete="organization" maxlength="200">
+                    </div>
                     <div class="ag-field">
                         <textarea id="ag-usecase" rows="4" maxlength="2000"
                             placeholder="What molecules / problems do you want to work on? (min 10 characters)"
@@ -406,6 +415,18 @@
                     // then flips the gate to 'pending'.
                     if (!data.requestPending) {
                         gateShow('needUseCase');
+                        // Pre-fill first/last name from the Google profile so the
+                        // user usually only has to type the org + use case.
+                        try {
+                            const dn = (user.displayName || '').trim();
+                            if (dn) {
+                                const parts = dn.split(/\s+/);
+                                const first = document.getElementById('ag-firstname');
+                                const last = document.getElementById('ag-lastname');
+                                if (first && !first.value) first.value = parts[0] || '';
+                                if (last && !last.value) last.value = parts.slice(1).join(' ') || '';
+                            }
+                        } catch { }
                         return;
                     }
                     gateShow('pending');
@@ -475,8 +496,29 @@
             signOut(auth);
         });
         document.getElementById('ag-usecase-submit').addEventListener('click', async () => {
+            const firstNameEl = document.getElementById('ag-firstname');
+            const lastNameEl = document.getElementById('ag-lastname');
+            const orgEl = document.getElementById('ag-org');
             const ta = document.getElementById('ag-usecase');
+            const firstName = (firstNameEl?.value || '').trim();
+            const lastName = (lastNameEl?.value || '').trim();
+            const org = (orgEl?.value || '').trim();
             const useCase = (ta?.value || '').trim();
+            if (!firstName) {
+                gateMsg.textContent = 'First name is required.';
+                firstNameEl?.focus();
+                return;
+            }
+            if (!lastName) {
+                gateMsg.textContent = 'Last name is required.';
+                lastNameEl?.focus();
+                return;
+            }
+            if (!org) {
+                gateMsg.textContent = 'Organization is required.';
+                orgEl?.focus();
+                return;
+            }
             if (useCase.length < 10) {
                 gateMsg.textContent = 'Please describe your use case (at least 10 characters).';
                 ta?.focus();
@@ -495,7 +537,13 @@
                 const res = await fetch(`${url}/access/request-self`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ useCase }),
+                    body: JSON.stringify({
+                        firstName,
+                        lastName,
+                        name: `${firstName} ${lastName}`,
+                        org,
+                        useCase,
+                    }),
                 });
                 if (!res.ok) {
                     const msg = await res.text().catch(() => '');
