@@ -115,7 +115,7 @@
     </div>
 
     <script type="module">
-        import { getBackendUrl } from '/demo/utils/apiUtils.js';
+        import { getRenderBackendUrl } from '/demo/utils/apiUtils.js';
 
         const form = document.getElementById('form');
         const msg = document.getElementById('message');
@@ -152,7 +152,7 @@
             };
 
             try {
-                const url = await getBackendUrl();
+                const url = await getRenderBackendUrl();
                 const res = await fetch(`${url}/access/request`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

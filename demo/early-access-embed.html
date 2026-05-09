@@ -31,11 +31,14 @@
   <label for="gvEmail">Email *</label>
   <input id="gvEmail" name="email" type="email" required autocomplete="email">
 
-  <label for="gvName">Name *</label>
-  <input id="gvName" name="name" type="text" required autocomplete="name">
+  <label for="gvFirstName">First name *</label>
+  <input id="gvFirstName" name="firstName" type="text" required autocomplete="given-name">
 
-  <label for="gvOrg">Organization</label>
-  <input id="gvOrg" name="org" type="text" autocomplete="organization">
+  <label for="gvLastName">Last name *</label>
+  <input id="gvLastName" name="lastName" type="text" required autocomplete="family-name">
+
+  <label for="gvOrg">Organization *</label>
+  <input id="gvOrg" name="org" type="text" required autocomplete="organization">
 
   <label for="gvUseCase">What do you want to use ChopChopMol for? *</label>
   <textarea id="gvUseCase" name="useCase" required minlength="10"
@@ -64,10 +67,21 @@
       btn.disabled = true;
       btn.textContent = 'Sending…';
 
+      var firstName = form.firstName.value.trim();
+      var lastName = form.lastName.value.trim();
+      var org = form.org.value.trim();
+      if (!firstName || !lastName || !org) {
+        show('err', 'First name, last name, and organization are required.');
+        btn.disabled = false;
+        btn.textContent = 'Request access';
+        return;
+      }
       var payload = {
         email: form.email.value.trim(),
-        name: form.name.value.trim(),
-        org: form.org.value.trim(),
+        firstName: firstName,
+        lastName: lastName,
+        name: firstName + ' ' + lastName,
+        org: org,
         useCase: form.useCase.value.trim(),
       };
 

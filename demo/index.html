@@ -291,7 +291,7 @@
     <script src="/demo/utils/undo.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
-        import { getBackendUrl, getBackendKey, getSavedBackendOverride, setBackendOverride, onBackendUrlOverride } from '/demo/utils/apiUtils.js';
+        import { getBackendUrl, getRenderBackendUrl, getBackendKey, getSavedBackendOverride, setBackendOverride, onBackendUrlOverride } from '/demo/utils/apiUtils.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
@@ -386,7 +386,7 @@
             if (isGuestBypassed()) { window.isGuest = true; gateHide(); return; }
             if (!user) { gateShow('signedOut'); return; }
             try {
-                const url = await getBackendUrl();
+                const url = await getRenderBackendUrl();
                 let res = await _accessMe(url, user, false);
                 // Stale cached token can produce a spurious 401 immediately after
                 // sign-in. Retry once with a force-refreshed token before treating
@@ -488,7 +488,7 @@
             btn.textContent = 'Submitting…';
             gateMsg.textContent = '';
             try {
-                const url = await getBackendUrl();
+                const url = await getRenderBackendUrl();
                 const user = auth.currentUser;
                 if (!user) throw new Error('Not signed in.');
                 const t = await user.getIdToken();

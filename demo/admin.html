@@ -111,7 +111,7 @@
         import {
             getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        import { getBackendUrl } from '/demo/utils/apiUtils.js';
+        import { getRenderBackendUrl } from '/demo/utils/apiUtils.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyAAlbmJmNxVGJ3wv1KiyoFWJ86Ik31jY-w",
@@ -177,7 +177,7 @@
             const user = auth.currentUser;
             if (!user) throw new Error('Not signed in');
             const token = await user.getIdToken();
-            const url = await getBackendUrl();
+            const url = await getRenderBackendUrl();
             return fetch(`${url}${path}`, {
                 ...opts,
                 headers: {
