@@ -2195,12 +2195,12 @@
         <input type="range" id="frameSlider" min="0" max="0" value="0" style="
             width: 200px;
             accent-color: #1D60FD;">
-        <button id="playFrames" class="fancy-button" style="
+        <button id="playFrames" class="fancy-button" aria-label="Play / pause trajectory frames" title="Play / pause trajectory frames" style="
             padding: 8px 16px;
             border-radius: 20px;
             font-size: 12px;
             background: none; width:fit-content;">
-            <i class="fa-solid fa-play"></i></button>
+            <i class="fa-solid fa-play" aria-hidden="true"></i></button>
         <input type="range" id="frameSpeed" min="1" max="500" value="100" style="width: 80px; accent-color: #ff6b6b;">
         <input type="number" id="frameSpeedInput" min="10" max="500" value="100"
             style="width: 50px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); border-radius: 5px; color: white; text-align: center;">
@@ -2839,7 +2839,7 @@
                     <i class="fas fa-paperclip"></i>
                 </button>
                 <input type="file" id="aiFileInput" multiple style="display:none">
-                <button id="aiSendBtn"><i class="fas fa-paper-plane"></i></button>
+                <button id="aiSendBtn" aria-label="Send message" title="Send message"><i class="fas fa-paper-plane" aria-hidden="true"></i></button>
                 <button id="aiMicBtn" class="ai-mic-btn" title="Voice input">
                     <i class="fas fa-microphone"></i>
                 </button>
@@ -6572,17 +6572,17 @@
     <div id="aiMiniBar" class="ai-mini-bar">
         <i class="fas fa-atom ai-mini-icon"></i>
         <span class="ai-mini-placeholder">Ask me to optimize, design, or analyze molecules...</span>
-        <button class="ai-mini-send"><i class="fas fa-paper-plane"></i></button>
+        <button class="ai-mini-send" aria-label="Open chat and send" title="Open chat and send"><i class="fas fa-paper-plane" aria-hidden="true"></i></button>
     </div>
 
     <!-- Mobile backdrop for dismissing panels -->
     <div id="mobileBackdrop" class="mobile-backdrop"></div>
 
-    <script type="module" src="main.js"></script>
-    <script src="fileExplorer.js"></script>
-    <script type="module" src="aiagent.js"></script>
-    <script type="module" src="remoteFiles.js"></script>
-    <script src="mobile.js"></script>
+    <script type="module" src="main.js?v=20260510b"></script>
+    <script src="fileExplorer.js?v=20260510b"></script>
+    <script type="module" src="aiagent.js?v=20260510b"></script>
+    <script type="module" src="remoteFiles.js?v=20260510b"></script>
+    <script src="mobile.js?v=20260510b"></script>
 
     <div class="brand-attribution" role="contentinfo">
       ChopChopMol 2.0 &middot; Powered by Claude AI &amp; MACE

@@ -185,8 +185,8 @@ export class RemoteFileManager {
                         <i class="fas fa-server"></i>
                         <span>Remote Connection</span>
                     </div>
-                    <button class="remote-modal-close" onclick="window.remoteFileManager.closeConnectionModal()">
-                        <i class="fas fa-times"></i>
+                    <button class="remote-modal-close" aria-label="Close remote connection dialog" title="Close" onclick="window.remoteFileManager.closeConnectionModal()">
+                        <i class="fas fa-times" aria-hidden="true"></i>
                     </button>
                 </div>
 
