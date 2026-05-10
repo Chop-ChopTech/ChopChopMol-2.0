@@ -9,7 +9,7 @@ const DEFAULT_TIMEOUT_MS = 30000;
 
 const RUNPOD_URL = 'https://l01l6g1um1puzn-10000.proxy.runpod.net';
 const RENDER_URL = 'https://chopchopmol-ai-backend.onrender.com';
-const DEV_URL = 'https://api-dev.chopchopmol.com';
+const DEV_URL = 'https://chopchopmol-dev-backend.onrender.com';
 const LOCAL_URL = 'http://127.0.0.1:10000';
 
 // Map of stable keys → URLs. Keep names lowercase for the localStorage value.
@@ -53,7 +53,11 @@ export async function getBackendUrl() {
     }
 
     // Dev environment — bound to its own backend, no fallback to prod.
-    if (window.location.hostname === 'dev.chopchopmol.com') {
+    // chopchopmoldev.web.app and chopchopmoldev.firebaseapp.com are both Firebase
+    // Hosting URLs for the dev project.
+    if (window.location.hostname === 'chopchopmoldev.web.app' ||
+        window.location.hostname === 'chopchopmoldev.firebaseapp.com' ||
+        window.location.hostname === 'dev.chopchopmol.com') {
         _resolvedBackendUrl = DEV_URL;
         console.log('Backend: Dev');
         return _resolvedBackendUrl;
@@ -148,7 +152,9 @@ export function getBackendUrlSync() {
         _resolvedBackendUrl = LOCAL_URL;
         return LOCAL_URL;
     }
-    if (window.location.hostname === 'dev.chopchopmol.com') {
+    if (window.location.hostname === 'chopchopmoldev.web.app' ||
+        window.location.hostname === 'chopchopmoldev.firebaseapp.com' ||
+        window.location.hostname === 'dev.chopchopmol.com') {
         _resolvedBackendUrl = DEV_URL;
         return DEV_URL;
     }
