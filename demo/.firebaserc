@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "chopchopmol-2"
+    "default": "chopchopmol-2",
+    "prod": "chopchopmol-2",
+    "dev": "chopchopmol-dev"
   }
 }

@@ -9,10 +9,11 @@ const DEFAULT_TIMEOUT_MS = 30000;
 
 const RUNPOD_URL = 'https://l01l6g1um1puzn-10000.proxy.runpod.net';
 const RENDER_URL = 'https://chopchopmol-ai-backend.onrender.com';
+const DEV_URL = 'https://api-dev.chopchopmol.com';
 const LOCAL_URL = 'http://127.0.0.1:10000';
 
 // Map of stable keys → URLs. Keep names lowercase for the localStorage value.
-const BACKEND_URLS = { runpod: RUNPOD_URL, render: RENDER_URL, local: LOCAL_URL };
+const BACKEND_URLS = { runpod: RUNPOD_URL, render: RENDER_URL, dev: DEV_URL, local: LOCAL_URL };
 const BACKEND_OVERRIDE_KEY = 'chopchop_backend_override';
 
 /** Read sticky override saved by the settings UI. Returns null if unset/invalid. */
@@ -48,6 +49,13 @@ export async function getBackendUrl() {
     if (isLocal) {
         _resolvedBackendUrl = LOCAL_URL;
         console.log('Backend: Local');
+        return _resolvedBackendUrl;
+    }
+
+    // Dev environment — bound to its own backend, no fallback to prod.
+    if (window.location.hostname === 'dev.chopchopmol.com') {
+        _resolvedBackendUrl = DEV_URL;
+        console.log('Backend: Dev');
         return _resolvedBackendUrl;
     }
 
@@ -140,6 +148,10 @@ export function getBackendUrlSync() {
         _resolvedBackendUrl = LOCAL_URL;
         return LOCAL_URL;
     }
+    if (window.location.hostname === 'dev.chopchopmol.com') {
+        _resolvedBackendUrl = DEV_URL;
+        return DEV_URL;
+    }
     // Kick off async resolution if not started
     if (!_resolvePromise) getBackendUrl();
     return RENDER_URL; // fallback until resolved
@@ -179,8 +191,8 @@ window.addEventListener('keydown', (e) => {
         _backslashTimer = setTimeout(() => { _backslashCount = 0; }, 1500);
         if (_backslashCount >= 5) {
             _backslashCount = 0;
-            const choice = prompt('Switch backend:\n1: RunPod\n2: Render\n3: Local\n4: Auto-detect');
-            const keys = { '1': 'runpod', '2': 'render', '3': 'local', '4': 'auto' };
+            const choice = prompt('Switch backend:\n1: RunPod\n2: Render\n3: Local\n4: Dev\n5: Auto-detect');
+            const keys = { '1': 'runpod', '2': 'render', '3': 'local', '4': 'dev', '5': 'auto' };
             if (keys[choice]) setBackendOverride(keys[choice]);
         }
     } else {
@@ -190,19 +202,85 @@ window.addEventListener('keydown', (e) => {
 
 /**
  * Auth headers for backend `/ai/*` and `/api/*` requests. The backend's
- * `before_request` gate requires either a Firebase ID token (`Authorization:
- * Bearer ...`) or the guest bypass code (`X-Guest-Code`). Both are sourced
- * from globals set elsewhere (window._firebaseIdToken via onIdTokenChanged,
- * sessionStorage.guestBypass via the gate's guest entry).
+ * `before_request` gate accepts:
+ *   - Firebase ID token: `Authorization: Bearer ...` (signed-in users)
+ *   - Guest token (new): `X-Guest-Token: ...` (issued by `/auth/guest-token`,
+ *     1-hour expiry, replaces the old hardcoded bypass)
+ *   - Guest bypass code (legacy): `X-Guest-Code: 0987` (kept for prod backend
+ *     until it's upgraded to the token system)
+ *
+ * Sources:
+ *   - window._firebaseIdToken: set by onIdTokenChanged elsewhere
+ *   - sessionStorage.guestToken: bootstrapped lazily by `bootstrapGuestToken()`
+ *   - sessionStorage.guestBypass: set by the gate's guest entry path
  */
+const GUEST_TOKEN_KEY = 'chopchop_guest_token';
+const GUEST_TOKEN_EXPIRES_KEY = 'chopchop_guest_token_expires';
+
 export function getAuthHeaders() {
     const h = {};
     const t = (typeof window !== 'undefined') ? window._firebaseIdToken : null;
     if (t) h['Authorization'] = `Bearer ${t}`;
     try {
+        const guestToken = sessionStorage.getItem(GUEST_TOKEN_KEY);
+        const expires = parseInt(sessionStorage.getItem(GUEST_TOKEN_EXPIRES_KEY) || '0', 10);
+        if (guestToken && Date.now() < expires) {
+            h['X-Guest-Token'] = guestToken;
+        }
         if (sessionStorage.getItem('guestBypass') === '1') h['X-Guest-Code'] = '0987';
     } catch { }
     return h;
+}
+
+/**
+ * Fetch a fresh guest token from the backend and cache it in sessionStorage.
+ * The token expires after 1 hour server-side; we refresh ~5 min before that.
+ * Safe to call multiple times — concurrent calls are deduped.
+ */
+let _guestTokenPromise = null;
+export async function bootstrapGuestToken() {
+    try {
+        const existing = sessionStorage.getItem(GUEST_TOKEN_KEY);
+        const expires = parseInt(sessionStorage.getItem(GUEST_TOKEN_EXPIRES_KEY) || '0', 10);
+        // Reuse if at least 5 minutes of life remaining
+        if (existing && (expires - Date.now()) > 5 * 60 * 1000) return existing;
+    } catch { }
+
+    if (_guestTokenPromise) return _guestTokenPromise;
+
+    _guestTokenPromise = (async () => {
+        try {
+            const url = await getBackendUrl();
+            const res = await fetch(`${url}/auth/guest-token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (!data || !data.token) return null;
+            try {
+                sessionStorage.setItem(GUEST_TOKEN_KEY, data.token);
+                // Server expires in 1h; cache slightly less to refresh in time
+                sessionStorage.setItem(GUEST_TOKEN_EXPIRES_KEY, String(Date.now() + 55 * 60 * 1000));
+            } catch { }
+            return data.token;
+        } catch (e) {
+            console.warn('Guest token bootstrap failed:', e?.message || e);
+            return null;
+        } finally {
+            _guestTokenPromise = null;
+        }
+    })();
+    return _guestTokenPromise;
+}
+
+// Bootstrap a guest token on module load for dev/prod (skipped on localhost since
+// the local backend doesn't enforce auth either). The fetch is fire-and-forget;
+// `getAuthHeaders()` reads sessionStorage so callers don't need to await.
+if (typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1') {
+    bootstrapGuestToken();
 }
 
 /**

@@ -1,0 +1,33 @@
+# Deploy the dev branch to the chopchopmol-dev Firebase project.
+# Triggered on every push to dev. Prod is unaffected — different project,
+# different service account secret, different workflow file.
+name: Deploy to Firebase Hosting (dev)
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install demo deps
+        working-directory: ./demo
+        run: npm ci
+
+      - name: Deploy to chopchopmol-dev
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CHOPCHOPMOL_DEV }}
+          channelId: live
+          projectId: chopchopmol-dev
+          entryPoint: ./demo
