@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChopChopMol 2.0</title>
-    <link rel="stylesheet" href="/demo/style.css">
+    <link rel="stylesheet" href="style.css">
     <!-- <link rel="icon" href="logo.png"> -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +13,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- <link rel="icon" href="favicon.ico" type="image/x-icon"> -->
-    <link rel="icon" href="/demo/molicon.png">
+    <link rel="icon" href="molicon.png">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7912318580869252"
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/bundle.min.js"></script>
@@ -220,7 +220,7 @@
     </style>
     <div id="access-gate" style="display:none">
         <div class="ag-card">
-            <img class="ag-logo" src="/demo/molicon.png" alt="">
+            <img class="ag-logo" src="molicon.png" alt="">
             <h1>ChopChopMol</h1>
             <p class="ag-lede" id="ag-lede">Sign in to continue</p>
 
@@ -243,7 +243,7 @@
                 <button id="ag-google" class="ag-google"><i class="fab fa-google"></i> Continue with Google</button>
 
                 <div class="ag-foot">
-                    Don't have an account? <a href="/demo/early-access.html">Request access</a>
+                    Don't have an account? <a href="early-access.html">Request access</a>
                 </div>
 
                 <div class="ag-divider">or</div>
@@ -278,7 +278,7 @@
                 <p style="font-size:12.5px;color:#6b7280;line-height:1.55;margin:6px 0 16px">
                     Your request is in the queue — we'll email you once it's reviewed. Otherwise:
                 </p>
-                <a href="/demo/early-access.html" style="display:block;text-decoration:none;margin-bottom:8px">
+                <a href="early-access.html" style="display:block;text-decoration:none;margin-bottom:8px">
                     <button class="ag-primary" type="button">Edit request</button>
                 </a>
                 <button id="ag-signout">Sign out</button>
@@ -289,7 +289,7 @@
     </div>
 
     <script src="https://unpkg.com/undo-manager@1.0.5/lib/undomanager.js"></script>
-    <script src="/demo/utils/undo.js"></script>
+    <script src="utils/undo.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { getBackendUrl, getRenderBackendUrl, getBackendKey, getSavedBackendOverride, setBackendOverride, onBackendUrlOverride } from '/demo/utils/apiUtils.js';
@@ -1606,7 +1606,7 @@
         <div id="chatOutput" style="margin-top: 10px; max-width: 400px;"></div> -->
     </div>
     <!-- Scripts -->
-    <script src="/demo/utils/utils.js"></script>
+    <script src="utils/utils.js"></script>
     <script>
         const fileInput = document.getElementById('fileInput');
         const customButton = document.getElementById('customButton');
@@ -6563,7 +6563,7 @@
     </script>
 
     <pre id="output"></pre>
-    <script src="/demo/utils/stripe.js"></script>
+    <script src="utils/stripe.js"></script>
 
     <!-- Mobile AI mini-bar (visible only on mobile when AI panel is collapsed) -->
     <div id="aiMiniBar" class="ai-mini-bar">
@@ -6575,11 +6575,11 @@
     <!-- Mobile backdrop for dismissing panels -->
     <div id="mobileBackdrop" class="mobile-backdrop"></div>
 
-    <script type="module" src="/demo/main.js"></script>
-    <script src="/demo/fileExplorer.js"></script>
-    <script type="module" src="/demo/aiagent.js"></script>
-    <script type="module" src="/demo/remoteFiles.js"></script>
-    <script src="/demo/mobile.js"></script>
+    <script type="module" src="main.js"></script>
+    <script src="fileExplorer.js"></script>
+    <script type="module" src="aiagent.js"></script>
+    <script type="module" src="remoteFiles.js"></script>
+    <script src="mobile.js"></script>
 
     <div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);font-size:0.7rem;color:rgba(255,255,255,0.3);padding:4px 12px;pointer-events:none;z-index:1;letter-spacing:0.03em;">
       ChopChopMol 2.0 &middot; Powered by Claude AI &amp; MACE
