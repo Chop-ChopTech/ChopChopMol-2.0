@@ -1,7 +1,36 @@
+/* Avoid the well-known footgun of `transition: all 0.5s` on the universal
+   selector: it animates layout and color shifts on every element during
+   page-load and during legitimate interactions (slider drags, frame swaps,
+   model rebuilds), causing visible jank and unnecessary GPU work.
+
+   The original code relied on this for incidental hover affordances on
+   miscellaneous elements. We keep that affordance with a much shorter
+   duration scoped to common interactive properties (color, background,
+   border, opacity, transform, box-shadow) instead of `all`, which leaves
+   layout-affecting properties (width, height, top, left, etc.) un-animated.
+*/
 * {
-    transition: all 0.5s ease;
-    font-family: rubik;
+    font-family: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        color 0.18s ease,
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        opacity 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+/* Honor accessibility preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 /* Force dark-mode native controls (fixes white dropdowns on Windows) */
@@ -139,15 +168,17 @@ body {
 }
 
 #customButton {
-    background-color: rgb(0, 157, 255);
+    background: var(--brand-grad, linear-gradient(90deg, #833AB4, #1D60FD, #42D6FF));
+    color: #ffffff;
     padding: 8px 11px;
     border: none;
     cursor: pointer;
     height: auto;
+    border-radius: 6px;
 }
 
 #customButton:hover {
-    background-color: #0ec2f9;
+    background: var(--brand-grad-bright, linear-gradient(90deg, #a855e9, #3b82fd, #74ecff));
 }
 
 #chatInputContainer {
@@ -250,18 +281,18 @@ body {
 
 #aiGenerate {
     color: #fff;
-    background: linear-gradient(90deg, rgb(77, 166, 255), rgb(255, 42, 42), rgb(215, 181, 32));
+    background: var(--brand-grad, linear-gradient(90deg, #833AB4, #1D60FD, #42D6FF));
     padding: 8px 11px;
     border: none;
     cursor: pointer;
     height: auto;
-    border-radius: 5px;
+    border-radius: 6px;
+    font-weight: 500;
 }
 
 #aiGenerate:hover {
-    color: #ffea00;
-    box-shadow: 0 0 10px rgb(255, 255, 0), 0 0 15px rgba(255, 204, 0, 0);
-    background-color: #0ec2f9;
+    background: var(--brand-grad-bright, linear-gradient(90deg, #a855e9, #3b82fd, #74ecff));
+    box-shadow: var(--brand-glow, 0 5px 20px rgba(29, 96, 253, 0.35));
 }
 
 #buttons {
@@ -297,18 +328,19 @@ body {
 
 #generateButton {
     color: #fff;
-    background: linear-gradient(90deg, rgba(0, 136, 255, 1) 0%, rgb(0, 94, 255) 0%, rgba(255, 0, 98, 1) 100%);
+    background: var(--brand-grad, linear-gradient(90deg, #833AB4, #1D60FD, #42D6FF));
     padding: 8px 11px;
     border: none;
     cursor: pointer;
-    border-radius: 5px;
-    background-size: 300% 100%;
+    border-radius: 6px;
+    background-size: 200% 100%;
     height: 43px;
+    font-weight: 500;
 }
 
 #generateButton:hover {
-    color: #ffea00;
-    background-color: #0ec2f9;
+    background: var(--brand-grad-bright, linear-gradient(90deg, #a855e9, #3b82fd, #74ecff));
+    box-shadow: var(--brand-glow, 0 5px 20px rgba(29, 96, 253, 0.35));
 }
 
 #toggleLabels {
@@ -562,35 +594,39 @@ body {
 
 
 
+/* Loading indicator — formerly a rainbow gradient that read as cartoonish.
+   Now uses the brand gradient for a calm, branded loading state. */
 #loading {
     position: absolute;
-    color: #fff;
-    /* background-color: #00d600; */
-    width: 100vw;
+    width: auto;
     left: 50%;
     transform: translateX(-50%);
     text-align: center;
-    padding: 10px 0;
-    border-radius: 5px;
+    padding: 6px 16px;
+    border-radius: 999px;
     white-space: nowrap;
-    font-size: 2em;
-    height: 30px;
-    /* Ensures text stays on one line */
-    background: linear-gradient(90deg, #ff0000, #ff9900, #33cc33, #3399ff, #ff0000);
-    background-size: 200% 200%;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: linear-gradient(90deg,
+        rgba(168, 85, 233, 1) 0%,
+        rgba(59, 130, 253, 1) 50%,
+        rgba(116, 236, 255, 1) 100%);
+    background-size: 200% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: gradient 7s linear infinite;
+    animation: gradient 6s linear infinite;
     display: inline-block;
     top: -100px;
-    transition: all 0.5s ease;
+    transition: top 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
     z-index: 9999;
     pointer-events: none;
+    text-shadow: none;
 }
 
 #loading.on {
-    top: 85px;
+    top: 78px;
 }
 
 #clear-canvas {
@@ -1306,15 +1342,16 @@ input[type="range"]:focus {
 
 /* Icon styling */
 .dropdown-icon {
-    font-size: 22px;
+    font-size: 21px;
     cursor: pointer;
     padding: 0;
     background-color: transparent;
+    border: 0;
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255, 255, 255, 0.65);
+    color: rgba(255, 255, 255, 0.78);
     transition: color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
     width: 42px;
     height: 42px;
@@ -1322,6 +1359,13 @@ input[type="range"]:focus {
 }
 
 .dropdown-icon:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.dropdown-icon:focus-visible {
+    outline: 2px solid var(--brand-cyan, #42D6FF);
+    outline-offset: -2px;
     color: #ffffff;
 }
 
@@ -2467,10 +2511,40 @@ input[type="range"]:focus {
     }
 }
 
-/* AI Toggle Button in Toolbar */
+/* AI Toggle Button in Toolbar — primary CTA, branded gradient ring */
 #aiToggleBtn {
     color: white;
     position: relative;
+}
+
+#aiToggleBtn::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: 8px;
+    padding: 1px;
+    background: var(--brand-grad-bright, linear-gradient(135deg, #a855e9, #74ecff));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    opacity: 0.55;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+#aiToggleBtn:hover::before,
+#aiToggleBtn.active::before {
+    opacity: 1;
+}
+
+#aiToggleBtn.active {
+    color: #ffffff;
+    background: rgba(131, 58, 180, 0.12);
+}
+
+#aiToggleBtn:focus-visible {
+    outline: 2px solid var(--brand-cyan, #42D6FF);
+    outline-offset: 2px;
 }
 
 
@@ -2557,9 +2631,14 @@ input[type="range"]:focus {
 }
 
 .ai-model-trigger:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(131, 58, 180, 0.35);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(131, 58, 180, 0.55);
     color: #fff;
+}
+
+.ai-model-trigger:focus-visible {
+    outline: 2px solid var(--brand-cyan, #42D6FF);
+    outline-offset: 2px;
 }
 
 .ai-model-trigger-badge {
@@ -3174,19 +3253,28 @@ input[type="range"]:focus {
     color: rgba(255, 255, 255, 0.85);
 }
 
+.ai-header-btn:focus-visible {
+    outline: 2px solid var(--brand-cyan, #42D6FF);
+    outline-offset: 2px;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* "New chat" button — was previously red which read as a "delete/danger"
+   action rather than a positive new-conversation affordance and clashed
+   with the brand purple/cyan palette. */
 .ai-clear-btn {
     padding: 5px 7px;
     width: auto;
-    color: rgba(239, 80, 80, 0.5);
+    color: rgba(255, 255, 255, 0.55);
     border-color: transparent;
     background: none;
     font-size: 12px;
 }
 
 .ai-clear-btn:hover {
-    color: rgba(140, 160, 255, 0.9);
-    background: rgba(140, 160, 255, 0.1);
-    border-color: rgba(140, 160, 255, 0.15);
+    color: rgba(140, 160, 255, 0.95);
+    background: rgba(140, 160, 255, 0.10);
+    border-color: rgba(140, 160, 255, 0.18);
 }
 
 .ai-header-btn:disabled {
@@ -4418,9 +4506,9 @@ input[type="range"]:focus {
 }
 
 #aiChatInput:focus {
-    border-color: rgba(29, 96, 253, 0.25);
-    background: rgba(255, 255, 255, 0.06);
-    box-shadow: 0 0 0 3px rgba(29, 96, 253, 0.06);
+    border-color: rgba(66, 214, 255, 0.55);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 0 0 3px rgba(66, 214, 255, 0.15);
 }
 
 #aiSendBtn {
@@ -4904,18 +4992,21 @@ input[type="range"]:focus {
 
 #fileSearchInput {
     flex: 1;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
     padding: 6px 10px;
     color: #fff;
     font-size: 12px;
     outline: none;
     width: 100%;
+    transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
 
 #fileSearchInput:focus {
-    border-color: rgba(0, 136, 255, 0.5);
+    border-color: rgba(66, 214, 255, 0.45);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 3px rgba(66, 214, 255, 0.12);
 }
 
 #fileSearchInput::placeholder {
@@ -8091,7 +8182,33 @@ input[type="color"]::-moz-color-swatch {
     }
 }
 
-/* Landing Card */
+/* ── Brand Attribution Footer ─────────────────────────────────────────────
+   Pinned to the bottom of the viewport. Subtle so it never competes
+   with primary content; sized to remain legible on dark backgrounds. */
+.brand-attribution {
+    position: fixed;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.34);
+    padding: 4px 12px;
+    pointer-events: none;
+    z-index: 1;
+    letter-spacing: 0.04em;
+    font-weight: 400;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 480px) {
+    .brand-attribution { font-size: 10px; bottom: 2px; }
+}
+
+/* ── Landing Card ─────────────────────────────────────────────────────────
+   Shown when no molecule is loaded. Anchored center of the viewport
+   between the AI panel (left) and file explorer (right). Hidden via
+   `display:none` by main.js as soon as the first molecule loads. */
 #landingCard {
     position: fixed;
     top: 0;
@@ -8103,78 +8220,137 @@ input[type="color"]::-moz-color-swatch {
     justify-content: center;
     z-index: 10;
     pointer-events: none;
+    /* Avoid being covered by the chat input bar / file explorer drawer */
+    padding: 80px 16px 120px;
+    box-sizing: border-box;
 }
 
 .landing-card-content {
     pointer-events: auto;
-    border: 2px dashed rgba(255, 255, 255, 0.25);
-    border-radius: 24px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    background: rgba(255, 255, 255, 0.04);
-    padding: 48px 56px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    background:
+        radial-gradient(120% 80% at 0% 0%, rgba(131, 58, 180, 0.10), transparent 60%),
+        radial-gradient(120% 80% at 100% 100%, rgba(66, 214, 255, 0.08), transparent 60%),
+        rgba(10, 14, 28, 0.55);
+    padding: 40px 48px 32px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    min-width: 340px;
+    gap: 10px;
+    max-width: 520px;
+    text-align: center;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.06) inset,
+        0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
-.landing-title {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 22px;
+.landing-headline {
+    /* Required by tests: must contain "Design molecules with AI" */
+    margin: 0 0 4px 0;
+    font-size: 28px;
+    line-height: 1.18;
     font-weight: 600;
-    margin: 0;
-    letter-spacing: 0.5px;
+    letter-spacing: -0.02em;
+    background: var(--brand-grad-bright, linear-gradient(135deg, #a855e9, #74ecff));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
-.landing-subtitle {
-    color: rgba(255, 255, 255, 0.45);
+.landing-lede {
+    color: rgba(255, 255, 255, 0.66);
     font-size: 14px;
-    margin: 0 0 16px 0;
+    line-height: 1.55;
+    margin: 0 0 20px 0;
+    max-width: 420px;
     font-weight: 400;
 }
 
 .landing-buttons {
     display: flex;
-    gap: 12px;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .landing-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 24px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 14px;
+    padding: 10px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.86);
+    font-family: inherit;
+    font-size: 13.5px;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .landing-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.26);
     transform: translateY(-1px);
 }
 
-.landing-btn:active {
-    transform: translateY(0);
+.landing-btn:active { transform: translateY(0); }
+
+.landing-btn:focus-visible {
+    outline: 2px solid var(--brand-cyan, #42D6FF);
+    outline-offset: 2px;
 }
 
 .landing-btn i {
-    font-size: 16px;
-    opacity: 0.7;
+    font-size: 14px;
+    opacity: 0.78;
 }
 
+/* Primary action — branded gradient pill */
+.landing-btn-primary {
+    background: var(--brand-grad, linear-gradient(90deg, #833AB4, #1D60FD, #42D6FF));
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 6px 18px rgba(29, 96, 253, 0.35);
+}
+
+.landing-btn-primary:hover {
+    background: var(--brand-grad-bright, linear-gradient(90deg, #a855e9, #3b82fd, #74ecff));
+    border-color: transparent;
+    box-shadow: 0 8px 22px rgba(29, 96, 253, 0.5);
+}
+
+.landing-btn-primary i { opacity: 1; }
+
 .landing-hint {
-    color: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.36);
     font-size: 12px;
-    margin: 12px 0 0 0;
+    margin: 14px 0 0 0;
     font-weight: 400;
+    letter-spacing: 0.01em;
+}
+
+.landing-hint kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    line-height: 1.2;
+    vertical-align: 1px;
+}
+
+@media (max-width: 640px) {
+    .landing-card-content { padding: 28px 24px 22px; }
+    .landing-headline { font-size: 22px; }
+    .landing-lede { font-size: 13px; }
 }
 
 /* ── Toast Notification System ── */

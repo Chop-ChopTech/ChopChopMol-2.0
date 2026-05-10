@@ -23,9 +23,11 @@
 </head>
 
 <body>
-    <!-- Critical error page (WebGL failure, etc.) — no module dependencies -->
-    <div id="critical-error-page">
-        <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <!-- Critical error page (WebGL failure, etc.) — no module dependencies.
+         Inline `display:none` prevents an unstyled FOUC flash before style.css parses,
+         which on slow connections briefly renders the SVG at full-page size. -->
+    <div id="critical-error-page" style="display:none;">
+        <svg class="error-icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
             <line x1="12" y1="9" x2="12" y2="13" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -1541,23 +1543,24 @@
         <h3>Drag and drop a file here .xyz, .mol, or .pdb to be loaded</h3>
     </div>
 
-    <div id="landingCard" style="display: none!important;">
+    <!-- Landing card: shown when no molecule is loaded. Hidden by main.js
+         after the first molecule loads. Visible by default (CSS sets display:flex).
+         Earlier inline `display:none!important` made the value-prop invisible. -->
+    <div id="landingCard">
         <div class="landing-card-content">
-            <h2 class="landing-title">ChopChopMol</h2>
-            <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:0.5rem;background:var(--brand-grad,linear-gradient(135deg,#833ab4,#00d4ff));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Design molecules with AI</h2>
-            <p style="font-size:0.9rem;color:rgba(255,255,255,0.7);margin-bottom:1.2rem;line-height:1.5;">Generate structures, optimize geometries, and run quantum chemistry calculations — all through natural language.</p>
-            <p class="landing-subtitle">Load a molecule. Design new structures with natural language and AI.</p>
+            <h1 class="landing-headline">Design molecules with AI</h1>
+            <p class="landing-lede">Generate structures, optimize geometries, and run quantum chemistry calculations &mdash; all through natural language.</p>
             <div class="landing-buttons">
-                <button class="landing-btn" id="landingOpenFile">
-                    <i class="fa-solid fa-folder-open"></i>
+                <button class="landing-btn landing-btn-primary" id="landingOpenFile" type="button">
+                    <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
                     <span>Open File</span>
                 </button>
-                <button class="landing-btn" id="landingSearchDB">
-                    <i class="fa-solid fa-magnifying-glass"></i>
+                <button class="landing-btn" id="landingSearchDB" type="button">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                     <span>Search Database</span>
                 </button>
             </div>
-            <p class="landing-hint">or drag & drop a file anywhere</p>
+            <p class="landing-hint">or drag &amp; drop a file anywhere &middot; press <kbd>?</kbd> for shortcuts</p>
         </div>
     </div>
 
@@ -6581,7 +6584,7 @@
     <script type="module" src="remoteFiles.js"></script>
     <script src="mobile.js"></script>
 
-    <div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);font-size:0.7rem;color:rgba(255,255,255,0.3);padding:4px 12px;pointer-events:none;z-index:1;letter-spacing:0.03em;">
+    <div class="brand-attribution" role="contentinfo">
       ChopChopMol 2.0 &middot; Powered by Claude AI &amp; MACE
     </div>
 
