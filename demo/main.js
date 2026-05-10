@@ -7201,14 +7201,17 @@ window.updateForceArrowControls = function () {
     const checkbox = document.getElementById('toggleForceArrows');
     const colorCheckbox = document.getElementById('toggleForceColors');
 
-    console.log('[ForceArrows] updateForceArrowControls called');
-    console.log('[ForceArrows] molecule exists:', !!molecule);
-    console.log('[ForceArrows] hasForceData():', hasForces);
-    if (molecule) {
-        console.log('[ForceArrows] forceData:', molecule.forceData);
-        console.log('[ForceArrows] forceData length:', molecule.forceData?.length);
-        if (molecule.forceData && molecule.forceData.length > 0) {
-            console.log('[ForceArrows] First force entry:', molecule.forceData[0]);
+    // Verbose debug logs gated behind window.__DEBUG_FORCES — set in DevTools to enable.
+    if (window.__DEBUG_FORCES) {
+        console.log('[ForceArrows] updateForceArrowControls called');
+        console.log('[ForceArrows] molecule exists:', !!molecule);
+        console.log('[ForceArrows] hasForceData():', hasForces);
+        if (molecule) {
+            console.log('[ForceArrows] forceData:', molecule.forceData);
+            console.log('[ForceArrows] forceData length:', molecule.forceData?.length);
+            if (molecule.forceData && molecule.forceData.length > 0) {
+                console.log('[ForceArrows] First force entry:', molecule.forceData[0]);
+            }
         }
     }
 
@@ -7700,13 +7703,15 @@ window.updateOrbitalControls = function () {
     const orbitalTablePanel = document.getElementById('orbitalTablePanel');
     const orbitalTableBody = document.getElementById('orbitalTableBody');
 
-    console.log('[Orbitals] updateOrbitalControls called');
-    console.log('[Orbitals] molecule exists:', !!molecule);
-    console.log('[Orbitals] hasOrbitalData():', hasOrbitals);
+    if (window.__DEBUG_ORBITALS) {
+        console.log('[Orbitals] updateOrbitalControls called');
+        console.log('[Orbitals] molecule exists:', !!molecule);
+        console.log('[Orbitals] hasOrbitalData():', hasOrbitals);
+    }
 
     if (hasOrbitals && orbitalTablePanel) {
         const info = molecule.getOrbitalInfo();
-        console.log('[Orbitals] Orbital info:', info);
+        if (window.__DEBUG_ORBITALS) console.log('[Orbitals] Orbital info:', info);
 
         // Show the orbital table panel
         orbitalTablePanel.classList.add('open');

@@ -21,6 +21,25 @@
         box-shadow 0.18s ease;
 }
 
+/* Accessible global focus ring fallback. Many components below intentionally
+   set `outline: none` to clean up mouse focus rings. We restore a visible
+   focus indicator for keyboard users via :focus-visible — it only renders
+   when the browser determines focus arrived via keyboard, so mouse clicks
+   stay clean. Component-specific :focus-visible rules elsewhere override
+   this safely. */
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+    outline: 2px solid var(--brand-cyan, #42D6FF);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
 /* Honor accessibility preference for reduced motion */
 @media (prefers-reduced-motion: reduce) {
     *,

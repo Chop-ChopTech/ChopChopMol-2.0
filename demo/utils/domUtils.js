@@ -9,10 +9,19 @@
  * @param {Function} handler - The event handler to attach
  * @returns {HTMLElement|null} The new button element, or null if button not found
  */
+// Track button IDs we've already warned about so the same warning doesn't
+// flood the console on every selection / re-render. Some buttons are
+// referenced for legacy code paths that no longer have a corresponding
+// element — once is enough.
+const _missingButtonWarned = new Set();
+
 export function reattachButtonHandler(buttonId, handler) {
     const button = document.getElementById(buttonId);
     if (!button) {
-        console.warn(`Button with id "${buttonId}" not found`);
+        if (!_missingButtonWarned.has(buttonId)) {
+            _missingButtonWarned.add(buttonId);
+            console.warn(`Button with id "${buttonId}" not found`);
+        }
         return null;
     }
 
