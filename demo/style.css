@@ -8213,16 +8213,18 @@ input[type="color"]::-moz-color-swatch {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    /* Use viewport units, not %, because <body> has no explicit height
+       (it's flex-sized to its content) and 100% on a fixed element
+       resolved to ~32px instead of the viewport height. */
+    width: 100vw;
+    height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 10;
     pointer-events: none;
-    /* Generous padding that still keeps the card off the toolbar (top)
-       and the chat input bar (bottom). Reduced from 80/120 to 64/96
-       so a 360-400px-tall card never overflows on 720p displays. */
+    /* Padding that still keeps the card off the toolbar (top) and the
+       chat input bar (bottom) on a 720p screen. */
     padding: 64px 16px 96px;
     box-sizing: border-box;
 }
