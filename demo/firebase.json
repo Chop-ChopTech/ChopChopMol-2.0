@@ -6,7 +6,6 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
-    "site": "chopchopmol-2",
     "public": "./",
     "ignore": [
       "firebase.json",
