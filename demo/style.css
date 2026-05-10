@@ -8220,8 +8220,10 @@ input[type="color"]::-moz-color-swatch {
     justify-content: center;
     z-index: 10;
     pointer-events: none;
-    /* Avoid being covered by the chat input bar / file explorer drawer */
-    padding: 80px 16px 120px;
+    /* Generous padding that still keeps the card off the toolbar (top)
+       and the chat input bar (bottom). Reduced from 80/120 to 64/96
+       so a 360-400px-tall card never overflows on 720p displays. */
+    padding: 64px 16px 96px;
     box-sizing: border-box;
 }
 
@@ -8235,11 +8237,11 @@ input[type="color"]::-moz-color-swatch {
         radial-gradient(120% 80% at 0% 0%, rgba(131, 58, 180, 0.10), transparent 60%),
         radial-gradient(120% 80% at 100% 100%, rgba(66, 214, 255, 0.08), transparent 60%),
         rgba(10, 14, 28, 0.55);
-    padding: 40px 48px 32px;
+    padding: 32px 40px 26px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     max-width: 520px;
     text-align: center;
     box-shadow:
@@ -8250,21 +8252,23 @@ input[type="color"]::-moz-color-swatch {
 .landing-headline {
     /* Required by tests: must contain "Design molecules with AI" */
     margin: 0 0 4px 0;
-    font-size: 28px;
-    line-height: 1.18;
+    font-size: 26px;
+    line-height: 1.2;
     font-weight: 600;
     letter-spacing: -0.02em;
     background: var(--brand-grad-bright, linear-gradient(135deg, #a855e9, #74ecff));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    /* Fallback color for browsers without background-clip:text support */
+    color: #ffffff;
 }
 
 .landing-lede {
     color: rgba(255, 255, 255, 0.66);
-    font-size: 14px;
+    font-size: 13.5px;
     line-height: 1.55;
-    margin: 0 0 20px 0;
+    margin: 0 0 18px 0;
     max-width: 420px;
     font-weight: 400;
 }
