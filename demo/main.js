@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { ArcballControls } from 'jsm/controls/ArcballControls.js';
 import { RGBELoader } from 'jsm/loaders/RGBELoader.js';
 
-import Molecule from '/demo/atom/molecule.js';
-import FileHandler from '/demo/utils/fileHandler.js';
-import { reattachButtonHandler } from '/demo/utils/domUtils.js';
-import '/demo/utils/orbitalUtils.js'; // Orbital visualization utilities
-import '/demo/utils/moldenOrbitalUtils.js'; // Molden orbital grid generation
+import Molecule from './atom/molecule.js';
+import FileHandler from './utils/fileHandler.js';
+import { reattachButtonHandler } from './utils/domUtils.js';
+import './utils/orbitalUtils.js'; // Orbital visualization utilities
+import './utils/moldenOrbitalUtils.js'; // Molden orbital grid generation
 import {
     hideRestrictionMessage,
     showRestrictionMessage,
@@ -21,7 +21,7 @@ import {
     originalEventHandlers,
     isUserSignedIn
 
-} from '/demo/handleFeatures.js';
+} from './handleFeatures.js';
 
 import {
     saveStylePreferences,
@@ -30,10 +30,10 @@ import {
     showNotification,
     resetToDefaults,
 
-} from '/demo/handleStyles.js';
+} from './handleStyles.js';
 
-import '/demo/utils/toast.js';
-import '/demo/utils/errorHandler.js';
+import './utils/toast.js';
+import './utils/errorHandler.js';
 
 // WebGL feature detection
 function checkWebGLSupport() {
@@ -248,7 +248,7 @@ export default class Main {
 
         // Clear ribbon
         if (ribbonGroup) {
-            import('/demo/utils/ribbon.js').then(module => {
+            import('./utils/ribbon.js').then(module => {
                 module.removeRibbon(ribbonGroup, scene);
                 ribbonGroup = null;
             });
@@ -302,7 +302,7 @@ export default class Main {
 
         // If ribbon mode, create ribbon instead of showing atoms
         if (useRibbonMode && data.ribbonData) {
-            import('/demo/utils/ribbon.js').then(module => {
+            import('./utils/ribbon.js').then(module => {
                 ribbonGroup = module.createRibbon(
                     data.ribbonData,
                     scene,
@@ -1604,7 +1604,7 @@ async function saveAsFile(format = 'xyz') {
     }
 
     // Dynamically import file writer
-    const { saveFile, downloadFile, saveToFileExplorer } = await import('/demo/utils/fileWriter.js');
+    const { saveFile, downloadFile, saveToFileExplorer } = await import('./utils/fileWriter.js');
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `molecule_${timestamp}.${format}`;
@@ -4127,7 +4127,7 @@ function attachMouseWheelRotation() {
 }
 window.attachMouseWheelRotation = attachMouseWheelRotation
 const buttonSound = new Audio()
-buttonSound.src = "/demo/Create.wav"
+buttonSound.src = "Create.wav"
 
 document.querySelectorAll('button').forEach(button => {
     button.addEventListener('click', (event) => {

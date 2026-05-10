@@ -746,7 +746,7 @@ let workerPending = null;
 function getMarchingCubesWorker() {
     if (!marchingCubesWorker) {
         try {
-            marchingCubesWorker = new Worker('/demo/utils/marchingCubesWorker.js');
+            marchingCubesWorker = new Worker(new URL('./marchingCubesWorker.js', import.meta.url));
         } catch (e) {
             console.warn('[Orbitals] Failed to create web worker, falling back to main thread:', e);
             return null;

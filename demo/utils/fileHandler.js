@@ -1637,7 +1637,7 @@ export default class FileHandler {
     }
 
     parseJSON() {
-        return fetch('/demo/utils/atomSettings.json')
+        return fetch(new URL('./atomSettings.json', import.meta.url))
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`Failed to load JSON: ${response.statusText}`);
