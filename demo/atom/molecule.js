@@ -64,6 +64,24 @@ export default class Molecule {
         this.currentLODResolution = 8;
         this.lastLODUpdateTime = 0;
         this.lodUpdateInterval = 100; // ms between LOD checks
+
+        // Disposal-race guard. Three.js geometry/material disposal is not
+        // re-entrant: if a frame animation or async file load fires draw()
+        // while reset() is mid-flight, instancedMesh/bondGroup get torn down
+        // twice and emit "WebGL invalid operation" warnings or crash on null
+        // material lookups. Set this flag at the start of any teardown and
+        // clear it at the end; mutators should bail when it is true.
+        this._disposalInProgress = false;
+    }
+
+    /**
+     * Returns true while a teardown (reset/dispose) is in progress. Mutators
+     * that touch this.instancedMesh or this.bondGroup (animateToFrame,
+     * createForceArrows, etc.) should bail when this is true to avoid the
+     * disposal race described in the constructor.
+     */
+    isDisposing() {
+        return this._disposalInProgress === true;
     }
 
     init(data, mode, center, ribbonMode = false) {
@@ -576,59 +594,68 @@ export default class Molecule {
 
 
     reset() {
-        this.atoms = [];
-        this.bonds = [];
+        // Guard against re-entry. If a frame animation or async file load
+        // races with reset(), the second caller would otherwise try to dispose
+        // already-disposed geometries.
+        if (this._disposalInProgress) return;
+        this._disposalInProgress = true;
+        try {
+            this.atoms = [];
+            this.bonds = [];
 
-        if (this.instancedMesh) {
-            this.main.scene.remove(this.instancedMesh);
-            if (this.instancedMesh.geometry) {
-                this.instancedMesh.geometry.dispose();
-            }
-            if (this.instancedMesh.material) {
-                if (Array.isArray(this.instancedMesh.material)) {
-                    this.instancedMesh.material.forEach(mat => mat.dispose());
-                } else {
-                    this.instancedMesh.material.dispose();
+            if (this.instancedMesh) {
+                this.main.scene.remove(this.instancedMesh);
+                if (this.instancedMesh.geometry) {
+                    this.instancedMesh.geometry.dispose();
                 }
-            }
-            this.instancedMesh = null;
-        }
-
-        if (this.bondGroup) {
-            while (this.bondGroup.children.length > 0) {
-                const child = this.bondGroup.children[0];
-                this.bondGroup.remove(child);
-                if (child.geometry) child.geometry.dispose();
-                if (child.material) {
-                    if (Array.isArray(child.material)) {
-                        child.material.forEach(mat => mat.dispose());
+                if (this.instancedMesh.material) {
+                    if (Array.isArray(this.instancedMesh.material)) {
+                        this.instancedMesh.material.forEach(mat => mat.dispose());
                     } else {
-                        child.material.dispose();
+                        this.instancedMesh.material.dispose();
                     }
                 }
+                this.instancedMesh = null;
             }
-            this.main.scene.remove(this.bondGroup);
-            this.bondGroup = new THREE.Group();
-        }
 
-        // Clear force arrows
-        if (this.forceArrowGroup) {
-            while (this.forceArrowGroup.children.length > 0) {
-                const child = this.forceArrowGroup.children[0];
-                this.forceArrowGroup.remove(child);
-                if (child.geometry) child.geometry.dispose();
-                if (child.material) child.material.dispose();
+            if (this.bondGroup) {
+                while (this.bondGroup.children.length > 0) {
+                    const child = this.bondGroup.children[0];
+                    this.bondGroup.remove(child);
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(mat => mat.dispose());
+                        } else {
+                            child.material.dispose();
+                        }
+                    }
+                }
+                this.main.scene.remove(this.bondGroup);
+                this.bondGroup = new THREE.Group();
             }
-            this.main.scene.remove(this.forceArrowGroup);
-            this.forceArrowGroup = new THREE.Group();
+
+            // Clear force arrows
+            if (this.forceArrowGroup) {
+                while (this.forceArrowGroup.children.length > 0) {
+                    const child = this.forceArrowGroup.children[0];
+                    this.forceArrowGroup.remove(child);
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) child.material.dispose();
+                }
+                this.main.scene.remove(this.forceArrowGroup);
+                this.forceArrowGroup = new THREE.Group();
+            }
+            this.forceData = null;
+
+            // Clear orbital visualization
+            this.clearOrbitals();
+
+            // Clear labels properly
+            this.clearLabels();
+        } finally {
+            this._disposalInProgress = false;
         }
-        this.forceData = null;
-
-        // Clear orbital visualization
-        this.clearOrbitals();
-
-        // Clear labels properly
-        this.clearLabels();
     }
 
     updateBonds(mode) {
@@ -1005,7 +1032,12 @@ export default class Molecule {
 
     // Create force arrows from force data
     createForceArrows(scale = 1.0, colorPositive = 0xff4444, colorNegative = 0x4444ff) {
+        // Guard against the disposal race (see constructor). If another caller
+        // is tearing the molecule down, skip — the arrows will be rebuilt next
+        // draw cycle.
+        if (this._disposalInProgress) return;
         if (!this.forceData || !this.atoms.length) return;
+        if (!this.forceArrowGroup) return;
 
         // Clear existing arrows
         while (this.forceArrowGroup.children.length > 0) {

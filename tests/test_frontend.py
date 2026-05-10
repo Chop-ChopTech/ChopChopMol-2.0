@@ -96,3 +96,91 @@ class TestCopyImprovements:
         # Old: "Model & Reasoning" / New: "Choose Model & Thinking Mode"
         assert 'Choose Model' in html or 'Thinking Mode' in html, \
             "Model picker title not updated to 'Choose Model & Thinking Mode'"
+
+
+# ── Engineering hardening ─────────────────────────────────────────────────────
+
+API_UTILS_PATH = os.path.join(os.path.dirname(__file__), '..', 'demo', 'utils', 'apiUtils.js')
+ERROR_HANDLER_PATH = os.path.join(os.path.dirname(__file__), '..', 'demo', 'utils', 'errorHandler.js')
+MOLECULE_PATH = os.path.join(os.path.dirname(__file__), '..', 'demo', 'atom', 'molecule.js')
+
+
+@pytest.fixture(scope='module')
+def api_utils():
+    with open(API_UTILS_PATH, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
+@pytest.fixture(scope='module')
+def error_handler():
+    with open(ERROR_HANDLER_PATH, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
+@pytest.fixture(scope='module')
+def molecule_js():
+    with open(MOLECULE_PATH, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
+class TestSSEErrorBoundary:
+    def test_streamSSE_has_retry_param(self, api_utils):
+        """streamSSE must accept a `retries` option for transport-level retries."""
+        assert 'retries' in api_utils, "streamSSE missing retry support"
+        # Exponential backoff should be implemented
+        assert 'Math.pow' in api_utils or 'baseDelayMs' in api_utils, \
+            "streamSSE missing exponential backoff"
+
+    def test_per_event_handler_errors_contained(self, api_utils):
+        """A single bad event must not kill the rest of the stream — the
+        onEvent callback must be wrapped in try/catch."""
+        # The onEvent invocation must be inside a try block
+        assert 'try {\n                onEvent(event)' in api_utils \
+            or "try { onEvent(event)" in api_utils, \
+            "onEvent callback is not wrapped in try/catch (per-event error boundary missing)"
+
+
+class TestGlobalErrorLog:
+    def test_window_errors_array_initialized(self, error_handler):
+        """`window.__errors` must be initialized so dev/QA can dump errors."""
+        assert 'window.__errors' in error_handler, \
+            "errorHandler.js does not expose window.__errors"
+
+    def test_record_error_helper_exposed(self, error_handler):
+        """A `recordError` helper must be exposed on window for callers to log
+        their own caught errors."""
+        assert 'window.recordError' in error_handler, \
+            "window.recordError helper missing — callers can't log caught errors"
+
+    def test_error_log_is_capped(self, error_handler):
+        """The error log must be capped to avoid unbounded memory growth."""
+        assert 'MAX_ERRORS' in error_handler or 'splice' in error_handler, \
+            "Error log appears uncapped (memory leak risk)"
+
+
+class TestThreeJsDisposalRace:
+    def test_disposal_in_progress_flag_set(self, molecule_js):
+        """The disposal-in-progress guard must be initialized in the
+        constructor."""
+        assert '_disposalInProgress' in molecule_js, \
+            "Molecule._disposalInProgress flag not present"
+
+    def test_reset_uses_guard(self, molecule_js):
+        """reset() must check and set the disposal guard to be re-entry safe."""
+        # The reset method should read the flag to early-return AND set it.
+        idx = molecule_js.find('reset() {')
+        assert idx != -1, "reset() method not found"
+        body = molecule_js[idx:idx + 1500]
+        assert '_disposalInProgress' in body, \
+            "reset() does not consult the disposal guard"
+        # And it should set it to true at start
+        assert 'this._disposalInProgress = true' in body, \
+            "reset() does not set _disposalInProgress = true"
+
+    def test_create_force_arrows_respects_guard(self, molecule_js):
+        """createForceArrows() must early-return during disposal."""
+        idx = molecule_js.find('createForceArrows(')
+        assert idx != -1, "createForceArrows method not found"
+        body = molecule_js[idx:idx + 800]
+        assert '_disposalInProgress' in body, \
+            "createForceArrows() does not respect the disposal guard"

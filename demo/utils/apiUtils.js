@@ -425,14 +425,48 @@ export async function retryFetch(fetchFn, maxRetries = 3, baseDelayMs = 1000) {
  *   {type: 'progress' | 'frame' | 'scf' | 'stdout' | 'stderr' | 'status'
  *         | 'heartbeat' | 'figure' | 'done' | 'error', ...payload}
  *
+ * Resiliency:
+ *   - Per-event handler errors are caught and reported via `onError`. One bad
+ *     event will not kill the rest of the stream (matches "error boundary"
+ *     semantics — a render glitch in one frame shouldn't drop the connection).
+ *   - On transport failure (network blip, 5xx) the call optionally retries with
+ *     exponential backoff. Retries are off by default; opt in with
+ *     `{ retries: 2 }`. The body is replayed; the caller is responsible for
+ *     providing an idempotent payload.
+ *
  * @param {string} url         Full endpoint URL
  * @param {object} body        POST body (JSON-serialized)
  * @param {object} opts
  * @param {(ev:object)=>void} opts.onEvent  Per-event callback
+ * @param {(err:Error,ev?:object)=>void} [opts.onError]  Per-event error reporter
  * @param {AbortSignal}       [opts.signal] Abort signal
  * @param {Record<string,string>} [opts.headers]
+ * @param {number}            [opts.retries=0]  Transport-level retry count
+ * @param {number}            [opts.baseDelayMs=500]  First backoff delay
  */
-export async function streamSSE(url, body, { onEvent, signal, headers } = {}) {
+export async function streamSSE(url, body, opts = {}) {
+    const { onEvent, onError, signal, headers, retries = 0, baseDelayMs = 500 } = opts;
+    let attempt = 0;
+    let lastErr;
+    while (attempt <= retries) {
+        try {
+            return await _streamSSEOnce(url, body, { onEvent, onError, signal, headers });
+        } catch (err) {
+            lastErr = err;
+            // Don't retry user-aborted streams or auth/4xx errors.
+            const aborted = err && (err.name === 'AbortError' || (signal && signal.aborted));
+            const is4xx = /^HTTP 4\d\d/.test(err && err.message || '');
+            if (aborted || is4xx || attempt >= retries) break;
+            const delay = baseDelayMs * Math.pow(2, attempt);
+            await new Promise(r => setTimeout(r, delay));
+            attempt++;
+            console.warn(`[streamSSE] retry ${attempt}/${retries} for ${url}: ${err.message}`);
+        }
+    }
+    throw lastErr;
+}
+
+async function _streamSSEOnce(url, body, { onEvent, onError, signal, headers }) {
     const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders(), ...(headers || {}) },
@@ -453,9 +487,23 @@ export async function streamSSE(url, body, { onEvent, signal, headers } = {}) {
         if (event.type === 'done') {
             summary = event.summary || { success: true };
         } else if (event.type === 'error') {
+            // Backend-reported errors are still treated as terminal — they
+            // come from the server saying "stop, this stream is broken".
             throw new Error(event.error || 'stream error');
         }
-        if (onEvent) onEvent(event);
+        // Per-event callback: any throw here is contained so a single bad
+        // frame can't kill the whole stream.
+        if (onEvent) {
+            try {
+                onEvent(event);
+            } catch (e) {
+                if (onError) {
+                    try { onError(e, event); } catch { /* swallow logger errors */ }
+                } else {
+                    console.error('[streamSSE] onEvent threw', e, event);
+                }
+            }
+        }
     };
 
     const parseLine = (line) => {
@@ -464,6 +512,9 @@ export async function streamSSE(url, body, { onEvent, signal, headers } = {}) {
         try {
             handle(JSON.parse(json));
         } catch (e) {
+            // SyntaxError = server sent a partial chunk — keep going, the
+            // next read will complete the line. Any other throw is a real
+            // error from `handle` and bubbles up.
             if (!(e instanceof SyntaxError)) throw e;
         }
     };
