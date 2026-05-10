@@ -2,6 +2,6 @@
   "projects": {
     "default": "chopchopmol-2",
     "prod": "chopchopmol-2",
-    "dev": "chopchopmol-dev"
+    "dev": "chopchopmoldev"
   }
 }
