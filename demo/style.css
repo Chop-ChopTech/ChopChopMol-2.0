@@ -1362,8 +1362,8 @@ input[type="range"]:focus {
 /* Vertical divider between groups */
 .toolbar-divider {
     width: 1px;
-    height: 26px;
-    background: rgba(255, 255, 255, 0.1);
+    height: 28px;
+    background: rgba(255, 255, 255, 0.2);
     margin: 0 8px;
     flex-shrink: 0;
 }
@@ -2523,10 +2523,10 @@ input[type="range"]:focus {
     flex: 1;
     min-width: 120px;
     max-width: 100%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(131, 58, 180, 0.35);
     border-radius: 8px;
-    color: rgba(255, 255, 255, 0.75);
+    color: #ffffff;
     padding: 5px 10px;
     font-family: 'Rubik', sans-serif;
     font-size: 11px;

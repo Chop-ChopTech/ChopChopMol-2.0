@@ -19,6 +19,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 </head>
 
 <body>
@@ -1543,7 +1544,9 @@
     <div id="landingCard" style="display: none!important;">
         <div class="landing-card-content">
             <h2 class="landing-title">ChopChopMol</h2>
-            <p class="landing-subtitle">Load a molecule to get started</p>
+            <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:0.5rem;background:var(--brand-grad,linear-gradient(135deg,#833ab4,#00d4ff));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Design molecules with AI</h2>
+            <p style="font-size:0.9rem;color:rgba(255,255,255,0.7);margin-bottom:1.2rem;line-height:1.5;">Generate structures, optimize geometries, and run quantum chemistry calculations — all through natural language.</p>
+            <p class="landing-subtitle">Load a molecule. Design new structures with natural language and AI.</p>
             <div class="landing-buttons">
                 <button class="landing-btn" id="landingOpenFile">
                     <i class="fa-solid fa-folder-open"></i>
@@ -2054,7 +2057,10 @@
 
                 window.imgToAnalyze = data.reply;
 
-                const reply = marked.parse(data.reply);
+                const reply = DOMPurify.sanitize(marked.parse(data.reply), {
+                    ALLOWED_TAGS: ['b','i','em','strong','p','br','code','pre',
+                                   'ul','ol','li','a','blockquote','h1','h2','h3','h4','h5','h6','span','div']
+                });
 
                 const text = document.createElement('p');
 
@@ -2755,10 +2761,11 @@
             <div id="aiDropOverlay" class="ai-drop-overlay">
                 <i class="fas fa-file-upload"></i><span>Drop files to attach</span>
             </div>
-            <textarea id="aiChatInput" placeholder="Ask me anything" rows="3"></textarea>
+            <textarea id="aiChatInput" placeholder="Ask me to optimize, design, or analyze molecules..." rows="3"></textarea>
 
             <div id="bottom-options">
                 <button type="button" id="aiModelTrigger" class="ai-model-trigger"
+                    style="border: 1px solid rgba(131,58,180,0.35); background: rgba(255,255,255,0.08); color: #ffffff;"
                     title="Select AI model & thinking mode">
                     <i class="fas fa-microchip"></i>
                     <span class="ai-model-trigger-name">Sonnet 4.6</span>
@@ -2846,7 +2853,7 @@
     <div id="aiModelModal" class="ai-model-modal">
         <div class="ai-model-modal-content">
             <div class="ai-model-modal-header">
-                <h3><i class="fas fa-microchip"></i> Model &amp; Reasoning</h3>
+                <h3><i class="fas fa-microchip"></i> Choose Model &amp; Thinking Mode</h3>
                 <button id="aiModelModalClose" class="ai-model-modal-close" title="Close">
                     <i class="fas fa-times"></i>
                 </button>
@@ -4480,7 +4487,10 @@
              */
             /*******  a6be3692-f35c-4d13-a0f4-b1e5ccd613ea  *******/
             function renderMarkdown(text) {
-                return marked.parse(text);
+                return DOMPurify.sanitize(marked.parse(text), {
+                    ALLOWED_TAGS: ['b','i','em','strong','p','br','code','pre',
+                                   'ul','ol','li','a','blockquote','h1','h2','h3','h4','h5','h6','span','div']
+                });
             }
 
             // ── Conversation History: Serialization, Auto-Save, Drawer ──
@@ -5653,7 +5663,7 @@
                 } catch (err) {
                     console.error('Failed to transcribe:', err);
                 } finally {
-                    chatInput.placeholder = 'Ask me anything';
+                    chatInput.placeholder = 'Ask me to optimize, design, or analyze molecules...';
                     chatInput.disabled = false;
                     // Restart recording for follow-up
                     if (micStream && micStream.active) {
@@ -6558,7 +6568,7 @@
     <!-- Mobile AI mini-bar (visible only on mobile when AI panel is collapsed) -->
     <div id="aiMiniBar" class="ai-mini-bar">
         <i class="fas fa-atom ai-mini-icon"></i>
-        <span class="ai-mini-placeholder">Ask me anything...</span>
+        <span class="ai-mini-placeholder">Ask me to optimize, design, or analyze molecules...</span>
         <button class="ai-mini-send"><i class="fas fa-paper-plane"></i></button>
     </div>
 
@@ -6570,6 +6580,10 @@
     <script type="module" src="/demo/aiagent.js"></script>
     <script type="module" src="/demo/remoteFiles.js"></script>
     <script src="/demo/mobile.js"></script>
+
+    <div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);font-size:0.7rem;color:rgba(255,255,255,0.3);padding:4px 12px;pointer-events:none;z-index:1;letter-spacing:0.03em;">
+      ChopChopMol 2.0 &middot; Powered by Claude AI &amp; MACE
+    </div>
 
 </body>
 
