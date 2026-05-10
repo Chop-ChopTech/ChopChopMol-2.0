@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChopChopMol 2.0</title>
+    <title>ChopChopMol 2.0 — AI molecular design & quantum chemistry</title>
+    <meta name="description" content="Design molecules with AI: generate structures, optimize geometries, and run quantum chemistry calculations through natural language. Powered by Claude AI and MACE machine learning potentials.">
     <link rel="stylesheet" href="style.css">
     <!-- <link rel="icon" href="logo.png"> -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,6 +24,10 @@
 </head>
 
 <body>
+    <!-- Skip-to-content link for keyboard users; visually hidden until focused.
+         Styled in style.css (.skip-link). Targets the AI chat input, the most
+         common interaction starting point. -->
+    <a href="#aiChatInput" class="skip-link">Skip to chat</a>
     <!-- Critical error page (WebGL failure, etc.) — no module dependencies.
          Inline `display:none` prevents an unstyled FOUC flash before style.css parses,
          which on slow connections briefly renders the SVG at full-page size. -->
@@ -1546,7 +1551,7 @@
     <!-- Landing card: shown when no molecule is loaded. Hidden by main.js
          after the first molecule loads. Visible by default (CSS sets display:flex).
          Earlier inline `display:none!important` made the value-prop invisible. -->
-    <div id="landingCard">
+    <div id="landingCard" role="region" aria-label="Welcome — no molecule loaded">
         <div class="landing-card-content">
             <h1 class="landing-headline">Design molecules with AI</h1>
             <p class="landing-lede">Generate structures, optimize geometries, and run quantum chemistry calculations &mdash; all through natural language.</p>
@@ -2192,7 +2197,7 @@
         <span id="frameLabel"
             style="color: white; font-family: 'Rubik', sans-serif; font-size: 14px; min-width: 100px;">Frame 1 /
             1</span>
-        <input type="range" id="frameSlider" min="0" max="0" value="0" style="
+        <input type="range" id="frameSlider" min="0" max="0" value="0" aria-label="Trajectory frame position" style="
             width: 200px;
             accent-color: #1D60FD;">
         <button id="playFrames" class="fancy-button" aria-label="Play / pause trajectory frames" title="Play / pause trajectory frames" style="
@@ -2201,7 +2206,7 @@
             font-size: 12px;
             background: none; width:fit-content;">
             <i class="fa-solid fa-play" aria-hidden="true"></i></button>
-        <input type="range" id="frameSpeed" min="1" max="500" value="100" style="width: 80px; accent-color: #ff6b6b;">
+        <input type="range" id="frameSpeed" min="1" max="500" value="100" aria-label="Trajectory playback speed (ms per frame)" style="width: 80px; accent-color: #ff6b6b;">
         <input type="number" id="frameSpeedInput" min="10" max="500" value="100"
             style="width: 50px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); border-radius: 5px; color: white; text-align: center;">
         <span style="color: white; font-family: sans-serif; font-size: 12px;">ms</span>
@@ -2369,60 +2374,61 @@
         <div class="style-panel-content">
             <div class="style-sliders-col">
                 <div class="compact-style-row">
-                    <label>Roughness</label>
-                    <input type="range" id="style1" min="0" max="1" step="0.01" value="0.17">
+                    <label for="style1">Roughness</label>
+                    <input type="range" id="style1" min="0" max="1" step="0.01" value="0.17" aria-label="Material roughness">
                 </div>
                 <div class="compact-style-row">
-                    <label>Metalness</label>
-                    <input type="range" id="style2" min="0" max="1" step="0.01" value="0.3">
+                    <label for="style2">Metalness</label>
+                    <input type="range" id="style2" min="0" max="1" step="0.01" value="0.3" aria-label="Material metalness">
                 </div>
                 <div class="compact-style-row">
-                    <label>Opacity</label>
-                    <input type="range" id="style3" min="0" max="1" step="0.01" value="1">
+                    <label for="style3">Opacity</label>
+                    <input type="range" id="style3" min="0" max="1" step="0.01" value="1" aria-label="Atom opacity">
                 </div>
                 <div class="compact-style-row">
-                    <label>Bonds</label>
-                    <input type="range" min="0.1" max="0.9" step="0.001" value="0.15" id="style4">
+                    <label for="style4">Bonds</label>
+                    <input type="range" min="0.1" max="0.9" step="0.001" value="0.15" id="style4" aria-label="Bond thickness">
                 </div>
                 <div class="compact-style-row">
-                    <label>Atom Size</label>
-                    <input type="range" id="style5" min="0.1" max="2" step="0.01">
+                    <label for="style5">Atom Size</label>
+                    <input type="range" id="style5" min="0.1" max="2" step="0.01" aria-label="Atom size">
                 </div>
                 <div class="compact-style-row">
-                    <label>Resolution</label>
-                    <input type="range" id="style6" min="1" max="64" step="1">
+                    <label for="style6">Resolution</label>
+                    <input type="range" id="style6" min="1" max="64" step="1" aria-label="Atom geometry resolution">
                 </div>
                 <div class="compact-style-row">
-                    <label>Transmission</label>
-                    <input type="range" id="styleTransmission" min="0" max="1" step="0.01" value="0">
+                    <label for="styleTransmission">Transmission</label>
+                    <input type="range" id="styleTransmission" min="0" max="1" step="0.01" value="0" aria-label="Material transmission">
                 </div>
                 <div class="compact-style-row">
-                    <label>IOR</label>
-                    <input type="range" id="styleIOR" min="1" max="2.33" step="0.01" value="1.5">
+                    <label for="styleIOR">IOR</label>
+                    <input type="range" id="styleIOR" min="1" max="2.33" step="0.01" value="1.5" aria-label="Index of refraction">
                 </div>
                 <div class="compact-style-row">
-                    <label>Thickness</label>
-                    <input type="range" id="styleThickness" min="0" max="5" step="0.05" value="0.5">
+                    <label for="styleThickness">Thickness</label>
+                    <input type="range" id="styleThickness" min="0" max="5" step="0.05" value="0.5" aria-label="Material thickness">
                 </div>
                 <div class="compact-style-row">
-                    <label>Clearcoat</label>
-                    <input type="range" id="styleClearcoat" min="0" max="1" step="0.01" value="0">
+                    <label for="styleClearcoat">Clearcoat</label>
+                    <input type="range" id="styleClearcoat" min="0" max="1" step="0.01" value="0" aria-label="Material clearcoat">
                 </div>
                 <div class="compact-style-row">
-                    <label>Sheen</label>
-                    <input type="range" id="styleSheen" min="0" max="1" step="0.01" value="0">
+                    <label for="styleSheen">Sheen</label>
+                    <input type="range" id="styleSheen" min="0" max="1" step="0.01" value="0" aria-label="Material sheen">
                 </div>
                 <div class="compact-style-row">
-                    <label>Iridescence</label>
-                    <input type="range" id="styleIridescence" min="0" max="1" step="0.01" value="0">
+                    <label for="styleIridescence">Iridescence</label>
+                    <input type="range" id="styleIridescence" min="0" max="1" step="0.01" value="0" aria-label="Material iridescence">
                 </div>
                 <div class="compact-style-row">
                     <label>Background</label>
                     <input type="color" id="style8" value="#01101f">
                 </div>
                 <div class="compact-style-row">
-                    <label>Text size</label>
+                    <label for="textSizeSlider">Text size</label>
                     <input type="range" id="textSizeSlider" min="0.85" max="1.4" step="0.05" value="1"
+                        aria-label="UI text size"
                         title="Adjust UI text size">
                 </div>
             </div>
@@ -2481,8 +2487,8 @@
                     </select>
                 </div>
                 <div class="compact-style-row" id="envMapIntensityRow" style="opacity: 0.5;">
-                    <label>Env Intensity</label>
-                    <input type="range" id="envMapIntensity" min="0" max="3" step="0.05" value="1">
+                    <label for="envMapIntensity">Env Intensity</label>
+                    <input type="range" id="envMapIntensity" min="0" max="3" step="0.05" value="1" aria-label="Environment map intensity">
                 </div>
             </div>
 
@@ -2492,8 +2498,8 @@
                     <label><input type="checkbox" id="toggleTransitions"> Animate Transitions</label>
                 </div>
                 <div class="compact-style-row" id="transitionDurationRow">
-                    <label>Duration</label>
-                    <input type="range" id="transitionDuration" min="50" max="300" step="10" value="300">
+                    <label for="transitionDuration">Duration</label>
+                    <input type="range" id="transitionDuration" min="50" max="300" step="10" value="300" aria-label="Transition animation duration (ms)">
                     <span id="transitionDurationValue">300ms</span>
                 </div>
             </div>
@@ -2512,18 +2518,18 @@
         </div>
         <div class="orbital-table-controls">
             <div class="orbital-control-row">
-                <label>Isovalue</label>
-                <input type="range" id="isovalueSlider" min="0.001" max="0.1" step="0.001" value="0.02">
+                <label for="isovalueSlider">Isovalue</label>
+                <input type="range" id="isovalueSlider" min="0.001" max="0.1" step="0.001" value="0.02" aria-label="Orbital isovalue threshold">
                 <span id="isovalueValue">0.02</span>
             </div>
             <div class="orbital-control-row">
-                <label>Opacity</label>
-                <input type="range" id="orbitalOpacitySlider" min="0" max="1" step="0.05" value="0">
+                <label for="orbitalOpacitySlider">Opacity</label>
+                <input type="range" id="orbitalOpacitySlider" min="0" max="1" step="0.05" value="0" aria-label="Orbital surface opacity">
                 <span id="orbitalOpacityValue">0</span>
             </div>
             <div class="orbital-control-row">
-                <label>Quality</label>
-                <input type="range" id="orbitalQualitySlider" min="30" max="80" step="10" value="50">
+                <label for="orbitalQualitySlider">Quality</label>
+                <input type="range" id="orbitalQualitySlider" min="30" max="80" step="10" value="50" aria-label="Orbital grid quality">
                 <span id="orbitalQualityValue">50</span>
             </div>
             <div class="orbital-phase-toggles">
@@ -2557,8 +2563,8 @@
                 </select>
             </div>
             <div class="orbital-control-row" id="pointSizeControl" style="display: none;">
-                <label>Point Size</label>
-                <input type="range" id="orbitalPointSizeSlider" min="0.02" max="0.3" step="0.01" value="0.08">
+                <label for="orbitalPointSizeSlider">Point Size</label>
+                <input type="range" id="orbitalPointSizeSlider" min="0.02" max="0.3" step="0.01" value="0.08" aria-label="Orbital point cloud size">
                 <span id="orbitalPointSizeValue">0.08</span>
             </div>
         </div>
@@ -2596,8 +2602,8 @@
                             style="font-size: 10px; color: #888;"></span></label>
                 </div>
                 <div class="compact-style-row" id="forceScaleRow">
-                    <label>Force Scale</label>
-                    <input type="range" id="forceScaleSlider" min="0.1" max="10" step="0.1" value="1">
+                    <label for="forceScaleSlider">Force Scale</label>
+                    <input type="range" id="forceScaleSlider" min="0.1" max="10" step="0.1" value="1" aria-label="Force arrow length scale">
                     <span id="forceScaleValue">1.0</span>
                 </div>
             </div>
@@ -6578,11 +6584,11 @@
     <!-- Mobile backdrop for dismissing panels -->
     <div id="mobileBackdrop" class="mobile-backdrop"></div>
 
-    <script type="module" src="main.js?v=20260510c"></script>
-    <script src="fileExplorer.js?v=20260510c"></script>
-    <script type="module" src="aiagent.js?v=20260510c"></script>
-    <script type="module" src="remoteFiles.js?v=20260510c"></script>
-    <script src="mobile.js?v=20260510c"></script>
+    <script type="module" src="main.js?v=20260510d"></script>
+    <script src="fileExplorer.js?v=20260510d"></script>
+    <script type="module" src="aiagent.js?v=20260510d"></script>
+    <script type="module" src="remoteFiles.js?v=20260510d"></script>
+    <script src="mobile.js?v=20260510d"></script>
 
     <div class="brand-attribution" role="contentinfo">
       ChopChopMol 2.0 &middot; Powered by Claude AI &amp; MACE

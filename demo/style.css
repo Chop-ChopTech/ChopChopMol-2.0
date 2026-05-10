@@ -40,6 +40,31 @@ summary:focus-visible {
     border-radius: 4px;
 }
 
+/* Skip-to-content link: visually hidden until keyboard focus moves to it,
+   then slides into view at the top-left. Lets keyboard users jump past the
+   3D viewport overlay into the chat input. */
+.skip-link {
+    position: fixed;
+    top: -100px;
+    left: 12px;
+    z-index: 10000;
+    padding: 8px 14px;
+    background: #111;
+    color: #fff;
+    border: 2px solid var(--brand-cyan, #42D6FF);
+    border-radius: 6px;
+    text-decoration: none;
+    font-family: 'Rubik', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    transition: top 0.18s ease;
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+    top: 12px;
+    outline: none;
+}
+
 /* Honor accessibility preference for reduced motion */
 @media (prefers-reduced-motion: reduce) {
     *,

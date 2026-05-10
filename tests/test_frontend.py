@@ -184,3 +184,47 @@ class TestThreeJsDisposalRace:
         body = molecule_js[idx:idx + 800]
         assert '_disposalInProgress' in body, \
             "createForceArrows() does not respect the disposal guard"
+
+# ── Accessibility (Final QA regression) ──────────────────────────────────────
+
+class TestAccessibility:
+    def test_range_sliders_have_aria_labels(self, html):
+        """Every <input type='range'> must have an aria-label for screen readers."""
+        # Find all range inputs
+        range_inputs = re.findall(r'<input[^>]*type="range"[^>]*>', html)
+        assert len(range_inputs) > 0, "No range inputs found — test fixture broken"
+        unlabeled = [r for r in range_inputs if 'aria-label' not in r]
+        assert len(unlabeled) == 0, (
+            f"{len(unlabeled)}/{len(range_inputs)} range sliders missing aria-label. "
+            f"First: {unlabeled[0][:120] if unlabeled else ''}"
+        )
+
+    def test_skip_link_exists(self, html):
+        """Skip-to-content link must be present for keyboard users."""
+        assert 'class="skip-link"' in html, \
+            "Missing skip-link for keyboard navigation"
+
+    def test_html_lang_attribute(self, html):
+        """<html> must have a lang attribute for screen readers."""
+        assert re.search(r'<html[^>]*\blang=', html), \
+            "<html> missing lang attribute"
+
+    def test_meta_description_present(self, html):
+        """Page must have a meta description for SEO and previews."""
+        assert re.search(r'<meta[^>]*name="description"', html), \
+            "Missing <meta name='description'>"
+
+    def test_descriptive_page_title(self, html):
+        """Page title must mention the product purpose, not just the name."""
+        title_match = re.search(r'<title>([^<]+)</title>', html)
+        assert title_match, "No <title> tag"
+        title = title_match.group(1)
+        # Must include at least one purpose-revealing word
+        purpose_words = ['molecul', 'AI', 'chemistry', 'design']
+        assert any(w.lower() in title.lower() for w in purpose_words), \
+            f"Title '{title}' is not descriptive — should mention what the product does"
+
+    def test_landing_card_has_region_role(self, html):
+        """Landing card must be exposed as a landmark region."""
+        assert re.search(r'id="landingCard"[^>]*role="region"', html), \
+            "landingCard missing role='region' for screen-reader landmark navigation"
