@@ -298,3 +298,34 @@ class TestDevBackendCorsHeaderGuard:
             "getAuthHeaders() must detect the dev backend host"
         assert 'isDevBackend' in body, \
             "getAuthHeaders() must short-circuit on the dev backend"
+
+
+class TestGroqReducedToolsetNotice:
+    """Groq free tier exposes a reduced toolset (27 of 59 tools). The UI must
+    surface this so users understand why certain features may not be reachable
+    when a Groq model is selected. Two requirements:
+      1. Each Groq model's hint string mentions the toolset constraint.
+      2. updateModelTrigger() shows the trigger badge with the toolset count
+         when a Groq model is the active selection."""
+
+    def test_llama_hint_mentions_toolset(self, html):
+        # Find the metadata entry for llama-3.3-70b-versatile and assert its
+        # hint mentions the 27/59 limit so users see it in the model picker.
+        m = re.search(r"'llama-3\.3-70b-versatile':\s*\{[^}]*hint:\s*'([^']*)'", html)
+        assert m, "llama-3.3-70b-versatile MODEL_META entry not found"
+        hint = m.group(1)
+        assert '27' in hint and '59' in hint, \
+            f"Llama hint must surface the 27-of-59 toolset constraint; got: {hint!r}"
+
+    def test_trigger_badge_shows_groq_toolset(self, html):
+        # updateModelTrigger() must branch on isGroqModelValue() and reveal
+        # the trigger badge with the toolset count.
+        assert 'isGroqModelValue' in html, \
+            "isGroqModelValue() helper missing — needed to detect Groq models"
+        m = re.search(r'function updateModelTrigger\(\)\s*\{([\s\S]*?)\n\s{12}\}', html)
+        assert m, "updateModelTrigger() function body not found"
+        body = m.group(1)
+        assert 'isGroqModelValue' in body, \
+            "updateModelTrigger() must call isGroqModelValue() to gate the badge"
+        assert '27/59' in body or "'27/59 tools'" in body, \
+            "Trigger badge text must show '27/59 tools' for Groq models"

@@ -3147,11 +3147,11 @@
                 'gpt-4.1': { hint: 'Chat · no reasoning' },
                 'gpt-4.1-mini': { hint: 'Chat · no reasoning' },
                 'gpt-4.1-nano': { hint: 'Chat · no reasoning' },
-                'llama-3.3-70b-versatile': { badge: 'Groq', hint: 'Llama 3.3 70B via Groq · 12k TPM · recommended for tool use' },
-                'meta-llama/llama-4-scout-17b-16e-instruct': { badge: 'Groq', hint: 'Llama 4 Scout 17B via Groq · fast & capable' },
-                'meta-llama/llama-4-maverick-17b-128e-instruct': { badge: 'Groq', hint: 'Llama 4 Maverick 17B via Groq · high quality' },
-                'llama-3.1-8b-instant': { hint: 'Llama 3.1 8B via Groq · 6k TPM · may hit limits with tools' },
-                'gemma2-9b-it': { hint: 'Gemma 2 9B via Groq · 15k TPM free' },
+                'llama-3.3-70b-versatile': { badge: 'Groq', hint: 'Llama 3.3 70B via Groq · 12k TPM · 27 of 59 tools · recommended for tool use' },
+                'meta-llama/llama-4-scout-17b-16e-instruct': { badge: 'Groq', hint: 'Llama 4 Scout 17B via Groq · fast & capable · 27 of 59 tools' },
+                'meta-llama/llama-4-maverick-17b-128e-instruct': { badge: 'Groq', hint: 'Llama 4 Maverick 17B via Groq · high quality · 27 of 59 tools' },
+                'llama-3.1-8b-instant': { hint: 'Llama 3.1 8B via Groq · 6k TPM · 27 of 59 tools · may hit limits with tools' },
+                'gemma2-9b-it': { hint: 'Gemma 2 9B via Groq · 15k TPM free · 27 of 59 tools' },
             };
 
             function providerFor(groupLabel) {
@@ -3287,12 +3287,30 @@
                 renderModelList(modelSearch.value);
             });
 
+            // Match the backend's _GROQ_MODEL_PREFIXES in app.py — keep in sync
+            const GROQ_MODEL_PREFIXES = ['llama', 'gemma', 'mixtral', 'groq', 'mistral', 'qwen'];
+            function isGroqModelValue(value) {
+                const v = (value || '').toLowerCase();
+                if (GROQ_MODEL_PREFIXES.some(p => v.startsWith(p))) return true;
+                // meta-llama/... namespaced models
+                if (v.includes('llama') || v.includes('mixtral')) return true;
+                return false;
+            }
+
             function updateModelTrigger() {
                 const opt = modelSelect.options[modelSelect.selectedIndex];
                 const raw = opt ? opt.textContent : modelSelect.value;
                 const label = raw.replace(/^Claude\s+/i, '');
                 modelTriggerName.textContent = label;
-                if (modelTriggerBadge) modelTriggerBadge.style.display = 'none';
+                if (modelTriggerBadge) {
+                    if (isGroqModelValue(modelSelect.value)) {
+                        modelTriggerBadge.textContent = '27/59 tools';
+                        modelTriggerBadge.title = 'Groq free tier exposes a reduced toolset (27 of 59 tools) to keep the system prompt under TPM limits. Switch to Claude or GPT for the full toolset.';
+                        modelTriggerBadge.style.display = '';
+                    } else {
+                        modelTriggerBadge.style.display = 'none';
+                    }
+                }
                 if (modelFooterValue) modelFooterValue.textContent = label;
                 refreshSetDefaultBtn();
             }
