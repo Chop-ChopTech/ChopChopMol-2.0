@@ -105,6 +105,25 @@ export function generateMultiFrameExtxyz(frames) {
 }
 
 /**
+ * Read the user's compute-device preference from localStorage.
+ * Returns 'cpu' (default), 'gpu', or 'auto'. The toggle UI lives in the model
+ * picker modal; this helper is the single source of truth that MACE / DFT
+ * call sites inject into request bodies. When the backend has no GPU
+ * available it falls back to CPU and surfaces that via the response so the
+ * user knows the choice didn't bind. Forward-compatible with a future GPU
+ * spot pool.
+ * @returns {string} 'cpu' | 'gpu' | 'auto'
+ */
+export function getComputeDevice() {
+    try {
+        const v = (localStorage.getItem('chopchop_compute_device') || 'cpu').toLowerCase();
+        return (v === 'gpu' || v === 'auto') ? v : 'cpu';
+    } catch (_) {
+        return 'cpu';
+    }
+}
+
+/**
  * Calls MACE energy endpoint
  * @param {string} backendUrl - Backend URL
  * @param {Array} atoms - Array of atom data
@@ -113,7 +132,7 @@ export function generateMultiFrameExtxyz(frames) {
  * @returns {Promise<Object>} API response
  */
 export async function callMaceEnergy(backendUrl, atoms, model, includeForces = false) {
-    return postJson(`${backendUrl}/ai/mace/energy`, { atoms, model, includeForces }, {}, 120000);
+    return postJson(`${backendUrl}/ai/mace/energy`, { atoms, model, includeForces, device: getComputeDevice() }, {}, 120000);
 }
 
 /**
@@ -125,7 +144,7 @@ export async function callMaceEnergy(backendUrl, atoms, model, includeForces = f
  * @returns {Promise<Object>} API response
  */
 export async function callMaceEnergyBatch(backendUrl, frames, model, includeForces = false, jobId = null) {
-    const body = { frames, model, includeForces };
+    const body = { frames, model, includeForces, device: getComputeDevice() };
     if (jobId) body.jobId = jobId;
     return postJson(`${backendUrl}/ai/mace/energy-batch`, body, {}, 120000);
 }
@@ -140,7 +159,7 @@ export async function callMaceEnergyBatch(backendUrl, frames, model, includeForc
  */
 export async function callMaceOptimize(backendUrl, atoms, model, options = {}) {
     const { fmax = 0.05, maxSteps = 100, includeForces = false, jobId = null } = options;
-    const body = { atoms, model, fmax, maxSteps, includeForces };
+    const body = { atoms, model, fmax, maxSteps, includeForces, device: getComputeDevice() };
     if (jobId) body.jobId = jobId;
     return postJson(`${backendUrl}/ai/mace/optimize`, body, {}, 120000);
 }
@@ -161,7 +180,7 @@ export async function callMaceMD(backendUrl, atoms, model, options = {}) {
         includeForces = false,
         jobId = null
     } = options;
-    const body = { atoms, model, temperature_K, timestep_fs, steps, includeForces };
+    const body = { atoms, model, temperature_K, timestep_fs, steps, includeForces, device: getComputeDevice() };
     if (jobId) body.jobId = jobId;
     return postJson(`${backendUrl}/ai/mace/md`, body, {}, 120000);
 }
@@ -210,7 +229,7 @@ export async function saveExtxyzFile(filename, content) {
  */
 export async function callDftEnergy(backendUrl, atoms, options = {}) {
     const { basis = 'def2-tzvppd', xc = 'wb97m-d3bj', charge = 0, spin = 0, includeForces = true } = options;
-    return postJson(`${backendUrl}/ai/dft/energy`, { atoms, basis, xc, charge, spin, includeForces }, {}, 300000);
+    return postJson(`${backendUrl}/ai/dft/energy`, { atoms, basis, xc, charge, spin, includeForces, device: getComputeDevice() }, {}, 300000);
 }
 
 /**
@@ -222,7 +241,7 @@ export async function callDftEnergy(backendUrl, atoms, options = {}) {
  */
 export async function callDftEnergyBatch(backendUrl, frames, options = {}) {
     const { basis = 'def2-tzvppd', xc = 'wb97m-d3bj', charge = 0, spin = 0, includeForces = true } = options;
-    return postJson(`${backendUrl}/ai/dft/energy-batch`, { frames, basis, xc, charge, spin, includeForces }, {}, 1800000);
+    return postJson(`${backendUrl}/ai/dft/energy-batch`, { frames, basis, xc, charge, spin, includeForces, device: getComputeDevice() }, {}, 1800000);
 }
 
 /**

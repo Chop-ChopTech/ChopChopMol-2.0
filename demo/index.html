@@ -2894,6 +2894,16 @@
                             title="Deep thinking (~32K tokens)">High</button>
                     </div>
                 </div>
+                <div class="ai-thinking-control" id="aiComputeControl">
+                    <i class="fas fa-microchip"></i>
+                    <span class="ai-thinking-control-label">Compute</span>
+                    <div class="ai-thinking-toggle" id="aiComputeToggle">
+                        <button class="ai-thinking-opt active" data-device="cpu"
+                            title="Run MACE / DFT on CPU. Always available. Slower for large molecules and batch DFT.">CPU</button>
+                        <button class="ai-thinking-opt" data-device="gpu"
+                            title="Run MACE / DFT on GPU when available. Falls back to CPU with a warning if the dev backend has no GPU pool.">GPU</button>
+                    </div>
+                </div>
             </div>
             <div class="ai-model-modal-tabs" id="aiModelTabs">
                 <button type="button" class="ai-model-tab active" data-provider="Claude">
@@ -3409,6 +3419,30 @@
                 btn.classList.add('active');
                 window._thinkingBudget = parseInt(btn.dataset.budget);
                 localStorage.setItem('chopchop_thinking_budget', btn.dataset.budget);
+            });
+
+            // ── Compute device toggle (CPU / GPU) ──
+            // Mirrors the localStorage key `chopchop_compute_device` consumed
+            // by getComputeDevice() in demo/utils/maceUtils.js — keep both in
+            // sync. The toggle is purely a preference; the backend reads the
+            // `device` field on MACE / DFT request bodies and falls back to
+            // whatever is actually available, returning the chosen device in
+            // the response. On the current dev m6a.xlarge (CPU-only) GPU = CPU
+            // with a logged warning until a g4dn pool is provisioned.
+            const computeToggle = document.getElementById('aiComputeToggle');
+            const savedDevice = (localStorage.getItem('chopchop_compute_device') || 'cpu').toLowerCase();
+            const initialDevice = (savedDevice === 'gpu' || savedDevice === 'auto') ? savedDevice : 'cpu';
+            computeToggle.querySelectorAll('.ai-thinking-opt').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.device === initialDevice);
+            });
+            window._computeDevice = initialDevice;
+            computeToggle.addEventListener('click', (e) => {
+                const btn = e.target.closest('.ai-thinking-opt');
+                if (!btn || !btn.dataset.device) return;
+                computeToggle.querySelectorAll('.ai-thinking-opt').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                window._computeDevice = btn.dataset.device;
+                localStorage.setItem('chopchop_compute_device', btn.dataset.device);
             });
 
             // Toggle panel (button is hidden on mobile — panel always visible there)

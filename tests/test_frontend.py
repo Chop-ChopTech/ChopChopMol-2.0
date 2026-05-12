@@ -300,6 +300,46 @@ class TestDevBackendCorsHeaderGuard:
             "getAuthHeaders() must short-circuit on the dev backend"
 
 
+class TestComputeDeviceToggle:
+    """Users need a manual CPU / GPU selector so they can opt into GPU
+    acceleration when a g4dn-class spot is live and stay on cheap CPU
+    otherwise. The toggle persists in localStorage and rides on every
+    MACE / DFT request body so the backend can route accordingly."""
+
+    def test_toggle_exists_in_model_modal(self, html):
+        assert 'aiComputeToggle' in html, \
+            "Compute toggle (#aiComputeToggle) missing from model modal"
+        assert 'data-device="cpu"' in html and 'data-device="gpu"' in html, \
+            "Compute toggle must offer both CPU and GPU options"
+
+    def test_compute_toggle_persists_to_localstorage(self, html):
+        assert 'chopchop_compute_device' in html, \
+            "Compute toggle must persist its choice to localStorage key 'chopchop_compute_device'"
+
+    def test_mace_utils_exports_get_compute_device(self):
+        path = os.path.join(os.path.dirname(__file__), '..', 'demo', 'utils', 'maceUtils.js')
+        with open(path) as f:
+            content = f.read()
+        assert 'export function getComputeDevice' in content, \
+            "maceUtils.js must export getComputeDevice() so call sites can inject the user's choice"
+        assert "'chopchop_compute_device'" in content, \
+            "getComputeDevice() must read from localStorage key 'chopchop_compute_device' (mirrors the UI)"
+
+    def test_mace_calls_include_device_field(self):
+        path = os.path.join(os.path.dirname(__file__), '..', 'demo', 'utils', 'maceUtils.js')
+        with open(path) as f:
+            content = f.read()
+        # Every public MACE / DFT helper must inject the device field via
+        # getComputeDevice() so the backend can route.
+        for helper in ('callMaceEnergy', 'callMaceEnergyBatch', 'callMaceOptimize',
+                       'callMaceMD', 'callDftEnergy', 'callDftEnergyBatch'):
+            m = re.search(rf'export async function {helper}\([^)]*\)\s*\{{([\s\S]*?)\n\}}', content)
+            assert m, f"{helper} not found in maceUtils.js"
+            body = m.group(1)
+            assert 'getComputeDevice()' in body, \
+                f"{helper} must inject device: getComputeDevice() into its request body"
+
+
 class TestGroqReducedToolsetNotice:
     """Groq free tier exposes a reduced toolset (27 of 59 tools). The UI must
     surface this so users understand why certain features may not be reachable
