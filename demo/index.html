@@ -1871,6 +1871,19 @@
         let _reply = null;
         let _reply2 = "hhhh";
 
+        // Legacy "Generate!" / SMILES / analysis panels resolve the backend per environment.
+        // Older builds hard-coded a long-dead Render demo host. Prefer the
+        // AIAgent's resolved URL (which honours dev/RunPod/Render/local overrides).
+        function getBackendUrl() {
+            const resolved = window.AIAgent?.getBackendUrl?.();
+            if (resolved) return resolved;
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return 'http://127.0.0.1:10000';
+            if (location.hostname === 'dev.chopchopmol.com' ||
+                location.hostname === 'chopchopmoldev.web.app' ||
+                location.hostname === 'chopchopmoldev.firebaseapp.com') return 'https://api-dev.chopchopmol.com';
+            return 'https://chopchopmol-ai-backend.onrender.com';
+        }
+
         const chatBox = document.getElementById('chatInput');
         const smilesBox = document.getElementById('smilesInput');
         const jsonBox = document.getElementById('jsonInput');
@@ -2008,7 +2021,7 @@
             //chatOutput.innerHTML += `<p id="loading" class="typewriter"><strong>Generating Molecule...</p>`;
 
             try {
-                const response = await fetch('https://chopchopmol-2-0-3.onrender.com/chat', {
+                const response = await fetch(`${getBackendUrl()}/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: chatInput })
@@ -2033,7 +2046,7 @@
             smilesPanel.classList.remove('on');
 
             try {
-                const response = await fetch('https://chopchopmol-2-0-3.onrender.com/tosmiles', {
+                const response = await fetch(`${getBackendUrl()}/tosmiles`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: chatInput })
@@ -2056,7 +2069,7 @@
             //chatOutput.innerHTML += `<p id="loading" class="typewriter"><strong>Generating Molecule...</p>`;
             loading.classList.add('on');
             try {
-                const response = await fetch('https://chopchopmol-2-0-3.onrender.com/analysis', {
+                const response = await fetch(`${getBackendUrl()}/analysis`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: chatInputImg, coordinates: chatInputCoordinates })
@@ -5226,9 +5239,14 @@
             let pendingJobs = []; // [{jobId, toolName, timestamp}]
 
             function getBackendUrl() {
-                return window.AIAgent?.getBackendUrl?.() ||
-                    (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-                        ? 'http://127.0.0.1:10000' : 'https://chopchopmol-ai-backend.onrender.com');
+                // Prefer the AI agent's resolved URL (handles RunPod/Render/dev/local + sticky override).
+                const resolved = window.AIAgent?.getBackendUrl?.();
+                if (resolved) return resolved;
+                if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return 'http://127.0.0.1:10000';
+                if (location.hostname === 'dev.chopchopmol.com' ||
+                    location.hostname === 'chopchopmoldev.web.app' ||
+                    location.hostname === 'chopchopmoldev.firebaseapp.com') return 'https://api-dev.chopchopmol.com';
+                return 'https://chopchopmol-ai-backend.onrender.com';
             }
 
             window.addEventListener('mace-job-started', async (e) => {

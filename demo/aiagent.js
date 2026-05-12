@@ -79,15 +79,26 @@ export function getByokHeaders() {
     const h = {};
     const a = byokGet('anthropic'); if (a) h['X-User-Anthropic-Key'] = a;
     const o = byokGet('openai');    if (o) h['X-User-OpenAI-Key'] = o;
-    // Token cached by onIdTokenChanged in index.html. When REQUIRE_AUTH=true
-    // on the backend, requests without this header get 401.
-    const t = window._firebaseIdToken;
-    if (t) h['Authorization'] = `Bearer ${t}`;
-    // Guest bypass: matching code in backend lets the request through as a
-    // synthetic guest. Set when the user enters the gate's guest code.
-    let guestCode = '';
-    try { if (sessionStorage.getItem('guestBypass') === '1') guestCode = '0987'; } catch { }
-    if (guestCode) h['X-Guest-Code'] = guestCode;
+    // The dev backend (api-dev.chopchopmol.com) restricts its CORS
+    // `access-control-allow-headers` to `content-type` plus the BYOK keys —
+    // sending Authorization / X-Guest-Code through a browser there triggers
+    // a preflight failure that surfaces as "Failed to fetch". The dev backend
+    // also currently accepts unauthenticated requests (rate-limited by IP),
+    // so it's safe to omit these. Render prod still needs them for the gate.
+    const isDevBackend = typeof AI_CONFIG !== 'undefined'
+        && typeof AI_CONFIG.backendUrl === 'string'
+        && AI_CONFIG.backendUrl.includes('api-dev.chopchopmol.com');
+    if (!isDevBackend) {
+        // Token cached by onIdTokenChanged in index.html. When REQUIRE_AUTH=true
+        // on the backend, requests without this header get 401.
+        const t = window._firebaseIdToken;
+        if (t) h['Authorization'] = `Bearer ${t}`;
+        // Guest bypass: matching code in backend lets the request through as a
+        // synthetic guest. Set when the user enters the gate's guest code.
+        let guestCode = '';
+        try { if (sessionStorage.getItem('guestBypass') === '1') guestCode = '0987'; } catch { }
+        if (guestCode) h['X-Guest-Code'] = guestCode;
+    }
     return h;
 }
 // Save immediately if new

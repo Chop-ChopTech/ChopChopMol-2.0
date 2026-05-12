@@ -228,3 +228,73 @@ class TestAccessibility:
         """Landing card must be exposed as a landmark region."""
         assert re.search(r'id="landingCard"[^>]*role="region"', html), \
             "landingCard missing role='region' for screen-reader landmark navigation"
+
+
+# ── Backend wiring regressions ───────────────────────────────────────────────
+
+AIAGENT_PATH = os.path.join(os.path.dirname(__file__), '..', 'demo', 'aiagent.js')
+APIUTILS_PATH = os.path.join(os.path.dirname(__file__), '..', 'demo', 'utils', 'apiUtils.js')
+
+
+@pytest.fixture(scope='module')
+def aiagent_js():
+    with open(AIAGENT_PATH, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
+@pytest.fixture(scope='module')
+def apiutils_js():
+    with open(APIUTILS_PATH, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
+class TestNoStaleBackendUrls:
+    """The legacy `chopchopmol-2-0-3.onrender.com` host is dead. Any hard-coded
+    reference in production paths will silently fail on dev/prod. All callers
+    must route through `getBackendUrl()` (which honours the dev host)."""
+
+    def test_no_chopchopmol_2_0_3_in_index(self, html):
+        assert 'chopchopmol-2-0-3.onrender.com' not in html, \
+            "Stale onrender URL still wired up — route through getBackendUrl() instead"
+
+    def test_local_getbackendurl_handles_dev(self, html):
+        """The fallback getBackendUrl in index.html must route dev.chopchopmol.com
+        to api-dev.chopchopmol.com (not the legacy Render fallback)."""
+        # We expect at least one block that mentions both the dev host and
+        # the api-dev backend URL in the same conditional.
+        assert "dev.chopchopmol.com" in html and "api-dev.chopchopmol.com" in html, \
+            "Local getBackendUrl() does not branch on the dev frontend hostname"
+
+
+class TestDevBackendCorsHeaderGuard:
+    """The dev backend's CORS allow-headers is locked to `content-type` and the
+    BYOK keys. Sending Authorization / X-Guest-Code / X-Guest-Token triggers a
+    preflight failure that surfaces as the opaque browser error 'Failed to fetch'.
+    Both auth-header builders must suppress those headers on the dev backend."""
+
+    def test_aiagent_byok_headers_skips_dev(self, aiagent_js):
+        assert 'api-dev.chopchopmol.com' in aiagent_js, \
+            "getByokHeaders() must detect the dev backend host"
+        # Both legacy auth headers must be inside a dev-backend guard, not
+        # unconditionally attached.
+        # Heuristic: locate the function body and ensure `isDevBackend` gating
+        # appears before the X-Guest-Code / Authorization additions.
+        m = re.search(r'function getByokHeaders\(\)\s*\{([\s\S]*?)\n\}', aiagent_js)
+        assert m, "getByokHeaders() function body not found"
+        body = m.group(1)
+        assert 'isDevBackend' in body, \
+            "getByokHeaders() must compute isDevBackend before attaching auth headers"
+        # X-Guest-Code must only be assigned inside the !isDevBackend branch
+        guard_idx = body.find('!isDevBackend')
+        guest_idx = body.find("'X-Guest-Code'")
+        assert guard_idx != -1 and guest_idx != -1 and guard_idx < guest_idx, \
+            "X-Guest-Code must be gated behind !isDevBackend"
+
+    def test_apiutils_auth_headers_skips_dev(self, apiutils_js):
+        m = re.search(r'export function getAuthHeaders\(\)\s*\{([\s\S]*?)\n\}', apiutils_js)
+        assert m, "getAuthHeaders() function body not found"
+        body = m.group(1)
+        assert 'api-dev.chopchopmol.com' in body, \
+            "getAuthHeaders() must detect the dev backend host"
+        assert 'isDevBackend' in body, \
+            "getAuthHeaders() must short-circuit on the dev backend"
