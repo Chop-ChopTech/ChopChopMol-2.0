@@ -81,6 +81,21 @@
         .msg.err   { background: #2a1416; border: 1px solid #5a2326; color: #e89090; }
         .footer { margin-top: 24px; font-size: 13px; color: #6b7280; text-align: center; }
         .footer a { color: #6b8cf0; text-decoration: none; }
+        .agree {
+            margin-top: 14px;
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+            line-height: 1.55;
+        }
+        .agree a {
+            color: #8ba0d8;
+            text-decoration: underline;
+            text-decoration-color: rgba(139, 160, 216, 0.35);
+            text-underline-offset: 2px;
+            transition: color 0.15s;
+        }
+        .agree a:hover { color: #b5c4f0; }
     </style>
 </head>
 
@@ -107,6 +122,13 @@
                 placeholder="What molecules / problems do you want to work on? (at least 10 characters)"></textarea>
 
             <button type="submit" id="submitBtn">Request access</button>
+
+            <p class="agree">
+                By requesting access, you agree to our
+                <a href="/demo/terms.html" target="_blank" rel="noopener">Terms of Service</a>
+                and
+                <a href="/demo/privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a>.
+            </p>
         </form>
 
         <div id="message" class="msg" style="display:none"></div>
