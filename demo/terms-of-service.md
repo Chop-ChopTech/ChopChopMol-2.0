@@ -62,7 +62,7 @@ Guavion may suspend or terminate your access to the Service at any time, with or
 
 ## 12. Governing law and disputes
 
-These Terms are governed by the laws of [State/Country], without regard to its conflict of law principles. Any disputes arising from or relating to these Terms or the Service will be resolved exclusively in the state or federal courts located in Palo Alto, and you consent to the personal jurisdiction of those courts.
+These Terms are governed by the laws of the State of California, United States, without regard to its conflict of law principles. Any disputes arising from or relating to these Terms or the Service will be resolved exclusively in the state or federal courts located in Palo Alto, California, and you consent to the personal jurisdiction of those courts.
 
 ## 13. Changes to these Terms
 
