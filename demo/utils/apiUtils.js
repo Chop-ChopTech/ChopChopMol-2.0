@@ -9,7 +9,7 @@ const DEFAULT_TIMEOUT_MS = 30000;
 
 const RUNPOD_URL = 'https://l01l6g1um1puzn-10000.proxy.runpod.net';
 const RENDER_URL = 'https://chopchopmol-ai-backend.onrender.com';
-const DEV_URL = 'https://chopchopmol-dev-backend.onrender.com';
+const DEV_URL = 'https://api-dev.chopchopmol.com';
 const LOCAL_URL = 'http://127.0.0.1:10000';
 
 // Map of stable keys → URLs. Keep names lowercase for the localStorage value.
