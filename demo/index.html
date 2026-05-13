@@ -287,9 +287,13 @@
                     Don't have an account? <a href="early-access.html">Request access</a>
                 </div>
 
-                <div class="ag-divider">or</div>
+                <!-- Guest-code path is server-side-disabled (REQUIRE_AUTH=true).
+                     The UI is kept in the DOM so it can be revived later without
+                     a structural change, but hidden behind a feature flag.
+                     data-feature="guest-code" makes it easy to find/restore. -->
+                <div class="ag-divider" data-feature="guest-code" style="display:none">or</div>
 
-                <div class="ag-form">
+                <div class="ag-form" data-feature="guest-code" style="display:none">
                     <div class="ag-field">
                         <input id="ag-guest-code" type="text" inputmode="numeric" autocomplete="off"
                             placeholder="Guest code" maxlength="16">

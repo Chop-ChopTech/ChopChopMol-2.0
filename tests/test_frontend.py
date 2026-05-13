@@ -466,6 +466,40 @@ class TestSimplifiedPicker:
             "Model modal missing a data-provider='Groq' tab for the Llama option"
 
 
+# ── Guest-code field hidden (UX P1) ──────────────────────────────────────────
+
+class TestGuestCodeHidden:
+    """The legacy 'Continue as guest' field on the sign-in screen is
+    server-side-disabled (REQUIRE_AUTH=true), so the UI must hide it to
+    stop users from typing a code and getting an opaque failure."""
+
+    def test_guest_code_inputs_hidden(self, html):
+        # The wrapping form must be marked with the feature flag attribute
+        # AND have display:none so it doesn't render.
+        # We accept either the form or the divider being flagged — both should
+        # be hidden together so they can be revived as a unit.
+        m = re.search(
+            r'<div class="ag-form"[^>]*data-feature="guest-code"[^>]*style="[^"]*display\s*:\s*none[^"]*"',
+            html,
+        )
+        assert m, \
+            "Guest-code form must carry data-feature='guest-code' and display:none"
+
+    def test_guest_code_divider_hidden(self, html):
+        m = re.search(
+            r'<div class="ag-divider"[^>]*data-feature="guest-code"[^>]*style="[^"]*display\s*:\s*none[^"]*"',
+            html,
+        )
+        assert m, \
+            "Guest-code 'or' divider must carry data-feature='guest-code' and display:none"
+
+    def test_request_access_link_still_visible(self, html):
+        """The Request access link must stay visible — only the guest-code
+        path is hidden."""
+        assert 'early-access.html">Request access' in html, \
+            "Request access link disappeared along with the guest-code field"
+
+
 # ── Sign-in error mapping (UX P0 — no raw Firebase strings) ──────────────────
 
 class TestSignInErrorMapping:
