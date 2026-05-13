@@ -266,38 +266,46 @@ class TestNoStaleBackendUrls:
             "Local getBackendUrl() does not branch on the dev frontend hostname"
 
 
-class TestDevBackendCorsHeaderGuard:
-    """The dev backend's CORS allow-headers is locked to `content-type` and the
-    BYOK keys. Sending Authorization / X-Guest-Code / X-Guest-Token triggers a
-    preflight failure that surfaces as the opaque browser error 'Failed to fetch'.
-    Both auth-header builders must suppress those headers on the dev backend."""
+class TestAuthHeadersUnconditional:
+    """The dev backend used to lock its CORS allow-headers to `content-type`
+    plus BYOK keys, which forced the frontend to short-circuit auth headers on
+    api-dev.chopchopmol.com (otherwise preflight failed as 'Failed to fetch').
+    The backend has since widened its allow-list (commit d4236ee), so the
+    frontend must send Authorization / X-Guest-Code / X-Guest-Token to every
+    backend unconditionally — same code path as prod. These tests pin that
+    behavior so the host-aware short-circuit can't sneak back in."""
 
-    def test_aiagent_byok_headers_skips_dev(self, aiagent_js):
-        assert 'api-dev.chopchopmol.com' in aiagent_js, \
-            "getByokHeaders() must detect the dev backend host"
-        # Both legacy auth headers must be inside a dev-backend guard, not
-        # unconditionally attached.
-        # Heuristic: locate the function body and ensure `isDevBackend` gating
-        # appears before the X-Guest-Code / Authorization additions.
+    def test_aiagent_byok_headers_no_dev_short_circuit(self, aiagent_js):
         m = re.search(r'function getByokHeaders\(\)\s*\{([\s\S]*?)\n\}', aiagent_js)
         assert m, "getByokHeaders() function body not found"
         body = m.group(1)
-        assert 'isDevBackend' in body, \
-            "getByokHeaders() must compute isDevBackend before attaching auth headers"
-        # X-Guest-Code must only be assigned inside the !isDevBackend branch
-        guard_idx = body.find('!isDevBackend')
-        guest_idx = body.find("'X-Guest-Code'")
-        assert guard_idx != -1 and guest_idx != -1 and guard_idx < guest_idx, \
-            "X-Guest-Code must be gated behind !isDevBackend"
+        assert 'isDevBackend' not in body, \
+            "getByokHeaders() must not branch on the dev backend host — " \
+            "backend CORS now accepts auth headers everywhere"
+        assert 'api-dev.chopchopmol.com' not in body, \
+            "getByokHeaders() must not reference the dev backend host"
+        # Authorization + X-Guest-Code must be attached unconditionally — no
+        # surrounding `if (...)` predicate other than the per-header presence
+        # check (`if (t)` / `if (guestCode)`).
+        assert "h['Authorization']" in body, \
+            "getByokHeaders() must attach Authorization header"
+        assert "h['X-Guest-Code']" in body, \
+            "getByokHeaders() must attach X-Guest-Code header"
 
-    def test_apiutils_auth_headers_skips_dev(self, apiutils_js):
+    def test_apiutils_auth_headers_no_dev_short_circuit(self, apiutils_js):
         m = re.search(r'export function getAuthHeaders\(\)\s*\{([\s\S]*?)\n\}', apiutils_js)
         assert m, "getAuthHeaders() function body not found"
         body = m.group(1)
-        assert 'api-dev.chopchopmol.com' in body, \
-            "getAuthHeaders() must detect the dev backend host"
-        assert 'isDevBackend' in body, \
-            "getAuthHeaders() must short-circuit on the dev backend"
+        assert 'isDevBackend' not in body, \
+            "getAuthHeaders() must not branch on the dev backend host"
+        assert 'api-dev.chopchopmol.com' not in body, \
+            "getAuthHeaders() must not reference the dev backend host"
+        assert "h['Authorization']" in body, \
+            "getAuthHeaders() must attach Authorization header"
+        assert "h['X-Guest-Token']" in body, \
+            "getAuthHeaders() must attach X-Guest-Token header"
+        assert "h['X-Guest-Code']" in body, \
+            "getAuthHeaders() must attach X-Guest-Code header"
 
 
 class TestComputeDeviceToggle:

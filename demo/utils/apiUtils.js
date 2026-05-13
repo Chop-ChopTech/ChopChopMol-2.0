@@ -224,14 +224,13 @@ const GUEST_TOKEN_KEY = 'chopchop_guest_token';
 const GUEST_TOKEN_EXPIRES_KEY = 'chopchop_guest_token_expires';
 
 export function getAuthHeaders() {
+    // Returns the auth headers attached to every credentialed request:
+    //   - Authorization: Firebase ID token (when signed in)
+    //   - X-Guest-Token: bootstrapped guest JWT from /auth/guest-token
+    //   - X-Guest-Code:  set when the user enters the guest bypass code
+    // The dev backend's CORS allow-list now includes all three (commit
+    // d4236ee), so this helper is no longer host-aware.
     const h = {};
-    // The dev backend restricts its CORS `access-control-allow-headers` to
-    // `content-type` plus BYOK keys. Adding Authorization / X-Guest-Code /
-    // X-Guest-Token triggers a preflight failure surfaced as "Failed to fetch".
-    // The dev backend accepts unauthenticated requests (rate-limited by IP),
-    // so it's safe to omit these. Render prod still needs them for the gate.
-    const isDevBackend = (_resolvedBackendUrl && _resolvedBackendUrl.includes('api-dev.chopchopmol.com'));
-    if (isDevBackend) return h;
     const t = (typeof window !== 'undefined') ? window._firebaseIdToken : null;
     if (t) h['Authorization'] = `Bearer ${t}`;
     try {
