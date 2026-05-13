@@ -98,6 +98,13 @@ class FileExplorer {
                 if (window.loadMoleculesList) this.loadCloudMolecules();
             }, { once: true });
         }
+        // Re-render the cloud panel on every auth-state change so the empty
+        // state, the 'Signed in as ...' label, and the actual molecule list
+        // are always consistent with the current Firebase user. (Previously
+        // the panel said 'Sign in to use cloud storage' even after sign-in.)
+        window.addEventListener('authStateChanged', () => {
+            if (window.loadMoleculesList) this.loadCloudMolecules();
+        });
         // Clear highlights when clicking outside file explorer items
         document.addEventListener('click', (e) => {
             // Clear active highlight when clicking outside items
@@ -1740,6 +1747,13 @@ class FileExplorer {
     // Find where cloud items are created and add draggable attribute + events:
     async loadCloudMolecules() {
         const list = document.getElementById('cloudList');
+        // Pre-flight: signed-out users see a clear sign-in prompt, not a
+        // generic 'No saved molecules' empty state that looks like broken auth.
+        const signedInUser = window.auth?.currentUser || window.currentUser || null;
+        if (!signedInUser) {
+            list.innerHTML = '<div class="cloud-empty cloud-empty-signedout"><i class="fas fa-cloud"></i><p>Sign in to use cloud storage.</p></div>';
+            return;
+        }
         list.innerHTML = '<div class="cloud-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
         const [molecules, folders] = await Promise.all([
@@ -1748,7 +1762,20 @@ class FileExplorer {
         ]);
 
         if (!molecules.length && !folders.length) {
-            list.innerHTML = '<div class="cloud-empty"><i class="fas fa-cloud"></i><p>No saved molecules</p></div>';
+            // Signed-in empty state — confirms auth is working and tells the
+            // user there's just nothing here yet. Build via textContent so an
+            // attacker-controlled email can't inject markup.
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'cloud-empty cloud-empty-signedin';
+            emptyDiv.innerHTML = '<i class="fas fa-cloud"></i><p>No saved molecules yet.</p>';
+            if (signedInUser.email) {
+                const meta = document.createElement('p');
+                meta.className = 'cloud-empty-meta';
+                meta.textContent = `Signed in as ${signedInUser.email}`;
+                emptyDiv.appendChild(meta);
+            }
+            list.innerHTML = '';
+            list.appendChild(emptyDiv);
             return;
         }
 

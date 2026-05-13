@@ -466,6 +466,43 @@ class TestSimplifiedPicker:
             "Model modal missing a data-provider='Groq' tab for the Llama option"
 
 
+# ── Cloud panel auth state (UX P1) ───────────────────────────────────────────
+
+FILE_EXPLORER_PATH = os.path.join(os.path.dirname(__file__), '..', 'demo', 'fileExplorer.js')
+
+
+@pytest.fixture(scope='module')
+def file_explorer_js():
+    with open(FILE_EXPLORER_PATH, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
+class TestCloudPanelAuthState:
+    """The right-rail Cloud panel used to say 'Sign in to use cloud storage'
+    even after sign-in, implying broken auth. Bind the panel render to
+    Firebase auth state so it reads 'Signed in as ...' + empty state when
+    signed in, and the sign-in prompt when signed out."""
+
+    def test_cloud_panel_renders_on_authStateChanged(self, file_explorer_js):
+        # The file explorer must re-render the cloud list on every auth
+        # state change, not just once.
+        assert "addEventListener('authStateChanged'" in file_explorer_js, \
+            "fileExplorer.js does not listen for authStateChanged"
+        # The listener must call loadCloudMolecules (the panel render path).
+        assert 'loadCloudMolecules' in file_explorer_js, \
+            "loadCloudMolecules() not referenced in fileExplorer.js"
+
+    def test_signed_out_branch_shows_signin_copy(self, file_explorer_js):
+        assert 'Sign in to use cloud storage' in file_explorer_js, \
+            "Cloud panel must show 'Sign in to use cloud storage' for signed-out users"
+
+    def test_signed_in_empty_state_present(self, file_explorer_js):
+        assert 'No saved molecules yet' in file_explorer_js, \
+            "Cloud panel must show 'No saved molecules yet' for signed-in users with no files"
+        assert 'Signed in as' in file_explorer_js, \
+            "Cloud panel must show 'Signed in as {email}' for signed-in users"
+
+
 # ── Backend switcher gated (UX P1) ───────────────────────────────────────────
 
 class TestBackendSwitcherGated:

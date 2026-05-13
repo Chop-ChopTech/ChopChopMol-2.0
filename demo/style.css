@@ -5864,6 +5864,13 @@ input[type="range"]:focus {
     text-align: center;
 }
 
+.cloud-empty .cloud-empty-meta {
+    margin-top: 2px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    font-style: italic;
+}
+
 /* Chart Lightbox (legacy) */
 .chart-lightbox {
     position: fixed;
