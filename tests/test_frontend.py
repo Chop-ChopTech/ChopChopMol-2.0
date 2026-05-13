@@ -715,3 +715,19 @@ class TestChatErrorCard:
             "aiagent.js must emit errorKind on failed sends"
         assert "errorKind: 'network'" in content, \
             "aiagent.js must classify transport-level failures as errorKind: 'network'"
+
+
+class TestChatComposerNoGrammarly:
+    """The chat textarea should suppress Grammarly's injected overlay icons
+    (huge user cohort has Grammarly installed; the badge squats over the right
+    side of the input). Use the data-gramm / spellcheck attributes Grammarly
+    documents as opt-out signals."""
+
+    def test_chat_textarea_opts_out_of_grammarly(self, html):
+        m = re.search(r'<textarea[^>]*id="aiChatInput"[^>]*>', html)
+        assert m, "aiChatInput textarea not found"
+        tag = m.group(0)
+        assert 'data-gramm="false"' in tag, \
+            "aiChatInput is missing data-gramm=\"false\" — Grammarly overlay will inject"
+        assert 'spellcheck="false"' in tag, \
+            "aiChatInput should set spellcheck=\"false\" to suppress browser spell-check too"
