@@ -1321,12 +1321,44 @@
         });
 
         // ─── Backend switcher (Settings → Account dropdown) ─────────────────
-        // Highlights the active backend pill, persists the choice via apiUtils,
-        // and reflects auto-detect / override changes back into the UI.
+        // Admin/QA-only. End users were flipping the inference cluster and
+        // breaking their session with no idea why. The dev backend is AWS-only
+        // anyway — RunPod/Render are irrelevant for end users here.
+        //
+        // SHOW_BACKEND_SWITCHER is the fail-closed default: the pill row stays
+        // hidden until we positively confirm the signed-in user has the admin
+        // custom claim. The keyboard shortcut (\\\\\) still works for ad-hoc
+        // overrides during incident response.
+        const SHOW_BACKEND_SWITCHER = false;
+
+        async function userHasAdminClaim(user) {
+            if (!user) return false;
+            try {
+                const result = await user.getIdTokenResult();
+                return !!(result && result.claims && (result.claims.admin === true || result.claims.qa === true));
+            } catch (e) {
+                console.warn('Failed to read custom claims:', e);
+                return false;
+            }
+        }
+
         (function initBackendSwitcher() {
             const root = document.getElementById('backendSwitcher');
             if (!root) return;
             const pills = Array.from(root.querySelectorAll('.backend-pill'));
+
+            // Default to hidden — only reveal on confirmed admin claim.
+            root.style.display = 'none';
+
+            async function revealIfPermitted() {
+                if (SHOW_BACKEND_SWITCHER) {
+                    root.style.display = '';
+                    return;
+                }
+                const user = window.auth?.currentUser || window.currentUser;
+                const ok = await userHasAdminClaim(user);
+                root.style.display = ok ? '' : 'none';
+            }
 
             function refreshActive() {
                 const saved = getSavedBackendOverride();
@@ -1347,8 +1379,14 @@
             // Listen for external switches (e.g. \\\\\\ keyboard shortcut)
             onBackendUrlOverride(() => refreshActive());
 
+            // Re-evaluate the gate when auth state changes — admins who sign
+            // out should lose the pill row, and admins who sign in should
+            // gain it without a page reload.
+            window.addEventListener('authStateChanged', () => revealIfPermitted());
+
             // Initial paint — and again once auto-detect resolves
             refreshActive();
+            revealIfPermitted();
             getBackendUrl().then(refreshActive).catch(() => { });
         })();
     </script>

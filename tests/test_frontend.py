@@ -466,6 +466,36 @@ class TestSimplifiedPicker:
             "Model modal missing a data-provider='Groq' tab for the Llama option"
 
 
+# ── Backend switcher gated (UX P1) ───────────────────────────────────────────
+
+class TestBackendSwitcherGated:
+    """End users were flipping the RunPod/Render toggle and breaking their
+    session. The pill row must be hidden by default and only revealed for
+    users with the admin/qa Firebase custom claim."""
+
+    def test_show_backend_switcher_default_false(self, html):
+        assert 'SHOW_BACKEND_SWITCHER = false' in html, \
+            "SHOW_BACKEND_SWITCHER must default to false (fail-closed)"
+
+    def test_admin_claim_check_present(self, html):
+        assert 'userHasAdminClaim' in html, \
+            "userHasAdminClaim() helper missing — backend switcher can't gate on custom claims"
+        assert 'getIdTokenResult' in html, \
+            "Admin gate must read Firebase ID token result for custom claims"
+        assert 'claims.admin' in html or "claims['admin']" in html, \
+            "Admin gate must check the 'admin' custom claim"
+
+    def test_switcher_hidden_by_default(self, html):
+        """The init function must set display:none on #backendSwitcher
+        before any async claim check resolves."""
+        # Find the init function body and assert it hides the root first.
+        idx = html.find('initBackendSwitcher')
+        assert idx != -1, "initBackendSwitcher() not found"
+        body = html[idx:idx + 2500]
+        assert "root.style.display = 'none'" in body, \
+            "initBackendSwitcher() must hide #backendSwitcher by default"
+
+
 # ── Guest-code field hidden (UX P1) ──────────────────────────────────────────
 
 class TestGuestCodeHidden:
