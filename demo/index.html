@@ -218,6 +218,33 @@
             text-align: center;
         }
 
+        /* Inline sign-in error banner — sits between password field and the
+           Sign-in button so the user sees it without scrolling past the form. */
+        #access-gate .ag-signin-error {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 8px 0 10px;
+            padding: 8px 11px;
+            background: rgba(220, 80, 60, 0.10);
+            border: 1px solid rgba(220, 80, 60, 0.45);
+            border-radius: 6px;
+            color: #f8c4b2;
+            font-size: 12.5px;
+            line-height: 1.45;
+        }
+
+        #access-gate .ag-signin-error[hidden] {
+            display: none;
+        }
+
+        #access-gate .ag-signin-error i {
+            color: #f6906f;
+            font-size: 13px;
+            margin-top: 1px;
+            flex-shrink: 0;
+        }
+
         #access-gate .ag-pending {
             font-size: 14px;
             color: #fdba74;
@@ -238,6 +265,13 @@
                     </div>
                     <div class="ag-field">
                         <input id="ag-pw" type="password" placeholder="Password" autocomplete="current-password">
+                    </div>
+                    <!-- Inline sign-in error banner: friendly, mapped from Firebase
+                         auth error codes, positioned in the user's line of sight
+                         (between password and Sign-in button). -->
+                    <div id="ag-signin-error" class="ag-signin-error" hidden>
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span class="ag-signin-error-message"></span>
                     </div>
                     <button id="ag-email-btn" class="ag-primary">Sign in</button>
                     <div style="text-align:right;margin:8px 2px 0">
@@ -438,16 +472,58 @@
                 if (err.code !== 'auth/popup-closed-by-user') signInWithRedirect(auth, provider);
             });
         });
+        // Map common Firebase auth error codes to user-friendly strings.
+        // We never want to leak the raw "Firebase: Error (auth/...)" SDK string
+        // — it's confusing, scary, and gives away what backend we're on.
+        const FIREBASE_AUTH_ERROR_MESSAGES = {
+            'auth/invalid-credential': 'Email or password is incorrect.',
+            'auth/user-not-found': 'Email or password is incorrect.',
+            'auth/wrong-password': 'Email or password is incorrect.',
+            'auth/too-many-requests': 'Too many attempts — try again in a minute.',
+            'auth/network-request-failed': 'Network error — check your connection.',
+            'auth/invalid-email': 'Please enter a valid email.',
+            'auth/user-disabled': 'This account has been disabled.',
+        };
+        function friendlySignInError(err) {
+            const code = err?.code || '';
+            if (code && FIREBASE_AUTH_ERROR_MESSAGES[code]) {
+                return FIREBASE_AUTH_ERROR_MESSAGES[code];
+            }
+            return 'Sign-in failed. Please try again.';
+        }
+        const signInErrorEl = document.getElementById('ag-signin-error');
+        const signInErrorMsg = signInErrorEl?.querySelector('.ag-signin-error-message');
+        function showSignInError(message) {
+            if (!signInErrorEl || !signInErrorMsg) return;
+            signInErrorMsg.textContent = message;
+            signInErrorEl.hidden = false;
+        }
+        function clearSignInError() {
+            if (!signInErrorEl) return;
+            signInErrorEl.hidden = true;
+            if (signInErrorMsg) signInErrorMsg.textContent = '';
+        }
+        // Clear the inline banner when the user starts editing either field —
+        // the previous error is no longer relevant.
+        document.getElementById('ag-email').addEventListener('input', clearSignInError);
+        document.getElementById('ag-pw').addEventListener('input', clearSignInError);
+
         document.getElementById('ag-email-btn').addEventListener('click', async () => {
             const email = document.getElementById('ag-email').value.trim();
             const pw = document.getElementById('ag-pw').value;
-            if (!email || !pw) { gateMsg.textContent = 'Email and password required.'; return; }
+            clearSignInError();
+            if (!email || !pw) {
+                showSignInError('Email and password required.');
+                return;
+            }
             try {
                 gateMsg.textContent = 'Signing in…';
                 await signInWithEmailAndPassword(auth, email, pw);
                 gateMsg.textContent = '';
             } catch (err) {
-                gateMsg.textContent = err.message || 'Sign-in failed.';
+                gateMsg.textContent = '';
+                console.warn('Sign-in failed:', err?.code, err?.message);
+                showSignInError(friendlySignInError(err));
             }
         });
         // Self-service password recovery for approved users whose original

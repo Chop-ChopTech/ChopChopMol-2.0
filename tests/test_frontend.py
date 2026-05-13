@@ -466,6 +466,43 @@ class TestSimplifiedPicker:
             "Model modal missing a data-provider='Groq' tab for the Llama option"
 
 
+# ── Sign-in error mapping (UX P0 — no raw Firebase strings) ──────────────────
+
+class TestSignInErrorMapping:
+    """The sign-in form must surface friendly, user-language error messages
+    instead of leaking the raw 'Firebase: Error (auth/invalid-credential).'
+    SDK string. The banner must sit between password and Sign-in (line of
+    sight), not 330px below the form."""
+
+    def test_firebase_error_map_exists(self, html):
+        assert 'FIREBASE_AUTH_ERROR_MESSAGES' in html, \
+            "FIREBASE_AUTH_ERROR_MESSAGES map is missing — raw Firebase strings will leak"
+
+    def test_invalid_credential_mapped(self, html):
+        assert "'auth/invalid-credential': 'Email or password is incorrect.'" in html, \
+            "auth/invalid-credential must map to 'Email or password is incorrect.'"
+
+    def test_too_many_requests_mapped(self, html):
+        assert "'auth/too-many-requests'" in html and 'try again in a minute' in html.lower(), \
+            "auth/too-many-requests must surface a throttle-aware message"
+
+    def test_network_error_mapped(self, html):
+        assert "'auth/network-request-failed'" in html and 'check your connection' in html.lower(), \
+            "auth/network-request-failed must surface a network-aware message"
+
+    def test_inline_error_banner_present(self, html):
+        """The error banner must exist between password input and Sign-in button."""
+        assert 'id="ag-signin-error"' in html, \
+            "Inline sign-in error banner (#ag-signin-error) is missing"
+        # Verify the banner is positioned between the password field and the
+        # Sign-in submit button so the user sees it in their line of sight.
+        idx_pw = html.find('id="ag-pw"')
+        idx_err = html.find('id="ag-signin-error"')
+        idx_submit = html.find('id="ag-email-btn"')
+        assert idx_pw < idx_err < idx_submit, \
+            "Sign-in error banner must sit between the password input and the Sign-in button"
+
+
 # ── Chat error card (UX P0 — backend failure UX) ─────────────────────────────
 
 class TestChatErrorCard:
