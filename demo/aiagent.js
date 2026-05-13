@@ -2817,7 +2817,12 @@ async function sendToAI(userMessage, onChunk) {
                 // Keep chart/figure data for final rendering, clear the rest
                 executed = executed.filter(e => e.chartData || e.pythonFigures);
             }
-            if (i === 0 && onChunk) onChunk(null, 'Thinking');
+            // Don't hardcode "Thinking" — it contradicts the budget picker
+            // when the user has thinking turned off. The chat UI watches SSE
+            // events and tells the typing indicator the real phase
+            // (Writing response… / Thinking… / Calling tool: X / Waiting for
+            // backend…). All we send here is a neutral "Sending request…".
+            if (i === 0 && onChunk) onChunk(null, 'Sending request');
 
             // 10s connect timeout: the streaming completion can take minutes, but
             // the initial fetch (DNS + TCP + TLS + first byte of headers) must

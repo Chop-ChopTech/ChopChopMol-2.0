@@ -3819,6 +3819,50 @@
                 if (welcome) welcome.remove();
                 const typingEl = showTyping();
 
+                // ── Dynamic typing-label state ─────────────────────────────
+                // The old label was hardcoded to "Thinking" for the entire
+                // round-trip, which contradicted the picker when the user had
+                // thinking turned off. Tie the label to the actual SSE phase
+                // and add an elapsed-time counter so users can distinguish
+                // "slow" from "stuck".
+                const _statusStart = performance.now();
+                let _chatStatusLabel = 'Sending request';
+                let _chatStatusEpoch = 0;            // bumped on every status change
+                let _lastSseEventAt = performance.now();
+                const SILENCE_THRESHOLD_MS = 3000;
+                const ELAPSED_THRESHOLD_MS = 5000;
+                function _setStatus(label) {
+                    if (!label) return;
+                    _chatStatusLabel = label;
+                    _chatStatusEpoch++;
+                    _renderStatus();
+                }
+                function _markSseEvent() { _lastSseEventAt = performance.now(); }
+                function _renderStatus() {
+                    if (typingRemoved) return;
+                    const elapsedMs = performance.now() - _statusStart;
+                    let label = _chatStatusLabel;
+                    // Silence watchdog: if the backend has gone quiet for >3s
+                    // while we're still in a pre-text phase, swap the label so
+                    // the user knows we're waiting on the server, not them.
+                    if (
+                        !_didStartWritingText &&
+                        performance.now() - _lastSseEventAt > SILENCE_THRESHOLD_MS
+                    ) {
+                        label = 'Waiting for backend';
+                    }
+                    if (elapsedMs > ELAPSED_THRESHOLD_MS) {
+                        const seconds = Math.floor(elapsedMs / 1000);
+                        label = `${label} · ${seconds}s`;
+                    }
+                    typingEl.setStatus(label);
+                }
+                // Tick once a second so the elapsed counter advances and the
+                // silence watchdog can fire even when there are no SSE events.
+                let _didStartWritingText = false;
+                const _statusTicker = setInterval(_renderStatus, 1000);
+                typingEl._cleanupStatusTicker = () => clearInterval(_statusTicker);
+
                 // Prepare message element (added after first chunk)
                 const msgEl = document.createElement('div');
                 msgEl.className = 'ai-message assistant';
@@ -4145,8 +4189,17 @@
 
                 try {
                     const response = await window.AIAgent.send(fullMessage, (chunk, status, statusType) => {
+                        // Every SSE event resets the silence watchdog.
+                        _markSseEvent();
+
                         // ── Thinking events ──
                         if (statusType === 'thinking_start') {
+                            // Only show "Thinking…" when the user actually has
+                            // thinking enabled (budget > 0). The status label
+                            // is updated even though the typing indicator is
+                            // about to be removed — the thinking block has its
+                            // own header label.
+                            _setStatus('Thinking');
                             if (!typingRemoved) {
                                 typingEl.remove();
                                 typingRemoved = true;
@@ -4200,6 +4253,11 @@
 
                         // ── Tool status → stacked rows ──
                         if (chunk === null && statusType === 'tool_status') {
+                            // Reflect the tool name in the typing-indicator
+                            // label (even though the indicator is removed
+                            // right after, this is consumed by clients that
+                            // keep it visible during streaming tools).
+                            _setStatus(`Calling tool: ${(toolStatusMap[status] || (status || 'tool').replace(/_/g, ' '))}`);
                             if (!typingRemoved) {
                                 typingEl.remove();
                                 typingRemoved = true;
@@ -4319,12 +4377,24 @@
                         }
 
                         // ── Status update only (for typing indicator) ──
+                        // The aiagent now sends neutral status strings here
+                        // ("Sending request", "Analyzing request", tool names
+                        // during execution). Route through _setStatus so the
+                        // elapsed counter and silence watchdog stay coherent.
                         if (chunk === null) {
-                            if (status) typingEl.setStatus(status);
+                            if (status) _setStatus(status);
                             return;
                         }
 
                         // ── Text chunk ──
+                        // First text token = response phase. Flip the label
+                        // (visible until the indicator is removed in this same
+                        // branch) so the user sees "Writing response…" and the
+                        // silence watchdog stops firing.
+                        if (!_didStartWritingText) {
+                            _didStartWritingText = true;
+                            _setStatus('Writing response');
+                        }
                         if (!typingRemoved) {
                             typingEl.remove();
                             typingRemoved = true;
@@ -4459,6 +4529,10 @@
                         clearInterval(thinkingEl._timerInterval);
                         thinkingEl._timerInterval = null;
                     }
+                    // Stop the dynamic-status ticker once the stream finishes,
+                    // regardless of whether the typing indicator is still in
+                    // the DOM (it usually isn't by this point).
+                    typingEl._cleanupStatusTicker?.();
 
                     // Clean up empty sub-containers
                     if (!thinkingContainer.children.length) thinkingContainer.remove();
@@ -4476,6 +4550,7 @@
                         clearInterval(thinkingEl._timerInterval);
                         thinkingEl._timerInterval = null;
                     }
+                    typingEl._cleanupStatusTicker?.();
                     msgEl.classList.add('error');
                     const looksLikeNetwork = err?.name === 'TypeError' || /failed to fetch|network/i.test(err?.message || '');
                     const card = renderChatErrorCard({

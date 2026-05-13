@@ -466,6 +466,67 @@ class TestSimplifiedPicker:
             "Model modal missing a data-provider='Groq' tab for the Llama option"
 
 
+# ── Dynamic typing-indicator label (UX P1) ───────────────────────────────────
+
+class TestDynamicTypingLabel:
+    """The chat typing indicator used to say 'Thinking' with 3 dots for the
+    entire round-trip — even when the user had thinking turned off, and even
+    while a tool was running. The label must reflect the actual SSE phase
+    and include an elapsed-time counter."""
+
+    def test_chat_status_label_state_exists(self, html):
+        """A mutable _chatStatusLabel variable must exist so the SSE handler
+        can update the label across multiple events."""
+        assert '_chatStatusLabel' in html, \
+            "_chatStatusLabel state variable missing — typing indicator can't be dynamic"
+
+    def test_writing_response_phase(self, html):
+        """The first text token must flip the label to 'Writing response'."""
+        assert "_setStatus('Writing response')" in html, \
+            "First text token must update the status label to 'Writing response'"
+
+    def test_calling_tool_phase(self, html):
+        """The tool_status SSE event must update the label to 'Calling tool: …'."""
+        assert "_setStatus(`Calling tool:" in html, \
+            "tool_status SSE event must update the status label to 'Calling tool: …'"
+
+    def test_thinking_phase_only_on_thinking_start(self, html):
+        """The 'Thinking' label must only be set in the thinking_start branch
+        — not unconditionally for every request."""
+        assert "_setStatus('Thinking')" in html, \
+            "thinking_start branch must set the status label to 'Thinking'"
+
+    def test_silence_watchdog_present(self, html):
+        """A silence watchdog must swap the label to 'Waiting for backend'
+        after a quiet period."""
+        assert 'SILENCE_THRESHOLD_MS' in html, \
+            "Silence watchdog threshold constant missing"
+        assert 'Waiting for backend' in html, \
+            "Silence watchdog must surface 'Waiting for backend' label"
+
+    def test_elapsed_counter_present(self, html):
+        """The status line must include an elapsed-time counter so users can
+        distinguish slow from stuck."""
+        assert 'ELAPSED_THRESHOLD_MS' in html, \
+            "Elapsed-time counter threshold missing"
+        # The counter format is "{label} · {seconds}s" — verify the seconds suffix
+        # construction is present.
+        assert '${seconds}s' in html, \
+            "Elapsed counter must append a seconds suffix to the status label"
+
+    def test_aiagent_does_not_hardcode_thinking(self):
+        """aiagent.js must not send a 'Thinking' status string on every
+        request — the chat UI's _setStatus is what governs the label now."""
+        path = os.path.join(os.path.dirname(__file__), '..', 'demo', 'aiagent.js')
+        with open(path) as f:
+            content = f.read()
+        # The "i === 0" initial onChunk call must NOT send 'Thinking' anymore.
+        # Match the legacy line so a future revert is caught immediately.
+        assert "onChunk(null, 'Thinking');" not in content, \
+            "aiagent.js still hardcodes 'Thinking' as the initial status — " \
+            "the chat UI should drive the label via SSE phase instead"
+
+
 # ── Cloud panel auth state (UX P1) ───────────────────────────────────────────
 
 FILE_EXPLORER_PATH = os.path.join(os.path.dirname(__file__), '..', 'demo', 'fileExplorer.js')
