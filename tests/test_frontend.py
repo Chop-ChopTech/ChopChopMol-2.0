@@ -464,3 +464,55 @@ class TestSimplifiedPicker:
         """The model modal must expose a Groq tab so Llama doesn't get orphaned."""
         assert 'data-provider="Groq"' in html, \
             "Model modal missing a data-provider='Groq' tab for the Llama option"
+
+
+# ── Chat error card (UX P0 — backend failure UX) ─────────────────────────────
+
+class TestChatErrorCard:
+    """When the AI backend is unreachable, the chat must render a real error
+    card with a Retry button (and a Show details disclosure for the raw
+    error message) — not a tiny red pill saying 'Failed to fetch'."""
+
+    def test_error_card_renderer_exists(self, html):
+        """renderChatErrorCard() must be defined in the inline chat script."""
+        assert 'function renderChatErrorCard' in html, \
+            "renderChatErrorCard() helper missing — error card cannot be built"
+
+    def test_error_card_emits_retry_button(self, html):
+        """The renderer must emit an .ai-error-card-retry button in its markup."""
+        # The retry button class string must appear in the renderer body so
+        # network failures get a real retry CTA, not a tiny red pill.
+        assert 'ai-error-card-retry' in html, \
+            "Error card renderer does not emit a .ai-error-card-retry button"
+        assert 'Retry' in html, \
+            "Error card Retry label missing"
+
+    def test_error_card_has_details_disclosure(self, html):
+        """The renderer must emit a Show details disclosure for the raw
+        error.name + error.message string."""
+        assert 'ai-error-card-details' in html, \
+            "Error card renderer does not emit a .ai-error-card-details disclosure"
+        assert 'Show details' in html, \
+            "Show details toggle label missing from error card"
+
+    def test_aiagent_uses_connect_timeout(self):
+        """sendToAI must wrap the initial fetch in a 10s connect timeout so
+        users don't stare at 'Thinking…' for 60s on a TCP/DNS failure."""
+        path = os.path.join(os.path.dirname(__file__), '..', 'demo', 'aiagent.js')
+        with open(path) as f:
+            content = f.read()
+        assert 'CONNECT_TIMEOUT_MS' in content, \
+            "aiagent.js must define a CONNECT_TIMEOUT_MS for the initial fetch"
+        assert '10000' in content, \
+            "Connect timeout must be 10000ms (10s)"
+
+    def test_aiagent_classifies_errors(self):
+        """sendToAI must surface errorKind so the UI can branch on
+        network vs. server vs. client failures."""
+        path = os.path.join(os.path.dirname(__file__), '..', 'demo', 'aiagent.js')
+        with open(path) as f:
+            content = f.read()
+        assert 'errorKind' in content, \
+            "aiagent.js must emit errorKind on failed sends"
+        assert "errorKind: 'network'" in content, \
+            "aiagent.js must classify transport-level failures as errorKind: 'network'"

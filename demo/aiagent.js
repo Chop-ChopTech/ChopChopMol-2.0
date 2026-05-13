@@ -2819,16 +2819,67 @@ async function sendToAI(userMessage, onChunk) {
             }
             if (i === 0 && onChunk) onChunk(null, 'Thinking');
 
-            const response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat/stream`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...getByokHeaders() },
-                body: JSON.stringify(payload),
-                signal: _abortController.signal
-            });
+            // 10s connect timeout: the streaming completion can take minutes, but
+            // the initial fetch (DNS + TCP + TLS + first byte of headers) must
+            // resolve quickly. If it doesn't, surface a clean error rather than
+            // letting the user stare at "Thinking..." for 60s.
+            const CONNECT_TIMEOUT_MS = 10000;
+            const connectTimeoutCtrl = new AbortController();
+            const connectTimer = setTimeout(() => {
+                try { connectTimeoutCtrl.abort(); } catch {}
+            }, CONNECT_TIMEOUT_MS);
+
+            // Forward an explicit user abort to the connect controller too, so
+            // the fetch tears down promptly when the user hits stop.
+            const onUserAbort = () => { try { connectTimeoutCtrl.abort(); } catch {} };
+            _abortController.signal.addEventListener('abort', onUserAbort);
+
+            let response;
+            try {
+                response = await fetch(`${AI_CONFIG.backendUrl}/ai/chat/stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getByokHeaders() },
+                    body: JSON.stringify(payload),
+                    signal: connectTimeoutCtrl.signal
+                });
+                clearTimeout(connectTimer);
+                _abortController.signal.removeEventListener('abort', onUserAbort);
+            } catch (fetchErr) {
+                clearTimeout(connectTimer);
+                _abortController.signal.removeEventListener('abort', onUserAbort);
+                // Distinguish a user abort from a transport failure.
+                if (_abortController.signal.aborted) {
+                    return { content: fullContent, actions: executed, aborted: true };
+                }
+                // Anything else (AbortError from timeout, TypeError: Failed to fetch,
+                // DNS errors, TLS errors) is a transport-level failure. Bubble up a
+                // structured error so the chat UI can render a real error card.
+                console.warn('Backend fetch failed:', fetchErr?.name, fetchErr?.message);
+                // Trigger backend re-detection on network failure
+                invalidateBackendUrl();
+                getBackendUrl().then(url => { AI_CONFIG.backendUrl = url; });
+                return {
+                    error: "Couldn't reach the AI backend. The dev server may be restarting — try again in a moment.",
+                    errorKind: 'network',
+                    errorDetails: `${fetchErr?.name || 'Error'}: ${fetchErr?.message || 'Failed to fetch'}`
+                };
+            }
 
             if (!response.ok) {
-                const err = await response.json();
-                return { error: err.error || 'Backend error' };
+                // Try to parse a JSON error body, but fall back to the raw text
+                // so 5xx HTML pages don't blow up JSON.parse.
+                let serverMsg = '';
+                try {
+                    const body = await response.json();
+                    serverMsg = body.error || body.message || '';
+                } catch {
+                    try { serverMsg = (await response.text()).slice(0, 300); } catch {}
+                }
+                return {
+                    error: serverMsg || `Backend error (HTTP ${response.status})`,
+                    errorKind: response.status >= 500 ? 'server' : 'client',
+                    errorDetails: `HTTP ${response.status} ${response.statusText || ''}`.trim()
+                };
             }
 
             const reader = response.body.getReader();
@@ -3016,7 +3067,18 @@ async function sendToAI(userMessage, onChunk) {
         // Trigger backend re-detection on network/fetch errors
         invalidateBackendUrl();
         getBackendUrl().then(url => { AI_CONFIG.backendUrl = url; });
-        return { error: e.message };
+        // Classify as network if it looks like a transport-level failure so the
+        // UI can render the retry-style error card. Anything else (parse errors,
+        // bugs in the SSE loop) is reported with its raw message.
+        const looksLikeNetwork = e?.name === 'TypeError' || /failed to fetch|network/i.test(e?.message || '');
+        if (looksLikeNetwork) {
+            return {
+                error: "Couldn't reach the AI backend. The dev server may be restarting — try again in a moment.",
+                errorKind: 'network',
+                errorDetails: `${e?.name || 'Error'}: ${e?.message || 'Failed to fetch'}`
+            };
+        }
+        return { error: e.message, errorKind: 'unknown', errorDetails: `${e?.name || 'Error'}: ${e?.message || ''}` };
     }
 }
 

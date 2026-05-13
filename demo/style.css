@@ -3763,6 +3763,88 @@ input[type="range"]:focus {
     color: #fca5a5;
 }
 
+/* ── Error Card (network / backend failures) ── */
+.ai-error-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
+    margin: 6px 0;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 10px;
+    color: #fecaca;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.ai-error-card-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.ai-error-card-icon {
+    color: #f87171;
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.ai-error-card-message {
+    flex: 1;
+    color: #fecaca;
+}
+
+.ai-error-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ai-error-card-retry,
+.ai-error-card-details-toggle {
+    appearance: none;
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fecaca;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ai-error-card-retry:hover,
+.ai-error-card-details-toggle:hover {
+    background: rgba(239, 68, 68, 0.28);
+    border-color: rgba(239, 68, 68, 0.55);
+}
+
+.ai-error-card-retry:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.ai-error-card-retry i {
+    margin-right: 6px;
+}
+
+.ai-error-card-details {
+    margin: 0;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 6px;
+    color: rgba(254, 202, 202, 0.85);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 /* ── Thinking Block ── */
 .ai-thinking-block {
     margin-bottom: 8px;

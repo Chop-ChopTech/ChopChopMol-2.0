@@ -4249,10 +4249,12 @@
 
                     if (response.error) {
                         msgEl.classList.add('error');
-                        const errorBlock = document.createElement('div');
-                        errorBlock.className = 'ai-response-text';
-                        errorBlock.textContent = response.error;
-                        contentEl.appendChild(errorBlock);
+                        // Render a real error card with retry + details for
+                        // network/transport failures. Model-level errors (5xx
+                        // with a body, 4xx) get the same card but skip the
+                        // retry CTA when retrying isn't likely to help.
+                        const card = renderChatErrorCard(response, fullMessage);
+                        contentEl.appendChild(card);
                     } else if (response.actions?.length > 0) {
                         // Populate tool row details with params/results
                         const toolRows = contentEl.querySelectorAll('.ai-tool-row');
@@ -4357,10 +4359,15 @@
                         thinkingEl._timerInterval = null;
                     }
                     msgEl.classList.add('error');
-                    const errBlock = document.createElement('div');
-                    errBlock.className = 'ai-response-text';
-                    errBlock.textContent = 'Something went wrong. Please try again.';
-                    contentEl.appendChild(errBlock);
+                    const looksLikeNetwork = err?.name === 'TypeError' || /failed to fetch|network/i.test(err?.message || '');
+                    const card = renderChatErrorCard({
+                        error: looksLikeNetwork
+                            ? "Couldn't reach the AI backend. The dev server may be restarting — try again in a moment."
+                            : 'Something went wrong. Please try again.',
+                        errorKind: looksLikeNetwork ? 'network' : 'unknown',
+                        errorDetails: `${err?.name || 'Error'}: ${err?.message || ''}`
+                    }, fullMessage);
+                    contentEl.appendChild(card);
                     console.error('AI Chat Error:', err);
                 }
 
@@ -4480,6 +4487,63 @@
                 const div = document.createElement('div');
                 div.textContent = text;
                 return div.innerHTML;
+            }
+
+            // Render a chat error card with icon, message, optional retry,
+            // and a "Show details" disclosure for the raw error string.
+            // Network/transport failures get a retry button that re-sends the
+            // same prompt; backend-level errors (4xx/5xx with a body) skip the
+            // retry to avoid hammering the server with the same broken request.
+            function renderChatErrorCard(response, originalPrompt) {
+                const card = document.createElement('div');
+                card.className = 'ai-error-card';
+                card.dataset.errorKind = response.errorKind || 'unknown';
+
+                const isNetwork = response.errorKind === 'network';
+                const isServer = response.errorKind === 'server';
+                const showRetry = isNetwork || isServer;
+
+                const safeMessage = escapeHtml(response.error || 'Something went wrong.');
+                const safeDetails = escapeHtml(response.errorDetails || '');
+
+                card.innerHTML = `
+                    <div class="ai-error-card-row">
+                        <i class="fas fa-exclamation-circle ai-error-card-icon"></i>
+                        <span class="ai-error-card-message">${safeMessage}</span>
+                    </div>
+                    <div class="ai-error-card-actions">
+                        ${showRetry ? '<button type="button" class="ai-error-card-retry"><i class="fas fa-rotate-right"></i> Retry</button>' : ''}
+                        ${safeDetails ? '<button type="button" class="ai-error-card-details-toggle">Show details</button>' : ''}
+                    </div>
+                    ${safeDetails ? `<pre class="ai-error-card-details" hidden>${safeDetails}</pre>` : ''}
+                `;
+
+                const retryBtn = card.querySelector('.ai-error-card-retry');
+                if (retryBtn && originalPrompt) {
+                    retryBtn.addEventListener('click', () => {
+                        retryBtn.disabled = true;
+                        // Re-populate the chat input and trigger send so the
+                        // existing handleSend() path runs (single source of truth
+                        // for typing indicator + SSE + history persistence).
+                        chatInput.value = originalPrompt;
+                        handleSend();
+                    });
+                }
+                const toggleBtn = card.querySelector('.ai-error-card-details-toggle');
+                const detailsEl = card.querySelector('.ai-error-card-details');
+                if (toggleBtn && detailsEl) {
+                    toggleBtn.addEventListener('click', () => {
+                        const isHidden = detailsEl.hasAttribute('hidden');
+                        if (isHidden) {
+                            detailsEl.removeAttribute('hidden');
+                            toggleBtn.textContent = 'Hide details';
+                        } else {
+                            detailsEl.setAttribute('hidden', '');
+                            toggleBtn.textContent = 'Show details';
+                        }
+                    });
+                }
+                return card;
             }
             /*************  ✨ Windsurf Command ⭐  *************/
             /**
