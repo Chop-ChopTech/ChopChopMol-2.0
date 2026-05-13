@@ -1,12 +1,15 @@
 # Deploy the dev branch to the chopchopmol-dev Firebase project.
-# Triggered on every push to dev. Prod is unaffected — different project,
-# different service account secret, different workflow file.
-name: Deploy to Firebase Hosting (dev)
+#
+# As of b82ebfc (Migrate dev frontend Firebase Hosting → AWS S3 + CloudFront),
+# dev.chopchopmol.com points at CloudFront, not Firebase. This workflow is
+# retained as a manual rollback path only — it no longer fires on push to
+# avoid double-deploying every change. Trigger via the Actions tab when you
+# need to flip back to chopchopmoldev.web.app (see CHANGELOG.md rollback
+# runbook).
+name: Deploy to Firebase Hosting (dev — manual rollback only)
 
 on:
-  push:
-    branches:
-      - dev
+  workflow_dispatch:
 
 jobs:
   build_and_deploy:
