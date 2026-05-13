@@ -8,6 +8,38 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased] — `dev`
 
+### Infrastructure — dev frontend moved to AWS S3 + CloudFront
+- `https://dev.chopchopmol.com` is now served from CloudFront distribution
+  `E351200SGLQFEA` (alias `d29u421gc7m3rh.cloudfront.net`) in front of S3
+  bucket `chopchopmol-dev-frontend` (us-east-1). ACM cert
+  `arn:aws:acm:us-east-1:099554283476:certificate/4b35cfee-b9ca-413b-9f0e-41e61e6e3d66`
+  issues TLS for the alias. The S3 bucket is private — only the CloudFront
+  OAC can `GetObject`.
+- New workflow `.github/workflows/deploy-dev-s3.yml` syncs `demo/` to the
+  bucket and invalidates `/*` on every push to `dev`. Three repo secrets
+  back it: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+  (IAM user `github-actions-chopchopmol-dev-frontend`, scoped to
+  `s3:PutObject`/`s3:DeleteObject` on this bucket + `cloudfront:CreateInvalidation`
+  on this distribution — least-priv), and `CLOUDFRONT_DISTRIBUTION_ID`.
+- SPA fallback wired: CloudFront serves `/index.html` with HTTP 200 for both
+  403 and 404 from S3, so client-side routes don't break.
+- Cloudflare DNS: `dev.chopchopmol.com` is now a **DNS-only** (gray-cloud)
+  CNAME → `d29u421gc7m3rh.cloudfront.net`. DNS-only on purpose for now —
+  rules out Cloudflare's CDN layer when debugging. Flip to proxied later
+  if we want Cloudflare's edge caching too.
+- Prod (`chopchopmol.com` on Vercel) is untouched. The previous Firebase
+  Hosting target `chopchopmoldev.web.app` is also untouched and remains a
+  hot rollback path. The old `firebase-hosting-dev.yml` workflow still
+  runs on every push to `dev` — both deploys happen in parallel; only the
+  S3+CloudFront one is what `dev.chopchopmol.com` resolves to.
+
+**Rollback runbook (3 steps):**
+1. In Cloudflare, change the `dev.chopchopmol.com` CNAME back to
+   `chopchopmoldev.web.app` (or whatever the Firebase Hosting target was).
+2. Wait 1-2 min for DNS TTL (currently 300s).
+3. Firebase Hosting is still running, so traffic resumes there. Disable
+   the AWS deploy workflow at the same time if you want to stop syncing.
+
 ### Reliability / Observability
 - **SSE error boundaries.** `streamSSE` in `demo/utils/apiUtils.js` now wraps
   per-event handler invocations in try/catch — one bad frame can no longer

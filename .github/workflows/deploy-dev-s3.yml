@@ -1,0 +1,72 @@
+# Deploy the dev branch frontend to AWS S3 + CloudFront.
+#
+# Replaces Firebase Hosting for https://dev.chopchopmol.com.
+# Triggered on every push to dev. Prod (Vercel, chopchopmol.com) is unaffected —
+# different service entirely. The firebase-hosting-dev.yml workflow is kept as
+# a rollback target; see CHANGELOG.md for the runbook.
+#
+# Secrets required (already configured on the repo):
+#   AWS_ACCESS_KEY_ID            (IAM user github-actions-chopchopmol-dev-frontend)
+#   AWS_SECRET_ACCESS_KEY        (same user — least-privileged, S3 + CF only)
+#   CLOUDFRONT_DISTRIBUTION_ID   (E351200SGLQFEA)
+#
+# If AWS secrets are missing (e.g. on a fork PR), the job no-ops gracefully
+# instead of failing loudly.
+name: Deploy dev frontend to AWS S3 + CloudFront
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev-s3
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check AWS secrets are present
+        id: check_secrets
+        env:
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          if [ -z "$AWS_KEY" ]; then
+            echo "AWS credentials not configured on this repo/fork — skipping S3 deploy."
+            echo "has_aws=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_aws=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.check_secrets.outputs.has_aws == 'true'
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        if: steps.check_secrets.outputs.has_aws == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Sync demo/ to S3
+        if: steps.check_secrets.outputs.has_aws == 'true'
+        run: |
+          aws s3 sync demo/ s3://chopchopmol-dev-frontend/ \
+            --delete \
+            --cache-control "public, no-cache" \
+            --exclude ".DS_Store" \
+            --exclude "node_modules/*"
+
+      - name: Invalidate CloudFront cache
+        if: steps.check_secrets.outputs.has_aws == 'true'
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
