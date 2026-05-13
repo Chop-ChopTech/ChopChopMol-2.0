@@ -2795,63 +2795,15 @@
                     <i class="fas fa-chevron-down ai-model-trigger-caret"></i>
                 </button>
                 <select id="aiModelSelect" class="ai-model-select" title="Select AI Model" style="display:none;">
-                    <optgroup label="GPT-5.5">
-                        <option value="gpt-5.5">GPT-5.5</option>
-                        <option value="gpt-5.5-pro">GPT-5.5 Pro</option>
-                    </optgroup>
-                    <optgroup label="GPT-5.4">
-                        <option value="gpt-5.4">GPT-5.4</option>
-                        <option value="gpt-5.4-pro">GPT-5.4 Pro</option>
-                        <option value="gpt-5.4-mini">GPT-5.4 Mini</option>
-                        <option value="gpt-5.4-nano">GPT-5.4 Nano</option>
-                    </optgroup>
-                    <optgroup label="GPT-5.3">
-                        <option value="gpt-5.3-chat-latest">GPT-5.3 Instant</option>
-                    </optgroup>
-                    <optgroup label="GPT-5.2">
-                        <option value="gpt-5.2">GPT-5.2</option>
-                        <option value="gpt-5.2-pro">GPT-5.2 Pro</option>
-                    </optgroup>
-                    <optgroup label="GPT-5.1">
-                        <option value="gpt-5.1">GPT-5.1</option>
-                        <option value="gpt-5.1-codex-max">GPT-5.1 Codex Max</option>
-                    </optgroup>
-                    <optgroup label="GPT-5">
-                        <option value="gpt-5">GPT-5</option>
-                        <option value="gpt-5-mini">GPT-5 Mini</option>
-                        <option value="gpt-5-nano">GPT-5 Nano</option>
-                    </optgroup>
-                    <optgroup label="O-Series (Reasoning)">
-                        <option value="o4-mini">o4-mini</option>
-                        <option value="o3">o3</option>
-                    </optgroup>
-                    <optgroup label="GPT-4.1 (No Reasoning)">
-                        <option value="gpt-4.1">GPT-4.1</option>
-                        <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
-                        <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
-                    </optgroup>
-                    <optgroup label="Groq (Llama)">
-                        <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq)</option>
-                        <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B</option>
-                        <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick 17B</option>
-                        <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant</option>
-                        <option value="gemma2-9b-it">Gemma 2 9B</option>
-                    </optgroup>
-                    <optgroup label="Claude Opus">
+                    <optgroup label="Claude">
                         <option value="claude-opus-4-7">Claude Opus 4.7</option>
-                        <option value="claude-opus-4-6">Claude Opus 4.6</option>
-                        <option value="claude-opus-4-5-20251101">Claude Opus 4.5</option>
-                        <option value="claude-opus-4-1-20250805">Claude Opus 4.1</option>
-                        <option value="claude-opus-4-20250514">Claude Opus 4</option>
-                    </optgroup>
-                    <optgroup label="Claude Sonnet">
                         <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
-                        <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5</option>
-                        <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
                     </optgroup>
-                    <optgroup label="Claude Haiku">
-                        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
-                        <option value="claude-3-5-haiku-20241022">Claude Haiku 3.5</option>
+                    <optgroup label="OpenAI">
+                        <option value="gpt-5">GPT-5</option>
+                    </optgroup>
+                    <optgroup label="Groq">
+                        <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq)</option>
                     </optgroup>
                 </select>
                 <button id="aiAttachBtn" class="ai-attach-btn" title="Attach files">
@@ -2885,13 +2837,9 @@
                     <i class="fas fa-brain"></i>
                     <span class="ai-thinking-control-label">Thinking</span>
                     <div class="ai-thinking-toggle" id="aiThinkingToggle">
-                        <button class="ai-thinking-opt" data-budget="0" title="No thinking">Off</button>
-                        <button class="ai-thinking-opt active" data-budget="4096"
-                            title="Light thinking (~4K tokens)">Low</button>
-                        <button class="ai-thinking-opt" data-budget="10000"
-                            title="Medium thinking (~10K tokens)">Med</button>
-                        <button class="ai-thinking-opt" data-budget="32000"
-                            title="Deep thinking (~32K tokens)">High</button>
+                        <button class="ai-thinking-opt" data-budget="0" title="No extended thinking">Off</button>
+                        <button class="ai-thinking-opt active" data-budget="10000"
+                            title="Extended thinking (~10K tokens)">On</button>
                     </div>
                 </div>
                 <div class="ai-thinking-control" id="aiComputeControl">
@@ -2911,6 +2859,9 @@
                 </button>
                 <button type="button" class="ai-model-tab" data-provider="OpenAI">
                     <i class="fas fa-bolt"></i><span>OpenAI</span>
+                </button>
+                <button type="button" class="ai-model-tab" data-provider="Groq">
+                    <i class="fas fa-rocket"></i><span>Groq</span>
                 </button>
             </div>
             <div class="ai-model-modal-search">
@@ -3022,7 +2973,7 @@
             // ═══════════════════════════════════════════════════════════════
             // ▼▼▼  PROVIDER RESTRICTION — EDIT THIS LINE AND REDEPLOY  ▼▼▼
             //   Set to 'claude' to mark all Claude models "Under Development"
-            //                      (users forced to GPT-5.4)
+            //                      (users forced to GPT-5)
             //   Set to 'openai' to mark all OpenAI models "Under Development"
             //                      (users forced to Claude Sonnet 4.6)
             //   Set to null     to enable both providers normally
@@ -3031,7 +2982,7 @@
             // ═══════════════════════════════════════════════════════════════
 
             const RESTRICTION_FALLBACK = {
-                claude: 'gpt-5.4-mini',
+                claude: 'gpt-5',
                 openai: 'claude-sonnet-4-6',
             };
             const PROVIDER_RESTRICTION = {
@@ -3127,45 +3078,15 @@
             const modelThinkingHint = null;
 
             const MODEL_META = {
-                'auto': { badge: 'Auto', hint: 'Pick the best available model for each request' },
-                'gpt-5.5': { badge: 'New', hint: 'Frontier · 1M context · best for code & analysis' },
-                'gpt-5.5-pro': { hint: 'Max depth GPT-5.5 with extra compute' },
-                'claude-opus-4-7': { badge: 'New', hint: 'Adaptive deep reasoning · latest Opus' },
-                'claude-opus-4-6': { hint: 'Adaptive reasoning · high intelligence' },
-                'claude-opus-4-5-20251101': { hint: 'Extended thinking · balanced Opus' },
-                'claude-opus-4-1-20250805': { hint: 'Extended thinking' },
-                'claude-opus-4-20250514': { hint: 'Original Opus 4' },
-                'claude-sonnet-4-6': { badge: 'Default', hint: 'Interleaved thinking · everyday workhorse' },
-                'claude-sonnet-4-5-20250929': { hint: 'Extended thinking' },
-                'claude-sonnet-4-20250514': { hint: 'Extended thinking' },
-                'claude-haiku-4-5-20251001': { hint: 'Fast · supports thinking' },
-                'claude-3-5-haiku-20241022': { hint: 'Legacy · no thinking' },
-                'gpt-5.4': { hint: 'Frontier reasoning · 1M context' },
-                'gpt-5.4-pro': { hint: 'Max depth via extra compute' },
-                'gpt-5.4-mini': { hint: 'Faster GPT-5.4 for high-volume' },
-                'gpt-5.4-nano': { hint: 'Cheapest/fastest GPT-5.4' },
-                'gpt-5.3-chat-latest': { hint: 'Non-reasoning chat · instant replies' },
-                'gpt-5.2': { hint: 'Reasoning effort · tool use' },
-                'gpt-5.2-pro': { hint: 'Pro variant of 5.2' },
-                'gpt-5.1': { hint: 'Reasoning effort' },
-                'gpt-5.1-codex-max': { hint: 'Agentic coding optimized' },
-                'gpt-5': { hint: 'Reasoning effort' },
-                'gpt-5-mini': { hint: 'Small & fast reasoning' },
-                'gpt-5-nano': { hint: 'Ultralight reasoning' },
-                'o4-mini': { hint: 'Reasoning series' },
-                'o3': { hint: 'Reasoning series' },
-                'gpt-4.1': { hint: 'Chat · no reasoning' },
-                'gpt-4.1-mini': { hint: 'Chat · no reasoning' },
-                'gpt-4.1-nano': { hint: 'Chat · no reasoning' },
+                'claude-opus-4-7': { badge: 'Default', hint: 'Adaptive deep reasoning · latest Opus' },
+                'claude-sonnet-4-6': { hint: 'Interleaved thinking · everyday workhorse' },
+                'gpt-5': { hint: 'OpenAI · reasoning effort' },
                 'llama-3.3-70b-versatile': { badge: 'Groq', hint: 'Llama 3.3 70B via Groq · 12k TPM · 27 of 59 tools · recommended for tool use' },
-                'meta-llama/llama-4-scout-17b-16e-instruct': { badge: 'Groq', hint: 'Llama 4 Scout 17B via Groq · fast & capable · 27 of 59 tools' },
-                'meta-llama/llama-4-maverick-17b-128e-instruct': { badge: 'Groq', hint: 'Llama 4 Maverick 17B via Groq · high quality · 27 of 59 tools' },
-                'llama-3.1-8b-instant': { hint: 'Llama 3.1 8B via Groq · 6k TPM · 27 of 59 tools · may hit limits with tools' },
-                'gemma2-9b-it': { hint: 'Gemma 2 9B via Groq · 15k TPM free · 27 of 59 tools' },
             };
 
             function providerFor(groupLabel) {
                 if (groupLabel.startsWith('Claude')) return 'Claude';
+                if (groupLabel.startsWith('Groq')) return 'Groq';
                 return 'OpenAI';
             }
 
@@ -3404,14 +3325,21 @@
             }
 
             // ── Thinking budget toggle ──
+            // The picker was simplified from Off/Low/Med/High (0/4096/10000/32000)
+            // to Off/On (0/10000). Migrate any legacy saved value: 4096 or 32000
+            // both map to 10000 (On) so existing users don't get a surprise.
             const thinkingToggle = document.getElementById('aiThinkingToggle');
-            const savedBudget = localStorage.getItem('chopchop_thinking_budget');
+            let savedBudget = localStorage.getItem('chopchop_thinking_budget');
+            if (savedBudget === '4096' || savedBudget === '32000') {
+                savedBudget = '10000';
+                localStorage.setItem('chopchop_thinking_budget', savedBudget);
+            }
             if (savedBudget !== null) {
                 thinkingToggle.querySelectorAll('.ai-thinking-opt').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.budget === savedBudget);
                 });
             }
-            window._thinkingBudget = parseInt(thinkingToggle.querySelector('.ai-thinking-opt.active')?.dataset.budget || '4096');
+            window._thinkingBudget = parseInt(thinkingToggle.querySelector('.ai-thinking-opt.active')?.dataset.budget || '10000');
             thinkingToggle.addEventListener('click', (e) => {
                 const btn = e.target.closest('.ai-thinking-opt');
                 if (!btn) return;

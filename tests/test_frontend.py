@@ -377,3 +377,90 @@ class TestGroqReducedToolsetNotice:
             "updateModelTrigger() must call isGroqModelValue() to gate the badge"
         assert '27/59' in body or "'27/59 tools'" in body, \
             "Trigger badge text must show '27/59 tools' for Groq models"
+
+
+# ── Simplified model picker (4 models, 2 thinking levels) ─────────────────────
+
+class TestSimplifiedPicker:
+    """Founder feedback: too many model variants + 4 thinking levels = decision
+    fatigue. The picker is now pared down to a clean 4-model set with an
+    Off/On thinking toggle. These tests pin the simplified layout so future
+    edits can't silently re-add variants."""
+
+    FINAL_MODEL_VALUES = [
+        'claude-opus-4-7',
+        'claude-sonnet-4-6',
+        'gpt-5',
+        'llama-3.3-70b-versatile',
+    ]
+
+    REMOVED_MODEL_VALUES = [
+        'claude-opus-4-6', 'claude-opus-4-5-20251101', 'claude-opus-4-1-20250805',
+        'claude-opus-4-20250514', 'claude-sonnet-4-5-20250929',
+        'claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001',
+        'claude-3-5-haiku-20241022', 'gpt-5-mini', 'gpt-5-nano',
+        'gpt-5.1', 'gpt-5.2', 'gpt-5.3-chat-latest', 'gpt-5.4', 'gpt-5.5',
+        'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'o3', 'o4-mini',
+        'meta-llama/llama-4-scout-17b-16e-instruct',
+        'meta-llama/llama-4-maverick-17b-128e-instruct',
+        'llama-3.1-8b-instant', 'gemma2-9b-it',
+    ]
+
+    def test_select_has_exactly_four_options(self, html):
+        """The #aiModelSelect element must hold exactly 4 <option> tags."""
+        m = re.search(r'<select id="aiModelSelect"[^>]*>([\s\S]*?)</select>', html)
+        assert m, "#aiModelSelect block not found"
+        block = m.group(1)
+        options = re.findall(r'<option\s+value="([^"]+)"', block)
+        assert len(options) == 4, \
+            f"Expected exactly 4 <option> tags inside #aiModelSelect, got {len(options)}: {options}"
+
+    def test_select_contains_the_four_retained_values(self, html):
+        """All 4 specific model values must be present in the select block."""
+        m = re.search(r'<select id="aiModelSelect"[^>]*>([\s\S]*?)</select>', html)
+        assert m, "#aiModelSelect block not found"
+        block = m.group(1)
+        for value in self.FINAL_MODEL_VALUES:
+            assert f'value="{value}"' in block, \
+                f"Retained model value {value!r} missing from #aiModelSelect"
+
+    def test_removed_models_no_longer_in_select(self, html):
+        """None of the retired model values should appear inside the select."""
+        m = re.search(r'<select id="aiModelSelect"[^>]*>([\s\S]*?)</select>', html)
+        assert m, "#aiModelSelect block not found"
+        block = m.group(1)
+        for value in self.REMOVED_MODEL_VALUES:
+            assert f'value="{value}"' not in block, \
+                f"Removed model value {value!r} still present in #aiModelSelect"
+
+    def test_thinking_toggle_has_two_buttons(self, html):
+        """The thinking toggle must have exactly 2 buttons: Off (0) and On (10000)."""
+        m = re.search(
+            r'<div class="ai-thinking-toggle" id="aiThinkingToggle">([\s\S]*?)</div>',
+            html,
+        )
+        assert m, "#aiThinkingToggle block not found"
+        block = m.group(1)
+        budgets = re.findall(r'data-budget="(\d+)"', block)
+        assert budgets == ['0', '10000'], \
+            f"Expected exactly two data-budget buttons [0, 10000], got {budgets}"
+
+    def test_old_thinking_budget_values_gone_from_toggle(self, html):
+        """The legacy 4096 (Low) and 32000 (High) budgets must no longer be
+        rendered as user-facing buttons. They may still appear in the migration
+        comment / logic but not as data-budget attributes."""
+        m = re.search(
+            r'<div class="ai-thinking-toggle" id="aiThinkingToggle">([\s\S]*?)</div>',
+            html,
+        )
+        assert m, "#aiThinkingToggle block not found"
+        block = m.group(1)
+        assert 'data-budget="4096"' not in block, \
+            "Legacy Low (4096) budget button still wired into the thinking toggle"
+        assert 'data-budget="32000"' not in block, \
+            "Legacy High (32000) budget button still wired into the thinking toggle"
+
+    def test_groq_tab_present_in_modal(self, html):
+        """The model modal must expose a Groq tab so Llama doesn't get orphaned."""
+        assert 'data-provider="Groq"' in html, \
+            "Model modal missing a data-provider='Groq' tab for the Llama option"
