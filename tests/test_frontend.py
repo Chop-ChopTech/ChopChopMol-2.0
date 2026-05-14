@@ -695,15 +695,24 @@ class TestChatErrorCard:
             "Show details toggle label missing from error card"
 
     def test_aiagent_uses_connect_timeout(self):
-        """sendToAI must wrap the initial fetch in a 10s connect timeout so
-        users don't stare at 'Thinking…' for 60s on a TCP/DNS failure."""
+        """sendToAI must wrap the initial fetch in a connect timeout so
+        users don't stare at 'Thinking…' indefinitely on a TCP/DNS failure.
+        Originally 10s; bumped to 60s in af74692 after live testing showed
+        Groq free-tier TTFT hits 30-45s and the 10s ceiling was firing
+        AFTER the upstream call had legitimately started."""
         path = os.path.join(os.path.dirname(__file__), '..', 'demo', 'aiagent.js')
         with open(path) as f:
             content = f.read()
         assert 'CONNECT_TIMEOUT_MS' in content, \
             "aiagent.js must define a CONNECT_TIMEOUT_MS for the initial fetch"
-        assert '10000' in content, \
-            "Connect timeout must be 10000ms (10s)"
+        # Extract numeric value and assert it's in the sane 30-120s range.
+        m = re.search(r'const CONNECT_TIMEOUT_MS\s*=\s*(\d+)\s*;', content)
+        assert m, "CONNECT_TIMEOUT_MS must be a numeric literal"
+        ms = int(m.group(1))
+        assert 30000 <= ms <= 120000, \
+            f"CONNECT_TIMEOUT_MS={ms} outside the 30-120s sane range " \
+            f"(too short → fires during normal Groq TTFT; too long → user " \
+            f"stares at a stuck spinner)"
 
     def test_aiagent_classifies_errors(self):
         """sendToAI must surface errorKind so the UI can branch on
