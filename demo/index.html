@@ -1698,7 +1698,8 @@
 
         document.getElementById('landingSearchDB').addEventListener('click', (e) => {
             e.stopPropagation();
-            const dropdownIcon = document.querySelector('#toolbar-background > .dropdown > .dropdown-icon');
+            const searchDropdown = document.getElementById('searchDropdownBox')?.closest('.dropdown');
+            const dropdownIcon = searchDropdown?.querySelector('.dropdown-icon');
             if (dropdownIcon) dropdownIcon.click();
             setTimeout(() => {
                 const searchInput = document.getElementById('dbSearchInput');
