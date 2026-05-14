@@ -2828,7 +2828,13 @@ async function sendToAI(userMessage, onChunk) {
             // the initial fetch (DNS + TCP + TLS + first byte of headers) must
             // resolve quickly. If it doesn't, surface a clean error rather than
             // letting the user stare at "Thinking..." for 60s.
-            const CONNECT_TIMEOUT_MS = 10000;
+            //
+            // 60s ceiling: Groq's free-tier TTFT for Llama 3.3 70B can hit
+            // 30-45s under load, and Claude with extended thinking on long
+            // contexts is similar. We previously had 10s which fired before
+            // the upstream even started responding. The progressive typing
+            // indicator (phase + elapsed counter) keeps the user oriented.
+            const CONNECT_TIMEOUT_MS = 60000;
             const connectTimeoutCtrl = new AbortController();
             const connectTimer = setTimeout(() => {
                 try { connectTimeoutCtrl.abort(); } catch {}
