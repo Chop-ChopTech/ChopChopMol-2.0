@@ -343,7 +343,29 @@
         import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy, serverTimestamp, where, writeBatch, deleteField, limit } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-        const firebaseConfig = {
+        // Hostname-aware Firebase project selection. The dev frontend
+        // (dev.chopchopmol.com / chopchopmoldev.web.app / local dev) talks
+        // to the `chopchopmoldev` Firebase project, whose Admin SA is what
+        // the dev backend uses to verify ID tokens. Production
+        // (chopchopmol.com) stays on `chopchopmol-2`. If you mix these up,
+        // every authed backend call returns 401 because the token audience
+        // doesn't match the SA project.
+        const DEV_FB_HOSTS = new Set([
+            "dev.chopchopmol.com",
+            "chopchopmoldev.web.app",
+            "chopchopmoldev.firebaseapp.com",
+            "localhost",
+            "127.0.0.1",
+        ]);
+        const isDevFirebaseHost = DEV_FB_HOSTS.has(window.location.hostname);
+        const firebaseConfig = isDevFirebaseHost ? {
+            apiKey: "AIzaSyBdu3mYrdJ_Fc8pu80lmfbiLZoHmx72Ee4",
+            authDomain: "chopchopmoldev.firebaseapp.com",
+            projectId: "chopchopmoldev",
+            storageBucket: "chopchopmoldev.firebasestorage.app",
+            messagingSenderId: "411968060294",
+            appId: "1:411968060294:web:fd274269827742d2ca8a07",
+        } : {
             apiKey: "AIzaSyAAlbmJmNxVGJ3wv1KiyoFWJ86Ik31jY-w",
             authDomain: "chopchopmol-2.firebaseapp.com",
             projectId: "chopchopmol-2",
@@ -3087,7 +3109,15 @@
             const messagesContainer = document.getElementById('aiChatMessages');
             const modelSelect = document.getElementById('aiModelSelect');
             const DEFAULT_MODEL_KEY = 'chopchop_default_model';
-            const FALLBACK_MODEL = 'claude-opus-4-7';
+            // Prod default = Claude (full Anthropic key wired). Dev default =
+            // Llama 3.3 70B via Groq (dev backend's ANTHROPIC_API_KEY is a
+            // placeholder, so Claude calls fail with 401 invalid x-api-key
+            // until a real key is rotated in. Llama on Groq has a real key
+            // and works end-to-end today). Detected by the same hostname
+            // set used for Firebase project selection — reuses isDevFirebaseHost.
+            const FALLBACK_MODEL = (typeof isDevFirebaseHost !== 'undefined' && isDevFirebaseHost)
+                ? 'llama-3.3-70b-versatile'
+                : 'claude-opus-4-7';
 
             // ═══════════════════════════════════════════════════════════════
             // ▼▼▼  PROVIDER RESTRICTION — EDIT THIS LINE AND REDEPLOY  ▼▼▼

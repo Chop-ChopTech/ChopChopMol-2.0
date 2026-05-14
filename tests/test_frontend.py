@@ -731,3 +731,33 @@ class TestChatComposerNoGrammarly:
             "aiChatInput is missing data-gramm=\"false\" — Grammarly overlay will inject"
         assert 'spellcheck="false"' in tag, \
             "aiChatInput should set spellcheck=\"false\" to suppress browser spell-check too"
+
+
+class TestDevFirebaseProjectIsolation:
+    """The dev frontend (dev.chopchopmol.com) MUST authenticate against the
+    `chopchopmoldev` Firebase project, not the prod `chopchopmol-2` project —
+    otherwise tokens issued by the frontend can't be verified by the dev
+    backend (whose Admin SA is for `chopchopmoldev`), and every authed call
+    returns 401. Bug discovered when Nguyen's email/password login failed
+    even though his founder account existed (in the dev project)."""
+
+    def test_dev_firebase_project_branch_present(self, html):
+        assert 'isDevFirebaseHost' in html, \
+            "Hostname-based Firebase project selection missing"
+        assert '"chopchopmoldev"' in html, \
+            "chopchopmoldev projectId not present — dev frontend will sign into the wrong project"
+        assert 'dev.chopchopmol.com' in html, \
+            "dev.chopchopmol.com must be in the DEV_FB_HOSTS set"
+
+    def test_prod_firebase_config_still_present(self, html):
+        # Prod path must remain reachable for chopchopmol.com
+        assert '"chopchopmol-2"' in html, \
+            "chopchopmol-2 projectId removed — prod will break"
+
+    def test_dev_fallback_model_is_llama(self, html):
+        # Dev's Anthropic key is a placeholder; defaulting new users to
+        # Llama-on-Groq avoids the 401 invalid-x-api-key wall.
+        assert "'llama-3.3-70b-versatile'" in html, \
+            "Dev fallback model must be llama-3.3-70b-versatile while Anthropic key is dummy"
+        assert "isDevFirebaseHost" in html and "FALLBACK_MODEL" in html, \
+            "FALLBACK_MODEL must branch on host"
