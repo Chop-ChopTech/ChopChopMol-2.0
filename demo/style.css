@@ -2852,6 +2852,31 @@ input[type="range"]:focus {
     background: rgba(0, 0, 0, 0.2);
 }
 
+/* BYOK hint inside the model picker — visually subdued, but invites
+   power users to add their own Claude/GPT key when the default Auto
+   model isn't enough. */
+.ai-model-modal-byok-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.ai-model-modal-byok-hint i { opacity: 0.7; }
+.ai-model-byok-open-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #e2733d;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: none;
+}
+.ai-model-byok-open-link:hover { text-decoration: underline; }
+
 .ai-model-modal-footer-label {
     font-size: 11px;
     color: rgba(255, 255, 255, 0.4);

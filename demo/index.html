@@ -2935,16 +2935,13 @@
                     <span class="ai-model-trigger-badge" id="aiModelTriggerBadge" style="display:none;"></span>
                     <i class="fas fa-chevron-down ai-model-trigger-caret"></i>
                 </button>
+                <!-- Dev picker — only the server-provided Groq model. Users
+                     who want Claude/GPT bring their own API key via the key
+                     icon in the AI Assistant header; that path stays free
+                     for ChopChopMol since we don't pay for tokens. -->
                 <select id="aiModelSelect" class="ai-model-select" title="Select AI Model" style="display:none;">
-                    <optgroup label="Claude">
-                        <option value="claude-opus-4-7">Claude Opus 4.7</option>
-                        <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
-                    </optgroup>
-                    <optgroup label="OpenAI">
-                        <option value="gpt-5">GPT-5</option>
-                    </optgroup>
-                    <optgroup label="Groq">
-                        <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq)</option>
+                    <optgroup label="Auto (server-managed)">
+                        <option value="llama-3.3-70b-versatile">Auto · Llama 3.3 70B (Groq)</option>
                     </optgroup>
                 </select>
                 <button id="aiAttachBtn" class="ai-attach-btn" title="Attach files">
@@ -2994,25 +2991,30 @@
                     </div>
                 </div>
             </div>
-            <div class="ai-model-modal-tabs" id="aiModelTabs">
-                <button type="button" class="ai-model-tab active" data-provider="Claude">
-                    <i class="fas fa-atom"></i><span>Claude</span>
-                </button>
-                <button type="button" class="ai-model-tab" data-provider="OpenAI">
-                    <i class="fas fa-bolt"></i><span>OpenAI</span>
-                </button>
-                <button type="button" class="ai-model-tab" data-provider="Groq">
+            <!-- Provider tabs hidden — only the server-managed Auto entry
+                 is visible by default. BYOK path is the door for Claude/GPT. -->
+            <div class="ai-model-modal-tabs" id="aiModelTabs" style="display:none;">
+                <button type="button" class="ai-model-tab active" data-provider="Groq">
                     <i class="fas fa-rocket"></i><span>Groq</span>
                 </button>
             </div>
-            <div class="ai-model-modal-search">
+            <div class="ai-model-modal-search" style="display:none;">
                 <i class="fas fa-search"></i>
                 <input type="text" id="aiModelSearch" placeholder="Search models..." autocomplete="off">
             </div>
             <div id="aiModelList" class="ai-model-list"></div>
+            <!-- BYOK hint inside the model picker so users discover the path
+                 to Claude / GPT without us listing those models statically. -->
+            <div class="ai-model-modal-byok-hint" id="aiModelByokHint">
+                <i class="fas fa-key"></i>
+                <span>Want Claude or GPT? </span>
+                <button type="button" id="aiModelByokOpen" class="ai-model-byok-open-link">
+                    Bring your own API key →
+                </button>
+            </div>
             <div class="ai-model-modal-footer">
                 <button type="button" id="aiModelSetDefault" class="ai-model-set-default"
-                    title="Use this model by default on page load">
+                    title="Use this model by default on page load" style="display:none;">
                     <i class="far fa-star"></i><span>Set as default</span>
                 </button>
                 <span class="ai-model-modal-footer-value" id="aiModelModalFooterValue">—</span>
@@ -3115,9 +3117,13 @@
             // until a real key is rotated in. Llama on Groq has a real key
             // and works end-to-end today). Detected by the same hostname
             // set used for Firebase project selection — reuses isDevFirebaseHost.
-            const FALLBACK_MODEL = (typeof isDevFirebaseHost !== 'undefined' && isDevFirebaseHost)
-                ? 'llama-3.3-70b-versatile'
-                : 'claude-opus-4-7';
+            // Single fallback model — the only entry in the picker by
+            // default. Users who want Claude/GPT add their own key via the
+            // BYOK modal (key icon in the AI Assistant header). That keeps
+            // ChopChopMol's hosted cost predictable: tokens are only spent
+            // on the Groq free-tier path unless the user is paying for
+            // their own.
+            const FALLBACK_MODEL = 'llama-3.3-70b-versatile';
 
             // ═══════════════════════════════════════════════════════════════
             // ▼▼▼  PROVIDER RESTRICTION — EDIT THIS LINE AND REDEPLOY  ▼▼▼
@@ -3227,19 +3233,16 @@
             const modelThinkingHint = null;
 
             const MODEL_META = {
-                'claude-opus-4-7': { badge: 'Default', hint: 'Adaptive deep reasoning · latest Opus' },
-                'claude-sonnet-4-6': { hint: 'Interleaved thinking · everyday workhorse' },
-                'gpt-5': { hint: 'OpenAI · reasoning effort' },
-                'llama-3.3-70b-versatile': { badge: 'Groq', hint: 'Llama 3.3 70B via Groq · 12k TPM · 27 of 59 tools · recommended for tool use' },
+                'llama-3.3-70b-versatile': { badge: 'Auto', hint: 'Server default · Llama 3.3 70B via Groq · 27 of 59 tools · free' },
             };
 
             function providerFor(groupLabel) {
                 if (groupLabel.startsWith('Claude')) return 'Claude';
-                if (groupLabel.startsWith('Groq')) return 'Groq';
+                if (groupLabel.startsWith('Groq') || groupLabel.startsWith('Auto')) return 'Groq';
                 return 'OpenAI';
             }
 
-            let activeProvider = 'Claude';
+            let activeProvider = 'Groq';
             const modelTabsEl = document.getElementById('aiModelTabs');
             const modelFooterValue = document.getElementById('aiModelModalFooterValue');
             const modelDoneBtn = document.getElementById('aiModelModalDone');
@@ -3613,6 +3616,17 @@
                 byokPopulateInputs();
                 settingsModal.classList.add('open');
             });
+
+            // BYOK hint inside the model picker — close the picker first so
+            // the BYOK modal stacks cleanly on top of the dim chat panel.
+            const byokOpenFromPicker = document.getElementById('aiModelByokOpen');
+            if (byokOpenFromPicker) {
+                byokOpenFromPicker.addEventListener('click', () => {
+                    modelModal.classList.remove('open');
+                    byokPopulateInputs();
+                    settingsModal.classList.add('open');
+                });
+            }
 
             cancelKeyBtn.addEventListener('click', () => {
                 settingsModal.classList.remove('open');

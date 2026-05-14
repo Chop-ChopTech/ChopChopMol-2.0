@@ -382,19 +382,19 @@ class TestGroqReducedToolsetNotice:
 # ── Simplified model picker (4 models, 2 thinking levels) ─────────────────────
 
 class TestSimplifiedPicker:
-    """Founder feedback: too many model variants + 4 thinking levels = decision
-    fatigue. The picker is now pared down to a clean 4-model set with an
-    Off/On thinking toggle. These tests pin the simplified layout so future
-    edits can't silently re-add variants."""
+    """Picker pared down to a single Auto entry (Groq Llama 3.3 70B). Users
+    who want Claude/GPT bring their own API key via the BYOK modal — see
+    TestSingleModelDropdown above for the canonical assertions. These
+    legacy tests are kept as guards that nothing slips back in."""
 
     FINAL_MODEL_VALUES = [
-        'claude-opus-4-7',
-        'claude-sonnet-4-6',
-        'gpt-5',
         'llama-3.3-70b-versatile',
     ]
 
     REMOVED_MODEL_VALUES = [
+        # All Claude/OpenAI/legacy values — must not appear in the static
+        # <select>. Users get them through the BYOK path instead.
+        'claude-opus-4-7', 'claude-sonnet-4-6', 'gpt-5',
         'claude-opus-4-6', 'claude-opus-4-5-20251101', 'claude-opus-4-1-20250805',
         'claude-opus-4-20250514', 'claude-sonnet-4-5-20250929',
         'claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001',
@@ -406,17 +406,17 @@ class TestSimplifiedPicker:
         'llama-3.1-8b-instant', 'gemma2-9b-it',
     ]
 
-    def test_select_has_exactly_four_options(self, html):
-        """The #aiModelSelect element must hold exactly 4 <option> tags."""
+    def test_select_has_exactly_one_option(self, html):
+        """The #aiModelSelect element must hold exactly one Auto entry."""
         m = re.search(r'<select id="aiModelSelect"[^>]*>([\s\S]*?)</select>', html)
         assert m, "#aiModelSelect block not found"
         block = m.group(1)
         options = re.findall(r'<option\s+value="([^"]+)"', block)
-        assert len(options) == 4, \
-            f"Expected exactly 4 <option> tags inside #aiModelSelect, got {len(options)}: {options}"
+        assert len(options) == 1, \
+            f"Expected exactly 1 <option> tag inside #aiModelSelect (Auto only); got {len(options)}: {options}"
 
-    def test_select_contains_the_four_retained_values(self, html):
-        """All 4 specific model values must be present in the select block."""
+    def test_select_contains_the_retained_value(self, html):
+        """The single retained model value must be present in the select block."""
         m = re.search(r'<select id="aiModelSelect"[^>]*>([\s\S]*?)</select>', html)
         assert m, "#aiModelSelect block not found"
         block = m.group(1)
@@ -740,6 +740,35 @@ class TestChatComposerNoGrammarly:
             "aiChatInput is missing data-gramm=\"false\" — Grammarly overlay will inject"
         assert 'spellcheck="false"' in tag, \
             "aiChatInput should set spellcheck=\"false\" to suppress browser spell-check too"
+
+
+class TestSingleModelDropdown:
+    """The model picker is now reduced to a single 'Auto' entry (Llama 3.3
+    70B via Groq). Users who want Claude/GPT bring their own API key via
+    the BYOK modal (key icon in the AI Assistant header). This keeps
+    hosted token costs predictable on dev — the server only pays for the
+    Groq free-tier path."""
+
+    def test_only_groq_llama_in_dropdown(self, html):
+        # The <select> should contain exactly one <option> value
+        m = re.search(r'<select id="aiModelSelect"[^>]*>([\s\S]*?)</select>', html)
+        assert m, "aiModelSelect not found"
+        block = m.group(1)
+        options = re.findall(r'<option value="([^"]+)"', block)
+        assert options == ['llama-3.3-70b-versatile'], \
+            f"Dropdown must have exactly one option (llama-3.3-70b-versatile); got {options}"
+
+    def test_byok_hint_inside_picker(self, html):
+        assert 'aiModelByokOpen' in html, \
+            "Picker missing the BYOK-open hint button (#aiModelByokOpen)"
+        assert 'Bring your own API key' in html, \
+            "Picker must point users at BYOK with the literal phrase 'Bring your own API key'"
+
+    def test_fallback_model_is_groq_only(self, html):
+        m = re.search(r"const FALLBACK_MODEL\s*=\s*'([^']+)'", html)
+        assert m, "FALLBACK_MODEL must be a single quoted string literal"
+        assert m.group(1) == 'llama-3.3-70b-versatile', \
+            f"FALLBACK_MODEL must be llama-3.3-70b-versatile; got {m.group(1)!r}"
 
 
 class TestDevFirebaseProjectIsolation:
