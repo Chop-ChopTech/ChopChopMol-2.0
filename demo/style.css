@@ -139,15 +139,7 @@ body {
 }
 
 #customButton {
-    background-color: rgb(0, 157, 255);
-    padding: 8px 11px;
-    border: none;
-    cursor: pointer;
     height: auto;
-}
-
-#customButton:hover {
-    background-color: #0ec2f9;
 }
 
 #chatInputContainer {
@@ -296,19 +288,7 @@ body {
 }
 
 #generateButton {
-    color: #fff;
-    background: linear-gradient(90deg, rgba(0, 136, 255, 1) 0%, rgb(0, 94, 255) 0%, rgba(255, 0, 98, 1) 100%);
-    padding: 8px 11px;
-    border: none;
-    cursor: pointer;
-    border-radius: 5px;
-    background-size: 300% 100%;
     height: 43px;
-}
-
-#generateButton:hover {
-    color: #ffea00;
-    background-color: #0ec2f9;
 }
 
 #toggleLabels {
@@ -401,27 +381,35 @@ body {
 }
 
 .fancy-button {
-    padding: 8px 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 18px;
     font-size: 13px;
-    font-weight: 600;
-    color: #fff;
-    border: none;
-    border-radius: 30px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.513), inset 2px 2px 3px rgba(255, 255, 255, 0.396), inset -8px -8px 16px rgba(255, 255, 255, 0.285);
-    text-transform: uppercase;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    box-shadow: none;
+    text-transform: none;
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    width: 140px;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    width: auto;
     will-change: transform;
+}
 
+.fancy-button i {
+    opacity: 0.7;
 }
 
 .fancy-button:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 0 8px rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
 }
 
 .fancy-button.pulse {
@@ -454,10 +442,8 @@ body {
 
 
 .fancy-button:active {
-    transform: translateY(0) scale(0.98);
-    /* Subtle press-down effect */
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    /* Reduced shadow on click */
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.09);
 }
 
 .fancy-button {
@@ -492,12 +478,7 @@ body {
     top: var(--ripple-y, 50%);
 }
 
-#import-smiles {
-    background-color: #d244ef;
-}
-
 #import-json {
-    background-color: #17af2d;
     display: none;
 }
 
@@ -646,8 +627,6 @@ body {
     transform: translate(-50%, -50%);
     right: 0px;
     top: 35px;
-    background-color: rgba(255, 0, 0, 0);
-
 }
 
 #explorationCanvas {
@@ -1277,15 +1256,6 @@ input[type="range"]:focus {
     opacity: 1;
 }
 
-#signInButton {
-    background-color: #2195f300;
-}
-
-#signOutButton {
-
-    background-color: #8e1acd00;
-}
-
 #userStatus {
     position: absolute;
     top: 7px;
@@ -1717,10 +1687,6 @@ input[type="range"]:focus {
 /* Fancy button styling */
 .dropdown-content button {
     margin: 5px 0;
-}
-
-.fancy-button:hover {
-    background-color: #0056b3;
 }
 
 /* ── Backend switcher (Settings → Account dropdown) ── */
@@ -8769,9 +8735,9 @@ input[type="color"]::-moz-color-swatch {
 
 @media (max-width: 480px) {
     .fancy-button {
-        padding: 5px 8px;
-        font-size: 10px;
-        border-radius: 20px;
+        padding: 6px 12px;
+        font-size: 11px;
+        border-radius: 10px;
     }
 
     .ai-model-select {
