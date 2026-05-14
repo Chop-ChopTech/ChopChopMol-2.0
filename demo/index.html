@@ -1613,7 +1613,7 @@
         <h3>Drag and drop a file here .xyz, .mol, or .pdb to be loaded</h3>
     </div>
 
-    <div id="landingCard" style="display: none!important;">
+    <div id="landingCard">
         <div class="landing-card-content">
             <h2 class="landing-title">ChopChopMol</h2>
             <p class="landing-subtitle">Load a molecule to get started</p>
@@ -6600,6 +6600,22 @@
             document.getElementById('startTutorialBtn')?.addEventListener('click', startTutorial);
 
             window.startTutorial = startTutorial;
+
+            // Auto-show the tutorial for first-time visitors, once the sign-in gate clears.
+            if (!localStorage.getItem('tutorialCompleted')) {
+                const gate = document.getElementById('access-gate');
+                const gateOpen = () => gate && getComputedStyle(gate).display !== 'none';
+                const tryAutoStart = () => {
+                    if (gateOpen()) {
+                        setTimeout(tryAutoStart, 500);
+                        return;
+                    }
+                    if (localStorage.getItem('tutorialCompleted')) return;
+                    if (overlay.classList.contains('active')) return;
+                    startTutorial();
+                };
+                setTimeout(tryAutoStart, 1200);
+            }
             // Close style panel when clicking outside
             document.addEventListener('click', (e) => {
                 const stylePanel = document.getElementById('stylePanel');
