@@ -86,7 +86,7 @@ export function getByokHeaders() {
     // Guest bypass: matching code in backend lets the request through as a
     // synthetic guest. Set when the user enters the gate's guest code.
     let guestCode = '';
-    try { if (sessionStorage.getItem('guestBypass') === '1') guestCode = '0987'; } catch { }
+    try { if (sessionStorage.getItem('guestBypass') === '1') guestCode = 'Neon@Neon4321@!'; } catch { }
     if (guestCode) h['X-Guest-Code'] = guestCode;
     return h;
 }
