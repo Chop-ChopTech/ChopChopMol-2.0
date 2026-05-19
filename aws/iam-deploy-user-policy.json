@@ -1,0 +1,30 @@
+{
+  "_comment": "OPTIONAL. Minimal IAM policy for a dedicated frontend-deploy user or GitHub Actions role — lets it sync the S3 bucket and invalidate CloudFront, and nothing else. Use this instead of your AdministratorAccess keys for routine deploys / CI. Replace BUCKET_NAME, ACCOUNT_ID, and DISTRIBUTION_ID. Attach via IAM -> Users (or Roles) -> Add permissions -> Create inline policy -> JSON. See AWS_MIGRATION_GUIDE.md Companion files index.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SyncBucket",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::BUCKET_NAME",
+        "arn:aws:s3:::BUCKET_NAME/*"
+      ]
+    },
+    {
+      "Sid": "InvalidateCloudFront",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:CreateInvalidation",
+        "cloudfront:GetInvalidation",
+        "cloudfront:ListInvalidations"
+      ],
+      "Resource": "arn:aws:cloudfront::ACCOUNT_ID:distribution/DISTRIBUTION_ID"
+    }
+  ]
+}

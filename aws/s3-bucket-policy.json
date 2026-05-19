@@ -1,0 +1,20 @@
+{
+  "_comment": "S3 bucket policy: allows ONLY your CloudFront distribution (via Origin Access Control) to read objects. The bucket stays fully private otherwise. Replace BUCKET_NAME, ACCOUNT_ID (12-digit, from `aws sts get-caller-identity`), and DISTRIBUTION_ID (from the CloudFront console). Apply at: S3 -> bucket -> Permissions -> Bucket policy -> Edit. CloudFront also offers a 'Copy policy' button when you create the distribution (§5.3) — either works. See AWS_MIGRATION_GUIDE.md §5.3.",
+  "Version": "2008-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCloudFrontServicePrincipalReadOnly",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::BUCKET_NAME/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceArn": "arn:aws:cloudfront::ACCOUNT_ID:distribution/DISTRIBUTION_ID"
+        }
+      }
+    }
+  ]
+}
