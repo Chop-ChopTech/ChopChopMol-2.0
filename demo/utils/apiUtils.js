@@ -200,7 +200,7 @@ export function getAuthHeaders() {
     const t = (typeof window !== 'undefined') ? window._firebaseIdToken : null;
     if (t) h['Authorization'] = `Bearer ${t}`;
     try {
-        if (sessionStorage.getItem('guestBypass') === '1') h['X-Guest-Code'] = 'GuavionPilot';
+        if (sessionStorage.getItem('guestBypass') === '1') h['X-Guest-Code'] = '0852';
     } catch { }
     return h;
 }
