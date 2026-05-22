@@ -402,7 +402,7 @@
         // suppresses the gate for the rest of the tab session. No backend auth —
         // /ai/* and /api/* calls will still 401 if REQUIRE_AUTH=true, so guests
         // see the UI but can't use authenticated features.
-        const GUEST_BYPASS_CODE = 'Neon@Neon4321@!';
+        const GUEST_BYPASS_CODE = 'GuavionPilot';
         function isGuestBypassed() {
             try { return sessionStorage.getItem('guestBypass') === '1'; }
             catch { return false; }
