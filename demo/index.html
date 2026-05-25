@@ -1572,9 +1572,9 @@
                                 <i class="fa-solid fa-server"></i> Backend
                             </div>
                             <div class="backend-switcher-row">
-                                <button type="button" class="backend-pill" data-backend="runpod"
-                                    title="RunPod GPU (CUDA)">
-                                    <i class="fa-solid fa-bolt"></i> RunPod
+                                <button type="button" class="backend-pill" data-backend="aws"
+                                    title="AWS EC2 GPU (Tesla T4)">
+                                    <i class="fa-solid fa-bolt"></i> AWS
                                 </button>
                                 <button type="button" class="backend-pill" data-backend="render"
                                     title="Render.com (CPU fallback)">
@@ -1585,7 +1585,7 @@
                                     <i class="fa-solid fa-house-laptop"></i> Local
                                 </button>
                                 <button type="button" class="backend-pill" data-backend="auto"
-                                    title="Auto-detect (RunPod first, fall back to Render)">
+                                    title="Auto-detect (AWS first, fall back to Render)">
                                     <i class="fa-solid fa-wand-magic-sparkles"></i> Auto
                                 </button>
                             </div>
@@ -5271,7 +5271,7 @@
             function getBackendUrl() {
                 return window.AIAgent?.getBackendUrl?.() ||
                     (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-                        ? 'http://127.0.0.1:10000' : 'https://chopchopmol-ai-backend.onrender.com');
+                        ? 'http://127.0.0.1:10000' : 'https://api.chopchopmol.com');
             }
 
             window.addEventListener('mace-job-started', async (e) => {

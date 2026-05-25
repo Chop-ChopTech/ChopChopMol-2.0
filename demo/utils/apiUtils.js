@@ -7,12 +7,12 @@
  */
 const DEFAULT_TIMEOUT_MS = 30000;
 
-const RUNPOD_URL = 'https://l01l6g1um1puzn-10000.proxy.runpod.net';
+const AWS_URL = 'https://api.chopchopmol.com';
 const RENDER_URL = 'https://chopchopmol-ai-backend.onrender.com';
 const LOCAL_URL = 'http://127.0.0.1:10000';
 
 // Map of stable keys → URLs. Keep names lowercase for the localStorage value.
-const BACKEND_URLS = { runpod: RUNPOD_URL, render: RENDER_URL, local: LOCAL_URL };
+const BACKEND_URLS = { aws: AWS_URL, render: RENDER_URL, local: LOCAL_URL };
 const BACKEND_OVERRIDE_KEY = 'chopchop_backend_override';
 
 /** Read sticky override saved by the settings UI. Returns null if unset/invalid. */
@@ -36,7 +36,7 @@ const _overrideListeners = [];
 }
 
 /**
- * Returns the backend URL. Local dev uses localhost, production tries RunPod first then Render.
+ * Returns the backend URL. Local dev uses localhost, production tries AWS first then Render.
  * The result is cached after the first resolution.
  * @returns {Promise<string>} The backend URL
  */
@@ -53,20 +53,20 @@ export async function getBackendUrl() {
 
     _resolvePromise = (async () => {
         try {
-            const res = await fetch(`${RUNPOD_URL}/health`, { signal: AbortSignal.timeout(3000) });
+            const res = await fetch(`${AWS_URL}/health`, { signal: AbortSignal.timeout(3000) });
             if (res.ok) {
                 const data = await res.json();
                 if (data.status === 'ok') {
-                    _resolvedBackendUrl = RUNPOD_URL;
-                    console.log('Backend: RunPod');
+                    _resolvedBackendUrl = AWS_URL;
+                    console.log('Backend: AWS');
                     return _resolvedBackendUrl;
                 }
             }
         } catch (e) {
-            console.log('RunPod health check failed:', e.message);
+            console.log('AWS health check failed:', e.message);
         }
         _resolvedBackendUrl = RENDER_URL;
-        console.log('Backend: Render');
+        console.log('Backend: Render (fallback)');
         return _resolvedBackendUrl;
     })();
 
@@ -85,7 +85,7 @@ export async function getRenderBackendUrl() {
 }
 
 /**
- * Returns the stable key ('runpod' | 'render' | 'local') of the active backend,
+ * Returns the stable key ('aws' | 'render' | 'local') of the active backend,
  * or 'auto' if no override is set and detection is in progress.
  */
 export function getBackendKey() {
@@ -103,7 +103,7 @@ export function getSavedBackendOverride() {
 /**
  * Switch the active backend. Persists the choice in localStorage so it survives
  * reload, updates the in-memory cache, and notifies all listeners.
- * @param {'runpod'|'render'|'local'|'auto'} key
+ * @param {'aws'|'render'|'local'|'auto'} key
  */
 export function setBackendOverride(key) {
     const k = (key || '').toLowerCase();
@@ -179,8 +179,8 @@ window.addEventListener('keydown', (e) => {
         _backslashTimer = setTimeout(() => { _backslashCount = 0; }, 1500);
         if (_backslashCount >= 5) {
             _backslashCount = 0;
-            const choice = prompt('Switch backend:\n1: RunPod\n2: Render\n3: Local\n4: Auto-detect');
-            const keys = { '1': 'runpod', '2': 'render', '3': 'local', '4': 'auto' };
+            const choice = prompt('Switch backend:\n1: AWS\n2: Render\n3: Local\n4: Auto-detect');
+            const keys = { '1': 'aws', '2': 'render', '3': 'local', '4': 'auto' };
             if (keys[choice]) setBackendOverride(keys[choice]);
         }
     } else {
