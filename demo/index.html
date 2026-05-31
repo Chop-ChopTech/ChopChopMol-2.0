@@ -22,6 +22,12 @@
 </head>
 
 <body>
+    <!-- Backend-down banner (toggled by initBackendDownBanner) -->
+    <div id="backendDownBanner" role="alert" style="display:none;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Servers are currently down. AI chat and calculations may be unavailable while we investigate.</span>
+    </div>
+
     <!-- Critical error page (WebGL failure, etc.) — no module dependencies -->
     <div id="critical-error-page">
         <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -325,7 +331,7 @@
     <script src="/demo/utils/undo.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
-        import { getBackendUrl, getRenderBackendUrl, getBackendKey, getSavedBackendOverride, setBackendOverride, onBackendUrlOverride } from '/demo/utils/apiUtils.js';
+        import { getBackendUrl, getRenderBackendUrl } from '/demo/utils/apiUtils.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
@@ -1305,36 +1311,17 @@
             }
         });
 
-        // ─── Backend switcher (Settings → Account dropdown) ─────────────────
-        // Highlights the active backend pill, persists the choice via apiUtils,
-        // and reflects auto-detect / override changes back into the UI.
-        (function initBackendSwitcher() {
-            const root = document.getElementById('backendSwitcher');
-            if (!root) return;
-            const pills = Array.from(root.querySelectorAll('.backend-pill'));
-
-            function refreshActive() {
-                const saved = getSavedBackendOverride();
-                const activeKey = saved || (getBackendKey() === 'auto' ? 'auto' : getBackendKey());
-                pills.forEach(p => {
-                    p.classList.toggle('active', p.dataset.backend === activeKey);
-                });
-            }
-
-            pills.forEach(p => {
-                p.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    setBackendOverride(p.dataset.backend);
-                    refreshActive();
-                });
+        // ─── Backend-down banner ─────────────────────────────────────────
+        // apiUtils.js pings AWS /health every 30s and dispatches a
+        // 'backend-status' event when the state flips. Show a persistent
+        // banner at the top of the page while the backend is unreachable.
+        (function initBackendDownBanner() {
+            const banner = document.getElementById('backendDownBanner');
+            if (!banner) return;
+            window.addEventListener('backend-status', (e) => {
+                const up = e.detail && e.detail.up;
+                banner.style.display = up ? 'none' : 'flex';
             });
-
-            // Listen for external switches (e.g. \\\\\\ keyboard shortcut)
-            onBackendUrlOverride(() => refreshActive());
-
-            // Initial paint — and again once auto-detect resolves
-            refreshActive();
-            getBackendUrl().then(refreshActive).catch(() => { });
         })();
     </script>
 
@@ -1567,29 +1554,6 @@
                         <a class="fancy-button privacy-link" href="/privacy.html" target="_blank" rel="noopener">
                             <i class="fas fa-shield-halved"></i> Privacy
                         </a>
-                        <div class="backend-switcher" id="backendSwitcher">
-                            <div class="backend-switcher-label">
-                                <i class="fa-solid fa-server"></i> Backend
-                            </div>
-                            <div class="backend-switcher-row">
-                                <button type="button" class="backend-pill" data-backend="aws"
-                                    title="AWS EC2 GPU (Tesla T4)">
-                                    <i class="fa-solid fa-bolt"></i> AWS
-                                </button>
-                                <button type="button" class="backend-pill" data-backend="render"
-                                    title="Render.com (CPU fallback)">
-                                    <i class="fa-solid fa-cloud"></i> Render
-                                </button>
-                                <button type="button" class="backend-pill" data-backend="local"
-                                    title="Local dev server (127.0.0.1:10000)">
-                                    <i class="fa-solid fa-house-laptop"></i> Local
-                                </button>
-                                <button type="button" class="backend-pill" data-backend="auto"
-                                    title="Auto-detect (AWS first, fall back to Render)">
-                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Auto
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
