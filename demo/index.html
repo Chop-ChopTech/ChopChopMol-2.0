@@ -1374,6 +1374,16 @@
         let _lastActivity = Date.now();
         function _bumpActivity() { _lastActivity = Date.now(); }
 
+        // Debug helper: rewind _lastActivity from the DevTools console so you
+        // don't have to wait 15 minutes to test idle logout.
+        //   __testIdle()      → rewinds to "16 min ago" (forces logout on next tick)
+        //   __testIdle(5)     → rewinds to "5 min ago" (still active)
+        window.__testIdle = (minutesAgo = 16) => {
+            _lastActivity = Date.now() - minutesAgo * 60 * 1000;
+            const willLogOut = (Date.now() - _lastActivity) >= IDLE_LIMIT_MS;
+            console.log(`[idle test] _lastActivity rewound ${minutesAgo}m. ${willLogOut ? 'Logout in ≤30s.' : 'Still considered active.'}`);
+        };
+
         function _currentUserId() {
             if (window.currentUserEmail) return `u:${window.currentUserEmail}`;
             if (window.isGuest) {
