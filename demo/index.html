@@ -22,12 +22,6 @@
 </head>
 
 <body>
-    <!-- Backend-down banner (toggled by initBackendDownBanner) -->
-    <div id="backendDownBanner" role="alert" style="display:none;">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>Servers are currently down. AI chat and calculations may be unavailable while we investigate.</span>
-    </div>
-
     <!-- Critical error page (WebGL failure, etc.) — no module dependencies -->
     <div id="critical-error-page">
         <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -312,6 +306,13 @@
                 </div>
             </div>
 
+            <div id="ag-server-starting" style="display:none">
+                <div class="ag-spinner"></div>
+                <p class="ag-starting-title">Starting up server, please wait…</p>
+                <p class="ag-starting-sub">This usually takes about a minute. We'll let you in as soon as it's ready.</p>
+                <button id="ag-starting-cancel" class="ag-starting-cancel" type="button">Cancel</button>
+            </div>
+
             <div id="ag-pending" style="display:none">
                 <p class="ag-pending">Account not provisioned</p>
                 <p style="font-size:12.5px;color:#6b7280;line-height:1.55;margin:6px 0 16px">
@@ -331,7 +332,7 @@
     <script src="/demo/utils/undo.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
-        import { getBackendUrl, getRenderBackendUrl } from '/demo/utils/apiUtils.js';
+        import { getBackendUrl, getRenderBackendUrl, waitForBackendHealth, isBackendKnownUp, startSession, sendHeartbeat, endSession } from '/demo/utils/apiUtils.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
@@ -389,6 +390,7 @@
         const gateSignedOut = document.getElementById('ag-signed-out');
         const gatePending = document.getElementById('ag-pending');
         const gateNeedUseCase = document.getElementById('ag-needusecase');
+        const gateServerStarting = document.getElementById('ag-server-starting');
         const gateMsg = document.getElementById('ag-msg');
         gateEl.style.display = 'flex';   // show by default until we confirm provisioning
 
@@ -396,12 +398,46 @@
             gateEl.style.display = 'flex';
             gateSignedOut.style.display = mode === 'signedOut' ? 'block' : 'none';
             gatePending.style.display = mode === 'pending' ? 'block' : 'none';
+            gateServerStarting.style.display = mode === 'serverStarting' ? 'block' : 'none';
             gateNeedUseCase.style.display = mode === 'needUseCase' ? 'block' : 'none';
             gateMsg.textContent = message;
         }
         function gateHide() {
             gateEl.style.display = 'none';
             gateMsg.textContent = '';
+        }
+
+        // After auth succeeds (signed-in user OR guest bypass), the EC2 backend
+        // may be stopped. Show the "starting up server" panel, ask the Lambda
+        // to start EC2 if needed, and wait for /health to come up. Returns
+        // true if the backend is reachable; false on timeout. Does NOT touch
+        // gate visibility on success — caller decides what to show next
+        // (gateHide for active users, needUseCase/pending for provisioning flows).
+        let _gateCancelHandler = null;
+        async function gateAwaitBackend({ firebaseToken = null, isGuest = false, onCancel } = {}) {
+            // Fast path: if we already know the backend is up (recent /health
+            // poll succeeded), skip the spinner panel entirely. Still call
+            // startSession so the Lambda updates DynamoDB.
+            if (isBackendKnownUp()) {
+                try { await startSession(firebaseToken, isGuest); } catch { }
+                return true;
+            }
+            gateShow('serverStarting');
+            const cancelBtn = document.getElementById('ag-starting-cancel');
+            if (_gateCancelHandler && cancelBtn) cancelBtn.removeEventListener('click', _gateCancelHandler);
+            _gateCancelHandler = () => { try { onCancel && onCancel(); } catch { } };
+            if (cancelBtn) cancelBtn.addEventListener('click', _gateCancelHandler);
+
+            try { await startSession(firebaseToken, isGuest); } catch { }
+
+            const ok = await waitForBackendHealth({ intervalMs: 3000, maxWaitMs: 180000 });
+            if (!ok) {
+                const t = document.querySelector('#ag-server-starting .ag-starting-title');
+                const s = document.querySelector('#ag-server-starting .ag-starting-sub');
+                if (t) t.textContent = 'Servers are taking longer than usual';
+                if (s) s.textContent = 'Try refreshing the page or cancel to sign out.';
+            }
+            return ok;
         }
 
         // Guest bypass: typing this code in the gate's "Continue as guest" field
@@ -423,8 +459,21 @@
         }
 
         async function evaluateAccessGate(user) {
-            if (isGuestBypassed()) { window.isGuest = true; gateHide(); return; }
+            if (isGuestBypassed()) {
+                window.isGuest = true;
+                const ok = await gateAwaitBackend({ isGuest: true, onCancel: () => { try { sessionStorage.removeItem('guestBypass'); } catch { } location.reload(); } });
+                if (ok) gateHide();
+                return;
+            }
             if (!user) { gateShow('signedOut'); return; }
+            // Backend may be stopped. Trigger auto-start + wait before calling
+            // /access/me, which itself requires the backend.
+            const token = await user.getIdToken();
+            const ok = await gateAwaitBackend({
+                firebaseToken: token,
+                onCancel: () => { try { signOut(auth); } catch { } location.reload(); },
+            });
+            if (!ok) return;
             try {
                 const url = await getRenderBackendUrl();
                 let res = await _accessMe(url, user, false);
@@ -589,7 +638,7 @@
             }
         });
 
-        function tryGuestBypass() {
+        async function tryGuestBypass() {
             const input = document.getElementById('ag-guest-code');
             const code = (input?.value || '').trim();
             if (code !== GUEST_BYPASS_CODE) {
@@ -600,7 +649,11 @@
             try { sessionStorage.setItem('guestBypass', '1'); } catch { }
             window.isGuest = true;
             gateMsg.textContent = '';
-            gateHide();
+            const ok = await gateAwaitBackend({
+                isGuest: true,
+                onCancel: () => { try { sessionStorage.removeItem('guestBypass'); } catch { } location.reload(); },
+            });
+            if (ok) gateHide();
         }
         document.getElementById('ag-guest-btn').addEventListener('click', tryGuestBypass);
         document.getElementById('ag-guest-code').addEventListener('keydown', (e) => {
@@ -1311,16 +1364,68 @@
             }
         });
 
-        // ─── Backend-down banner ─────────────────────────────────────────
-        // apiUtils.js pings AWS /health every 30s and dispatches a
-        // 'backend-status' event when the state flips. Show a persistent
-        // banner at the top of the page while the backend is unreachable.
-        (function initBackendDownBanner() {
-            const banner = document.getElementById('backendDownBanner');
-            if (!banner) return;
-            window.addEventListener('backend-status', (e) => {
-                const up = e.detail && e.detail.up;
-                banner.style.display = up ? 'none' : 'flex';
+        // ─── Auto-session: idle logout + heartbeat ───────────────────────
+        // Per-user 15-min idle logout: any user interaction (mouse/keys/touch)
+        // or in-flight network activity resets the idle timer. When it fires,
+        // we sign the user out and reload to the sign-in panel. The autostop
+        // Lambda (separately) stops EC2 once the LAST active user idles out.
+        const IDLE_LIMIT_MS = 15 * 60 * 1000;
+        const HEARTBEAT_INTERVAL_MS = 60 * 1000;
+        let _lastActivity = Date.now();
+        function _bumpActivity() { _lastActivity = Date.now(); }
+
+        function _currentUserId() {
+            if (window.currentUserEmail) return `u:${window.currentUserEmail}`;
+            if (window.isGuest) {
+                try {
+                    let gid = sessionStorage.getItem('guestSessionId');
+                    if (!gid) { gid = crypto.randomUUID(); sessionStorage.setItem('guestSessionId', gid); }
+                    return `g:${gid}`;
+                } catch { return null; }
+            }
+            return null;
+        }
+
+        (function initIdleTracker() {
+            ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(ev =>
+                window.addEventListener(ev, _bumpActivity, { passive: true })
+            );
+            // Treat any /ai/* or /api/* fetch as activity so that watching long
+            // calculations doesn't idle the user out.
+            const origFetch = window.fetch;
+            window.fetch = function (input, init) {
+                try {
+                    const u = (typeof input === 'string') ? input : (input && input.url) || '';
+                    if (u.includes('/ai/') || u.includes('/api/')) _bumpActivity();
+                } catch { }
+                return origFetch.call(this, input, init);
+            };
+
+            setInterval(() => {
+                if (gateEl.style.display !== 'none') return; // not signed in
+                if (Date.now() - _lastActivity < IDLE_LIMIT_MS) return;
+                console.log('[idle] 15-min inactivity — signing out');
+                const uid = _currentUserId();
+                if (uid) endSession(uid);
+                try { sessionStorage.removeItem('guestBypass'); } catch { }
+                try { signOut(auth); } catch { }
+                setTimeout(() => location.reload(), 300);
+            }, 30 * 1000);
+        })();
+
+        (function initHeartbeat() {
+            setInterval(async () => {
+                if (gateEl.style.display !== 'none') return; // not signed in / gate up
+                if (document.visibilityState !== 'visible') return;
+                const uid = _currentUserId();
+                if (!uid) return;
+                const token = window._firebaseIdToken || null;
+                sendHeartbeat(uid, token);
+            }, HEARTBEAT_INTERVAL_MS);
+
+            window.addEventListener('beforeunload', () => {
+                const uid = _currentUserId();
+                if (uid) endSession(uid);
             });
         })();
     </script>

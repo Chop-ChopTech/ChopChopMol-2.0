@@ -1689,30 +1689,54 @@ input[type="range"]:focus {
     margin: 5px 0;
 }
 
-/* ── Backend-down banner ── */
-#backendDownBanner {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 99999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 10px 16px;
-    background: linear-gradient(135deg, #b91c1c, #7f1d1d);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.2px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+/* ── Access-gate: "starting up server" panel ── */
+#ag-server-starting {
+    text-align: center;
+    padding: 8px 4px 4px;
 }
 
-#backendDownBanner i {
-    font-size: 14px;
-    color: #fde68a;
+#ag-server-starting .ag-spinner {
+    width: 42px;
+    height: 42px;
+    margin: 0 auto 14px;
+    border: 3px solid rgba(255, 200, 120, 0.18);
+    border-top-color: #f59e0b;
+    border-radius: 50%;
+    animation: ag-spin 0.9s linear infinite;
+}
+
+#ag-server-starting .ag-starting-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ebe2d6;
+    margin: 0 0 6px;
+}
+
+#ag-server-starting .ag-starting-sub {
+    font-size: 12.5px;
+    color: #8a7a6a;
+    line-height: 1.55;
+    margin: 0 0 18px;
+}
+
+#ag-server-starting .ag-starting-cancel {
+    background: transparent;
+    border: 1px solid #2c2118;
+    color: #8a7a6a;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+#ag-server-starting .ag-starting-cancel:hover {
+    color: #ebe2d6;
+    border-color: #4a3a28;
+}
+
+@keyframes ag-spin {
+    to { transform: rotate(360deg); }
 }
 
 
