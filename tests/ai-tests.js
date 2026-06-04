@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const CONFIG = JSON.parse(fs.readFileSync(path.join(__dirname, 'test-config.json')));
-BACKEND_URL = 'https://chopchopmol-ai-backend.onrender.com'
+BACKEND_URL = process.env.BACKEND_URL || 'https://api.chopchopmol.com'
 const DEBUG = process.env.DEBUG === 'true';
 
 function parseXYZ(filepath) {
