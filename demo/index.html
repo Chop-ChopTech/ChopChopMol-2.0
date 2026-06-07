@@ -19,6 +19,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- xterm.js for the in-app terminal panel -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 </head>
 
 <body>
@@ -1606,6 +1610,12 @@
                     style="border: none;" title="Molecular fragments">
                     <i class="fa-solid fa-puzzle-piece"></i>
                     <span class="toolbar-label">Fragments</span>
+                </button>
+                <button class="dropdown-icon dropdown"
+                    onclick="window.terminalManager?.toggle()"
+                    style="border: none;" title="Open a sandboxed terminal">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span class="toolbar-label">Terminal</span>
                 </button>
                 <div class="dropdown" id="energyChartDropdown" style="display: none;">
                     <span class="dropdown-icon" title="Energy Chart">
@@ -6722,10 +6732,27 @@
     <!-- Mobile backdrop for dismissing panels -->
     <div id="mobileBackdrop" class="mobile-backdrop"></div>
 
+    <!-- In-app terminal (per-user sandboxed container via the gateway service) -->
+    <div id="terminalPanel" class="terminal-panel">
+        <div id="terminalResizer" class="terminal-resizer"></div>
+        <div class="terminal-header">
+            <div class="terminal-title">
+                <i class="fa-solid fa-terminal"></i>
+                <span>Terminal</span>
+                <span id="terminalStatus" class="terminal-status" data-kind="idle">Idle</span>
+            </div>
+            <button id="terminalCloseBtn" class="terminal-close" title="Close terminal">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div id="terminalContainer" class="terminal-container"></div>
+    </div>
+
     <script type="module" src="/demo/main.js"></script>
     <script src="/demo/fileExplorer.js"></script>
     <script type="module" src="/demo/aiagent.js"></script>
     <script type="module" src="/demo/remoteFiles.js"></script>
+    <script type="module" src="/demo/terminal.js"></script>
     <script src="/demo/mobile.js"></script>
 
 </body>

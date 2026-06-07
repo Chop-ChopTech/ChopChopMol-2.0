@@ -36,6 +36,17 @@ export function getBackendUrlSync() {
 }
 
 /**
+ * WebSocket URL for the terminal gateway, derived from AWS_URL (https -> wss).
+ * Caddy routes /terminal/ws* to the gateway service. For local dev against a
+ * gateway on localhost, set window.__TERMINAL_WS_OVERRIDE = 'ws://localhost:10001'.
+ */
+export function getWsUrl(path = '/terminal/ws') {
+    const override = (typeof window !== 'undefined') ? window.__TERMINAL_WS_OVERRIDE : null;
+    const base = override || AWS_URL.replace(/^http/, 'ws');
+    return base.replace(/\/$/, '') + path;
+}
+
+/**
  * Legacy alias kept for callers that used to hit the Render backend for
  * non-AI traffic (admin, access gate, early-access). All traffic now goes
  * to AWS.

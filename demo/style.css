@@ -8780,3 +8780,110 @@ input[type="color"]::-moz-color-swatch {
         gap: 4px !important;
     }
 }
+
+/* ============================================================
+   In-app Terminal panel (bottom dock)
+   ============================================================ */
+.terminal-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 320px;
+    background: #0b0e14;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    z-index: 10002;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.terminal-panel.open {
+    transform: translateY(0);
+}
+
+.terminal-resizer {
+    position: absolute;
+    top: -3px;
+    left: 0;
+    right: 0;
+    height: 6px;
+    cursor: row-resize;
+    background: transparent;
+}
+
+.terminal-resizer:hover {
+    background: rgba(100, 200, 255, 0.4);
+}
+
+.terminal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex: 0 0 auto;
+    user-select: none;
+}
+
+.terminal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #d7dce5;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.terminal-status {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #9aa4b2;
+}
+
+.terminal-status[data-kind="ok"] {
+    background: rgba(46, 160, 87, 0.2);
+    color: #4ade80;
+}
+
+.terminal-status[data-kind="pending"] {
+    background: rgba(234, 179, 8, 0.2);
+    color: #facc15;
+}
+
+.terminal-status[data-kind="error"] {
+    background: rgba(220, 38, 38, 0.2);
+    color: #f87171;
+}
+
+.terminal-close {
+    background: transparent;
+    border: none;
+    color: #9aa4b2;
+    cursor: pointer;
+    font-size: 15px;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.terminal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.terminal-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 4px 8px;
+    overflow: hidden;
+}
+
+.terminal-container .xterm {
+    height: 100%;
+}
