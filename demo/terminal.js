@@ -109,14 +109,19 @@ class TerminalManager {
         if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
 
         const token = window._firebaseIdToken;
-        if (!token) {
+        let guest = false;
+        try { guest = sessionStorage.getItem('guestBypass') === '1'; } catch { /* ignore */ }
+        if (!token && !guest) {
             this._status('Sign in to use the terminal', 'error');
             return;
         }
 
         this.manualClose = false;
         this._status('Connecting…', 'pending');
-        const url = `${getWsUrl()}?token=${encodeURIComponent(token)}`;
+        // Signed-in users send their ID token; guests send the bypass code
+        // (matches getAuthHeaders()'s X-Guest-Code in apiUtils.js).
+        const query = token ? `token=${encodeURIComponent(token)}` : 'guest=0852';
+        const url = `${getWsUrl()}?${query}`;
         let ws;
         try {
             ws = new WebSocket(url);
