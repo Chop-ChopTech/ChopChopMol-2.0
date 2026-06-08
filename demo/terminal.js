@@ -78,8 +78,14 @@ class TerminalManager {
         }
         this.term = new window.Terminal({
             cursorBlink: true,
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+            // JetBrains Mono is strictly fixed-width; fallbacks are too. Avoid
+            // the bare `monospace` keyword, which can resolve to an ill-fitting
+            // system face and produce uneven column spacing.
+            fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
             fontSize: 13,
+            fontWeight: 400,
+            letterSpacing: 0,
+            lineHeight: 1.2,
             theme: { background: '#0b0e14', foreground: '#d7dce5' },
             scrollback: 5000,
         });
@@ -90,6 +96,20 @@ class TerminalManager {
 
         this.term.open(this.containerEl);
         this.fitAddon?.fit();
+
+        // xterm measures glyph width at open() time. If the webfont finishes
+        // loading afterwards, those measurements are stale and columns look
+        // uneven — so re-measure (clearTextureAtlas + refit) once it's ready.
+        if (document.fonts && document.fonts.load) {
+            document.fonts.load('13px "JetBrains Mono"')
+                .then(() => document.fonts.ready)
+                .then(() => {
+                    try { this.term.clearTextureAtlas?.(); } catch { /* older xterm */ }
+                    this.fitAddon?.fit();
+                    this.term?.refresh(0, Math.max(0, (this.term.rows || 1) - 1));
+                })
+                .catch(() => { /* font load failed — fallbacks still fixed-width */ });
+        }
 
         // Keystrokes -> gateway.
         this.term.onData((data) => {
