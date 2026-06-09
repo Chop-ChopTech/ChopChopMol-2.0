@@ -95,6 +95,19 @@ class TerminalManager {
         } catch { this.fitAddon = null; }
 
         this.term.open(this.containerEl);
+
+        // WebGL renderer: draws each cell on a fixed pixel grid, eliminating the
+        // DOM renderer's subpixel drift (the "letters look spaced apart" bug).
+        // Falls back to the default renderer if WebGL is unavailable or its
+        // context is lost.
+        try {
+            if (window.WebglAddon) {
+                const webgl = new window.WebglAddon.WebglAddon();
+                webgl.onContextLoss(() => { try { webgl.dispose(); } catch { /* noop */ } });
+                this.term.loadAddon(webgl);
+            }
+        } catch { /* keep the default DOM renderer */ }
+
         this.fitAddon?.fit();
 
         // xterm measures glyph width at open() time. If the webfont finishes
