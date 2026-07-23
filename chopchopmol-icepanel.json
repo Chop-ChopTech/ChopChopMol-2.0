@@ -1,0 +1,1118 @@
+{
+  "namespace": "chopchopmol-2.0",
+  "modelObjects": [
+    {
+      "id": "chopchopmol",
+      "name": "ChopChopMol 2.0",
+      "type": "domain",
+      "caption": "Web-based 3D molecular visualization & AI-powered editing platform",
+      "description": "Visualize molecular structures in Three.js, then manipulate them via natural-language commands powered by Claude/GPT, with MACE ML potentials and PySCF/GPU4PySCF DFT for energy and geometry calculations."
+    },
+    {
+      "id": "actor-researcher",
+      "name": "Researcher / End User",
+      "type": "actor",
+      "parentId": "chopchopmol",
+      "caption": "Chemist or researcher visualizing and editing molecules",
+      "description": "Loads structures, issues natural-language edit/compute commands, views energies and orbitals."
+    },
+    {
+      "id": "actor-admin",
+      "name": "Admin",
+      "type": "actor",
+      "parentId": "chopchopmol",
+      "caption": "Reviews early-access requests and manages billing",
+      "description": "Uses the admin queue page to approve/reject access requests."
+    },
+    {
+      "id": "sys-frontend",
+      "name": "ChopChopMol Frontend",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "caption": "Vanilla HTML/JS single-page app (no build step, ES6 modules, Three.js)",
+      "description": "Static site deployed to Firebase Hosting / AWS. Renders molecules with Three.js InstancedMesh, hosts the AI chat UI, file explorer, and all client-side molecule editing and compute-client logic.",
+      "tagIds": [
+        "tag-js",
+        "tag-html",
+        "tag-three",
+        "tag-firebase",
+        "tag-aws"
+      ]
+    },
+    {
+      "id": "sys-backend",
+      "name": "ChopChopMol AI Backend",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "caption": "Python Flask server (separate repo: chopchopmol-ai-backend)",
+      "description": "Proxies Claude/OpenAI chat over SSE, runs MACE ML-potential and PySCF/GPU4PySCF DFT calculations, executes sandboxed Python, fine-tunes MACE models, and proxies SSH/SFTP. Deploys to Render.com and RunPod GPU.",
+      "tagIds": [
+        "tag-py",
+        "tag-flask",
+        "tag-ml",
+        "tag-render",
+        "tag-runpod"
+      ]
+    },
+    {
+      "id": "ext-claude",
+      "name": "Anthropic Claude API",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "description": "Claude models (Opus/Sonnet/Haiku) with extended thinking + tool use",
+      "external": true,
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "ext-openai",
+      "name": "OpenAI API",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "description": "GPT-5 / GPT-4.1 chat completions + Whisper transcription",
+      "external": true,
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "ext-firebase",
+      "name": "Firebase",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "description": "Auth, Firestore (cloud saves, conversation persistence), Hosting",
+      "external": true,
+      "tagIds": [
+        "tag-firebase"
+      ]
+    },
+    {
+      "id": "ext-stripe",
+      "name": "Stripe",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "description": "Payment / premium subscription processing",
+      "external": true,
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "ext-tavily",
+      "name": "Tavily Search API",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "description": "Web search backend for the web_search AI tool",
+      "external": true
+    },
+    {
+      "id": "ext-cognito",
+      "name": "AWS Cognito",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "description": "OAuth/JWT user authentication (AWS deployment path)",
+      "external": true,
+      "tagIds": [
+        "tag-aws"
+      ]
+    },
+    {
+      "id": "ext-aws",
+      "name": "AWS (EC2 / ECR / CloudFront)",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "description": "Alternate hosting: EC2 GPU backend, ECR images, CloudFront + S3 SPA",
+      "external": true,
+      "tagIds": [
+        "tag-aws"
+      ]
+    },
+    {
+      "id": "ext-runpod",
+      "name": "RunPod GPU Cloud",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "description": "CUDA 12.4 GPU host for MACE/DFT via Docker + SSH",
+      "external": true,
+      "tagIds": [
+        "tag-runpod"
+      ]
+    },
+    {
+      "id": "ext-render",
+      "name": "Render.com",
+      "type": "system",
+      "parentId": "chopchopmol",
+      "description": "Primary managed Flask host (Gunicorn, auto-deploy on push)",
+      "external": true,
+      "tagIds": [
+        "tag-render"
+      ]
+    },
+    {
+      "id": "app-render",
+      "name": "Rendering & Scene",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Three.js render loop, camera, styles, feature toggles",
+      "tagIds": [
+        "tag-js",
+        "tag-three"
+      ]
+    },
+    {
+      "id": "c-main",
+      "name": "Main Controller",
+      "type": "component",
+      "parentId": "app-render",
+      "caption": "demo/main.js",
+      "description": "Molecule lifecycle, pointer/keyboard handlers, camera, render loop, atom editing (~7970 lines)",
+      "tagIds": [
+        "tag-js",
+        "tag-three"
+      ]
+    },
+    {
+      "id": "c-styles",
+      "name": "Atom Styles",
+      "type": "component",
+      "parentId": "app-render",
+      "caption": "demo/handleStyles.js",
+      "description": "Ball-and-stick, space-fill, wireframe rendering styles",
+      "tagIds": [
+        "tag-js",
+        "tag-three"
+      ]
+    },
+    {
+      "id": "c-features",
+      "name": "Feature Toggles",
+      "type": "component",
+      "parentId": "app-render",
+      "caption": "demo/handleFeatures.js",
+      "description": "Labels, force arrows, charge visualization, ribbon toggles",
+      "tagIds": [
+        "tag-js",
+        "tag-three"
+      ]
+    },
+    {
+      "id": "c-ribbon",
+      "name": "Protein Ribbon",
+      "type": "component",
+      "parentId": "app-render",
+      "caption": "demo/utils/ribbon.js",
+      "description": "Ribbon rendering from backbone CA atoms",
+      "tagIds": [
+        "tag-js",
+        "tag-three"
+      ]
+    },
+    {
+      "id": "app-model",
+      "name": "Molecule Model",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Core molecule data structures and meshes",
+      "tagIds": [
+        "tag-js",
+        "tag-three"
+      ]
+    },
+    {
+      "id": "c-molecule",
+      "name": "Molecule Class",
+      "type": "component",
+      "parentId": "app-model",
+      "caption": "demo/atom/molecule.js",
+      "description": "InstancedMesh atoms, bonds, labels, force arrows, frame animation (~2230 lines)",
+      "tagIds": [
+        "tag-js",
+        "tag-three"
+      ]
+    },
+    {
+      "id": "c-atom",
+      "name": "Atom",
+      "type": "component",
+      "parentId": "app-model",
+      "caption": "demo/atom/atom.js",
+      "description": "Atom: position, element, selection state",
+      "tagIds": [
+        "tag-js",
+        "tag-three"
+      ]
+    },
+    {
+      "id": "c-bond",
+      "name": "Bond",
+      "type": "component",
+      "parentId": "app-model",
+      "caption": "demo/atom/bond.js",
+      "description": "Bond: cylinder geometry, half-bond coloring",
+      "tagIds": [
+        "tag-js",
+        "tag-three"
+      ]
+    },
+    {
+      "id": "app-agent",
+      "name": "AI Agent",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Client-side AI tool executor and SSE loop",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-aiagent",
+      "name": "Agent Tool Executor",
+      "type": "component",
+      "parentId": "app-agent",
+      "caption": "demo/aiagent.js",
+      "description": "58 tool implementations, streamChat() SSE loop, compressToolResult(), cache warmup (~2860 lines)",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "app-chat",
+      "name": "Chat & App Shell UI",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Chat panel, tool rows, thinking blocks, charts",
+      "tagIds": [
+        "tag-html",
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-index",
+      "name": "App Shell / Chat UI",
+      "type": "component",
+      "parentId": "app-chat",
+      "caption": "demo/index.html",
+      "description": "Full app HTML + inline JS: chat UI, SSE parsing, tool rows, charts, file attachments (~5400 lines)",
+      "tagIds": [
+        "tag-html",
+        "tag-js"
+      ]
+    },
+    {
+      "id": "app-files",
+      "name": "File System",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Local, cloud, and remote file access",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-fileexplorer",
+      "name": "File Explorer",
+      "type": "component",
+      "parentId": "app-files",
+      "caption": "demo/fileExplorer.js",
+      "description": "Web File System API, Firebase cloud saves, IndexedDB persistence, text editor",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-remotefiles",
+      "name": "Remote Files",
+      "type": "component",
+      "parentId": "app-files",
+      "caption": "demo/remoteFiles.js",
+      "description": "SSH/SFTP remote browser via backend paramiko proxy",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-terminal",
+      "name": "Terminal",
+      "type": "component",
+      "parentId": "app-files",
+      "caption": "demo/terminal.js",
+      "description": "In-app terminal",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "app-fileio",
+      "name": "File Parsing & Export",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Molecular file format I/O",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-filehandler",
+      "name": "File Parser",
+      "type": "component",
+      "parentId": "app-fileio",
+      "caption": "demo/utils/fileHandler.js",
+      "description": "Parses 13 formats (XYZ, PDB, CIF, MOL/SDF, Cube, Molden...) + Bohr auto-detection",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-filewriter",
+      "name": "File Writer",
+      "type": "component",
+      "parentId": "app-fileio",
+      "caption": "demo/utils/fileWriter.js",
+      "description": "Exports 8 formats with energy/forces/charges",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "app-compute",
+      "name": "Compute Clients",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "MACE / DFT calculation clients",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-maceutils",
+      "name": "MACE/DFT Client",
+      "type": "component",
+      "parentId": "app-compute",
+      "caption": "demo/utils/maceUtils.js",
+      "description": "callMaceEnergy, callMaceOptimize, callMaceMD, callDftEnergy, streaming SSE",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "app-scan",
+      "name": "Scans & Frames",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Trajectory generation and graph ops",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-scanutils",
+      "name": "Scan Generators",
+      "type": "component",
+      "parentId": "app-scan",
+      "caption": "demo/utils/scanUtils.js",
+      "description": "Rotational, angle, translation scans",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-frameutils",
+      "name": "Frame Manager",
+      "type": "component",
+      "parentId": "app-scan",
+      "caption": "demo/utils/frameUtils.js",
+      "description": "Frame slider, loadFrames(), generateTransformFrames()",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-graphutils",
+      "name": "Molecular Graph",
+      "type": "component",
+      "parentId": "app-scan",
+      "caption": "demo/utils/graphUtils.js",
+      "description": "buildAdjacencyList, findConnectedFragment (fragment ops)",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "app-orbital",
+      "name": "Orbital Visualization",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Isosurface generation for orbitals",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-orbitalutils",
+      "name": "Cube Orbitals",
+      "type": "component",
+      "parentId": "app-orbital",
+      "caption": "demo/utils/orbitalUtils.js",
+      "description": "Marching Cubes isosurfaces for Cube volumetric data",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-moldenutils",
+      "name": "Molden Orbitals",
+      "type": "component",
+      "parentId": "app-orbital",
+      "caption": "demo/utils/moldenOrbitalUtils.js",
+      "description": "Molden volume/mesh decompression + Three.js meshes",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-mcworker",
+      "name": "Marching Cubes Worker",
+      "type": "component",
+      "parentId": "app-orbital",
+      "caption": "demo/utils/marchingCubesWorker.js",
+      "description": "Web Worker for parallel isosurface generation",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "app-core",
+      "name": "Core Utilities",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Shared client-side helpers",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-apiutils",
+      "name": "API Utilities",
+      "type": "component",
+      "parentId": "app-core",
+      "caption": "demo/utils/apiUtils.js",
+      "description": "safeFetch(), getBackendUrl() RunPod->Render->Local auto-detect, postJson()",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-utils",
+      "name": "Common Utils",
+      "type": "component",
+      "parentId": "app-core",
+      "caption": "demo/utils/utils.js",
+      "description": "Common utility functions",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-domutils",
+      "name": "DOM Utilities",
+      "type": "component",
+      "parentId": "app-core",
+      "caption": "demo/utils/domUtils.js",
+      "description": "DOM helper utilities",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-errhandler",
+      "name": "Error Handler",
+      "type": "component",
+      "parentId": "app-core",
+      "caption": "demo/utils/errorHandler.js",
+      "description": "Global error handler",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-toast",
+      "name": "Toast",
+      "type": "component",
+      "parentId": "app-core",
+      "caption": "demo/utils/toast.js",
+      "description": "Toast notification system",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-undo",
+      "name": "Undo Manager",
+      "type": "component",
+      "parentId": "app-core",
+      "caption": "demo/utils/undo.js",
+      "description": "Undo/redo, 30-action stack, deep-copies molecule state",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "app-billing",
+      "name": "Payments & Access",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Premium, BYOK, and access gating",
+      "tagIds": [
+        "tag-js",
+        "tag-html"
+      ]
+    },
+    {
+      "id": "c-stripe",
+      "name": "Stripe Integration",
+      "type": "component",
+      "parentId": "app-billing",
+      "caption": "demo/utils/stripe.js",
+      "description": "Stripe payment integration, premium feature gating",
+      "tagIds": [
+        "tag-js",
+        "tag-html"
+      ]
+    },
+    {
+      "id": "c-admin",
+      "name": "Admin Queue Page",
+      "type": "component",
+      "parentId": "app-billing",
+      "caption": "demo/admin.html",
+      "description": "Early-access request approval queue (Firebase ID token)",
+      "tagIds": [
+        "tag-js",
+        "tag-html"
+      ]
+    },
+    {
+      "id": "c-earlyacc",
+      "name": "Early-Access Page",
+      "type": "component",
+      "parentId": "app-billing",
+      "caption": "demo/early-access.html",
+      "description": "Early-access request + BYOK API-key entry",
+      "tagIds": [
+        "tag-js",
+        "tag-html"
+      ]
+    },
+    {
+      "id": "c-upgrade",
+      "name": "Upgrade Page",
+      "type": "component",
+      "parentId": "app-billing",
+      "caption": "upgrade/index.html",
+      "description": "Premium upgrade / pricing page",
+      "tagIds": [
+        "tag-js",
+        "tag-html"
+      ]
+    },
+    {
+      "id": "app-mobile",
+      "name": "Mobile UI",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Mobile panels and touch handling",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-mobile",
+      "name": "Mobile UI Controller",
+      "type": "component",
+      "parentId": "app-mobile",
+      "caption": "demo/mobile.js",
+      "description": "Mobile panel coordinator, toolbar controller, virtual keyboard",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "app-flask",
+      "name": "Flask API Server",
+      "type": "app",
+      "parentId": "sys-backend",
+      "caption": "chopchopmol-ai-backend/app.py (~3630 lines, single Flask app)",
+      "description": "Gunicorn (1 worker / 4 threads / 600s). CUDA auto-detect with CPU fallback.",
+      "tagIds": [
+        "tag-py",
+        "tag-flask"
+      ]
+    },
+    {
+      "id": "c-be-chat",
+      "name": "AI Chat Proxy",
+      "type": "component",
+      "parentId": "app-flask",
+      "caption": "/ai/chat/stream",
+      "description": "Builds system prompt + STATE line, calls Claude/OpenAI, streams SSE tool calls; token-aware history pruning + prompt caching",
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "c-be-mace",
+      "name": "MACE Service",
+      "type": "component",
+      "parentId": "app-flask",
+      "caption": "/ai/mace/*",
+      "description": "Energy, batch energy, optimize, MD (Langevin NVT), fine-tuning; streaming SSE; ASE/PyTorch",
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "c-be-dft",
+      "name": "DFT Service",
+      "type": "component",
+      "parentId": "app-flask",
+      "caption": "/ai/dft/*",
+      "description": "PySCF / GPU4PySCF single-point + batch DFT with dftd3/dftd4 dispersion",
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "c-be-python",
+      "name": "Python Execution",
+      "type": "component",
+      "parentId": "app-flask",
+      "caption": "/ai/python/execute",
+      "description": "Sandboxed exec() with numpy/matplotlib; injects atoms/positions/energies/frames; base64 figures",
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "c-be-orbital",
+      "name": "Orbital Service",
+      "type": "component",
+      "parentId": "app-flask",
+      "caption": "/ai/molden/*",
+      "description": "PySCF AO grid eval, GPU torch.matmul MO coeffs, NDJSON streaming, cached AO grids",
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "c-be-remote",
+      "name": "Remote SSH Proxy",
+      "type": "component",
+      "parentId": "app-flask",
+      "caption": "/api/remote/*",
+      "description": "paramiko SSH/SFTP: connect, list, read, write, delete, mkdir",
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "c-be-jobs",
+      "name": "Job Manager",
+      "type": "component",
+      "parentId": "app-flask",
+      "caption": "/ai/jobs/*",
+      "description": "Long-running background job status + cancellation (MAX_JOBS=200, 1hr TTL)",
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "c-be-search",
+      "name": "Web Search",
+      "type": "component",
+      "parentId": "app-flask",
+      "caption": "/ai/knowledge/search",
+      "description": "Tavily web search + Whisper transcription (/ai/transcribe)",
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "store-session",
+      "name": "Session & Job Store",
+      "type": "store",
+      "parentId": "sys-backend",
+      "caption": "In-memory sessions + jobs + AO-grid cache",
+      "description": "MAX_SESSIONS=500 (1hr TTL), MAX_JOBS=200, MOLDEN_CACHE (30min TTL). Not persisted.",
+      "tagIds": [
+        "tag-py"
+      ]
+    }
+  ],
+  "modelConnections": [
+    {
+      "id": "cx-user-fe",
+      "name": "Uses (browser)",
+      "originId": "actor-researcher",
+      "targetId": "sys-frontend",
+      "direction": "outgoing",
+      "description": "Loads molecules, chats, edits, views results in the 3D viewport"
+    },
+    {
+      "id": "cx-admin-fe",
+      "name": "Manages access",
+      "originId": "actor-admin",
+      "targetId": "c-admin",
+      "direction": "outgoing",
+      "description": "Approves/rejects early-access requests"
+    },
+    {
+      "id": "cx-agent-be",
+      "name": "AI chat over SSE",
+      "originId": "c-aiagent",
+      "targetId": "c-be-chat",
+      "direction": "outgoing",
+      "description": "POST /ai/chat/stream \u2014 message + molecule state, streams text/thinking/tool_calls"
+    },
+    {
+      "id": "cx-compute-mace",
+      "name": "MACE calc requests",
+      "originId": "c-maceutils",
+      "targetId": "c-be-mace",
+      "direction": "outgoing",
+      "description": "Energy / optimize / MD (SSE streaming)"
+    },
+    {
+      "id": "cx-compute-dft",
+      "name": "DFT calc requests",
+      "originId": "c-maceutils",
+      "targetId": "c-be-dft",
+      "direction": "outgoing",
+      "description": "Single-point + batch DFT energy"
+    },
+    {
+      "id": "cx-agent-python",
+      "name": "Run Python",
+      "originId": "c-aiagent",
+      "targetId": "c-be-python",
+      "direction": "outgoing",
+      "description": "execute_python tool with trajectory data"
+    },
+    {
+      "id": "cx-orbital-be",
+      "name": "Molden orbital eval",
+      "originId": "c-moldenutils",
+      "targetId": "c-be-orbital",
+      "direction": "outgoing",
+      "description": "AO grid prepare + batch orbital NDJSON"
+    },
+    {
+      "id": "cx-remote-be",
+      "name": "SSH/SFTP proxy",
+      "originId": "c-remotefiles",
+      "targetId": "c-be-remote",
+      "direction": "outgoing",
+      "description": "Remote file browse/read/write via paramiko"
+    },
+    {
+      "id": "cx-agent-search",
+      "name": "Web search tool",
+      "originId": "c-aiagent",
+      "targetId": "c-be-search",
+      "direction": "outgoing",
+      "description": "web_search AI tool -> Tavily"
+    },
+    {
+      "id": "cx-be-claude",
+      "name": "Chat completions",
+      "originId": "c-be-chat",
+      "targetId": "ext-claude",
+      "direction": "outgoing",
+      "description": "Anthropic Messages API, tool use + extended thinking"
+    },
+    {
+      "id": "cx-be-openai",
+      "name": "Chat completions",
+      "originId": "c-be-chat",
+      "targetId": "ext-openai",
+      "direction": "outgoing",
+      "description": "OpenAI chat + reasoning stream"
+    },
+    {
+      "id": "cx-be-tavily",
+      "name": "Search query",
+      "originId": "c-be-search",
+      "targetId": "ext-tavily",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-be-whisper",
+      "name": "Transcription",
+      "originId": "c-be-search",
+      "targetId": "ext-openai",
+      "direction": "outgoing",
+      "description": "Whisper audio -> text"
+    },
+    {
+      "id": "cx-jobs-store",
+      "name": "Reads/writes",
+      "originId": "c-be-jobs",
+      "targetId": "store-session",
+      "direction": "bidirectional"
+    },
+    {
+      "id": "cx-chat-store",
+      "name": "Session history",
+      "originId": "c-be-chat",
+      "targetId": "store-session",
+      "direction": "bidirectional"
+    },
+    {
+      "id": "cx-fe-firebase",
+      "name": "Auth + cloud saves",
+      "originId": "c-fileexplorer",
+      "targetId": "ext-firebase",
+      "direction": "outgoing",
+      "description": "Firestore molecule saves, conversation persistence"
+    },
+    {
+      "id": "cx-index-firebase",
+      "name": "Auth state",
+      "originId": "c-index",
+      "targetId": "ext-firebase",
+      "direction": "outgoing",
+      "description": "Firebase auth + conversation load"
+    },
+    {
+      "id": "cx-stripe-ext",
+      "name": "Checkout",
+      "originId": "c-stripe",
+      "targetId": "ext-stripe",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-cognito",
+      "name": "OAuth login",
+      "originId": "c-index",
+      "targetId": "ext-cognito",
+      "direction": "outgoing",
+      "description": "AWS deployment auth path (aws/auth-cognito.js)"
+    },
+    {
+      "id": "cx-be-render",
+      "name": "Deployed to",
+      "originId": "sys-backend",
+      "targetId": "ext-render",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-be-runpod",
+      "name": "GPU host",
+      "originId": "sys-backend",
+      "targetId": "ext-runpod",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-be-aws",
+      "name": "Alt host",
+      "originId": "sys-backend",
+      "targetId": "ext-aws",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-fe-firebase-host",
+      "name": "Hosted on",
+      "originId": "sys-frontend",
+      "targetId": "ext-firebase",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-agent-compute",
+      "name": "imports",
+      "originId": "c-aiagent",
+      "targetId": "c-maceutils",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-agent-fileio",
+      "name": "imports",
+      "originId": "c-aiagent",
+      "targetId": "c-filewriter",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-agent-scan-f",
+      "name": "imports",
+      "originId": "c-aiagent",
+      "targetId": "c-frameutils",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-agent-scan-g",
+      "name": "imports",
+      "originId": "c-aiagent",
+      "targetId": "c-graphutils",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-agent-core",
+      "name": "imports",
+      "originId": "c-aiagent",
+      "targetId": "c-apiutils",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-compute-core",
+      "name": "imports",
+      "originId": "c-maceutils",
+      "targetId": "c-apiutils",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-remote-core",
+      "name": "imports",
+      "originId": "c-remotefiles",
+      "targetId": "c-apiutils",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-terminal-core",
+      "name": "imports",
+      "originId": "c-terminal",
+      "targetId": "c-apiutils",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-molden-core",
+      "name": "imports",
+      "originId": "c-moldenutils",
+      "targetId": "c-apiutils",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-scan-frame",
+      "name": "imports",
+      "originId": "c-scanutils",
+      "targetId": "c-frameutils",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-features-dom",
+      "name": "imports",
+      "originId": "c-features",
+      "targetId": "c-domutils",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-mol-atom",
+      "name": "imports",
+      "originId": "c-molecule",
+      "targetId": "c-atom",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-mol-bond",
+      "name": "imports",
+      "originId": "c-molecule",
+      "targetId": "c-bond",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-main-mol",
+      "name": "drives",
+      "originId": "c-main",
+      "targetId": "c-molecule",
+      "direction": "outgoing",
+      "description": "Creates/updates the Molecule instance and triggers draw()"
+    },
+    {
+      "id": "cx-main-render",
+      "name": "renders",
+      "originId": "c-main",
+      "targetId": "c-styles",
+      "direction": "outgoing"
+    },
+    {
+      "id": "cx-main-features",
+      "name": "toggles",
+      "originId": "c-main",
+      "targetId": "c-features",
+      "direction": "outgoing"
+    }
+  ],
+  "tagGroups": [
+    {
+      "id": "tg-tech",
+      "name": "Technology",
+      "icon": "laptop-code"
+    },
+    {
+      "id": "tg-hosting",
+      "name": "Hosting",
+      "icon": "cloud"
+    }
+  ],
+  "tags": [
+    {
+      "id": "tag-js",
+      "name": "JavaScript",
+      "color": "yellow",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-py",
+      "name": "Python",
+      "color": "blue",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-html",
+      "name": "HTML/CSS",
+      "color": "orange",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-three",
+      "name": "Three.js",
+      "color": "green",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-flask",
+      "name": "Flask",
+      "color": "red",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-ml",
+      "name": "PyTorch / MACE",
+      "color": "purple",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-firebase",
+      "name": "Firebase Hosting",
+      "color": "orange",
+      "groupId": "tg-hosting"
+    },
+    {
+      "id": "tag-aws",
+      "name": "AWS",
+      "color": "beaver",
+      "groupId": "tg-hosting"
+    },
+    {
+      "id": "tag-render",
+      "name": "Render.com",
+      "color": "dark-blue",
+      "groupId": "tg-hosting"
+    },
+    {
+      "id": "tag-runpod",
+      "name": "RunPod GPU",
+      "color": "purple",
+      "groupId": "tg-hosting"
+    }
+  ]
+}
