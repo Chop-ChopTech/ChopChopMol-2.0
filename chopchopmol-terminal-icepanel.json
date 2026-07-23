@@ -1,0 +1,364 @@
+{
+  "namespace": "chopchopmol-terminal",
+  "modelObjects": [
+    {
+      "id": "term-root",
+      "name": "ChopChopMol Terminal",
+      "type": "domain",
+      "caption": "In-app browser terminal: xterm.js over a WebSocket to a per-user sandboxed container",
+      "description": "The Terminal button in the top toolbar opens a bottom panel running xterm.js. It connects over a WebSocket to a terminal gateway that authenticates the user (Firebase token or guest code) and drops them into their own isolated, sandboxed shell container. Keystrokes flow up as text frames; shell output flows down as binary frames."
+    },
+    {
+      "id": "actor-user",
+      "name": "Researcher / End User",
+      "type": "actor",
+      "parentId": "term-root",
+      "caption": "Signed-in user (Firebase) or guest (bypass code)",
+      "description": "Opens the terminal from the toolbar and types shell commands. Must be signed in with a Firebase ID token, or be a guest whose session carries the bypass code; otherwise the gateway refuses the socket (close 4401)."
+    },
+    {
+      "id": "sys-frontend",
+      "name": "ChopChopMol Frontend",
+      "type": "system",
+      "parentId": "term-root",
+      "caption": "Vanilla HTML/JS single-page app (Three.js, no build step)",
+      "description": "Static site served over HTTPS. Hosts the terminal panel and the xterm.js WebSocket client. Because the page is HTTPS, the terminal socket must be wss://.",
+      "tagIds": [
+        "tag-js",
+        "tag-html"
+      ]
+    },
+    {
+      "id": "app-terminal-panel",
+      "name": "Terminal Panel",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Bottom terminal panel: toolbar toggle, xterm host, WebSocket client",
+      "description": "The #terminalPanel UI and its WebSocket client. Owns the panel lifecycle, xterm rendering, and the frame protocol to the gateway.",
+      "tagIds": [
+        "tag-js",
+        "tag-ws"
+      ]
+    },
+    {
+      "id": "c-toolbar",
+      "name": "Terminal Toolbar Button",
+      "type": "component",
+      "parentId": "app-terminal-panel",
+      "caption": "demo/index.html — top toolbar",
+      "description": "The fa-terminal toolbar button. onclick calls window.terminalManager.toggle(), which opens #terminalPanel (a resizable bottom panel) and triggers connect().",
+      "tagIds": [
+        "tag-html",
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-terminal",
+      "name": "TerminalManager",
+      "type": "component",
+      "parentId": "app-terminal-panel",
+      "caption": "demo/terminal.js",
+      "description": "WebSocket client + xterm host. Manages the panel lifecycle (open/close/toggle), builds the socket URL, pipes keystrokes up and shell output down, sends resize events, and reconnects with exponential backoff (1s, capped at 15s) on unexpected drops. Handles close codes 4401 (unauthorized) and 4503 (at capacity).",
+      "tagIds": [
+        "tag-js",
+        "tag-ws"
+      ]
+    },
+    {
+      "id": "c-xterm",
+      "name": "xterm.js",
+      "type": "component",
+      "parentId": "app-terminal-panel",
+      "caption": "@xterm/xterm + addon-fit + addon-webgl (CDN)",
+      "description": "Third-party library loaded from CDN. Renders the terminal grid. FitAddon measures cols/rows for the panel size; WebglAddon draws each cell on a fixed pixel grid (fixes uneven glyph spacing). JetBrains Mono fixed-width font. onData emits keystrokes; write() paints incoming output.",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "app-core",
+      "name": "Core Utilities",
+      "type": "app",
+      "parentId": "sys-frontend",
+      "caption": "Shared client-side helpers",
+      "description": "Backend/socket URL resolution and shared fetch helpers used across the frontend.",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "c-apiutils",
+      "name": "API Utilities (getWsUrl)",
+      "type": "component",
+      "parentId": "app-core",
+      "caption": "demo/utils/apiUtils.js",
+      "description": "getWsUrl('/terminal/ws') derives the socket URL from AWS_URL by swapping https -> wss, producing wss://api.chopchopmol.com/terminal/ws. window.__TERMINAL_WS_OVERRIDE points it at a local gateway for dev.",
+      "tagIds": [
+        "tag-js"
+      ]
+    },
+    {
+      "id": "sys-gateway",
+      "name": "Terminal Gateway",
+      "type": "system",
+      "parentId": "term-root",
+      "caption": "Separate WebSocket gateway service (gateway.py) — NOT the Flask AI backend",
+      "description": "Standalone service behind Caddy. Accepts the browser WebSocket, verifies the auth token, allocates a per-user isolated sandboxed container, and bridges the socket to a PTY inside it. Distinct from both the AI/MACE/DFT Flask backend (app.py) and the SSH/SFTP remote-files proxy.",
+      "tagIds": [
+        "tag-py",
+        "tag-ws"
+      ]
+    },
+    {
+      "id": "app-gateway",
+      "name": "Gateway Service",
+      "type": "app",
+      "parentId": "sys-gateway",
+      "caption": "gateway.py — WebSocket server + PTY bridge",
+      "description": "Accepts the browser WebSocket, authenticates it, allocates a sandboxed container, and bridges the socket to a shell PTY inside it.",
+      "tagIds": [
+        "tag-py",
+        "tag-ws"
+      ]
+    },
+    {
+      "id": "c-gw-ws",
+      "name": "WebSocket + Auth Handler",
+      "type": "component",
+      "parentId": "app-gateway",
+      "caption": "gateway.py — connection accept + auth",
+      "description": "Reads ?token= (Firebase ID token) or ?guest= from the handshake query string, verifies it, and either provisions a container or closes the socket with 4401 (unauthorized) / 4503 (at capacity).",
+      "tagIds": [
+        "tag-py",
+        "tag-ws"
+      ]
+    },
+    {
+      "id": "c-gw-pty",
+      "name": "PTY / Shell Bridge",
+      "type": "component",
+      "parentId": "app-gateway",
+      "caption": "gateway.py — pseudo-terminal I/O",
+      "description": "Spawns a shell on a PTY inside the user's container. Feeds inbound text frames (keystrokes) to the PTY, applies resize messages (cols/rows), and streams PTY output back to the browser as binary frames.",
+      "tagIds": [
+        "tag-py"
+      ]
+    },
+    {
+      "id": "store-container",
+      "name": "Per-User Sandboxed Container",
+      "type": "store",
+      "parentId": "sys-gateway",
+      "caption": "Isolated shell environment, one per user session",
+      "description": "The isolated, sandboxed container the user is dropped into. Holds the running shell process and its filesystem for the session.",
+      "tagIds": [
+        "tag-container"
+      ]
+    },
+    {
+      "id": "ext-caddy",
+      "name": "Caddy Reverse Proxy",
+      "type": "system",
+      "parentId": "term-root",
+      "caption": "HTTPS/WSS termination at api.chopchopmol.com",
+      "description": "Terminates TLS and routes /terminal/ws* to the terminal gateway service (while /ai/* and /api/* go to the Flask backend on localhost:10000). Auto-manages the Let's Encrypt certificate.",
+      "external": true,
+      "tagIds": [
+        "tag-aws"
+      ]
+    },
+    {
+      "id": "ext-firebase",
+      "name": "Firebase Auth",
+      "type": "system",
+      "parentId": "term-root",
+      "caption": "Issues + verifies the ID token",
+      "description": "Provides the Firebase ID token (window._firebaseIdToken) the frontend sends as ?token=. The gateway verifies it before allocating a container.",
+      "external": true,
+      "tagIds": [
+        "tag-firebase"
+      ]
+    },
+    {
+      "id": "ext-aws",
+      "name": "AWS EC2 Host",
+      "type": "system",
+      "parentId": "term-root",
+      "caption": "g4dn.xlarge box behind Caddy",
+      "description": "The AWS EC2 instance that runs Caddy and the terminal gateway (alongside the Flask AI backend).",
+      "external": true,
+      "tagIds": [
+        "tag-aws"
+      ]
+    }
+  ],
+  "modelConnections": [
+    {
+      "id": "cx-user-toolbar",
+      "name": "Clicks Terminal button",
+      "originId": "actor-user",
+      "targetId": "c-toolbar",
+      "direction": "outgoing",
+      "description": "1. Opens the terminal from the top toolbar."
+    },
+    {
+      "id": "cx-toolbar-term",
+      "name": "toggle() -> open() -> connect()",
+      "originId": "c-toolbar",
+      "targetId": "c-terminal",
+      "direction": "outgoing",
+      "description": "2. Opens the bottom panel, ensures the xterm instance, fits it, and calls connect()."
+    },
+    {
+      "id": "cx-term-apiutils",
+      "name": "getWsUrl()",
+      "originId": "c-terminal",
+      "targetId": "c-apiutils",
+      "direction": "outgoing",
+      "description": "3. Builds wss://api.chopchopmol.com/terminal/ws (https -> wss)."
+    },
+    {
+      "id": "cx-term-firebase",
+      "name": "Reads ID token",
+      "originId": "c-terminal",
+      "targetId": "ext-firebase",
+      "direction": "outgoing",
+      "description": "4. Reads window._firebaseIdToken to authenticate the socket (guests use the bypass code instead)."
+    },
+    {
+      "id": "cx-term-xterm",
+      "name": "Renders + pipes keystrokes",
+      "originId": "c-terminal",
+      "targetId": "c-xterm",
+      "direction": "bidirectional",
+      "description": "5. term.onData(keystrokes) -> WebSocket; incoming frames -> term.write(). FitAddon reports cols/rows on resize."
+    },
+    {
+      "id": "cx-term-caddy",
+      "name": "Open WebSocket (?token=)",
+      "originId": "c-terminal",
+      "targetId": "ext-caddy",
+      "direction": "outgoing",
+      "description": "6. Opens wss://api.chopchopmol.com/terminal/ws?token=<Firebase ID token> (or ?guest=0852). Browser WS can't set an Authorization header, so auth rides in the query string."
+    },
+    {
+      "id": "cx-caddy-gw",
+      "name": "Routes /terminal/ws*",
+      "originId": "ext-caddy",
+      "targetId": "c-gw-ws",
+      "direction": "outgoing",
+      "description": "7. Caddy reverse-proxies the upgraded WebSocket (443) to the terminal gateway service."
+    },
+    {
+      "id": "cx-gw-firebase",
+      "name": "Verifies token",
+      "originId": "c-gw-ws",
+      "targetId": "ext-firebase",
+      "direction": "outgoing",
+      "description": "8. Verifies the Firebase ID token. On failure the socket is closed with code 4401; at capacity, 4503."
+    },
+    {
+      "id": "cx-gw-container",
+      "name": "Allocates container",
+      "originId": "c-gw-ws",
+      "targetId": "store-container",
+      "direction": "outgoing",
+      "description": "9. On success, drops the user into their own isolated, sandboxed container."
+    },
+    {
+      "id": "cx-gw-pty-container",
+      "name": "Spawns shell (PTY)",
+      "originId": "c-gw-pty",
+      "targetId": "store-container",
+      "direction": "bidirectional",
+      "description": "10. Runs a shell on a PTY inside the container and reads/writes its I/O."
+    },
+    {
+      "id": "cx-term-gw-in",
+      "name": "Keystrokes + resize (up)",
+      "originId": "c-terminal",
+      "targetId": "c-gw-pty",
+      "direction": "outgoing",
+      "description": "11a. Keystrokes as raw text frames; resize as JSON text {\"type\":\"resize\",\"cols\":N,\"rows\":M}. Fed to the PTY."
+    },
+    {
+      "id": "cx-gw-term-out",
+      "name": "Shell output (down)",
+      "originId": "c-gw-pty",
+      "targetId": "c-terminal",
+      "direction": "outgoing",
+      "description": "11b. PTY output streamed back as binary frames, written straight to xterm."
+    },
+    {
+      "id": "cx-gw-aws",
+      "name": "Runs on",
+      "originId": "sys-gateway",
+      "targetId": "ext-aws",
+      "direction": "outgoing",
+      "description": "The gateway (and Caddy) run on the AWS EC2 box."
+    },
+    {
+      "id": "cx-caddy-aws",
+      "name": "Runs on",
+      "originId": "ext-caddy",
+      "targetId": "ext-aws",
+      "direction": "outgoing"
+    }
+  ],
+  "tagGroups": [
+    {
+      "id": "tg-tech",
+      "name": "Technology",
+      "icon": "laptop-code"
+    },
+    {
+      "id": "tg-hosting",
+      "name": "Hosting",
+      "icon": "cloud"
+    }
+  ],
+  "tags": [
+    {
+      "id": "tag-js",
+      "name": "JavaScript",
+      "color": "yellow",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-html",
+      "name": "HTML/CSS",
+      "color": "orange",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-py",
+      "name": "Python",
+      "color": "blue",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-ws",
+      "name": "WebSocket",
+      "color": "green",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-container",
+      "name": "Sandboxed Container",
+      "color": "purple",
+      "groupId": "tg-tech"
+    },
+    {
+      "id": "tag-firebase",
+      "name": "Firebase",
+      "color": "orange",
+      "groupId": "tg-hosting"
+    },
+    {
+      "id": "tag-aws",
+      "name": "AWS",
+      "color": "beaver",
+      "groupId": "tg-hosting"
+    }
+  ]
+}
