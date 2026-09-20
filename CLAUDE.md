@@ -404,7 +404,8 @@ When `tool_status` arrives, `currentTextBlock` is set to `null` so the next text
 ### AI Models Supported
 
 **Claude** (via Anthropic):
-- `claude-opus-4-6` — Adaptive extended thinking (automatic budget)
+- `claude-opus-5`, `claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6` — Adaptive extended thinking (automatic budget; no `budget_tokens`, no `temperature` on 4.7+)
+- `claude-sonnet-5` — Adaptive extended thinking
 - `claude-sonnet-4-6` — Interleaved thinking via beta endpoint
 - `claude-sonnet-4` — Extended thinking with `budget_tokens`
 - `claude-haiku-4-5` — Extended thinking with `budget_tokens`
@@ -420,7 +421,7 @@ When `tool_status` arrives, `currentTextBlock` is set to `null` so the next text
 ### Extended Thinking
 
 - Frontend sends `thinkingBudget` (0=off, 4096/10000/32000) in POST payload, persisted in localStorage
-- **Opus 4.6**: Adaptive thinking (ignores budget_tokens, automatic)
+- **Opus 5 / 4.8 / 4.7 / 4.6, Sonnet 5**: Adaptive thinking (ignores budget_tokens, automatic)
 - **Sonnet 4.6**: Interleaved thinking via beta endpoint
 - **Sonnet 4 & Haiku 4.5**: Manual thinking with configurable `budget_tokens`
 - Hidden in UI for GPT models

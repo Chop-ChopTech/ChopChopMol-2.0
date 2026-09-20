@@ -2971,6 +2971,8 @@
                         <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
                     </optgroup>
                     <optgroup label="Claude Opus">
+                        <option value="claude-opus-5">Claude Opus 5</option>
+                        <option value="claude-opus-4-8">Claude Opus 4.8</option>
                         <option value="claude-opus-4-7">Claude Opus 4.7</option>
                         <option value="claude-opus-4-6">Claude Opus 4.6</option>
                         <option value="claude-opus-4-5-20251101">Claude Opus 4.5</option>
@@ -2978,6 +2980,7 @@
                         <option value="claude-opus-4-20250514">Claude Opus 4</option>
                     </optgroup>
                     <optgroup label="Claude Sonnet">
+                        <option value="claude-sonnet-5">Claude Sonnet 5</option>
                         <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
                         <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5</option>
                         <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
@@ -3140,7 +3143,7 @@
             const messagesContainer = document.getElementById('aiChatMessages');
             const modelSelect = document.getElementById('aiModelSelect');
             const DEFAULT_MODEL_KEY = 'chopchop_default_model';
-            const FALLBACK_MODEL = 'claude-opus-4-7';
+            const FALLBACK_MODEL = 'claude-opus-5';
 
             // ═══════════════════════════════════════════════════════════════
             // ▼▼▼  PROVIDER RESTRICTION — EDIT THIS LINE AND REDEPLOY  ▼▼▼
@@ -3253,12 +3256,15 @@
                 'auto': { badge: 'Auto', hint: 'Pick the best available model for each request' },
                 'gpt-5.5': { badge: 'New', hint: 'Frontier · 1M context · best for code & analysis' },
                 'gpt-5.5-pro': { hint: 'Max depth GPT-5.5 with extra compute' },
-                'claude-opus-4-7': { badge: 'New', hint: 'Adaptive deep reasoning · latest Opus' },
+                'claude-opus-5': { badge: 'New', hint: 'Adaptive deep reasoning · latest Opus · 1M context' },
+                'claude-opus-4-8': { hint: 'Adaptive deep reasoning · 1M context' },
+                'claude-opus-4-7': { hint: 'Adaptive deep reasoning' },
                 'claude-opus-4-6': { hint: 'Adaptive reasoning · high intelligence' },
                 'claude-opus-4-5-20251101': { hint: 'Extended thinking · balanced Opus' },
                 'claude-opus-4-1-20250805': { hint: 'Extended thinking' },
                 'claude-opus-4-20250514': { hint: 'Original Opus 4' },
-                'claude-sonnet-4-6': { badge: 'Default', hint: 'Interleaved thinking · everyday workhorse' },
+                'claude-sonnet-5': { badge: 'New', hint: 'Adaptive reasoning · fast everyday workhorse · 1M context' },
+                'claude-sonnet-4-6': { hint: 'Interleaved thinking · everyday workhorse' },
                 'claude-sonnet-4-5-20250929': { hint: 'Extended thinking' },
                 'claude-sonnet-4-20250514': { hint: 'Extended thinking' },
                 'claude-haiku-4-5-20251001': { hint: 'Fast · supports thinking' },
@@ -3396,7 +3402,7 @@
             // ── Migrate users off the old 'auto' default ──
             // Auto mode was removed; any user with `chopchop_default_model = 'auto'`
             // or the old `chopchop_auto_mode = '1'` flag in localStorage gets bumped
-            // to the new opus-4.7 default on next load. Idempotent.
+            // to the new Opus 5 default on next load. Idempotent.
             try {
                 if (localStorage.getItem(DEFAULT_MODEL_KEY) === 'auto') {
                     localStorage.setItem(DEFAULT_MODEL_KEY, FALLBACK_MODEL);
