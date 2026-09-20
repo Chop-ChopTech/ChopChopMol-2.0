@@ -2075,10 +2075,24 @@ function onPointerDown(event) {
                         // Add the selection event listeners
                         window.addEventListener('pointermove', onSelectionMove, false);
                         window.addEventListener('pointerup', onSelectionUp, false);
+                    } else {
+                        // A plain click on empty space keeps the current selection
+                        // (so orbiting the camera doesn't lose it). A second click
+                        // within DOUBLE_CLICK_MS / DOUBLE_CLICK_PX clears it. Detected
+                        // here (not via the DOM dblclick event) so it works with the
+                        // camera controls' pointer handling and on touch devices.
+                        const now = performance.now();
+                        const dx = event.clientX - lastEmptyClick.x;
+                        const dy = event.clientY - lastEmptyClick.y;
+                        const isDouble = (now - lastEmptyClick.time) < DOUBLE_CLICK_MS
+                            && (dx * dx + dy * dy) <= DOUBLE_CLICK_PX * DOUBLE_CLICK_PX;
+                        if (isDouble) {
+                            lastEmptyClick = { time: 0, x: 0, y: 0 };
+                            clearSelectionFromDoubleClick();
+                        } else {
+                            lastEmptyClick = { time: now, x: event.clientX, y: event.clientY };
+                        }
                     }
-                    // A plain click on empty space keeps the current selection
-                    // (so orbiting the camera doesn't lose it). Double-click on
-                    // empty space clears it — see clearSelectionOnDoubleClick.
                 }
             }
         }
@@ -5623,19 +5637,13 @@ window.removeEventListener('pointerdown', enhancedOnPointerDown, false);
 window.addEventListener('pointerdown', enhancedOnPointerDown, false);
 
 // Double-click on empty space clears the atom/fragment selection.
-// (Single clicks on empty space intentionally leave the selection alone.)
-function clearSelectionOnDoubleClick(event) {
-    if (ribbonMode || !editingMolecule) return;
-    if (!main.molecule || !main.molecule.instancedMesh) return;
+// Invoked from onPointerDown when two left clicks land on empty space in
+// quick succession (single clicks intentionally leave the selection alone).
+const DOUBLE_CLICK_MS = 400;
+const DOUBLE_CLICK_PX = 8;
+let lastEmptyClick = { time: 0, x: 0, y: 0 };
 
-    const rect = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
-    raycaster.setFromCamera(mouse, getActiveCamera());
-    const hits = enhancedRaycast(raycaster, main.molecule.instancedMesh, main.molecule.atoms);
-    if (hits.length > 0) return; // double-clicked an atom: keep selection
-
+function clearSelectionFromDoubleClick() {
     if (atomsSelected.length === 0 && fragmentsSelected.length === 0) return;
 
     if (window.sillyMode && atomsSelected.length > 0) {
@@ -5648,7 +5656,6 @@ function clearSelectionOnDoubleClick(event) {
     if (fragmentList) updateFragmentList(fragmentList);
     render();
 }
-renderer.domElement.addEventListener('dblclick', clearSelectionOnDoubleClick, false);
 
 // Prevent default context menu
 renderer.domElement.addEventListener('contextmenu', (event) => {
@@ -5672,100 +5679,6 @@ function onMoleculeReset() {
 }
 
 document.addEventListener('keydown', (event) => {
-    // Press 'B' to show/hide measurements
-    if (event.key === 'b' || event.key === 'B') {
-        if (atomsSelected.length === 2) {
-            // Bond length functionality for 2 atoms
-            const existingLabel = bondLengthLabels.findIndex(label =>
-                !label.isAngle && !label.isDihedral &&
-                ((label.atom1Index === atomsSelected[0] && label.atom2Index === atomsSelected[1]) ||
-                    (label.atom1Index === atomsSelected[1] && label.atom2Index === atomsSelected[0]))
-            );
-
-            if (existingLabel === -1) {
-                // Create label
-                labels.push([atomsSelected[0], atomsSelected[1]]);
-                console.log(labels);
-                createInfoLabel(atomsSelected[0], atomsSelected[1]);
-
-                // Also create axis automatically
-                const atom1 = main.molecule.atoms[atomsSelected[0]];
-                const atom2 = main.molecule.atoms[atomsSelected[1]];
-
-                const pos1 = atom1.position.clone();
-                const pos2 = atom2.position.clone();
-
-                rotationAxis = {
-                    point: pos1.clone(),
-                    direction: new THREE.Vector3().subVectors(pos2, pos1).normalize()
-                };
-
-                axisAtoms = [...atomsSelected];
-                createAxisVisualizer(atom1, atom2);
-
-                // Update UI to show axis controls
-                const element = main.molecule.atoms[atomsSelected[0]].type;
-                updateEditingContent(element, main.molecule.atomSettings[element].color);
-
-                console.log('Created bond length label and axis');
-            } else {
-                // Remove both label and axis
-                removeBondLengthLabel(existingLabel);
-
-                // Remove axis
-                rotationAxis = null;
-                axisAtoms = [];
-                if (axisVisualizer) {
-                    main.scene.remove(axisVisualizer);
-                    axisVisualizer.geometry.dispose();
-                    axisVisualizer.material.dispose();
-                    axisVisualizer = null;
-                }
-
-                // Update UI
-                if (atomsSelected.length > 0) {
-                    const element = main.molecule.atoms[atomsSelected[0]].type;
-                    updateEditingContent(element, main.molecule.atomSettings[element].color);
-                }
-
-                console.log('Removed bond length label and axis');
-            }
-        } else if (atomsSelected.length === 3) {
-            // Angle functionality for 3 atoms
-            const existingLabel = bondLengthLabels.findIndex(label =>
-                label.isAngle &&
-                label.atom1Index === atomsSelected[0] &&
-                label.atom2Index === atomsSelected[1] &&
-                label.atom3Index === atomsSelected[2]
-            );
-
-            if (existingLabel === -1) {
-                labels.push([atomsSelected[0], atomsSelected[1], atomsSelected[2]]);
-                console.log(labels);
-                createInfoLabel(atomsSelected[0], atomsSelected[1], atomsSelected[2]);
-            } else {
-                removeBondLengthLabel(existingLabel);
-            }
-        } else if (atomsSelected.length === 4) {
-            // Dihedral angle functionality for 4 atoms
-            const existingLabel = bondLengthLabels.findIndex(label =>
-                label.isDihedral &&
-                label.atom1Index === atomsSelected[0] &&
-                label.atom2Index === atomsSelected[1] &&
-                label.atom3Index === atomsSelected[2] &&
-                label.atom4Index === atomsSelected[3]
-            );
-
-            if (existingLabel === -1) {
-                labels.push([atomsSelected[0], atomsSelected[1], atomsSelected[2], atomsSelected[3]]);
-                console.log('Creating dihedral measurement for atoms:', atomsSelected);
-                createInfoLabel(atomsSelected[0], atomsSelected[1], atomsSelected[2], atomsSelected[3]);
-            } else {
-                removeBondLengthLabel(existingLabel);
-            }
-        }
-    }
-
     // Press 'L' to clear all labels
     if (event.key === 'l' || event.key === 'L') {
         if (event.shiftKey) {
@@ -5782,8 +5695,55 @@ document.addEventListener('keydown', (event) => {
             }
         }
     }
-    if (event.key == ' ') {
-        if (atomsSelected.length === 2) {
+    // Hold Space (not just tap it) to toggle a measurement for the selection:
+    // 2 atoms = bond length + rotation axis, 3 = angle, 4 = dihedral.
+    if (event.key === ' ') {
+        if (event.repeat || spaceHoldTimer !== null) return;   // ignore key auto-repeat
+        const t = event.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+        if (atomsSelected.length < 2 || atomsSelected.length > 4) return;
+        event.preventDefault();
+        spaceHoldTimer = setTimeout(() => {
+            spaceHoldTimer = null;
+            toggleMeasurementForSelection();
+        }, SPACE_HOLD_MS);
+    }
+});
+
+// Space must be held for this long before a measurement is toggled. Tapping it does nothing.
+const SPACE_HOLD_MS = 500;
+let spaceHoldTimer = null;
+
+function cancelSpaceHold() {
+    if (spaceHoldTimer !== null) {
+        clearTimeout(spaceHoldTimer);
+        spaceHoldTimer = null;
+    }
+}
+window.addEventListener('keyup', (e) => { if (e.key === ' ') cancelSpaceHold(); });
+window.addEventListener('blur', cancelSpaceHold);
+
+// Toggle the measurement matching the current selection (formerly the 'B' key):
+//   2 atoms -> bond length label + rotation axis (removing both if it already exists)
+//   3 atoms -> angle label
+//   4 atoms -> dihedral angle label
+function toggleMeasurementForSelection() {
+    if (!main.molecule || !main.molecule.atoms) return;
+    if (atomsSelected.length === 2) {
+        // Bond length functionality for 2 atoms
+        const existingLabel = bondLengthLabels.findIndex(label =>
+            !label.isAngle && !label.isDihedral &&
+            ((label.atom1Index === atomsSelected[0] && label.atom2Index === atomsSelected[1]) ||
+                (label.atom1Index === atomsSelected[1] && label.atom2Index === atomsSelected[0]))
+        );
+
+        if (existingLabel === -1) {
+            // Create label
+            labels.push([atomsSelected[0], atomsSelected[1]]);
+            console.log(labels);
+            createInfoLabel(atomsSelected[0], atomsSelected[1]);
+
+            // Also create axis automatically
             const atom1 = main.molecule.atoms[atomsSelected[0]];
             const atom2 = main.molecule.atoms[atomsSelected[1]];
 
@@ -5798,23 +5758,68 @@ document.addEventListener('keydown', (event) => {
             axisAtoms = [...atomsSelected];
             createAxisVisualizer(atom1, atom2);
 
-            // Also create label if it doesn't exist
-            const existingLabel = bondLengthLabels.findIndex(label =>
-                !label.isAngle && !label.isDihedral &&
-                ((label.atom1Index === atomsSelected[0] && label.atom2Index === atomsSelected[1]) ||
-                    (label.atom1Index === atomsSelected[1] && label.atom2Index === atomsSelected[0]))
-            );
+            // Update UI to show axis controls
+            const element = main.molecule.atoms[atomsSelected[0]].type;
+            updateEditingContent(element, main.molecule.atomSettings[element].color);
 
-            if (existingLabel === -1) {
-                labels.push([atomsSelected[0], atomsSelected[1]]);
-                createInfoLabel(atomsSelected[0], atomsSelected[1]);
+            console.log('Created bond length label and axis');
+        } else {
+            // Remove both label and axis
+            removeBondLengthLabel(existingLabel);
+
+            // Remove axis
+            rotationAxis = null;
+            axisAtoms = [];
+            if (axisVisualizer) {
+                main.scene.remove(axisVisualizer);
+                axisVisualizer.geometry.dispose();
+                axisVisualizer.material.dispose();
+                axisVisualizer = null;
             }
 
-            updateEditingContent(atom1.type, main.molecule.atomSettings[atom1.type].color);
-            console.log('Axis and label defined');
+            // Update UI
+            if (atomsSelected.length > 0) {
+                const element = main.molecule.atoms[atomsSelected[0]].type;
+                updateEditingContent(element, main.molecule.atomSettings[element].color);
+            }
+
+            console.log('Removed bond length label and axis');
+        }
+    } else if (atomsSelected.length === 3) {
+        // Angle functionality for 3 atoms
+        const existingLabel = bondLengthLabels.findIndex(label =>
+            label.isAngle &&
+            label.atom1Index === atomsSelected[0] &&
+            label.atom2Index === atomsSelected[1] &&
+            label.atom3Index === atomsSelected[2]
+        );
+
+        if (existingLabel === -1) {
+            labels.push([atomsSelected[0], atomsSelected[1], atomsSelected[2]]);
+            console.log(labels);
+            createInfoLabel(atomsSelected[0], atomsSelected[1], atomsSelected[2]);
+        } else {
+            removeBondLengthLabel(existingLabel);
+        }
+    } else if (atomsSelected.length === 4) {
+        // Dihedral angle functionality for 4 atoms
+        const existingLabel = bondLengthLabels.findIndex(label =>
+            label.isDihedral &&
+            label.atom1Index === atomsSelected[0] &&
+            label.atom2Index === atomsSelected[1] &&
+            label.atom3Index === atomsSelected[2] &&
+            label.atom4Index === atomsSelected[3]
+        );
+
+        if (existingLabel === -1) {
+            labels.push([atomsSelected[0], atomsSelected[1], atomsSelected[2], atomsSelected[3]]);
+            console.log('Creating dihedral measurement for atoms:', atomsSelected);
+            createInfoLabel(atomsSelected[0], atomsSelected[1], atomsSelected[2], atomsSelected[3]);
+        } else {
+            removeBondLengthLabel(existingLabel);
         }
     }
-});
+}
 
 function createRenderer(antialiasOn) {
     if (renderer) {

@@ -513,7 +513,7 @@ const FUNCTIONS = {
             const anchorAtom = atoms[anchorIdx];
             const refAtom = atoms[refIdx];
 
-            const stretch = molecule.stretch || 4;
+            const stretch = window.main.molecule.stretch || 4;
             const targetInternal = params.distance * stretch;
             const currentVector = new window.THREE.Vector3().subVectors(refAtom.position, anchorAtom.position);
             const currentDist = currentVector.length();
