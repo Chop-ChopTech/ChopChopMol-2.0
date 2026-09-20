@@ -1012,6 +1012,10 @@
                 setTimeout(() => {
                     if (moleculeData.fragments) {
                         window.fragments = moleculeData.fragments.map(f => f.atoms);
+                        const fragmentList = document.getElementById('fragmentList');
+                        if (fragmentList && typeof window.updateFragmentList === 'function') {
+                            window.updateFragmentList(fragmentList);
+                        }
                     }
                 }, 100);
             } else if (moleculeData.data) {
@@ -3005,6 +3009,7 @@
     </div>
     <div id="fragmentListContainer">
         <button id="createFragment">Create Fragment</button>
+        <button id="isolateFragmentBtn" title="View only the selected atoms or fragments">Isolate Selection</button>
         <ul id="fragmentList"></ul>
     </div>
     <!-- AI Model Picker Modal -->

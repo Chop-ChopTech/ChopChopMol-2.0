@@ -2075,30 +2075,10 @@ function onPointerDown(event) {
                         // Add the selection event listeners
                         window.addEventListener('pointermove', onSelectionMove, false);
                         window.addEventListener('pointerup', onSelectionUp, false);
-                    } else {
-
-                        if (fragmentsSelected.length === 0) {
-                            if (window.sillyMode && atomsSelected.length > 0) {
-                                sillyCascadeUnselect([...atomsSelected]);
-                                atomsSelected = [];
-                            } else {
-                                atomsSelected = [];
-                                unselectAtom();
-                            }
-                        }
-                        // If fragments are selected, keep their atoms selected
-                        else {
-                            atomsSelected = [];
-                            fragmentsSelected.forEach(fragIdx => {
-                                if (fragIdx < fragments.length) {
-                                    atomsSelected.push(...fragments[fragIdx]);
-                                }
-                            });
-                            // Re-highlight the fragment atoms
-                            selectFragment([], -1); // Call with empty to just update highlighting
-                        }
-                        render();
                     }
+                    // A plain click on empty space keeps the current selection
+                    // (so orbiting the camera doesn't lose it). Double-click on
+                    // empty space clears it — see clearSelectionOnDoubleClick.
                 }
             }
         }
@@ -2390,151 +2370,141 @@ function attachButtonEventListeners() {
         render();
     });
 
-    reattachButtonHandler('createFragment', () => {
-        // Create a copy of the selected atoms for the new fragment
-        const newFragment = [...atomsSelected];
+    reattachButtonHandler('createFragment', () => { createFragmentFromSelection(); });
+    reattachButtonHandler('isolateFragmentBtn', () => { isolateSelection(); });
 
-        // Get all atom indices in the molecule
-        const totalAtoms = main.molecule.atoms.length;
-        const allAtomIndices = Array.from({ length: totalAtoms }, (_, i) => i);
 
-        // Process existing fragments to remove atoms that are now in the new fragment
-        let updatedFragments = fragments.map(fragment => {
-            // Remove atoms from existing fragments if they're in the new fragment
-            return fragment.filter(atomIndex => !newFragment.includes(atomIndex));
-        }).filter(fragment => fragment.length > 0); // Remove empty fragments
+    // Attach axis event listeners
+    attachAxisEventListeners();
+}
 
-        // Find all atoms that are not in any fragment (including the new one)
-        const atomsInFragments = new Set([
-            ...newFragment,
-            ...updatedFragments.flat()
-        ]);
+// Open the Fragments side panel (it is collapsed until toggled from the toolbar).
+function showFragmentPanel() {
+    document.getElementById('fragmentListContainer')?.classList.add('open');
+    const btn = document.getElementById('createFragment');
+    if (btn) btn.style.display = 'block';
+}
 
-        const unassignedAtoms = allAtomIndices.filter(index => !atomsInFragments.has(index));
+// Called after entering an isolation level: make sure the panel is visible
+// and rebuilt so the "Back to Full Molecule" button and current view show up.
+function updateIsolationModeUI() {
+    showFragmentPanel();
+    const fragmentList = document.getElementById('fragmentList');
+    if (fragmentList) updateFragmentList(fragmentList);
+}
 
-        // Create a new fragment for unassigned atoms if there are any
-        if (unassignedAtoms.length > 0) {
-            // Check if there's already an "unassigned" fragment (could be from previous operations)
-            // If not, create one
-            updatedFragments.push(unassignedAtoms);
-        }
+// Group the currently selected atoms into a new fragment. Shared by the
+// "Create Fragment" button and the AI create_fragment tool.
+function createFragmentFromSelection() {
+    if (!main.molecule || !main.molecule.atoms || atomsSelected.length === 0) {
+        return { success: false, message: 'No atoms selected' };
+    }
+    // Create a copy of the selected atoms for the new fragment
+    const newFragment = [...atomsSelected];
 
-        // Add the new fragment
-        updatedFragments.push(newFragment);
+    // Get all atom indices in the molecule
+    const totalAtoms = main.molecule.atoms.length;
+    const allAtomIndices = Array.from({ length: totalAtoms }, (_, i) => i);
 
-        // Update the global fragments array
-        fragments = updatedFragments;
+    // Process existing fragments to remove atoms that are now in the new fragment
+    let updatedFragments = fragments.map(fragment => {
+        // Remove atoms from existing fragments if they're in the new fragment
+        return fragment.filter(atomIndex => !newFragment.includes(atomIndex));
+    }).filter(fragment => fragment.length > 0); // Remove empty fragments
 
-        // Log for debugging
-        console.log('Fragment created:', newFragment);
-        console.log('All fragments:', fragments);
-        console.log('Total atoms covered:', fragments.flat().length, '/', totalAtoms);
+    // Find all atoms that are not in any fragment (including the new one)
+    const atomsInFragments = new Set([
+        ...newFragment,
+        ...updatedFragments.flat()
+    ]);
 
-        // Update the editing content to show the new fragment list
-        if (atomsSelected.length > 0) {
-            const firstAtom = main.molecule.atoms[atomsSelected[0]];
-            updateEditingContent(firstAtom.type, main.molecule.atomSettings[firstAtom.type].color);
-        }
-    });
+    const unassignedAtoms = allAtomIndices.filter(index => !atomsInFragments.has(index));
 
-    reattachButtonHandler('isolateFragmentBtn', () => {
-        if (fragmentsSelected.length > 0) {
-            if (fragmentsSelected.length > 1) {
-                // Multiple fragments: create combined isolation
-                const combinedAtomIndices = [];
-                let combinedName = 'Combined: ';
+    // Create a new fragment for unassigned atoms if there are any
+    if (unassignedAtoms.length > 0) {
+        // Check if there's already an "unassigned" fragment (could be from previous operations)
+        // If not, create one
+        updatedFragments.push(unassignedAtoms);
+    }
 
-                fragmentsSelected.forEach((fragIdx, i) => {
-                    if (fragIdx < fragments.length) {
-                        combinedAtomIndices.push(...fragments[fragIdx]);
-                        combinedName += `F${fragIdx + 1}${i < fragmentsSelected.length - 1 ? '+' : ''}`;
-                    }
-                });
+    // Add the new fragment
+    updatedFragments.push(newFragment);
 
-                storeOriginalMolecule();
+    // Update the global fragments array
+    fragments = updatedFragments;
 
-                if (!isInIsolationMode) {
-                    originalFragments = JSON.parse(JSON.stringify(fragments));
+    // Log for debugging
+    console.log('Fragment created:', newFragment);
+    console.log('All fragments:', fragments);
+    console.log('Total atoms covered:', fragments.flat().length, '/', totalAtoms);
+
+    // Select the new fragment so it is highlighted in the viewport,
+    // then refresh (and open) the fragment panel.
+    const newIndex = fragments.length - 1;
+    fragmentsSelected = [newIndex];
+    selectFragment(fragments[newIndex], newIndex);
+    showFragmentPanel();
+    const fragmentList = document.getElementById('fragmentList');
+    if (fragmentList) updateFragmentList(fragmentList);
+    render();
+
+    return {
+        success: true,
+        index: newIndex,
+        atoms: [...newFragment],
+        message: `Created Fragment ${newIndex + 1} with ${newFragment.length} atoms (${fragments.length} fragments total)`
+    };
+}
+
+// Isolate the selected fragments (or, if none, the selected atoms) into their
+// own view. Shared by the "Isolate Selection" button and the AI isolate_selection tool.
+function isolateSelection() {
+    if (!main.molecule || !main.molecule.atoms) return { success: false, message: 'No molecule loaded' };
+    if (fragmentsSelected.length === 0 && atomsSelected.length === 0) {
+        return { success: false, message: 'No atoms or fragments selected' };
+    }
+    if (fragmentsSelected.length > 0) {
+        if (fragmentsSelected.length > 1) {
+            // Multiple fragments: create combined isolation
+            const combinedAtomIndices = [];
+            let combinedName = 'Combined: ';
+
+            fragmentsSelected.forEach((fragIdx, i) => {
+                if (fragIdx < fragments.length) {
+                    combinedAtomIndices.push(...fragments[fragIdx]);
+                    combinedName += `F${fragIdx + 1}${i < fragmentsSelected.length - 1 ? '+' : ''}`;
                 }
+            });
 
-                // FIX: Map indices for nested isolations
-                let mappedCombinedIndices;
-                if (isInIsolationMode && currentIsolationIndex >= 0) {
-                    const currentIsolation = isolationHistory[currentIsolationIndex];
-                    mappedCombinedIndices = combinedAtomIndices.map(localIdx => {
-                        if (localIdx < currentIsolation.originalIndices.length) {
-                            return currentIsolation.originalIndices[localIdx];
-                        }
-                        return null;
-                    }).filter(idx => idx !== null);
-                } else {
-                    mappedCombinedIndices = combinedAtomIndices;
-                }
-
-                const newData = generateDataFromAtoms(combinedAtomIndices);
-
-                const isolationEntry = {
-                    name: combinedName,
-                    atomCount: combinedAtomIndices.length,
-                    data: newData,
-                    fragmentIndices: [...fragmentsSelected],
-                    originalIndices: mappedCombinedIndices, // Use mapped indices
-                    localIndices: combinedAtomIndices, // Keep local indices
-                    timestamp: Date.now()
-                };
-
-                isolationHistory.push(isolationEntry);
-                currentIsolationIndex = isolationHistory.length - 1;
-
-                atomsSelected = [];
-                fragmentsSelected = [];
-                fragments = [];
-
-                isInIsolationMode = true;
-
-                main.newMolecule(
-                    newData,
-                    main.mode,
-                    true,
-                    true,
-                    false
-                );
-                main.data = newData;
-
-                updateIsolationModeUI();
-            } else {
-                // Single fragment
-                isolateFragment(fragmentsSelected[0]);
-            }
-        } else if (atomsSelected.length > 0) {
             storeOriginalMolecule();
 
             if (!isInIsolationMode) {
                 originalFragments = JSON.parse(JSON.stringify(fragments));
             }
 
-            // FIX: Map atom selection indices for nested isolations
-            let mappedAtomIndices;
+            // FIX: Map indices for nested isolations
+            let mappedCombinedIndices;
             if (isInIsolationMode && currentIsolationIndex >= 0) {
                 const currentIsolation = isolationHistory[currentIsolationIndex];
-                mappedAtomIndices = atomsSelected.map(localIdx => {
+                mappedCombinedIndices = combinedAtomIndices.map(localIdx => {
                     if (localIdx < currentIsolation.originalIndices.length) {
                         return currentIsolation.originalIndices[localIdx];
                     }
                     return null;
                 }).filter(idx => idx !== null);
             } else {
-                mappedAtomIndices = [...atomsSelected];
+                mappedCombinedIndices = combinedAtomIndices;
             }
 
-            const newData = generateDataFromAtoms(atomsSelected);
+            const newData = generateDataFromAtoms(combinedAtomIndices);
 
             const isolationEntry = {
-                name: `${atomsSelected.length} Selected Atoms`,
-                atomCount: atomsSelected.length,
+                name: combinedName,
+                atomCount: combinedAtomIndices.length,
                 data: newData,
-                originalIndices: mappedAtomIndices, // Use mapped indices
-                localIndices: [...atomsSelected], // Keep local indices
+                fragmentIndices: [...fragmentsSelected],
+                originalIndices: mappedCombinedIndices, // Use mapped indices
+                localIndices: combinedAtomIndices, // Keep local indices
                 timestamp: Date.now()
             };
 
@@ -2557,16 +2527,67 @@ function attachButtonEventListeners() {
             main.data = newData;
 
             updateIsolationModeUI();
-            console.log(`Isolated ${isolationEntry.atomCount} selected atoms`);
+        } else {
+            // Single fragment
+            isolateFragment(fragmentsSelected[0]);
+        }
+    } else if (atomsSelected.length > 0) {
+        storeOriginalMolecule();
+
+        if (!isInIsolationMode) {
+            originalFragments = JSON.parse(JSON.stringify(fragments));
         }
 
-        updateEditingContent();
-        render();
-    });
+        // FIX: Map atom selection indices for nested isolations
+        let mappedAtomIndices;
+        if (isInIsolationMode && currentIsolationIndex >= 0) {
+            const currentIsolation = isolationHistory[currentIsolationIndex];
+            mappedAtomIndices = atomsSelected.map(localIdx => {
+                if (localIdx < currentIsolation.originalIndices.length) {
+                    return currentIsolation.originalIndices[localIdx];
+                }
+                return null;
+            }).filter(idx => idx !== null);
+        } else {
+            mappedAtomIndices = [...atomsSelected];
+        }
 
+        const newData = generateDataFromAtoms(atomsSelected);
 
-    // Attach axis event listeners
-    attachAxisEventListeners();
+        const isolationEntry = {
+            name: `${atomsSelected.length} Selected Atoms`,
+            atomCount: atomsSelected.length,
+            data: newData,
+            originalIndices: mappedAtomIndices, // Use mapped indices
+            localIndices: [...atomsSelected], // Keep local indices
+            timestamp: Date.now()
+        };
+
+        isolationHistory.push(isolationEntry);
+        currentIsolationIndex = isolationHistory.length - 1;
+
+        atomsSelected = [];
+        fragmentsSelected = [];
+        fragments = [];
+
+        isInIsolationMode = true;
+
+        main.newMolecule(
+            newData,
+            main.mode,
+            true,
+            true,
+            false
+        );
+        main.data = newData;
+
+        updateIsolationModeUI();
+        console.log(`Isolated ${isolationEntry.atomCount} selected atoms`);
+    }
+
+    updateEditingContent();
+    render();
+    return { success: true, message: `Isolated ${main.molecule.atoms.length} atoms. Use the "Back to Full Molecule" button (or restoreOriginalMolecule) to return.` };
 }
 
 function resetRotationState() {
@@ -5601,6 +5622,34 @@ window.removeEventListener('pointerdown', onPointerDown, false);
 window.removeEventListener('pointerdown', enhancedOnPointerDown, false);
 window.addEventListener('pointerdown', enhancedOnPointerDown, false);
 
+// Double-click on empty space clears the atom/fragment selection.
+// (Single clicks on empty space intentionally leave the selection alone.)
+function clearSelectionOnDoubleClick(event) {
+    if (ribbonMode || !editingMolecule) return;
+    if (!main.molecule || !main.molecule.instancedMesh) return;
+
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    updateInstancedMeshBounds(main.molecule.instancedMesh, main.molecule.atoms);
+    raycaster.setFromCamera(mouse, getActiveCamera());
+    const hits = enhancedRaycast(raycaster, main.molecule.instancedMesh, main.molecule.atoms);
+    if (hits.length > 0) return; // double-clicked an atom: keep selection
+
+    if (atomsSelected.length === 0 && fragmentsSelected.length === 0) return;
+
+    if (window.sillyMode && atomsSelected.length > 0) {
+        sillyCascadeUnselect([...atomsSelected]);
+    }
+    atomsSelected = [];
+    fragmentsSelected = [];
+    unselectAtom();
+    const fragmentList = document.getElementById('fragmentList');
+    if (fragmentList) updateFragmentList(fragmentList);
+    render();
+}
+renderer.domElement.addEventListener('dblclick', clearSelectionOnDoubleClick, false);
+
 // Prevent default context menu
 renderer.domElement.addEventListener('contextmenu', (event) => {
     event.preventDefault();
@@ -7927,6 +7976,9 @@ window.rotateSelectedAtoms = rotateSelectedAtoms;
 window.translateSelectedAtoms = translateSelectedAtoms;
 window.updateEditingContent = updateEditingContent;
 window.attachButtonEventListeners = attachButtonEventListeners;
+window.createFragmentFromSelection = createFragmentFromSelection;
+window.isolateSelection = isolateSelection;
+window.restoreOriginalMolecule = restoreOriginalMolecule;
 window.rotateCamera = rotateCamera;
 window.render = render;
 window.initializeRotationState = initializeRotationState;

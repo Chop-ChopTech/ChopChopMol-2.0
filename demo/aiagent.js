@@ -877,11 +877,12 @@ const FUNCTIONS = {
                 window.updateEditingContent();
             }
 
-            // Show create fragment button
+            // Show create fragment button and open the Fragments panel
             const createFragmentBtn = document.getElementById('createFragment');
             if (createFragmentBtn) {
                 createFragmentBtn.style.display = 'block';
             }
+            document.getElementById('fragmentListContainer')?.classList.add('open');
 
             if (typeof window.render === 'function') {
                 window.render();
@@ -1071,18 +1072,28 @@ const FUNCTIONS = {
 
     create_fragment: {
         execute: () => {
-            if (!window.atomsSelected?.length) return { success: false, message: "No atoms selected" };
-            const btn = document.getElementById('createFragment');
-            if (btn) { btn.click(); return { success: true, message: `Fragment created` }; }
-            return { success: false, message: "Fragment creation not available" };
+            if (!window.atomsSelected?.length) return { success: false, message: "No atoms selected (call select_atoms first)" };
+            if (typeof window.createFragmentFromSelection !== 'function') {
+                return { success: false, message: "Fragment creation not available" };
+            }
+            const result = window.createFragmentFromSelection();
+            return {
+                success: !!result?.success,
+                message: result?.message || "Fragment creation failed",
+                fragmentIndex: result?.index,
+                fragments: window.fragments || []
+            };
         }
     },
 
     isolate_selection: {
         execute: () => {
-            const btn = document.getElementById('isolateFragmentBtn');
-            if (btn) { btn.click(); return { success: true, message: "Selection isolated" }; }
-            return { success: false, message: "Isolate function not available" };
+            if (!window.atomsSelected?.length) return { success: false, message: "No atoms selected (call select_atoms first)" };
+            if (typeof window.isolateSelection !== 'function') {
+                return { success: false, message: "Isolate function not available" };
+            }
+            const result = window.isolateSelection();
+            return { success: !!result?.success, message: result?.message || "Isolation failed", atomCount: window.main?.molecule?.atoms?.length || 0 };
         }
     },
 

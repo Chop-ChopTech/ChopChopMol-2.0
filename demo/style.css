@@ -737,7 +737,8 @@ body {
     }
 }
 
-#createFragment {
+#createFragment,
+#isolateFragmentBtn {
     padding: 9.5px 9px;
     font-size: 14px;
     color: #fff;
@@ -756,7 +757,8 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-#createFragment:hover {
+#createFragment:hover,
+#isolateFragmentBtn:hover {
     cursor: pointer;
     background: #364d76;
 }
